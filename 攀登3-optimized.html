@@ -1407,7 +1407,7 @@
 function alpineLink() {
   return {
     currentPage: 'home',
-    activeCategory: 'summits',
+    activeCategory: '8000ers',
     gearMode: 'buy',
     activeChatType: 'all',
     currentLang: 'zh',
@@ -1424,6 +1424,7 @@ function alpineLink() {
     bookingData: { mountain: null, date: '', guide: null, members: 1, notes: '' },
     showSOS: false,
     sosStep: 0,
+    sosImages: [],
     showSettings: false,
     settingsType: 'profile',
     showComments: false,
@@ -1436,6 +1437,8 @@ function alpineLink() {
     showChat: false,
     activeChatConv: null,
     chatInput: '',
+    selectedConversation: null,
+    showChatDetail: false,
     showGearPublish: false,
     newGear: { name: '', brand: '', price: '', condition: 'good', description: '' },
     showTeamDetail: false,
@@ -1443,6 +1446,7 @@ function alpineLink() {
     showCreateTeam: false,
     newTeam: { name: '', peak: '', date: '', level: '', spots: 4, description: '' },
     showInsurance: false,
+    showGuideDetail: false,
     showGuideProfile: false,
     selectedGuide: null,
     showExpeditionDetail: false,
@@ -1457,9 +1461,29 @@ function alpineLink() {
     selectedWorldPeak: null,
     showAlpineDetail: false,
     selectedAlpine: null,
+    toasts: [],
+    newComment: '',
+    availableLangs: [
+      { code: 'zh', native: '简体中文', flag: '🇨🇳' },
+      { code: 'en', native: 'English', flag: '🇬🇧' },
+      { code: 'zh-TW', native: '繁體中文', flag: '🇹🇼' },
+      { code: 'ja', native: '日本語', flag: '🇯🇵' },
+      { code: 'ne', native: 'नेपाली', flag: '🇳🇵' },
+      { code: 'hi', native: 'हिन्दी', flag: '🇮🇳' },
+      { code: 'fr', native: 'Français', flag: '🇫🇷' },
+      { code: 'it', native: 'Italiano', flag: '🇮🇹' },
+      { code: 'es', native: 'Español', flag: '🇪🇸' },
+    ],
     translations: {
-      zh: { app_name: '巅峰探索', home: '首页', explore: '探索', community: '社区', track: '轨迹', gear: '装备', me: '我的', search: '搜索', booking: '预约', submit: '提交', cancel: '取消', close: '关闭', save: '保存', confirm: '确认', back: '返回', edit: '编辑', delete: '删除', share: '分享', like: '点赞', comment: '评论', follow: '关注', login: '登录', logout: '退出', settings: '设置', sos: 'SOS 紧急救援', loading: '加载中...', weather: '天气', altitude: '海拔', difficulty: '难度', price: '价格', date: '日期', guide: '向导', members: '成员', notes: '备注', send_sos: '发送 SOS', peak_detail: '山峰详情', booking_title: '预约攀登' },
-      en: { app_name: 'SummitLink', home: 'Home', explore: 'Explore', community: 'Community', track: 'Track', gear: 'Gear', me: 'Me', search: 'Search', booking: 'Booking', submit: 'Submit', cancel: 'Cancel', close: 'Close', save: 'Save', confirm: 'Confirm', back: 'Back', edit: 'Edit', delete: 'Delete', share: 'Share', like: 'Like', comment: 'Comment', follow: 'Follow', login: 'Login', logout: 'Logout', settings: 'Settings', sos: 'SOS Emergency', loading: 'Loading...', weather: 'Weather', altitude: 'Altitude', difficulty: 'Difficulty', price: 'Price', date: 'Date', guide: 'Guide', members: 'Members', notes: 'Notes', send_sos: 'Send SOS', peak_detail: 'Peak Detail', booking_title: 'Book Climbing' }
+      zh: { app_name: '巅峰探索', summit: '峰顶', search: '搜索', language: '语言', home: '首页', explore: '探索', community: '社区', track: '轨迹', gear: '装备', me: '我的', booking: '预约', submit: '提交', cancel: '取消', close: '关闭', save: '保存', confirm: '确认', back: '返回', edit: '编辑', delete: '删除', share: '分享', like: '点赞', comment: '评论', follow: '关注', login: '登录', logout: '退出', settings: '设置', sos: 'SOS 紧急救援', loading: '加载中...', success: '成功', error: '错误', weather: '天气', altitude: '海拔', difficulty: '难度', country: '国家', price: '价格', date: '日期', guide: '向导', members: '成员', notes: '备注', send_sos: '发送 SOS', book_now: '立即预约', peak_detail: '山峰详情', booking_title: '预约攀登' },
+      en: { app_name: 'SummitLink', summit: 'Summit', search: 'Search', language: 'Language', home: 'Home', explore: 'Explore', community: 'Community', track: 'Track', gear: 'Gear', me: 'Me', booking: 'Booking', submit: 'Submit', cancel: 'Cancel', close: 'Close', save: 'Save', confirm: 'Confirm', back: 'Back', edit: 'Edit', delete: 'Delete', share: 'Share', like: 'Like', comment: 'Comment', follow: 'Follow', login: 'Login', logout: 'Logout', settings: 'Settings', sos: 'SOS Emergency', loading: 'Loading...', success: 'Success', error: 'Error', weather: 'Weather', altitude: 'Altitude', difficulty: 'Difficulty', country: 'Country', price: 'Price', date: 'Date', guide: 'Guide', members: 'Members', notes: 'Notes', send_sos: 'Send SOS', book_now: 'Book Now', peak_detail: 'Peak Detail', booking_title: 'Book Climbing' },
+      'zh-TW': { app_name: '巔峰探索', summit: '峰頂', search: '搜尋', language: '語言', home: '首頁', explore: '探索', community: '社群', track: '軌跡', gear: '裝備', me: '我的', booking: '預約', submit: '提交', cancel: '取消', close: '關閉', save: '儲存', confirm: '確認', back: '返回', edit: '編輯', delete: '刪除', share: '分享', like: '按讚', comment: '評論', follow: '追蹤', login: '登入', logout: '登出', settings: '設定', sos: 'SOS 緊急救援', loading: '載入中...', success: '成功', error: '錯誤', weather: '天氣', altitude: '海拔', difficulty: '難度', country: '國家', price: '價格', date: '日期', guide: '嚮導', members: '成員', notes: '備註', send_sos: '發送 SOS', book_now: '立即預約', peak_detail: '山峰詳情', booking_title: '預約攀登' },
+      ja: { app_name: 'サミットリンク', summit: '山頂', search: '検索', language: '言語', home: 'ホーム', explore: '探索', community: 'コミュニティ', track: 'トラック', gear: 'ギア', me: '自分', booking: '予約', submit: '送信', cancel: 'キャンセル', close: '閉じる', save: '保存', confirm: '確認', back: '戻る', edit: '編集', delete: '削除', share: '共有', like: 'いいね', comment: 'コメント', follow: 'フォロー', login: 'ログイン', logout: 'ログアウト', settings: '設定', sos: 'SOS 緊急救助', loading: '読み込み中...', success: '成功', error: 'エラー', weather: '天気', altitude: '高度', difficulty: '難易度', country: '国', price: '価格', date: '日付', guide: 'ガイド', members: 'メンバー', notes: 'メモ', send_sos: 'SOS送信', book_now: '今すぐ予約', peak_detail: '山の詳細', booking_title: 'クライミング予約' },
+      ne: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोज्नुहोस्', language: 'भाषा', home: 'गृह', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्र्याक', gear: 'गियर', me: 'म', booking: 'बुकिङ', submit: 'पेश गर्नुहोस्', cancel: 'रद्द गर्नुहोस्', close: 'बन्द गर्नुहोस्', save: 'सुरक्षित', confirm: 'पुष्टि गर्नुहोस्', back: 'पछाडि', edit: 'सम्पादन', delete: 'मेटाउनुहोस्', share: 'साझा गर्नुहोस्', like: 'मन पर्छ', comment: 'टिप्पणी', follow: 'अनुसरण', login: 'लगिन', logout: 'लगआउट', settings: 'सेटिङ', sos: 'SOS आपतकालीन', loading: 'लोड हुँदैछ...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'उचाइ', difficulty: 'कठिनाइ', country: 'देश', price: 'मूल्य', date: 'मिति', guide: 'गाइड', members: 'सदस्यहरू', notes: 'नोट', send_sos: 'SOS पठाउनुहोस्', book_now: 'अहिले बुक गर्नुहोस्', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिङ' },
+      hi: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोजें', language: 'भाषा', home: 'होम', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्रैक', gear: 'गियर', me: 'मैं', booking: 'बुकिंग', submit: 'जमा करें', cancel: 'रद्द करें', close: 'बंद करें', save: 'सहेजें', confirm: 'पुष्टि करें', back: 'वापस', edit: 'संपादित करें', delete: 'हटाएं', share: 'साझा करें', like: 'पसंद', comment: 'टिप्पणी', follow: 'अनुसरण करें', login: 'लॉगिन', logout: 'लॉगआउट', settings: 'सेटिंग', sos: 'SOS आपातकालीन', loading: 'लोड हो रहा है...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'ऊंचाई', difficulty: 'कठिनाई', country: 'देश', price: 'कीमत', date: 'तारीख', guide: 'गाइड', members: 'सदस्य', notes: 'नोट', send_sos: 'SOS भेजें', book_now: 'अभी बुक करें', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिंग' },
+      fr: { app_name: 'SommetsLink', summit: 'Sommet', search: 'Rechercher', language: 'Langue', home: 'Accueil', explore: 'Explorer', community: 'Communauté', track: 'Piste', gear: 'Équipement', me: 'Moi', booking: 'Réservation', submit: 'Soumettre', cancel: 'Annuler', close: 'Fermer', save: 'Enregistrer', confirm: 'Confirmer', back: 'Retour', edit: 'Modifier', delete: 'Supprimer', share: 'Partager', like: "J'aime", comment: 'Commenter', follow: 'Suivre', login: 'Connexion', logout: 'Déconnexion', settings: 'Paramètres', sos: 'SOS Urgence', loading: 'Chargement...', success: 'Succès', error: 'Erreur', weather: 'Météo', altitude: 'Altitude', difficulty: 'Difficulté', country: 'Pays', price: 'Prix', date: 'Date', guide: 'Guide', members: 'Membres', notes: 'Notes', send_sos: 'Envoyer SOS', book_now: 'Réserver maintenant', peak_detail: 'Détail du sommet', booking_title: "Réserver l'escalade" },
+      it: { app_name: 'SummitLink', summit: 'Vetta', search: 'Cerca', language: 'Lingua', home: 'Home', explore: 'Esplora', community: 'Comunità', track: 'Percorso', gear: 'Attrezzatura', me: 'Io', booking: 'Prenotazione', submit: 'Invia', cancel: 'Annulla', close: 'Chiudi', save: 'Salva', confirm: 'Conferma', back: 'Indietro', edit: 'Modifica', delete: 'Elimina', share: 'Condividi', like: 'Mi piace', comment: 'Commenta', follow: 'Segui', login: 'Accedi', logout: 'Esci', settings: 'Impostazioni', sos: 'SOS Emergenza', loading: 'Caricamento...', success: 'Successo', error: 'Errore', weather: 'Meteo', altitude: 'Altitudine', difficulty: 'Difficoltà', country: 'Paese', price: 'Prezzo', date: 'Data', guide: 'Guida', members: 'Membri', notes: 'Note', send_sos: 'Invia SOS', book_now: 'Prenota ora', peak_detail: 'Dettaglio cima', booking_title: 'Prenota scalata' },
+      es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
     },
     t(key) { const lang = this.translations[this.currentLang] || this.translations['zh']; return lang[key] || this.translations['zh'][key] || key; },
     eightThousanders: [
@@ -1477,10 +1501,12 @@ function alpineLink() {
     worldPeaks: [
       { id: 1, name: '马特洪峰', nameEn: 'Matterhorn', altitude: 4478, country: '瑞士/意大利', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', type: 'alpine' },
       { id: 2, name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, country: '法国/意大利', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', type: 'alpine' },
+      { id: 3, name: '大帕拉迪索峰', nameEn: 'Gran Paradiso', altitude: 4061, country: '意大利', difficulty: '中等', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', type: 'alpine' },
     ],
     climbingSpots: [
       { id: 1, name: '黄龙溪攀岩', nameEn: 'Huanglongxi Climbing', country: '中国', difficulty: '初级', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400' },
       { id: 2, name: '张家界岩壁', nameEn: 'Zhangjiajie Cliff', country: '中国', difficulty: '中级', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400' },
+      { id: 3, name: '阳朔月亮山', nameEn: 'Yangshuo Moon Hill', country: '中国', difficulty: '中级', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400' },
     ],
     categories: [
       { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
@@ -1488,7 +1514,51 @@ function alpineLink() {
       { id: 'world', name: '世界经典', icon: 'travel_explore' },
       { id: 'alpine', name: '技术攀登', icon: 'terrain' },
     ],
-    guides: [], guideArticles: [], communityPosts: [], climbDiaries: [], clubs: [], expeditions: [], conversations: [], gearItems: [], insuranceProducts: [],
+    communityPosts: [
+      { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
+      { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
+      { id: 3, author: '王芳', authorAvatar: 'https://i.pravatar.cc/150?u=wang', timeAgo: '1天前', content: '马特洪峰北壁首次尝试，虽然未能登顶，但收获了宝贵的经验。山在那里，我还会回来的。', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '马特洪峰, 瑞士', likes: 89, comments: 15, isLiked: false, isFavorited: false, commentPreview: [{ author: '陈强', text: '勇敢！下次一定能成功！' }] },
+    ],
+    climbDiaries: [
+      { id: 1, title: '珠峰BC到C1的旅程', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', altitude: 6065, difficulty: '极难', duration: '3天', date: '2024-05-10', peak: '珠穆朗玛峰', likes: 234, comments: 45, views: 1200, tags: ['珠峰', '高海拔', '远征'], excerpt: '从大本营出发，穿越冰川到达C1营地，记录了沿途的风景和挑战...' },
+      { id: 2, title: 'K2绝壁攀登记录', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '李明', avatar: 'https://i.pravatar.cc/150?u=li', altitude: 8611, difficulty: '极难', duration: '45天', date: '2024-07-25', peak: 'K2', likes: 567, comments: 89, views: 3400, tags: ['K2', '技术攀登', '挑战'], excerpt: '历时45天的K2远征，经历了风暴、高反和团队合作的考验...' },
+      { id: 3, title: '马特洪峰北壁技术路线', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', author: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', altitude: 4478, difficulty: '难', duration: '2天', date: '2024-08-15', peak: '马特洪峰', likes: 123, comments: 28, views: 890, tags: ['阿尔卑斯', '技术路线', '欧洲'], excerpt: '马特洪峰北壁是阿尔卑斯最具挑战性的路线之一，本文记录了攀登过程...' },
+    ],
+    clubs: [
+      { id: 1, name: '中国高山协会', type: '专业', region: '中国', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专注于中国高山探险和技术攀登的专业协会，拥有多名国家级攀登运动员', members: 1280, expeditions: 45, founded: '2005', verified: true, specialty: '8000米峰', achievements: ['珠峰无氧登顶', 'K2首次全女队登顶', '14座8000米峰完成者'] },
+      { id: 2, name: '阿尔派探险俱乐部', type: '综合', region: '北京', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '面向攀登爱好者的综合性俱乐部，提供从初级到专业的培训和远征服务', members: 560, expeditions: 28, founded: '2010', verified: true, specialty: '技术攀登', achievements: ['洛子峰新路线开辟', '南极文森峰团队登顶'] },
+      { id: 3, name: '北京户外探险队', type: '休闲', region: '北京', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', description: '以休闲户外和中低海拔攀登为主的俱乐部，适合初学者和爱好者参与', members: 890, expeditions: 120, founded: '2015', verified: true, specialty: '中低海拔', achievements: ['年度最佳户外俱乐部', '组织公益攀登活动100+'] },
+    ],
+    expeditions: [
+      { id: 1, title: '2025珠峰商业远征', peak: '珠穆朗玛峰', date: '2025-04-01', duration: '60天', difficulty: '极难', spots: 3, totalSpots: 8, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang', price: 380000, image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专业向导带领的珠峰南坡商业远征，全程高山支援，适合有经验的攀登者' },
+      { id: 2, title: 'K2夏季挑战队', peak: 'K2', date: '2025-06-15', duration: '45天', difficulty: '极难', spots: 2, totalSpots: 6, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li', price: 450000, image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', description: 'K2 标准路线挑战，要求参与者有8000米以上攀登经历' },
+      { id: 3, title: '马特洪峰技术攀登营', peak: '马特洪峰', date: '2025-08-01', duration: '14天', difficulty: '难', spots: 4, totalSpots: 6, leader: '王芳', leaderAvatar: 'https://i.pravatar.cc/150?u=wang', price: 35000, image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '由资深向导带领的马特洪峰技术攀登，含技术培训和北壁尝试' },
+    ],
+    guides: [
+      { id: 1, name: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', rating: 4.9, reviews: 128, experience: 15, languages: ['中文', '英语', '尼泊尔语'], summits: ['珠穆朗玛峰', 'K2', '干城章嘉峰', '洛子峰'], price: 35000, available: true, specialty: '8000米峰专家', bio: '15年高山攀登经验，成功登顶全部14座8000米峰，专注于帮助客户安全实现高山梦想' },
+      { id: 2, name: '李明', avatar: 'https://i.pravatar.cc/150?u=li', rating: 4.8, reviews: 96, experience: 12, languages: ['中文', '英语'], summits: ['K2', '马特洪峰', '白朗峰', '麦金利山'], price: 28000, available: true, specialty: '技术攀登专家', bio: '12年攀登经验，专注于技术性路线，曾开辟多条新路线，擅长冰雪技术教学' },
+      { id: 3, name: 'Sara Neymann', avatar: 'https://i.pravatar.cc/150?u=sara', rating: 4.7, reviews: 74, experience: 10, languages: ['英语', '法语', '意大利语'], summits: ['马特洪峰', '白朗峰', '大帕拉迪索峰', '埃格尔北壁'], price: 25000, available: true, specialty: '阿尔卑斯专家', bio: '十年阿尔卑斯攀登经验，UIAGM认证向导，专注于西欧技术路线' },
+    ],
+    gearItems: [
+      { id: 1, name: '黑钻Momentum高山靴', brand: 'Black Diamond', price: 2800, condition: '九成新', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', description: '用过两次，无明显磨损，尺码43', seller: '张磊', sellerAvatar: 'https://i.pravatar.cc/150?u=zhang' },
+      { id: 2, name: 'Petzl高山头盔', brand: 'Petzl', price: 680, condition: '全新', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', description: '全新未使用，原价980元，尺寸M/L可调', seller: '李明', sellerAvatar: 'https://i.pravatar.cc/150?u=li' },
+      { id: 3, name: 'Mammut 8.0干绳', brand: 'Mammut', price: 1200, condition: '八成新', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '60米干绳，使用约10次，无严重磨损，经检验可继续使用', seller: '王芳', sellerAvatar: 'https://i.pravatar.cc/150?u=wang' },
+    ],
+    guideArticles: [
+      { id: 1, title: '8000米峰攀登基础知识', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', readTime: '15分钟', category: '高海拔' },
+      { id: 2, title: '冰雪技术入门指南', cover: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', author: '李明', readTime: '10分钟', category: '技术' },
+      { id: 3, name: '高海拔营养补给策略', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '王芳', readTime: '8分钟', category: '健康' },
+    ],
+    insuranceProducts: [
+      { id: 1, name: '高山探险险', price: 2980, coverage: '300万', period: '30天', type: 'premium' },
+      { id: 2, name: '标准登山险', price: 980, coverage: '100万', period: '14天', type: 'standard' },
+      { id: 3, name: '基础户外险', price: 280, coverage: '30万', period: '7天', type: 'basic' },
+    ],
+    conversations: [
+      { id: 1, name: '救援指挥中心', avatar: 'https://i.pravatar.cc/150?u=rescue', type: 'rescue', lastMsg: '您好，有紧急情况请立即联系', time: '10:30', unread: 0, messages: [] },
+      { id: 2, name: '张磊（向导）', avatar: 'https://i.pravatar.cc/150?u=zhang', type: 'guide', lastMsg: '明天我们6点出发', time: '09:15', unread: 2, messages: [] },
+      { id: 3, name: '珠峰2025队', avatar: 'https://i.pravatar.cc/150?u=team', type: 'team', lastMsg: '装备检查完毕', time: '昨天', unread: 5, messages: [] },
+    ],
     tracks: [
       { id: 1, name: '珠峰大本营徒步', date: '2024-03-15', distance: 45.2, elevation: 2300, duration: '5天', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400' },
       { id: 2, name: 'K2 BC 线路', date: '2024-07-20', distance: 62.8, elevation: 3800, duration: '8天', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400' },
@@ -1506,11 +1576,192 @@ function alpineLink() {
       { id: 'home', icon: 'home', name: '首页' },
       { id: 'explore', icon: 'explore', name: '探索' },
       { id: 'community', icon: 'groups', name: '社区' },
+      { id: 'track', icon: 'route', name: '轨迹' },
       { id: 'gear', icon: 'backpack', name: '装备' },
       { id: 'me', icon: 'person', name: '我的' },
     ],
     weather: { location: '珠穆朗玛峰大本营', condition: 'partly_cloudy', temp: -8, wind: 25, humidity: 45, visibility: 12 },
     userProfile: { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 },
+
+    // Toast notifications
+    showToast(message, type = 'success') {
+      const id = Date.now();
+      this.toasts.push({ id, message, type });
+      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
+    },
+
+    // Search
+    performSearch() {
+      if (!this.searchQuery.trim()) { this.searchResults = []; return; }
+      const q = this.searchQuery.toLowerCase();
+      const results = [];
+      [...this.eightThousanders, ...this.continentalPeaks, ...this.worldPeaks].forEach(p => {
+        if ((p.name && p.name.includes(q)) || (p.nameEn && p.nameEn.toLowerCase().includes(q)) || (p.country && p.country.includes(q))) {
+          results.push({ ...p, type: 'peak' });
+        }
+      });
+      this.climbingSpots.forEach(s => {
+        if ((s.name && s.name.includes(q)) || (s.nameEn && s.nameEn.toLowerCase().includes(q)) || (s.country && s.country.includes(q))) {
+          results.push({ ...s, type: 'spot' });
+        }
+      });
+      this.guides.forEach(g => { if (g.name && g.name.includes(q)) results.push({ ...g, type: 'guide' }); });
+      this.clubs.forEach(c => { if (c.name && c.name.includes(q)) results.push({ ...c, type: 'club' }); });
+      this.gearItems.forEach(i => { if (i.name && i.name.includes(q)) results.push({ ...i, type: 'gear' }); });
+      this.searchResults = results;
+    },
+    selectSearchResult(result) {
+      if (result.type === 'peak') this.openPeakDetail(result);
+      else if (result.type === 'spot') this.openAlpineDetail(result);
+      else if (result.type === 'guide') this.viewGuideProfile(result);
+      else if (result.type === 'club') this.openClubDetail(result);
+      else if (result.type === 'gear') this.openGearDetail(result);
+      this.showSearch = false;
+    },
+    searchByKeyword(keyword) { this.searchQuery = keyword; this.performSearch(); },
+    removeHistory(index) { this.searchHistory.splice(index, 1); },
+
+    // Peak detail
+    openPeakDetail(peak) { this.selectedPeak = peak; this.showPeakDetail = true; },
+    openWorldPeakDetail(peak) { this.selectedPeak = peak; this.showPeakDetail = true; },
+    openAlpineDetail(spot) { this.selectedPeak = spot; this.showPeakDetail = true; },
+
+    // Booking
+    openBooking(item) { this.bookingData.mountain = item.name || item; this.showBooking = true; },
+    openBookingWithGuide(peak, guide) { this.bookingData.mountain = peak.name; this.bookingData.guide = guide.name; this.showBooking = true; },
+    submitBooking() {
+      if (!this.bookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
+      this.showToast('预约成功！我们将尽快与您联系确认');
+      this.showBooking = false;
+      this.bookingData = { mountain: null, date: '', guide: null, members: 1, notes: '' };
+    },
+
+    // Community interactions
+    toggleLike(post) { post.isLiked = !post.isLiked; post.likes += post.isLiked ? 1 : -1; },
+    toggleFavorite(post) { post.isFavorited = !post.isFavorited; },
+    openComments(post) { this.selectedPostForComment = post; this.showComments = true; },
+    closeComments() { this.showComments = false; this.selectedPostForComment = null; },
+    addComment() {
+      if (!this.newComment.trim()) return;
+      if (this.selectedPostForComment) {
+        if (!this.selectedPostForComment.commentPreview) this.selectedPostForComment.commentPreview = [];
+        this.selectedPostForComment.commentPreview.push({ author: this.userProfile.name, text: this.newComment });
+        this.selectedPostForComment.comments++;
+      }
+      this.newComment = '';
+    },
+    sharePost(post) { this.selectedPostForShare = post; this.showShare = true; },
+    closeShareModal() { this.showShare = false; },
+    doShare(platform) { this.showToast('已分享到 ' + platform); this.closeShareModal(); },
+
+    // Post editor
+    openPostEditor() { this.showPostEditor = true; },
+    submitPost() {
+      if (!this.newPost.content.trim()) return;
+      this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: this.newPost.images[0] || null, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
+      this.newPost = { content: '', location: '', images: [] };
+      this.showPostEditor = false;
+      this.showToast('发布成功！');
+    },
+    addPostImage() { this.newPost.images.push('https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'); },
+    removePostImage(idx) { this.newPost.images.splice(idx, 1); },
+    selectPostEmoji(emoji) { this.newPost.content += emoji; },
+    togglePostEmojiPicker() { this.showPostEmojiPicker = !this.showPostEmojiPicker; },
+
+    // Chat
+    selectEmoji(emoji) { this.chatInput += emoji; },
+    sendMessage() {
+      if (!this.chatInput.trim()) return;
+      if (this.selectedConversation) {
+        this.selectedConversation.messages = this.selectedConversation.messages || [];
+        this.selectedConversation.messages.push({ from: 'me', text: this.chatInput, time: new Date().toLocaleTimeString() });
+      }
+      this.chatInput = '';
+    },
+    openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
+    openChatWithUser(name, avatar) { this.selectedConversation = { name, avatar, messages: [] }; this.showChatDetail = true; },
+    get filteredConversations() {
+      if (!this.activeChatType || this.activeChatType === 'all') return this.conversations;
+      return this.conversations.filter(c => c.type === this.activeChatType);
+    },
+
+    // Guides
+    viewGuideProfile(guide) { this.selectedGuide = guide; this.showGuideDetail = true; },
+    contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar); },
+    bookGuideService(guide) { this.openBookingWithGuide({ name: '' }, guide); },
+    selectGuideDate(date) { this.bookingData.date = date; },
+    isGuideDateAvailable(date) { return true; },
+
+    // SOS
+    openSOS() { this.showSOS = true; this.sosStep = 0; },
+    sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
+    cancelSOS() { this.showSOS = false; this.sosStep = 0; },
+    refreshLocation() { this.showToast('位置已刷新'); },
+    shareLocation() { this.showToast('位置已分享'); },
+    callEmergency(number) { this.showToast('正在拨打 ' + number); },
+    callContact(contact) { this.showToast('正在联系 ' + contact.name); },
+    callVIPHotline() { this.showToast('正在拨打 VIP 热线'); },
+    saveMedicalInfo() { this.showToast('医疗信息已保存'); },
+    handleSOSImageUpload(event) {
+      const files = event.target.files;
+      if (files) { Array.from(files).forEach(f => { this.sosImages.push(URL.createObjectURL(f)); }); }
+    },
+
+    // Insurance
+    openInsurance() { this.showInsurance = true; },
+    buyInsurance(type) { this.showToast('已选择保险方案：' + type); },
+    purchaseInsurance(product) { this.showToast('购买成功：' + product.name); this.showInsurance = false; },
+    fileInsuranceClaim() { this.showToast('理赔申请已提交'); },
+    bookVIPService() { this.showToast('VIP 服务预约成功'); },
+
+    // Expeditions & Clubs
+    openExpeditionDetail(exp) { this.selectedExpedition = exp; this.showExpeditionDetail = true; },
+    openClubDetail(club) { this.selectedClub = club; this.showClubDetail = true; },
+    joinClub() { this.showToast('已成功加入俱乐部！'); this.showClubDetail = false; },
+    openArticle(guide) { this.selectedArticle = guide; this.showArticle = true; },
+
+    // Gear
+    openGearDetail(item) { this.selectedGear = item; this.showGearDetail = true; },
+    openGearPublish() { this.showGearPublish = true; },
+    submitGear() { this.showToast('装备已发布！'); this.showGearPublish = false; },
+    contactSeller(item) { this.openChatWithUser(item.seller || '卖家', item.sellerAvatar || ''); },
+    getConditionClass(condition) {
+      const map = { '全新': 'text-green-400', '九成新': 'text-emerald-400', '八成新': 'text-yellow-400', '七成新': 'text-orange-400' };
+      return map[condition] || 'text-slate-400';
+    },
+
+    // Teams
+    openTeamDetail(team) { this.selectedTeam = team; this.showTeamDetail = true; },
+    closeTeamDetail() { this.showTeamDetail = false; },
+    joinTeam(team) { this.showToast('已申请加入：' + team.name); this.closeTeamDetail(); },
+    openCreateTeam() { this.showCreateTeam = true; },
+    closeCreateTeam() { this.showCreateTeam = false; },
+    createTeam() { this.showToast('队伍创建成功！'); this.closeCreateTeam(); },
+
+    // Tracks
+    openNewTrack() { this.showToast('GPS 轨迹记录功能即将上线'); },
+    openTrackDetail(track) { this.showToast(track.name + ' · ' + track.distance + 'km'); },
+
+    // Utility methods
+    getDifficultyClass(difficulty) {
+      const map = { '极难': 'text-red-500', '高': 'text-orange-400', '中': 'text-yellow-400', '低': 'text-green-400' };
+      return map[difficulty] || 'text-slate-400';
+    },
+    getWeatherIcon(condition) {
+      const map = { 'sunny': 'wb_sunny', 'cloudy': 'cloud', 'snowy': 'ac_unit', 'windy': 'air', 'stormy': 'thunderstorm' };
+      return map[condition] || 'wb_sunny';
+    },
+    formatAlt(alt) { return this.useMetric ? alt + 'm' : Math.round(alt * 3.281) + 'ft'; },
+    formatWind(speed) { return this.useMetric ? speed + ' km/h' : Math.round(speed * 0.621) + ' mph'; },
+    formatPrice(price) { return '¥' + price.toLocaleString('zh-CN'); },
+    goToPage(id) { this.currentPage = id; },
+    viewImage(url) { window.open(url, '_blank'); },
+    viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
+    openSidebar() { this.showToast('侧边菜单即将推出'); },
+    getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
+    getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
+    openSettings(type) { this.settingsType = type; this.showSettings = true; },
+
     init() {},
   };
 }
