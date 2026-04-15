@@ -1547,7 +1547,7 @@ function alpineLink() {
     guideArticles: [
       { id: 1, title: '8000米峰攀登基础知识', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', readTime: '15分钟', category: '高海拔' },
       { id: 2, title: '冰雪技术入门指南', cover: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', author: '李明', readTime: '10分钟', category: '技术' },
-      { id: 3, name: '高海拔营养补给策略', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '王芳', readTime: '8分钟', category: '健康' },
+      { id: 3, title: '高海拔营养补给策略', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '王芳', readTime: '8分钟', category: '健康' },
     ],
     insuranceProducts: [
       { id: 1, name: '高山探险险', price: 2980, coverage: '300万', period: '30天', type: 'premium' },
@@ -1596,18 +1596,18 @@ function alpineLink() {
       const q = this.searchQuery.toLowerCase();
       const results = [];
       [...this.eightThousanders, ...this.continentalPeaks, ...this.worldPeaks].forEach(p => {
-        if ((p.name && p.name.includes(q)) || (p.nameEn && p.nameEn.toLowerCase().includes(q)) || (p.country && p.country.includes(q))) {
+        if ((p.name && p.name.toLowerCase().includes(q)) || (p.nameEn && p.nameEn.toLowerCase().includes(q)) || (p.country && p.country.toLowerCase().includes(q))) {
           results.push({ ...p, type: 'peak' });
         }
       });
       this.climbingSpots.forEach(s => {
-        if ((s.name && s.name.includes(q)) || (s.nameEn && s.nameEn.toLowerCase().includes(q)) || (s.country && s.country.includes(q))) {
+        if ((s.name && s.name.toLowerCase().includes(q)) || (s.nameEn && s.nameEn.toLowerCase().includes(q)) || (s.country && s.country.toLowerCase().includes(q))) {
           results.push({ ...s, type: 'spot' });
         }
       });
-      this.guides.forEach(g => { if (g.name && g.name.includes(q)) results.push({ ...g, type: 'guide' }); });
-      this.clubs.forEach(c => { if (c.name && c.name.includes(q)) results.push({ ...c, type: 'club' }); });
-      this.gearItems.forEach(i => { if (i.name && i.name.includes(q)) results.push({ ...i, type: 'gear' }); });
+      this.guides.forEach(g => { if (g.name && g.name.toLowerCase().includes(q)) results.push({ ...g, type: 'guide' }); });
+      this.clubs.forEach(c => { if (c.name && c.name.toLowerCase().includes(q)) results.push({ ...c, type: 'club' }); });
+      this.gearItems.forEach(i => { if (i.name && i.name.toLowerCase().includes(q)) results.push({ ...i, type: 'gear' }); });
       this.searchResults = results;
     },
     selectSearchResult(result) {
@@ -1695,7 +1695,7 @@ function alpineLink() {
     // SOS
     openSOS() { this.showSOS = true; this.sosStep = 0; },
     sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
-    cancelSOS() { this.showSOS = false; this.sosStep = 0; },
+    cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
     refreshLocation() { this.showToast('位置已刷新'); },
     shareLocation() { this.showToast('位置已分享'); },
     callEmergency(number) { this.showToast('正在拨打 ' + number); },
@@ -1704,7 +1704,13 @@ function alpineLink() {
     saveMedicalInfo() { this.showToast('医疗信息已保存'); },
     handleSOSImageUpload(event) {
       const files = event.target.files;
-      if (files) { Array.from(files).forEach(f => { this.sosImages.push(URL.createObjectURL(f)); }); }
+      if (files) {
+        Array.from(files).forEach(f => {
+          if (!f.type.startsWith('image/')) return;
+          if (f.size > 10 * 1024 * 1024) { this.showToast('图片大小不能超过10MB', 'error'); return; }
+          this.sosImages.push(URL.createObjectURL(f));
+        });
+      }
     },
 
     // Insurance
