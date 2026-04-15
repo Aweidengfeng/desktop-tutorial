@@ -1,0 +1,5 @@
+node_modules/
+.env
+db/summitlink.db
+db/summitlink.db-shm
+db/summitlink.db-wal
