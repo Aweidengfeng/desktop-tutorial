@@ -898,7 +898,7 @@
         <!-- Menu Items -->
         <div class="glass rounded-2xl overflow-hidden mb-4">
           <template x-for="item in [{icon:'backpack',name:'我的装备',sub:'8件装备',action:'gear'},{icon:'route',name:'我的轨迹',sub:'2条记录',action:'track'},{icon:'groups',name:'我的队伍',sub:'1支队伍',action:'teams'},{icon:'emoji_events',name:'我的成就',sub:'12项成就',action:''},{icon:'workspace_premium',name:'会员中心',sub:'专业会员',action:''}]" :key="item.name">
-            <button @click="item.action==='gear'?(currentPage='gear'):item.action==='track'?(currentPage='track'):item.action==='teams'?(currentPage='community',activeChatType='teams'):showToast('即将推出')" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
+            <button @click="handleMenuAction(item.action)" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
               <div class="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center">
                 <span class="material-symbols-outlined text-primary-light text-lg" x-text="item.icon"></span>
               </div>
@@ -2397,7 +2397,7 @@ function alpineLink() {
         const res = await fetch('/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.newGear, price: Number(this.newGear.price), mode: 'used' }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
-        if (this.gearMode === 'used') this.gearItems.unshift({ ...data, sellerAvatar: this.userProfile.avatar, seller: this.userProfile.name });
+        this.gearItems.unshift({ ...data, sellerAvatar: this.userProfile.avatar, seller: this.userProfile.name });
         this.showToast('装备已发布！');
         this.newGear = { name: '', brand: '', price: '', condition: 'good', description: '' };
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
@@ -2461,8 +2461,9 @@ function alpineLink() {
     openPayment(amount) { this.paymentAmount = amount; this.showPayment = true; },
     async confirmPayment() {
       try {
-        await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
-      } catch(e) {}
+        const res = await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
+        if (!res.ok) { this.showToast('支付失败，请重试', 'error'); return; }
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); return; }
       this.showPayment = false;
       this.showToast('支付成功！订单已确认 🎉');
     },
@@ -2487,6 +2488,12 @@ function alpineLink() {
     getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
     getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
     openSettings(type) { this.settingsType = type; this.showSettings = true; },
+    handleMenuAction(action) {
+      if (action === 'gear') { this.currentPage = 'gear'; }
+      else if (action === 'track') { this.currentPage = 'track'; }
+      else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
+      else { this.showToast('即将推出'); }
+    },
     async saveSettings() {
       if (this.settingsType === 'profile' && this.authToken) {
         try {
@@ -2658,8 +2665,14 @@ function alpineLink() {
       this.loadPosts();
       this.loadLeaderboard();
       this.loadWeather();
-      // Watch gearMode changes to reload gear
-      this.$watch('gearMode', (val) => { this.gearCategory = '全部'; this.loadGear(val); });
+      // Watch gearMode changes to reload gear (reset category first to avoid double-call)
+      this.$watch('gearMode', (val) => {
+        if (this.gearCategory !== '全部') {
+          this.gearCategory = '全部'; // triggers gearCategory watch → loadGear
+        } else {
+          this.loadGear(val); // category unchanged, load manually
+        }
+      });
       // Watch gearCategory changes to reload gear
       this.$watch('gearCategory', (val) => this.loadGear(this.gearMode, val));
       // Watch activeCategory changes to reload peaks
