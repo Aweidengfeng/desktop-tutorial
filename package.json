@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "build": "cd backend && npm install",
-    "start": "node backend/db/seed.js && node backend/app.js"
+    "start": "node backend/db/seed.js && node backend/app.js",
+    "test:api": "node tests/api.test.js",
+    "test:e2e": "playwright test",
+    "test": "npm run test:api && npm run test:e2e"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -12,5 +15,8 @@
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
     "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }
