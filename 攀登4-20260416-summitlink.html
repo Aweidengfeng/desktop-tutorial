@@ -564,6 +564,59 @@
             <p class="mt-2 text-sm">暂无帖子</p>
           </div>
         </div>
+
+        <!-- Diary Section -->
+        <div x-show="activeChatType==='diary'" class="mb-5">
+          <h3 class="font-semibold text-white mb-3">攀登日记</h3>
+          <template x-for="diary in climbDiaries" :key="diary.id">
+            <div class="glass rounded-2xl overflow-hidden mb-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div class="relative h-36">
+                <img :src="diary.cover" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <p class="text-white font-bold text-sm truncate" x-text="diary.title"></p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-primary-light text-xs" x-text="diary.altitude + 'm'"></span>
+                    <span class="text-slate-400 text-xs" x-text="'· ' + diary.duration"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="p-3 flex items-center gap-3">
+                <img :src="diary.avatar" class="w-7 h-7 rounded-full object-cover">
+                <span class="text-white text-xs font-semibold" x-text="diary.author"></span>
+                <span class="text-slate-500 text-xs ml-auto" x-text="diary.date"></span>
+                <span class="text-slate-400 text-xs">❤️ <span x-text="diary.likes"></span></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Clubs Section -->
+        <div x-show="activeChatType==='clubs'" class="mb-5">
+          <h3 class="font-semibold text-white mb-3">攀登俱乐部</h3>
+          <template x-for="club in clubs" :key="club.id">
+            <div @click="openClubDetail(club)" class="glass rounded-2xl overflow-hidden mb-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div class="relative h-28">
+                <img :src="club.cover" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+                <div class="absolute top-2 right-2">
+                  <span x-show="club.verified" class="text-xs bg-primary px-2 py-0.5 rounded-full text-white font-semibold">✓ 认证</span>
+                </div>
+                <div class="absolute bottom-2 left-3">
+                  <p class="text-white font-bold" x-text="club.name"></p>
+                </div>
+              </div>
+              <div class="p-3">
+                <p class="text-slate-400 text-xs mb-2" x-text="club.description"></p>
+                <div class="flex items-center gap-3 text-xs">
+                  <span class="text-primary-light font-semibold" x-text="club.specialty"></span>
+                  <span class="text-slate-500" x-text="club.members + ' 成员'"></span>
+                  <span class="text-slate-500" x-text="club.expeditions + ' 远征'"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
       </div>
     </section>
 
@@ -602,7 +655,7 @@
           </div>
         </div>
         <!-- Start Button -->
-        <button class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl mb-5 transition-colors text-lg">
+        <button @click="openNewTrack()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl mb-5 transition-colors text-lg">
           开始记录
         </button>
         <!-- Track History -->
@@ -735,7 +788,7 @@
         <!-- Category Chips -->
         <div class="flex gap-2 overflow-x-auto scroll-hide pb-3 mb-4">
           <template x-for="cat in ['全部','冰斧','绳索','鞋靴','服装','帐篷','背包','保暖']" :key="cat">
-            <button class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium glass text-slate-300 hover:bg-white/10 transition-colors" x-text="cat"></button>
+            <button @click="gearCategory=cat" :class="gearCategory===cat ? 'bg-primary text-white' : 'glass text-slate-300 hover:bg-white/10'" class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors" x-text="cat"></button>
           </template>
         </div>
         <!-- Gear Grid -->
@@ -844,8 +897,8 @@
 
         <!-- Menu Items -->
         <div class="glass rounded-2xl overflow-hidden mb-4">
-          <template x-for="item in [{icon:'backpack',name:'我的装备',sub:'8件装备'},{icon:'route',name:'我的轨迹',sub:'2条记录'},{icon:'groups',name:'我的队伍',sub:'1支队伍'},{icon:'emoji_events',name:'我的成就',sub:'12项成就'},{icon:'workspace_premium',name:'会员中心',sub:'专业会员'}]" :key="item.name">
-            <button class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
+          <template x-for="item in [{icon:'backpack',name:'我的装备',sub:'8件装备',action:'gear'},{icon:'route',name:'我的轨迹',sub:'2条记录',action:'track'},{icon:'groups',name:'我的队伍',sub:'1支队伍',action:'teams'},{icon:'emoji_events',name:'我的成就',sub:'12项成就',action:''},{icon:'workspace_premium',name:'会员中心',sub:'专业会员',action:''}]" :key="item.name">
+            <button @click="handleMenuAction(item.action)" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
               <div class="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center">
                 <span class="material-symbols-outlined text-primary-light text-lg" x-text="item.icon"></span>
               </div>
@@ -1361,7 +1414,7 @@
             <span class="material-symbols-outlined text-slate-600 text-5xl">settings</span>
             <p class="text-slate-400 mt-3">设置即将推出</p>
           </div>
-          <button @click="showSettings=false" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5">保存</button>
+          <button @click="saveSettings()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5">保存</button>
         </div>
       </div>
     </div>
@@ -1915,6 +1968,7 @@ function alpineLink() {
     ],
     activeCategory: '8000ers',
     gearMode: 'buy',
+    gearCategory: '全部',
     activeChatType: 'all',
     currentLang: 'zh',
     showLangPicker: false,
@@ -2295,7 +2349,7 @@ function alpineLink() {
     // Guides
     viewGuideProfile(guide) { this.selectedGuide = guide; this.showGuideDetail = true; },
     contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar); },
-    bookGuideService(guide) { if (!this.requireAuth()) return; this.openBookingWithGuide({ name: '' }, guide); },
+    bookGuideService(guide) { if (!this.requireAuth()) return; this.bookingData.mountain = guide.specialty ? guide.specialty.split('/')[0].trim() : ''; this.bookingData.guide = guide.name; this.showBooking = true; },
     selectGuideDate(date) { this.bookingData.date = date; },
     isGuideDateAvailable(date) { return true; },
 
@@ -2336,7 +2390,19 @@ function alpineLink() {
     // Gear
     openGearDetail(item) { this.selectedGear = item; this.showGearDetail = true; },
     openGearPublish() { this.showGearPublish = true; },
-    submitGear() { this.showToast('装备已发布！'); this.showGearPublish = false; },
+    async submitGear() {
+      if (!this.requireAuth()) return;
+      if (!this.newGear.name || !this.newGear.price) { this.showToast('请填写装备名称和价格', 'error'); return; }
+      try {
+        const res = await fetch('/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.newGear, price: Number(this.newGear.price), mode: 'used' }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
+        this.gearItems.unshift({ ...data, sellerAvatar: this.userProfile.avatar, seller: this.userProfile.name });
+        this.showToast('装备已发布！');
+        this.newGear = { name: '', brand: '', price: '', condition: 'good', description: '' };
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      this.showGearPublish = false;
+    },
     contactSeller(item) { this.openChatWithUser(item.seller || '卖家', item.sellerAvatar || ''); },
     getConditionClass(condition) {
       const map = { '全新': 'text-green-400', '九成新': 'text-emerald-400', '八成新': 'text-yellow-400', '七成新': 'text-orange-400' };
@@ -2358,7 +2424,19 @@ function alpineLink() {
     closeTeamDetail() { this.showTeamDetail = false; },
     openCreateTeam() { this.showCreateTeam = true; },
     closeCreateTeam() { this.showCreateTeam = false; },
-    createTeam() { this.showToast('队伍创建成功！'); this.closeCreateTeam(); },
+    async createTeam() {
+      if (!this.requireAuth()) return;
+      if (!this.newTeam.name || !this.newTeam.peak) { this.showToast('请填写队伍名称和目标山峰', 'error'); return; }
+      try {
+        const res = await fetch('/api/teams', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.newTeam.name, peak: this.newTeam.peak, date: this.newTeam.date, totalSpots: Number(this.newTeam.spots), level: this.newTeam.level, description: this.newTeam.description }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '创建失败', 'error'); return; }
+        this.teams.unshift({ ...data, leaderAvatar: this.userProfile.avatar });
+        this.showToast('队伍创建成功！');
+        this.newTeam = { name: '', peak: '', date: '', level: '', spots: 4, description: '' };
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      this.closeCreateTeam();
+    },
 
     // Tracks
     openNewTrack() { this.showToast('GPS 轨迹记录功能即将上线'); },
@@ -2381,16 +2459,27 @@ function alpineLink() {
       return '¥' + price.toLocaleString('zh-CN');
     },
     openPayment(amount) { this.paymentAmount = amount; this.showPayment = true; },
-    confirmPayment() {
+    async confirmPayment() {
+      try {
+        const res = await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
+        if (!res.ok) { this.showToast('支付失败，请重试', 'error'); return; }
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); return; }
       this.showPayment = false;
       this.showToast('支付成功！订单已确认 🎉');
     },
-    submitGuideApply() {
+    async submitGuideApply() {
       if (!this.guideApplyForm.name || !this.guideApplyForm.cert) {
         this.showToast('请填写姓名和证书信息', 'error'); return;
       }
-      this.showGuideApply = false;
-      this.showToast('申请已提交，7天内审核完成 ✅');
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/guides/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.guideApplyForm) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
+        this.showGuideApply = false;
+        this.showToast('申请已提交，7天内审核完成 ✅');
+        this.guideApplyForm = { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' };
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
     goToPage(id) { this.currentPage = id; },
     viewImage(url) { window.open(url, '_blank'); },
@@ -2399,6 +2488,22 @@ function alpineLink() {
     getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
     getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
     openSettings(type) { this.settingsType = type; this.showSettings = true; },
+    handleMenuAction(action) {
+      if (action === 'gear') { this.currentPage = 'gear'; }
+      else if (action === 'track') { this.currentPage = 'track'; }
+      else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
+      else { this.showToast('即将推出'); }
+    },
+    async saveSettings() {
+      if (this.settingsType === 'profile' && this.authToken) {
+        try {
+          const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name }) });
+          if (res.ok) { const u = await res.json(); this.currentUser = u; this.showToast('资料已保存 ✅'); }
+          else { this.showToast('保存失败', 'error'); }
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      }
+      this.showSettings = false;
+    },
 
     // Auth methods
     getAuthHeaders() {
@@ -2416,7 +2521,7 @@ function alpineLink() {
         this.authToken = data.token;
         this.currentUser = data.user;
         localStorage.setItem('summitlink_token', data.token);
-        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: '攀登者', summits: 0, expeditions: 0, followers: 0, following: 0 };
+        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
         this.showLogin = false;
         this.loginForm = { phone: '', password: '' };
         this.showToast('登录成功，欢迎回来 ' + data.user.name + '！');
@@ -2457,7 +2562,7 @@ function alpineLink() {
         if (!res.ok) { localStorage.removeItem('summitlink_token'); this.authToken = null; this.currentUser = null; return; }
         const user = await res.json();
         this.currentUser = user;
-        this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: '攀登者', summits: 0, expeditions: 0, followers: 0, following: 0 };
+        this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
       } catch(e) {}
     },
 
@@ -2492,10 +2597,13 @@ function alpineLink() {
         this.teams = data;
       } catch(e) {}
     },
-    async loadGear(mode) {
+    async loadGear(mode, category) {
       try {
         const m = mode || this.gearMode;
-        const res = await fetch('/api/gear?mode=' + m);
+        const c = category !== undefined ? category : this.gearCategory;
+        let url = '/api/gear?mode=' + m;
+        if (c && c !== '全部') url += '&category=' + encodeURIComponent(c);
+        const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
         this.gearItems = data;
@@ -2557,8 +2665,16 @@ function alpineLink() {
       this.loadPosts();
       this.loadLeaderboard();
       this.loadWeather();
-      // Watch gearMode changes to reload gear
-      this.$watch('gearMode', (val) => this.loadGear(val));
+      // Watch gearMode changes to reload gear (reset category first to avoid double-call)
+      this.$watch('gearMode', (val) => {
+        if (this.gearCategory !== '全部') {
+          this.gearCategory = '全部'; // triggers gearCategory watch → loadGear
+        } else {
+          this.loadGear(val); // category unchanged, load manually
+        }
+      });
+      // Watch gearCategory changes to reload gear
+      this.$watch('gearCategory', (val) => this.loadGear(this.gearMode, val));
       // Watch activeCategory changes to reload peaks
       this.$watch('activeCategory', (val) => {
         if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
