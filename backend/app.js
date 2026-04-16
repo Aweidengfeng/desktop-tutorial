@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
@@ -9,12 +10,17 @@ app.use(cors());
 app.use(express.json());
 
 // HTML在仓库根目录，backend在子目录
-// __dirname = /app/backend，所以根目录是 __dirname/..
-const rootPath = path.join(__dirname, '..');
+// __dirname = /app/backend，所以根目录是 __dirname/..\nconst rootPath = path.join(__dirname, '..');
 app.use(express.static(rootPath));
 app.use(express.static(path.join(__dirname)));
 
 console.log('📁 静态文件根目录:', rootPath);
+
+// 专门处理中文文件名的HTML（Linux上express.static可能无法处理中文文件名）
+const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
+app.get(['/summitlink', '/summitlink.html', '/%E6%94%80%E7%99%BB4-20260416-summitlink.html'], (req, res) => {
+  res.sendFile(htmlFile);
+});
 
 // 挂载路由
 app.use('/api/auth', require('./routes/auth'));
@@ -29,16 +35,20 @@ app.use('/api/weather', require('./routes/weather'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 
 // 健康检查
-app.get('/health', (req, res) => res.json({ status: 'ok', staticRoot: rootPath }));
+app.get('/health', (req, res) => {
+  const exists = fs.existsSync(htmlFile);
+  res.json({ status: 'ok', staticRoot: rootPath, htmlExists: exists, htmlPath: htmlFile });
+});
 
 // 根路径重定向到最新前端
 app.get('/', (req, res) => {
-  res.redirect('/攀登4-20260416-summitlink.html');
+  res.redirect('/summitlink');
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SummitLink后端运行在 http://localhost:${PORT}`);
-  console.log(`   前端页面: http://localhost:${PORT}/攀登4-20260416-summitlink.html`);
+  console.log(`   前端页面: http://localhost:${PORT}/summitlink`);
   console.log(`   静态文件目录: ${rootPath}`);
+  console.log(`   HTML文件存在: ${fs.existsSync(htmlFile)}`);
 });
