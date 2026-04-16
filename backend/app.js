@@ -9,17 +9,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// HTML在仓库根目录，startCommand是cd backend && node app.js
-// 所以__dirname = /app/backend，根目录是上一层
-const rootPath = path.join(__dirname, '..');
+// 从根目录启动(node backend/app.js)，process.cwd() = /app (仓库根目录)
+const rootPath = process.cwd();
+console.log('📁 根目录:', rootPath);
+console.log('📁 __dirname:', __dirname);
+
+// 静态文件服务 - 根目录
 app.use(express.static(rootPath));
-app.use(express.static(path.join(__dirname)));
 
-console.log('📁 静态文件根目录:', rootPath);
-
-// 专门处理中文文件名（Linux上express.static可能无法处理中文文件名）
+// 专门处理HTML文件路由（避免中文文件名问题）
 const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
-app.get(['/summitlink', '/summitlink.html', '/%E6%94%80%E7%99%BB4-20260416-summitlink.html'], (req, res) => {
+app.get(['/summitlink', '/summitlink.html'], (req, res) => {
+  console.log('📄 请求HTML文件:', htmlFile);
+  console.log('📄 文件存在:', fs.existsSync(htmlFile));
   res.sendFile(htmlFile);
 });
 
@@ -38,18 +40,17 @@ app.use('/api/leaderboard', require('./routes/leaderboard'));
 // 健康检查
 app.get('/health', (req, res) => {
   const exists = fs.existsSync(htmlFile);
-  res.json({ status: 'ok', staticRoot: rootPath, htmlExists: exists, htmlPath: htmlFile });
+  const files = fs.readdirSync(rootPath);
+  res.json({ status: 'ok', rootPath, htmlExists: exists, htmlPath: htmlFile, rootFiles: files });
 });
 
-// 根路径重定向到最新前端
+// 根路径
 app.get('/', (req, res) => {
   res.redirect('/summitlink');
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ SummitLink后端运行在 http://localhost:${PORT}`);
-  console.log(`   前端页面: http://localhost:${PORT}/summitlink`);
-  console.log(`   静态文件目录: ${rootPath}`);
-  console.log(`   HTML文件存在: ${fs.existsSync(htmlFile)}`);
+  console.log('✅ SummitLink运行在 http://localhost:' + PORT);
+  console.log('   HTML存在: ' + fs.existsSync(htmlFile));
 });
