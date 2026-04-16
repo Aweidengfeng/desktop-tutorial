@@ -9,14 +9,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// HTML在仓库根目录，backend在子目录
-// __dirname = /app/backend，所以根目录是 __dirname/..\nconst rootPath = path.join(__dirname, '..');
+// HTML在仓库根目录，startCommand是cd backend && node app.js
+// 所以__dirname = /app/backend，根目录是上一层
+const rootPath = path.join(__dirname, '..');
 app.use(express.static(rootPath));
 app.use(express.static(path.join(__dirname)));
 
 console.log('📁 静态文件根目录:', rootPath);
 
-// 专门处理中文文件名的HTML（Linux上express.static可能无法处理中文文件名）
+// 专门处理中文文件名（Linux上express.static可能无法处理中文文件名）
 const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
 app.get(['/summitlink', '/summitlink.html', '/%E6%94%80%E7%99%BB4-20260416-summitlink.html'], (req, res) => {
   res.sendFile(htmlFile);
