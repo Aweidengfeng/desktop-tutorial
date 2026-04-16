@@ -1,0 +1,2327 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>巅峰探索 / SummitLink</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#2b6579">
+  <meta property="og:title" content="巅峰探索 / SummitLink">
+  <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2b6579',
+            'primary-light': '#3d8a9e',
+            'primary-dark': '#1e4f60',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Manrope', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    [x-cloak] { display: none !important; }
+    .app-container { max-width: 430px; margin: 0 auto; }
+    body { background: #0f172a; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+    .material-symbols-outlined.filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .scroll-hide::-webkit-scrollbar { display: none; }
+    .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); } 70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
+    .pulse-red { animation: pulse-red 2s infinite; }
+    .bottom-sheet { border-radius: 20px 20px 0 0; }
+  </style>
+</head>
+<body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
+<div class="app-container relative min-h-screen bg-slate-900 overflow-hidden">
+
+  <!-- Toast Notifications -->
+  <div class="fixed top-4 right-4 z-[200] flex flex-col gap-2" style="max-width: 300px;">
+    <template x-for="toast in toasts" :key="toast.id">
+      <div class="px-4 py-3 rounded-xl text-white text-sm shadow-lg"
+           :class="toast.type === 'error' ? 'bg-red-500' : toast.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'"
+           x-text="toast.message"
+           x-transition:enter="transition ease-out duration-300"
+           x-transition:enter-start="opacity-0 translate-x-8"
+           x-transition:enter-end="opacity-100 translate-x-0"
+           x-transition:leave="transition ease-in duration-200"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0"></div>
+    </template>
+  </div>
+
+  <!-- FIXED HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/10" style="max-width:430px;margin:0 auto;">
+    <div class="flex items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="text-primary-light text-xl">&#9968;&#65039;</span>
+        <span class="font-display font-bold text-lg text-white" x-text="t('app_name')"></span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button @click="showLangPicker=true" class="px-2 py-1 rounded-full text-xs font-bold glass text-slate-300 hover:text-white transition-colors uppercase" x-text="currentLang.toUpperCase()"></button>
+        <button @click="showSearch = !showSearch" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+          <span class="material-symbols-outlined text-slate-300 text-xl">search</span>
+        </button>
+        <button class="p-2 rounded-full hover:bg-white/10 transition-colors relative">
+          <span class="material-symbols-outlined text-slate-300 text-xl">notifications</span>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+        </button>
+      </div>
+    </div>
+    <!-- Collapsible Search Bar -->
+    <div x-show="showSearch"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
+         class="px-4 pb-3">
+      <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
+        <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+        <input x-model="searchQuery" type="text" :placeholder="t('search')" class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
+        <button @click="showSearch=false;searchQuery=''" class="text-slate-400 hover:text-white">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div class="flex gap-2 mt-2 overflow-x-auto scroll-hide pb-1">
+        <template x-for="h in searchHistory" :key="h">
+          <button @click="searchQuery = h" class="flex-shrink-0 px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition-colors" x-text="h"></button>
+        </template>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="pt-16 pb-20 min-h-screen">
+
+    <!-- HOME PAGE -->
+    <section x-show="currentPage === 'home'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <!-- Hero Carousel -->
+      <div class="relative h-56 overflow-hidden" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
+        <template x-for="(slide,i) in heroSlides" :key="i">
+          <div class="absolute inset-0 transition-opacity duration-700" :class="heroSlide===i ? 'opacity-100' : 'opacity-0'">
+            <img :src="slide.image" :alt="slide.name" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+          </div>
+        </template>
+        <div class="absolute bottom-4 left-4 right-10">
+          <p class="text-xs text-primary-light font-semibold tracking-widest uppercase mb-1">Featured Peak</p>
+          <h2 class="text-2xl font-display font-bold text-white" x-text="heroSlides[heroSlide].name"></h2>
+          <p class="text-slate-300 text-sm" x-text="heroSlides[heroSlide].sub"></p>
+        </div>
+        <!-- Arrows -->
+        <button @click="heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors">
+          <span class="material-symbols-outlined text-lg">chevron_left</span>
+        </button>
+        <button @click="heroSlide=(heroSlide+1)%heroSlides.length" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors">
+          <span class="material-symbols-outlined text-lg">chevron_right</span>
+        </button>
+        <!-- Dots -->
+        <div class="absolute bottom-2 right-4 flex gap-1.5">
+          <template x-for="(slide,i) in heroSlides" :key="i">
+            <div @click="heroSlide=i" class="w-1.5 h-1.5 rounded-full cursor-pointer transition-all" :class="heroSlide===i ? 'bg-white w-4' : 'bg-white/40'"></div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Weather Widget -->
+      <div class="px-4 -mt-2 mb-4">
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-xs text-slate-400" x-text="weather.location"></p>
+              <p class="text-3xl font-bold text-white"><span x-text="weather.temp"></span>°C</p>
+            </div>
+            <div class="text-4xl">🌤️</div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-slate-800/50 rounded-xl p-2">
+              <p class="text-xs text-slate-400">风速</p>
+              <p class="text-sm font-semibold text-white"><span x-text="weather.wind"></span> km/h</p>
+            </div>
+            <div class="bg-slate-800/50 rounded-xl p-2">
+              <p class="text-xs text-slate-400">湿度</p>
+              <p class="text-sm font-semibold text-white"><span x-text="weather.humidity"></span>%</p>
+            </div>
+            <div class="bg-slate-800/50 rounded-xl p-2">
+              <p class="text-xs text-slate-400">能见度</p>
+              <p class="text-sm font-semibold text-white"><span x-text="weather.visibility"></span> km</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Links Grid -->
+      <div class="px-4 mb-4">
+        <div class="grid grid-cols-4 gap-2">
+          <button @click="currentPage='explore';activeCategory='8000ers'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🏔️</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">探索山峰</span>
+          </button>
+          <button @click="currentPage='explore';activeCategory='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🧗</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">找向导</span>
+          </button>
+          <button @click="currentPage='track'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">📍</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">记录轨迹</span>
+          </button>
+          <button @click="currentPage='gear'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🎒</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">装备市场</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Guide Recommendations -->
+      <div class="mb-5">
+        <div class="px-4 flex items-center justify-between mb-1">
+          <h3 class="font-display font-bold text-white">向导推荐</h3>
+          <button @click="currentPage='explore';activeCategory='guides'" class="text-xs text-primary-light">查看全部</button>
+        </div>
+        <p class="px-4 text-slate-400 text-xs mb-3">根据您的目标山峰为您精选专业向导</p>
+        <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
+          <template x-for="g in nearbyGuides" :key="g.id">
+            <div @click="selectedGuide=g;showGuideDetail=true" class="flex-shrink-0 w-40 glass rounded-2xl p-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div class="flex items-center gap-2 mb-2">
+                <img :src="g.avatar" class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-xs font-bold truncate" x-text="g.name"></p>
+                  <p class="text-slate-400 text-xs" x-text="g.flag + ' ' + g.nationality"></p>
+                </div>
+              </div>
+              <div x-show="g.tag" class="mb-1.5">
+                <span class="text-xs bg-primary/20 text-primary-light px-1.5 py-0.5 rounded-full font-semibold" x-text="g.tag"></span>
+              </div>
+              <div class="flex items-center gap-1 mb-1">
+                <span class="text-yellow-400 text-xs">★</span>
+                <span class="text-white text-xs font-semibold" x-text="g.rating"></span>
+                <span class="text-slate-500 text-xs" x-text="'(' + g.reviews + ')'"></span>
+              </div>
+              <p class="text-slate-400 text-xs truncate mb-2" x-text="g.specialty"></p>
+              <p class="text-primary-light text-xs font-bold" x-text="'$' + g.dayRate + '/天'"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+
+
+      <!-- Eight Thousanders -->
+      <div class="mb-5">
+        <div class="px-4 flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-white">八千米巨峰</h3>
+          <button @click="currentPage='explore';activeCategory='8000ers'" class="text-xs text-primary-light">查看全部</button>
+        </div>
+        <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
+          <template x-for="peak in eightThousanders" :key="peak.id">
+            <div @click="selectedPeak = peak; showPeakDetail = true" class="flex-shrink-0 w-40 rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+              <div class="relative h-28">
+                <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
+                <div class="absolute bottom-2 left-2 right-2">
+                  <p class="text-white text-xs font-bold" x-text="peak.name"></p>
+                  <p class="text-primary-light text-xs" x-text="(peak.altitude/1000).toFixed(3) + ' km'"></p>
+                </div>
+              </div>
+              <div class="bg-slate-800 px-2 py-1.5 flex items-center justify-between">
+                <span class="text-xs text-slate-400 truncate mr-1" x-text="peak.country"></span>
+                <span class="text-xs px-1.5 py-0.5 rounded-full bg-primary/30 text-primary-light flex-shrink-0" x-text="peak.difficulty"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Teams Section -->
+      <div class="px-4 mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-white">招募中的队伍</h3>
+          <button @click="currentPage='community';activeChatType='teams'" class="text-xs text-primary-light">更多</button>
+        </div>
+        <div class="space-y-3">
+          <template x-for="team in teams" :key="team.id">
+            <div @click="selectedTeam=team;showTeamDetail=true" class="glass rounded-2xl p-3 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <img :src="team.leaderAvatar" :alt="team.leader" class="w-10 h-10 rounded-full object-cover">
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-sm font-semibold truncate" x-text="team.name"></p>
+                <p class="text-slate-400 text-xs" x-text="team.peak + ' · ' + team.date"></p>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <p class="text-xs text-primary-light font-semibold" x-text="team.spots + ' 名额'"></p>
+                <p class="text-xs text-slate-500" x-text="team.level"></p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Recent Tracks -->
+      <div class="px-4 mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-white">最近轨迹</h3>
+          <button @click="currentPage='track'" class="text-xs text-primary-light">查看全部</button>
+        </div>
+        <div class="space-y-3">
+          <template x-for="track in tracks" :key="track.id">
+            <div class="glass rounded-2xl overflow-hidden flex gap-3">
+              <img :src="track.image" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
+              <div class="py-3 pr-3 flex-1 min-w-0">
+                <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
+                <p class="text-slate-400 text-xs mt-1" x-text="track.date"></p>
+                <div class="flex gap-3 mt-2">
+                  <span class="text-xs text-slate-300">📍 <span x-text="track.distance + 'km'"></span></span>
+                  <span class="text-xs text-slate-300">↑ <span x-text="track.elevation + 'm'"></span></span>
+                  <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- 本月登顶榜 -->
+      <div class="px-4 mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-white">🏆 本月登顶榜</h3>
+        </div>
+        <div class="glass rounded-2xl overflow-hidden">
+          <template x-for="(entry, idx) in summitLeaderboard" :key="entry.id">
+            <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
+              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                   :class="idx===0 ? 'bg-yellow-500 text-white' : idx===1 ? 'bg-slate-400 text-white' : idx===2 ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-400'"
+                   x-text="idx+1"></div>
+              <img :src="entry.avatar" class="w-8 h-8 rounded-full object-cover">
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-sm font-semibold truncate">
+                  <span x-text="entry.flag"></span> <span x-text="entry.name"></span>
+                </p>
+                <p class="text-slate-400 text-xs truncate" x-text="entry.peak"></p>
+              </div>
+              <p class="text-primary-light text-xs font-bold flex-shrink-0" x-text="entry.date"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPLORE PAGE -->
+    <section x-show="currentPage === 'explore'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2 pb-3">
+        <h2 class="font-display font-bold text-xl text-white mb-4">探索山峰</h2>
+        <div class="flex gap-2 overflow-x-auto scroll-hide pb-2 mb-4">
+          <template x-for="cat in categories" :key="cat.id">
+            <button @click="activeCategory = cat.id"
+                    :class="activeCategory === cat.id ? 'bg-primary text-white' : 'glass text-slate-300 hover:bg-white/10'"
+                    class="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all">
+              <span class="material-symbols-outlined text-base" x-text="cat.icon"></span>
+              <span x-text="cat.name"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- 8000ers Grid -->
+        <div x-show="activeCategory === '8000ers'">
+          <div class="grid grid-cols-2 gap-3">
+            <template x-for="peak in eightThousanders" :key="peak.id">
+              <div @click="selectedPeak=peak;showPeakDetail=true" class="rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+                <div class="relative h-32">
+                  <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
+                  <div class="absolute top-2 right-2">
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/80 text-white font-semibold" x-text="peak.altitude + 'm'"></span>
+                  </div>
+                  <div class="absolute bottom-2 left-2 right-2">
+                    <p class="text-white text-sm font-bold" x-text="peak.name"></p>
+                    <p class="text-slate-300 text-xs" x-text="peak.nameEn"></p>
+                  </div>
+                </div>
+                <div class="bg-slate-800 px-3 py-2">
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400 truncate mr-1" x-text="peak.country"></span>
+                    <span class="text-xs text-primary-light font-semibold" x-text="peak.difficulty"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Continental Peaks -->
+        <div x-show="activeCategory === 'continental'">
+          <div class="space-y-3">
+            <template x-for="peak in continentalPeaks" :key="peak.id">
+              <div class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+                <img :src="peak.image" :alt="peak.name" class="w-24 h-24 object-cover flex-shrink-0">
+                <div class="py-3 flex-1 pr-3">
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <p class="text-white font-semibold" x-text="peak.name"></p>
+                      <p class="text-slate-400 text-xs" x-text="peak.nameEn"></p>
+                    </div>
+                    <span class="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-slate-300 flex-shrink-0" x-text="peak.continent"></span>
+                  </div>
+                  <div class="flex gap-3 mt-2">
+                    <span class="text-xs text-primary-light font-bold" x-text="peak.altitude + 'm'"></span>
+                    <span class="text-xs text-slate-400" x-text="peak.country"></span>
+                    <span class="text-xs text-orange-400" x-text="peak.difficulty"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- World Peaks -->
+        <div x-show="activeCategory === 'world'">
+          <div class="space-y-3">
+            <template x-for="peak in worldPeaks" :key="peak.id">
+              <div class="glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
+                <div class="relative h-36">
+                  <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+                  <div class="absolute bottom-3 left-3">
+                    <p class="text-white font-bold" x-text="peak.name"></p>
+                    <p class="text-slate-300 text-xs" x-text="peak.nameEn + ' · ' + peak.altitude + 'm'"></p>
+                  </div>
+                  <div class="absolute top-3 right-3">
+                    <span class="text-xs bg-primary/80 px-2 py-0.5 rounded-full text-white" x-text="peak.country"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Alpine Spots -->
+        <div x-show="activeCategory === 'alpine'">
+          <div class="space-y-3">
+            <template x-for="spot in climbingSpots" :key="spot.id">
+              <div class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+                <img :src="spot.image" :alt="spot.name" class="w-24 h-24 object-cover flex-shrink-0">
+                <div class="py-3 flex-1">
+                  <p class="text-white font-semibold" x-text="spot.name"></p>
+                  <p class="text-slate-400 text-xs" x-text="spot.nameEn"></p>
+                  <div class="flex gap-2 mt-2">
+                    <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full" x-text="spot.difficulty"></span>
+                    <span class="text-xs text-slate-400" x-text="spot.country"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- No match (intentional bug state when activeCategory='summits') -->
+        <div x-show="!['8000ers','continental','world','alpine'].includes(activeCategory)" class="text-center py-12">
+          <span class="material-symbols-outlined text-slate-600 text-6xl">landscape</span>
+          <p class="text-slate-500 mt-3">请选择分类</p>
+        </div>
+
+        <!-- Expeditions Placeholder -->
+        <div class="mt-6">
+          <h3 class="font-display font-bold text-white mb-3">远征计划</h3>
+          <div class="glass rounded-2xl p-6 text-center">
+            <span class="material-symbols-outlined text-slate-500 text-4xl">flag</span>
+            <p class="text-slate-400 text-sm mt-2">即将推出更多远征计划</p>
+          </div>
+        </div>
+
+        <!-- Guides Placeholder -->
+        <div class="mt-4 mb-2">
+          <h3 class="font-display font-bold text-white mb-3">专业向导</h3>
+          <div class="glass rounded-2xl p-6 text-center">
+            <span class="material-symbols-outlined text-slate-500 text-4xl">person_pin</span>
+            <p class="text-slate-400 text-sm mt-2">向导信息即将上线</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMMUNITY PAGE -->
+    <section x-show="currentPage === 'community'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-display font-bold text-xl text-white">社区</h2>
+          <button @click="showPostEditor=true" class="flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-primary-light transition-colors">
+            <span class="material-symbols-outlined text-base">add</span>发布
+          </button>
+        </div>
+        <!-- Tab Bar -->
+        <div class="flex gap-4 overflow-x-auto scroll-hide pb-3 mb-4 border-b border-white/10">
+          <template x-for="tab in [{id:'all',name:'全部'},{id:'posts',name:'动态'},{id:'diary',name:'日记'},{id:'clubs',name:'俱乐部'},{id:'teams',name:'组队'}]" :key="tab.id">
+            <button @click="activeChatType=tab.id"
+                    :class="activeChatType===tab.id ? 'text-primary-light border-b-2 border-primary-light' : 'text-slate-400'"
+                    class="flex-shrink-0 pb-1 text-sm font-medium transition-colors" x-text="tab.name"></button>
+          </template>
+        </div>
+
+        <!-- Teams Section -->
+        <div x-show="activeChatType==='teams' || activeChatType==='all'" class="mb-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-white">招募队伍</h3>
+            <button @click="showCreateTeam=true" class="text-xs text-primary-light flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">add_circle</span>创建队伍
+            </button>
+          </div>
+          <div class="space-y-3">
+            <template x-for="team in teams" :key="team.id">
+              <div @click="selectedTeam=team;showTeamDetail=true" class="glass rounded-2xl p-4 cursor-pointer hover:bg-white/10 transition-colors">
+                <div class="flex items-center gap-3">
+                  <img :src="team.leaderAvatar" class="w-10 h-10 rounded-full object-cover">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-white font-semibold truncate" x-text="team.name"></p>
+                    <p class="text-slate-400 text-xs" x-text="team.peak"></p>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="text-primary-light text-sm font-bold" x-text="team.spots + '/' + team.totalSpots"></p>
+                    <p class="text-slate-500 text-xs">名额</p>
+                  </div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                  <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full" x-text="team.date"></span>
+                  <span class="text-xs bg-primary/20 text-primary-light px-2 py-0.5 rounded-full" x-text="team.level"></span>
+                  <span class="text-xs text-slate-400" x-text="'领队: ' + team.leader"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Posts Section -->
+        <div x-show="activeChatType==='posts' || activeChatType==='all'" class="mb-5">
+          <h3 class="font-semibold text-white mb-3" x-show="activeChatType==='all'">最新动态</h3>
+          <div class="glass rounded-2xl p-4 mb-3">
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://i.pravatar.cc/150?u=climber1" class="w-9 h-9 rounded-full object-cover">
+              <div class="flex-1">
+                <p class="text-white text-sm font-semibold">冰川行者</p>
+                <p class="text-slate-500 text-xs">2小时前 · 珠峰大本营</p>
+              </div>
+              <button class="text-primary-light text-xs border border-primary-light/50 rounded-full px-3 py-0.5">关注</button>
+            </div>
+            <p class="text-slate-300 text-sm mb-3">今天成功抵达珠峰大本营！海拔5364米，氧气稀薄，但心情无比激动。明天开始适应性训练，向顶峰冲刺！💪🏔️</p>
+            <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400" class="w-full h-40 object-cover rounded-xl mb-3">
+            <div class="flex items-center gap-4 pt-2 border-t border-white/10">
+              <button @click="showComments=true;selectedPostForComment=1" class="flex items-center gap-1.5 text-slate-400 hover:text-red-400 transition-colors text-sm">
+                <span class="material-symbols-outlined text-base">favorite</span><span>286</span>
+              </button>
+              <button @click="showComments=true;selectedPostForComment=1" class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+                <span class="material-symbols-outlined text-base">chat_bubble</span><span>43</span>
+              </button>
+              <button @click="showShare=true;selectedPostForShare=1" class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+                <span class="material-symbols-outlined text-base">share</span><span>分享</span>
+              </button>
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4 mb-3">
+            <div class="flex items-center gap-3 mb-3">
+              <img src="https://i.pravatar.cc/150?u=climber2" class="w-9 h-9 rounded-full object-cover">
+              <div class="flex-1">
+                <p class="text-white text-sm font-semibold">峰顶追梦人</p>
+                <p class="text-slate-500 text-xs">5小时前 · K2 BC</p>
+              </div>
+              <button class="text-primary-light text-xs border border-primary-light/50 rounded-full px-3 py-0.5">关注</button>
+            </div>
+            <p class="text-slate-300 text-sm mb-3">K2 的天气窗口终于来了！明天凌晨2点出发，冲击顶峰。感谢所有人的支持，祝我们好运！🙏</p>
+            <div class="flex items-center gap-4 pt-2 border-t border-white/10">
+              <button @click="showComments=true;selectedPostForComment=2" class="flex items-center gap-1.5 text-slate-400 hover:text-red-400 transition-colors text-sm">
+                <span class="material-symbols-outlined text-base">favorite</span><span>512</span>
+              </button>
+              <button @click="showComments=true;selectedPostForComment=2" class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+                <span class="material-symbols-outlined text-base">chat_bubble</span><span>89</span>
+              </button>
+              <button @click="showShare=true;selectedPostForShare=2" class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+                <span class="material-symbols-outlined text-base">share</span><span>分享</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRACK PAGE (standalone) -->
+    <section x-show="currentPage === 'track'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2">
+        <h2 class="font-display font-bold text-xl text-white mb-4">轨迹记录</h2>
+        <!-- GPS Map Placeholder -->
+        <div class="glass rounded-2xl h-48 mb-4 relative overflow-hidden flex items-center justify-center">
+          <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900"></div>
+          <div class="relative text-center">
+            <span class="material-symbols-outlined text-primary-light text-5xl">map</span>
+            <p class="text-slate-400 text-sm mt-2">GPS 地图</p>
+            <div class="flex items-center gap-1.5 justify-center mt-2">
+              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span class="text-green-400 text-xs font-semibold">GPS 已连接</span>
+            </div>
+          </div>
+        </div>
+        <!-- Live Stats -->
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="glass rounded-2xl p-3 text-center">
+            <p class="text-2xl font-bold text-white">0.0</p>
+            <p class="text-xs text-slate-400 mt-1">距离 (km)</p>
+          </div>
+          <div class="glass rounded-2xl p-3 text-center">
+            <p class="text-2xl font-bold text-white">0</p>
+            <p class="text-xs text-slate-400 mt-1">海拔 (m)</p>
+          </div>
+          <div class="glass rounded-2xl p-3 text-center">
+            <p class="text-2xl font-bold text-white">00:00</p>
+            <p class="text-xs text-slate-400 mt-1">时长</p>
+          </div>
+        </div>
+        <!-- Start Button -->
+        <button class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl mb-5 transition-colors text-lg">
+          开始记录
+        </button>
+        <!-- Track History -->
+        <h3 class="font-display font-bold text-white mb-3">历史轨迹</h3>
+        <div class="space-y-3">
+          <template x-for="track in tracks" :key="track.id">
+            <div class="glass rounded-2xl overflow-hidden flex gap-3">
+              <img :src="track.image" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
+              <div class="py-3 pr-3 flex-1 min-w-0">
+                <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
+                <p class="text-slate-400 text-xs mt-1" x-text="track.date"></p>
+                <div class="flex gap-3 mt-2">
+                  <span class="text-xs text-slate-300">📍 <span x-text="track.distance + 'km'"></span></span>
+                  <span class="text-xs text-slate-300">↑ <span x-text="track.elevation + 'm'"></span></span>
+                  <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAT PAGE -->
+    <section x-show="currentPage === 'chat'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2">
+        <h2 class="font-display font-bold text-xl text-white mb-4">聊天</h2>
+        <!-- Sub Tabs -->
+        <div class="flex gap-1 bg-slate-800 rounded-xl p-1 mb-4">
+          <button @click="chatSubTab='all'" :class="chatSubTab==='all' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">全部</button>
+          <button @click="chatSubTab='guide'" :class="chatSubTab==='guide' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">向导</button>
+          <button @click="chatSubTab='club'" :class="chatSubTab==='club' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">俱乐部&amp;组队</button>
+          <button @click="chatSubTab='square'" :class="chatSubTab==='square' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">广场</button>
+        </div>
+
+        <!-- Session List: 全部/向导/俱乐部 -->
+        <div x-show="chatSubTab !== 'square'" class="space-y-1">
+          <template x-for="session in chatSessions.filter(s => chatSubTab === 'all' || s.type === chatSubTab || (chatSubTab === 'club' && s.type === 'club'))" :key="session.id">
+            <div @click="activeChatSession=session;showChatWindow=true" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer">
+              <div class="relative flex-shrink-0">
+                <img :src="session.avatar" class="w-12 h-12 rounded-full object-cover">
+                <span class="absolute -bottom-0.5 -right-0.5 text-sm" x-text="session.flag"></span>
+                <div x-show="session.online" class="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-slate-900"></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-0.5">
+                  <p class="text-white text-sm font-semibold truncate" x-text="session.name"></p>
+                  <p class="text-slate-500 text-xs flex-shrink-0 ml-2" x-text="session.time"></p>
+                </div>
+                <div class="flex items-center justify-between">
+                  <p class="text-slate-400 text-xs truncate" x-text="session.lastMsg"></p>
+                  <div x-show="session.unread > 0" class="flex-shrink-0 ml-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                    <span class="text-white text-xs font-bold" x-text="session.unread"></span>
+                  </div>
+                </div>
+                <!-- Club members flags -->
+                <div x-show="session.members" class="flex gap-0.5 mt-1">
+                  <template x-for="flag in (session.members || [])" :key="flag">
+                    <span class="text-xs" x-text="flag"></span>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Square Tab -->
+        <div x-show="chatSubTab === 'square'" class="space-y-3">
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <img src="https://i.pravatar.cc/150?u=climber1" class="w-8 h-8 rounded-full object-cover">
+              <div class="flex-1">
+                <p class="text-white text-sm font-semibold">冰川行者 🇨🇳</p>
+                <p class="text-slate-500 text-xs">2小时前</p>
+              </div>
+            </div>
+            <p class="text-slate-300 text-sm mb-3">今天成功抵达珠峰大本营！有同行的朋友吗？💪</p>
+            <div class="flex gap-3">
+              <button class="flex items-center gap-1 text-slate-400 text-xs hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm">favorite</span>286</button>
+              <button class="flex items-center gap-1 text-slate-400 text-xs hover:text-white transition-colors"><span class="material-symbols-outlined text-sm">chat_bubble</span>43</button>
+              <button @click="activeChatSession={id:99,name:'冰川行者',avatar:'https://i.pravatar.cc/150?u=climber1',flag:'🇨🇳',type:'guide',online:true,unread:0,lastMsg:'',messages:[]};showChatWindow=true" class="flex items-center gap-1 text-primary-light text-xs hover:text-white transition-colors ml-auto"><span class="material-symbols-outlined text-sm">send</span>私信TA</button>
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <img src="https://i.pravatar.cc/150?u=climber2" class="w-8 h-8 rounded-full object-cover">
+              <div class="flex-1">
+                <p class="text-white text-sm font-semibold">峰顶追梦人 🇨🇳</p>
+                <p class="text-slate-500 text-xs">5小时前</p>
+              </div>
+            </div>
+            <p class="text-slate-300 text-sm mb-3">K2 天气窗口来了！有没有人一起组队？</p>
+            <div class="flex gap-3">
+              <button class="flex items-center gap-1 text-slate-400 text-xs hover:text-red-400 transition-colors"><span class="material-symbols-outlined text-sm">favorite</span>512</button>
+              <button class="flex items-center gap-1 text-slate-400 text-xs hover:text-white transition-colors"><span class="material-symbols-outlined text-sm">chat_bubble</span>89</button>
+              <button @click="activeChatSession={id:100,name:'峰顶追梦人',avatar:'https://i.pravatar.cc/150?u=climber2',flag:'🇨🇳',type:'guide',online:false,unread:0,lastMsg:'',messages:[]};showChatWindow=true" class="flex items-center gap-1 text-primary-light text-xs hover:text-white transition-colors ml-auto"><span class="material-symbols-outlined text-sm">send</span>私信TA</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GEAR PAGE -->
+    <section x-show="currentPage === 'gear'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-display font-bold text-xl text-white">装备市场</h2>
+          <button @click="showGearPublish=true" class="flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-primary-light transition-colors">
+            <span class="material-symbols-outlined text-base">sell</span>出售
+          </button>
+        </div>
+        <!-- Mode Tabs -->
+        <div class="flex bg-slate-800 rounded-xl p-1 mb-4">
+          <button @click="gearMode='buy'" :class="gearMode==='buy' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all">新品购买</button>
+          <button @click="gearMode='used'" :class="gearMode==='used' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all">二手交易</button>
+        </div>
+        <!-- Publish used gear button (only in used mode) -->
+        <div x-show="gearMode==='used'" class="flex items-center justify-between mb-3">
+          <p class="text-slate-400 text-xs">找到心仪的二手装备</p>
+          <button @click="showGearPublish=true" class="flex items-center gap-1.5 bg-primary text-white px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-primary-light transition-colors">
+            <span class="material-symbols-outlined text-sm">add</span>发布二手
+          </button>
+        </div>
+        <!-- Category Chips -->
+        <div class="flex gap-2 overflow-x-auto scroll-hide pb-3 mb-4">
+          <template x-for="cat in ['全部','冰斧','绳索','鞋靴','服装','帐篷','背包','保暖']" :key="cat">
+            <button class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium glass text-slate-300 hover:bg-white/10 transition-colors" x-text="cat"></button>
+          </template>
+        </div>
+        <!-- Gear Grid -->
+        <div class="grid grid-cols-2 gap-3 mb-5">
+          <div @click="selectedGear={id:1,name:'Black Diamond 冰斧',brand:'Black Diamond',price:1280,condition:'全新',image:'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400',description:'专业攀冰冰斧，65cm，全新未用'};showGearDetail=true"
+               class="glass rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+            <img src="https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400" class="w-full h-32 object-cover">
+            <div class="p-2.5">
+              <p class="text-white text-xs font-semibold truncate">Black Diamond 冰斧</p>
+              <p class="text-slate-400 text-xs">Black Diamond</p>
+              <p class="text-primary-light font-bold mt-1">¥1,280</p>
+            </div>
+          </div>
+          <div @click="selectedGear={id:2,name:'Mammut 干绳 60m',brand:'Mammut',price:2580,condition:'全新',image:'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400',description:'Mammut Infinity 干绳，60米，绿色'};showGearDetail=true"
+               class="glass rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+            <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?w=400" class="w-full h-32 object-cover">
+            <div class="p-2.5">
+              <p class="text-white text-xs font-semibold truncate">Mammut 干绳 60m</p>
+              <p class="text-slate-400 text-xs">Mammut</p>
+              <p class="text-primary-light font-bold mt-1">¥2,580</p>
+            </div>
+          </div>
+          <div @click="selectedGear={id:3,name:'Scarpa 高山靴',brand:'Scarpa',price:3680,condition:'九成新',image:'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400',description:'Scarpa Phantom 6000 高山靴，44码'};showGearDetail=true"
+               class="glass rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+            <img src="https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400" class="w-full h-32 object-cover">
+            <div class="p-2.5">
+              <p class="text-white text-xs font-semibold truncate">Scarpa 高山靴</p>
+              <p class="text-slate-400 text-xs">Scarpa</p>
+              <p class="text-primary-light font-bold mt-1">¥3,680</p>
+            </div>
+          </div>
+          <div @click="selectedGear={id:4,name:"Arc'teryx 冲锋衣",brand:"Arc'teryx",price:4200,condition:'全新',image:'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400',description:"Arc'teryx Alpha SV 冲锋衣，M码"};showGearDetail=true"
+               class="glass rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+            <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400" class="w-full h-32 object-cover">
+            <div class="p-2.5">
+              <p class="text-white text-xs font-semibold truncate">Arc'teryx 冲锋衣</p>
+              <p class="text-slate-400 text-xs">Arc'teryx</p>
+              <p class="text-primary-light font-bold mt-1">¥4,200</p>
+            </div>
+          </div>
+        </div>
+        <!-- Insurance Section -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-display font-bold text-white">攀登保险</h3>
+            <button @click="showInsurance=true" class="text-xs text-primary-light">查看方案</button>
+          </div>
+          <div @click="showInsurance=true" class="glass rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+            <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+              <span class="material-symbols-outlined text-blue-400 text-2xl">security</span>
+            </div>
+            <div class="flex-1">
+              <p class="text-white font-semibold">高原攀登综合保险</p>
+              <p class="text-slate-400 text-xs mt-0.5">救援 · 医疗 · 意外 · 器材</p>
+            </div>
+            <span class="material-symbols-outlined text-slate-500">chevron_right</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ME PAGE (intentionally unclosed before settings modal) -->
+    <section x-show="currentPage === 'me'"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2">
+        <!-- Profile Card -->
+        <div class="glass rounded-3xl p-5 mb-4">
+          <div class="flex items-center gap-4 mb-4">
+            <img :src="userProfile.avatar" class="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary-light">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-display font-bold text-xl text-white" x-text="userProfile.name"></h3>
+                <span class="text-xs bg-primary/30 text-primary-light px-2 py-0.5 rounded-full font-semibold" x-text="userProfile.level"></span>
+              </div>
+              <p class="text-slate-400 text-sm" x-text="userProfile.username"></p>
+            </div>
+            <button @click="showSettings=true;settingsType='profile'" class="p-2 rounded-xl hover:bg-white/10 transition-colors">
+              <span class="material-symbols-outlined text-slate-400">edit</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p class="text-xl font-bold text-white" x-text="userProfile.summits"></p>
+              <p class="text-xs text-slate-400">登顶</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold text-white" x-text="userProfile.expeditions"></p>
+              <p class="text-xs text-slate-400">远征</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold text-white" x-text="userProfile.followers"></p>
+              <p class="text-xs text-slate-400">粉丝</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold text-white" x-text="userProfile.following"></p>
+              <p class="text-xs text-slate-400">关注</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Community Quick Links -->
+        <div class="mb-4">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">社区</p>
+          <div class="grid grid-cols-4 gap-2">
+            <button @click="currentPage='community';activeChatType='posts'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-xl">📝</span>
+              <span class="text-xs text-slate-300 font-medium">动态</span>
+            </button>
+            <button @click="currentPage='community';activeChatType='diary'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-xl">📖</span>
+              <span class="text-xs text-slate-300 font-medium">日记</span>
+            </button>
+            <button @click="currentPage='community';activeChatType='teams'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-xl">👥</span>
+              <span class="text-xs text-slate-300 font-medium">组队</span>
+            </button>
+            <button @click="currentPage='community';activeChatType='clubs'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-xl">🏛️</span>
+              <span class="text-xs text-slate-300 font-medium">俱乐部</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Menu Items -->
+        <div class="glass rounded-2xl overflow-hidden mb-4">
+          <template x-for="item in [{icon:'backpack',name:'我的装备',sub:'8件装备'},{icon:'route',name:'我的轨迹',sub:'2条记录'},{icon:'groups',name:'我的队伍',sub:'1支队伍'},{icon:'emoji_events',name:'我的成就',sub:'12项成就'},{icon:'workspace_premium',name:'会员中心',sub:'专业会员'}]" :key="item.name">
+            <button class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
+              <div class="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center">
+                <span class="material-symbols-outlined text-primary-light text-lg" x-text="item.icon"></span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium" x-text="item.name"></p>
+                <p class="text-slate-500 text-xs" x-text="item.sub"></p>
+              </div>
+              <span class="material-symbols-outlined text-slate-600">chevron_right</span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Settings Menu -->
+        <div class="glass rounded-2xl overflow-hidden mb-4">
+          <template x-for="item in [{icon:'language',name:'语言设置',type:'language'},{icon:'straighten',name:'单位设置',type:'units'},{icon:'notifications',name:'消息通知',type:'notifications'},{icon:'lock',name:'隐私设置',type:'privacy'},{icon:'help',name:'帮助与反馈',type:'help'}]" :key="item.name">
+            <button @click="showSettings=true;settingsType=item.type" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
+              <div class="w-9 h-9 bg-slate-700/50 rounded-xl flex items-center justify-center">
+                <span class="material-symbols-outlined text-slate-400 text-lg" x-text="item.icon"></span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium" x-text="item.name"></p>
+              </div>
+              <span class="material-symbols-outlined text-slate-600">chevron_right</span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Guide Apply Banner -->
+        <div @click="showGuideApply=true" class="rounded-2xl p-4 mb-4 cursor-pointer hover:opacity-90 transition-opacity" style="background: linear-gradient(135deg,#e57c23,#c0392b);">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-white font-bold text-sm">🧗 成为认证向导</p>
+              <p class="text-orange-100 text-xs mt-0.5">开始赚取收入 · 审核7天内完成</p>
+            </div>
+            <span class="material-symbols-outlined text-white">arrow_forward</span>
+          </div>
+        </div>
+
+        <!-- Emergency SOS text button -->
+        <button @click="showSOSConfirm=true" class="w-full glass rounded-2xl py-3 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-3 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">emergency</span>紧急求救
+        </button>
+
+        <!-- Logout -->
+        <button class="w-full glass rounded-2xl py-4 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-4 flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-base">logout</span>退出登录
+        </button>
+      </div>
+      </div>
+    </section>
+
+<!-- Payment Modal -->
+<div x-show="showPayment"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+  <div class="absolute inset-0 bg-black/70" @click="showPayment=false"></div>
+  <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display font-bold text-xl text-white">选择支付方式</h3>
+        <button @click="showPayment=false" class="p-1.5 rounded-full hover:bg-white/10">
+          <span class="material-symbols-outlined text-slate-400">close</span>
+        </button>
+      </div>
+      <div class="text-center mb-5">
+        <p class="text-slate-400 text-sm">支付金额</p>
+        <p class="text-3xl font-bold text-white mt-1" x-text="paymentAmount ? formatPrice(paymentAmount) : '¥0'"></p>
+      </div>
+      <!-- Payment Methods -->
+      <div class="space-y-3 mb-5">
+        <button @click="paymentMethod='alipay'" class="w-full flex items-center gap-3 p-4 rounded-2xl transition-all" :class="paymentMethod==='alipay' ? 'bg-blue-500/20 border border-blue-400/50' : 'bg-slate-800 border border-transparent'">
+          <span class="text-2xl">💙</span>
+          <div class="text-left flex-1">
+            <p class="text-white font-semibold text-sm">支付宝</p>
+            <p class="text-slate-400 text-xs">Alipay · 支持花呗</p>
+          </div>
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center" :class="paymentMethod==='alipay' ? 'border-blue-400 bg-blue-400' : 'border-slate-500'">
+            <div class="w-2 h-2 rounded-full bg-white" x-show="paymentMethod==='alipay'"></div>
+          </div>
+        </button>
+        <button @click="paymentMethod='wechat'" class="w-full flex items-center gap-3 p-4 rounded-2xl transition-all" :class="paymentMethod==='wechat' ? 'bg-green-500/20 border border-green-400/50' : 'bg-slate-800 border border-transparent'">
+          <span class="text-2xl">💚</span>
+          <div class="text-left flex-1">
+            <p class="text-white font-semibold text-sm">微信支付</p>
+            <p class="text-slate-400 text-xs">WeChat Pay · 零手续费</p>
+          </div>
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center" :class="paymentMethod==='wechat' ? 'border-green-400 bg-green-400' : 'border-slate-500'">
+            <div class="w-2 h-2 rounded-full bg-white" x-show="paymentMethod==='wechat'"></div>
+          </div>
+        </button>
+        <button @click="paymentMethod='stripe'" class="w-full flex items-center gap-3 p-4 rounded-2xl transition-all" :class="paymentMethod==='stripe' ? 'bg-violet-500/20 border border-violet-400/50' : 'bg-slate-800 border border-transparent'">
+          <span class="text-2xl">💳</span>
+          <div class="text-left flex-1">
+            <p class="text-white font-semibold text-sm">Stripe</p>
+            <p class="text-slate-400 text-xs">Credit / Debit Card · 国际卡</p>
+          </div>
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center" :class="paymentMethod==='stripe' ? 'border-violet-400 bg-violet-400' : 'border-slate-500'">
+            <div class="w-2 h-2 rounded-full bg-white" x-show="paymentMethod==='stripe'"></div>
+          </div>
+        </button>
+        <button @click="paymentMethod='paypal'" class="w-full flex items-center gap-3 p-4 rounded-2xl transition-all" :class="paymentMethod==='paypal' ? 'bg-yellow-500/20 border border-yellow-400/50' : 'bg-slate-800 border border-transparent'">
+          <span class="text-2xl">🅿️</span>
+          <div class="text-left flex-1">
+            <p class="text-white font-semibold text-sm">PayPal</p>
+            <p class="text-slate-400 text-xs">PayPal Balance / Bank Account</p>
+          </div>
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center" :class="paymentMethod==='paypal' ? 'border-yellow-400 bg-yellow-400' : 'border-slate-500'">
+            <div class="w-2 h-2 rounded-full bg-white" x-show="paymentMethod==='paypal'"></div>
+          </div>
+        </button>
+      </div>
+      <button @click="confirmPayment()" class="w-full bg-primary hover:bg-primary-light text-white py-4 rounded-2xl font-bold text-base transition-colors">
+        确认支付
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Guide Apply Modal -->
+<div x-show="showGuideApply"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+  <div class="absolute inset-0 bg-black/70" @click="showGuideApply=false"></div>
+  <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display font-bold text-xl text-white">向导资质申请</h3>
+        <button @click="showGuideApply=false" class="p-1.5 rounded-full hover:bg-white/10">
+          <span class="material-symbols-outlined text-slate-400">close</span>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">真实姓名 *</label>
+          <input type="text" x-model="guideApplyForm.name" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="请输入真实姓名">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">专业证书 *</label>
+          <input type="text" x-model="guideApplyForm.cert" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="如：IFMGA/UIAGM 认证编号">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">专长山峰</label>
+          <input type="text" x-model="guideApplyForm.specialty" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="如：珠峰、K2、马特洪峰">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">服务语言</label>
+          <input type="text" x-model="guideApplyForm.languages" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="如：中文、English、Français">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">日费用（USD）</label>
+          <input type="number" x-model="guideApplyForm.dayRate" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="例：300">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">服务地区</label>
+          <input type="text" x-model="guideApplyForm.region" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="如：喜马拉雅、阿尔卑斯、安第斯">
+        </div>
+        <button @click="submitGuideApply()" class="w-full bg-primary hover:bg-primary-light text-white py-4 rounded-2xl font-bold text-base transition-colors">提交申请</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Language Picker Modal -->
+<div x-show="showLangPicker"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[300] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+  <div class="absolute inset-0 bg-black/70" @click="showLangPicker=false"></div>
+  <div class="relative bottom-sheet bg-slate-900 max-h-[80vh] overflow-y-auto">
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display font-bold text-xl text-white" x-text="t('language')"></h3>
+        <button @click="showLangPicker=false" class="p-1.5 rounded-full hover:bg-white/10">
+          <span class="material-symbols-outlined text-slate-400">close</span>
+        </button>
+      </div>
+      <div class="space-y-2">
+        <template x-for="lang in availableLangs" :key="lang.code">
+          <button @click="currentLang=lang.code; showLangPicker=false"
+                  :class="currentLang===lang.code ? 'ring-2 ring-primary bg-primary/10' : 'hover:bg-white/5'"
+                  class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3 transition-all">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl" x-text="lang.flag"></span>
+              <div class="text-left">
+                <p class="text-white font-semibold" x-text="lang.native"></p>
+                <p class="text-slate-400 text-xs" x-text="lang.code"></p>
+              </div>
+            </div>
+            <span x-show="currentLang===lang.code" class="material-symbols-outlined text-primary-light">check_circle</span>
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- MODALS -->
+
+    <!-- Peak Detail Modal -->
+    <div x-show="showPeakDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showPeakDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <template x-if="selectedPeak">
+          <div>
+            <div class="relative h-52">
+              <img :src="selectedPeak.image" :alt="selectedPeak.name" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+              <button @click="showPeakDetail=false" class="absolute top-4 right-4 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-base">close</span>
+              </button>
+              <div class="absolute bottom-4 left-4">
+                <h3 class="text-2xl font-display font-bold text-white" x-text="selectedPeak.name"></h3>
+                <p class="text-slate-300 text-sm" x-text="selectedPeak.nameEn"></p>
+              </div>
+            </div>
+            <div class="p-5">
+              <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-slate-800 rounded-xl p-3 text-center">
+                  <p class="text-xs text-slate-400">海拔</p>
+                  <p class="text-white font-bold text-sm mt-1" x-text="selectedPeak.altitude + 'm'"></p>
+                </div>
+                <div class="bg-slate-800 rounded-xl p-3 text-center">
+                  <p class="text-xs text-slate-400">难度</p>
+                  <p class="text-red-400 font-bold text-sm mt-1" x-text="selectedPeak.difficulty"></p>
+                </div>
+                <div class="bg-slate-800 rounded-xl p-3 text-center">
+                  <p class="text-xs text-slate-400">国家</p>
+                  <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.country"></p>
+                </div>
+              </div>
+              <template x-if="selectedPeak.weather">
+                <div class="bg-slate-800 rounded-xl p-3 mb-4 flex items-center gap-4">
+                  <span class="text-2xl">🌡️</span>
+                  <div>
+                    <p class="text-xs text-slate-400">当前天气</p>
+                    <p class="text-white text-sm font-semibold" x-text="selectedPeak.weather.temp + '°C · 风速 ' + selectedPeak.weather.wind + ' km/h'"></p>
+                  </div>
+                </div>
+              </template>
+              <template x-if="selectedPeak.description">
+                <p class="text-slate-400 text-sm mb-5" x-text="selectedPeak.description"></p>
+              </template>
+              <div class="flex gap-3">
+                <button @click="showPeakDetail=false;bookingData.mountain=selectedPeak.name;showBooking=true" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
+                <button class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors">
+                  <span class="material-symbols-outlined">bookmark</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div x-show="showBooking"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showBooking=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-xl text-white">预约攀登</h3>
+            <button @click="showBooking=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div class="bg-slate-800/50 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary-light">landscape</span>
+            <span class="text-white font-semibold" x-text="bookingData.mountain || '请先选择山峰'"></span>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">出发日期</label>
+              <input x-model="bookingData.date" type="date" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">成员人数</label>
+              <div class="flex items-center gap-4">
+                <button @click="bookingData.members = Math.max(1, bookingData.members - 1)" class="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-600 transition-colors">-</button>
+                <span class="text-white font-bold text-lg w-8 text-center" x-text="bookingData.members"></span>
+                <button @click="bookingData.members = Math.min(20, bookingData.members + 1)" class="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-600 transition-colors">+</button>
+              </div>
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">备注</label>
+              <textarea x-model="bookingData.notes" rows="3" placeholder="特殊需求或说明..." class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600 resize-none"></textarea>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-5">
+            <button @click="showBooking=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
+            <button @click="submitBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOS Modal -->
+    <div x-show="showSOS"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[200] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/85" @click="showSOS=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-xl text-red-400">🆘 紧急救援</h3>
+            <button @click="showSOS=false;sosStep=0" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div x-show="sosStep === 0">
+            <div class="bg-slate-800 rounded-2xl p-4 mb-5">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span class="text-green-400 text-xs font-semibold">GPS 定位已获取</span>
+              </div>
+              <p class="text-slate-300 text-sm">📍 27.9881° N, 86.9250° E</p>
+              <p class="text-slate-500 text-xs mt-1">珠穆朗玛峰大本营附近，海拔 5,364m</p>
+            </div>
+            <p class="text-slate-400 text-sm text-center mb-6">按下按钮将向紧急联系人和救援中心发送您的位置</p>
+            <button @click="sosStep=1" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-5 rounded-2xl pulse-red text-xl transition-colors mb-4">
+              🆘 发送 SOS
+            </button>
+            <button @click="showSOS=false" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors text-sm">取消</button>
+          </div>
+          <div x-show="sosStep === 1">
+            <div class="text-center py-4 mb-5">
+              <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <span class="material-symbols-outlined text-white text-3xl">check</span>
+              </div>
+              <h4 class="text-white font-bold text-xl">SOS 已发送</h4>
+              <p class="text-slate-400 text-sm mt-1">救援团队正在响应</p>
+            </div>
+            <h4 class="text-white font-semibold mb-3">紧急联系人</h4>
+            <div class="space-y-2">
+              <template x-for="contact in emergencyContacts" :key="contact.number">
+                <div class="bg-slate-800 rounded-xl p-3 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="text-xl" x-text="contact.country"></span>
+                    <div>
+                      <p class="text-white text-sm font-semibold" x-text="contact.name"></p>
+                      <p class="text-slate-400 text-xs" x-text="contact.number"></p>
+                    </div>
+                  </div>
+                  <button class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-green-400 text-lg">call</span>
+                  </button>
+                </div>
+              </template>
+            </div>
+            <button @click="showSOS=false;sosStep=0" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors text-sm mt-5">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div x-show="showSettings"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showSettings=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-xl text-white">设置</h3>
+            <button @click="showSettings=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div x-show="settingsType==='language'" class="space-y-3">
+            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">选择语言</h4>
+            <button @click="currentLang='zh'" :class="currentLang==='zh' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div class="flex items-center gap-3"><span class="text-2xl">🇨🇳</span><div class="text-left"><p class="text-white font-semibold">中文</p><p class="text-slate-400 text-xs">简体中文</p></div></div>
+              <span x-show="currentLang==='zh'" class="material-symbols-outlined text-primary-light">check_circle</span>
+            </button>
+            <button @click="currentLang='en'" :class="currentLang==='en' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div class="flex items-center gap-3"><span class="text-2xl">🇬🇧</span><div class="text-left"><p class="text-white font-semibold">English</p><p class="text-slate-400 text-xs">English (US)</p></div></div>
+              <span x-show="currentLang==='en'" class="material-symbols-outlined text-primary-light">check_circle</span>
+            </button>
+          </div>
+          <div x-show="settingsType==='units'" class="space-y-4">
+            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">单位设置</h4>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <span class="text-white">公制 (km, m)</span>
+              <button @click="useMetric=true" :class="useMetric ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative">
+                <span :class="useMetric ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <span class="text-white">英制 (mi, ft)</span>
+              <button @click="useMetric=false" :class="!useMetric ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative">
+                <span :class="!useMetric ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+          </div>
+          <div x-show="settingsType==='profile'" class="space-y-4">
+            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">编辑资料</h4>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">昵称</label>
+              <input x-model="userProfile.name" type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">用户名</label>
+              <input x-model="userProfile.username" type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+            </div>
+          </div>
+          <div x-show="!['language','units','profile'].includes(settingsType)" class="text-center py-8">
+            <span class="material-symbols-outlined text-slate-600 text-5xl">settings</span>
+            <p class="text-slate-400 mt-3">设置即将推出</p>
+          </div>
+          <button @click="showSettings=false" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments Modal -->
+    <div x-show="showComments"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showComments=false"></div>
+      <div class="relative bottom-sheet bg-slate-900" style="max-height:70vh;display:flex;flex-direction:column;">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <h3 class="font-display font-bold text-white">评论</h3>
+          <button @click="showComments=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-5 space-y-4">
+          <div class="flex gap-3">
+            <img src="https://i.pravatar.cc/150?u=c1" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-white text-sm font-semibold">雪域行者</span>
+                <span class="text-slate-500 text-xs">2小时前</span>
+              </div>
+              <p class="text-slate-300 text-sm">太厉害了！加油，为你骄傲！💪</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <img src="https://i.pravatar.cc/150?u=c2" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-white text-sm font-semibold">高峰挑战者</span>
+                <span class="text-slate-500 text-xs">3小时前</span>
+              </div>
+              <p class="text-slate-300 text-sm">注意安全，好好适应高原反应！</p>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <img src="https://i.pravatar.cc/150?u=c3" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-white text-sm font-semibold">攀岩达人</span>
+                <span class="text-slate-500 text-xs">4小时前</span>
+              </div>
+              <p class="text-slate-300 text-sm">梦想的起点！期待看到你登顶的那一刻 🏔️</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 border-t border-white/10">
+          <div class="flex gap-3 items-center">
+            <img :src="userProfile.avatar" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+            <input type="text" placeholder="发表评论..." class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            <button class="w-8 h-8 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
+              <span class="material-symbols-outlined text-white text-base">send</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div x-show="showShare"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showShare=false"></div>
+      <div class="relative bottom-sheet bg-slate-900">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-white">分享</h3>
+            <button @click="showShare=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-4 gap-4 mb-5">
+            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+              <div class="w-14 h-14 bg-green-500/20 rounded-2xl flex items-center justify-center text-2xl">💬</div>
+              <span class="text-slate-400 text-xs">微信</span>
+            </button>
+            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+              <div class="w-14 h-14 bg-green-600/20 rounded-2xl flex items-center justify-center text-2xl">🌐</div>
+              <span class="text-slate-400 text-xs">朋友圈</span>
+            </button>
+            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+              <div class="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center text-xl font-bold text-red-400">W</div>
+              <span class="text-slate-400 text-xs">微博</span>
+            </button>
+            <button @click="showShare=false" class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+              <div class="w-14 h-14 bg-slate-600/50 rounded-2xl flex items-center justify-center">
+                <span class="material-symbols-outlined text-slate-300 text-xl">link</span>
+              </div>
+              <span class="text-slate-400 text-xs">复制链接</span>
+            </button>
+          </div>
+          <button @click="showShare=false" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors text-sm">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Post Editor Modal -->
+    <div x-show="showPostEditor"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showPostEditor=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-white">发布动态</h3>
+            <div class="flex gap-2">
+              <button @click="showPostEditor=false" class="px-4 py-1.5 text-slate-400 text-sm hover:text-white transition-colors">取消</button>
+              <button @click="submitPost()" class="px-4 py-1.5 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary-light transition-colors">发布</button>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 mb-4">
+            <img :src="userProfile.avatar" class="w-9 h-9 rounded-full object-cover flex-shrink-0">
+            <textarea x-model="newPost.content" rows="5" placeholder="分享你的攀登故事..." class="flex-1 bg-transparent text-white text-sm outline-none placeholder-slate-600 resize-none"></textarea>
+          </div>
+          <div class="bg-slate-800/50 rounded-xl px-3 py-2 flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-slate-400 text-base">location_on</span>
+            <input x-model="newPost.location" type="text" placeholder="添加位置..." class="bg-transparent text-slate-300 text-sm flex-1 outline-none placeholder-slate-600">
+          </div>
+          <div class="flex gap-4 border-t border-white/10 pt-4">
+            <button class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+              <span class="material-symbols-outlined text-base">photo_camera</span><span>照片</span>
+            </button>
+            <button class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+              <span class="material-symbols-outlined text-base">emoji_emotions</span><span>表情</span>
+            </button>
+            <button class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+              <span class="material-symbols-outlined text-base">tag</span><span>标签</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Detail Modal -->
+    <div x-show="showTeamDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showTeamDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <template x-if="selectedTeam">
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="font-display font-bold text-xl text-white" x-text="selectedTeam.name"></h3>
+              <button @click="showTeamDetail=false" class="p-1.5 rounded-full hover:bg-white/10">
+                <span class="material-symbols-outlined text-slate-400">close</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div class="bg-slate-800 rounded-xl p-3"><p class="text-slate-400 text-xs">目标山峰</p><p class="text-white font-semibold mt-1" x-text="selectedTeam.peak"></p></div>
+              <div class="bg-slate-800 rounded-xl p-3"><p class="text-slate-400 text-xs">出发日期</p><p class="text-white font-semibold mt-1" x-text="selectedTeam.date"></p></div>
+              <div class="bg-slate-800 rounded-xl p-3"><p class="text-slate-400 text-xs">难度等级</p><p class="text-primary-light font-semibold mt-1" x-text="selectedTeam.level"></p></div>
+              <div class="bg-slate-800 rounded-xl p-3"><p class="text-slate-400 text-xs">剩余名额</p><p class="text-white font-semibold mt-1" x-text="selectedTeam.spots + '/' + selectedTeam.totalSpots"></p></div>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-800 rounded-xl p-3 mb-5">
+              <img :src="selectedTeam.leaderAvatar" class="w-10 h-10 rounded-full object-cover">
+              <div><p class="text-slate-400 text-xs">领队</p><p class="text-white font-semibold" x-text="selectedTeam.leader"></p></div>
+            </div>
+            <div class="flex gap-3">
+              <button @click="showTeamDetail=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">关闭</button>
+              <button @click="joinTeam(selectedTeam)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">申请加入</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Gear Detail Modal -->
+    <div x-show="showGearDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showGearDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <template x-if="selectedGear">
+          <div>
+            <div class="relative h-52">
+              <img :src="selectedGear.image" :alt="selectedGear.name" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+              <button @click="showGearDetail=false" class="absolute top-4 right-4 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-base">close</span>
+              </button>
+            </div>
+            <div class="p-5">
+              <h3 class="text-xl font-display font-bold text-white mb-1" x-text="selectedGear.name"></h3>
+              <p class="text-slate-400 text-sm mb-3" x-text="selectedGear.brand"></p>
+              <div class="flex items-center gap-3 mb-4">
+                <span class="text-2xl font-bold text-primary-light" x-text="'¥' + selectedGear.price"></span>
+                <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full" x-text="selectedGear.condition"></span>
+              </div>
+              <p class="text-slate-400 text-sm mb-5" x-text="selectedGear.description"></p>
+              <!-- Seller info -->
+              <div class="flex items-center gap-3 bg-slate-800 rounded-xl p-3 mb-4">
+                <img :src="selectedGear.sellerAvatar || 'https://i.pravatar.cc/150?u=seller'" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-sm font-semibold" x-text="selectedGear.seller || '平台商品'"></p>
+                  <p class="text-slate-400 text-xs">响应率 98% · 通常1小时内回复</p>
+                </div>
+                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+              </div>
+              <!-- Shipping options -->
+              <div class="mb-4">
+                <p class="text-slate-400 text-xs mb-2">物流选项</p>
+                <div class="flex gap-2">
+                  <button class="flex-1 py-1.5 rounded-xl text-xs bg-slate-700 text-slate-300">顺丰 ¥25</button>
+                  <button class="flex-1 py-1.5 rounded-xl text-xs bg-primary/20 text-primary-light border border-primary-light/30">EMS ¥35</button>
+                  <button class="flex-1 py-1.5 rounded-xl text-xs bg-slate-700 text-slate-300">DHL $55</button>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <button @click="showGearDetail=false;contactSeller(selectedGear);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">联系卖家</button>
+                <button @click="showGearDetail=false;openPayment(selectedGear ? selectedGear.price : 0)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">立即购买</button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Insurance Modal -->
+    <div x-show="showInsurance"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showInsurance=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-xl text-white">攀登保险方案</h3>
+            <button @click="showInsurance=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <!-- Region Tabs -->
+          <div class="flex gap-2 overflow-x-auto scroll-hide pb-3 mb-4">
+            <template x-for="r in ['喜马拉雅','安第斯','阿尔卑斯','阿拉斯加','非洲','高加索','大洋洲']" :key="r">
+              <button @click="insuranceRegion=r" class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                      :class="insuranceRegion===r ? 'bg-primary text-white' : 'bg-slate-700 text-slate-400'">
+                <span x-text="r"></span>
+              </button>
+            </template>
+          </div>
+          <!-- Partners -->
+          <div class="flex gap-3 items-center mb-4">
+            <span class="text-xs text-slate-500">合作方：</span>
+            <span class="text-sm">🇨🇳 中国人寿</span>
+            <span class="text-sm">🇫🇷 AXA</span>
+            <span class="text-sm">🇩🇪 Allianz</span>
+            <span class="text-sm">🇬🇧 Lloyd's</span>
+          </div>
+          <div class="bg-slate-800 rounded-2xl p-4 mb-3">
+            <div class="flex items-center justify-between mb-3">
+              <div><h4 class="text-white font-bold">基础保障</h4><p class="text-slate-400 text-xs">适合初级攀登者</p></div>
+              <span class="text-xl font-bold text-primary-light" x-text="formatPrice(299)"><span class="text-xs font-normal text-slate-400">/次</span></span>
+            </div>
+            <ul class="space-y-1 text-xs text-slate-300 mb-3">
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>意外伤害 50万</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>紧急救援 20万</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>医疗费用 5万</li>
+            </ul>
+            <button @click="showInsurance=false;openPayment(299)" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-sm font-semibold transition-colors">选择方案</button>
+          </div>
+          <div class="bg-primary/20 border border-primary-light/30 rounded-2xl p-4 mb-3 relative">
+            <div class="absolute top-3 right-3"><span class="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-semibold">推荐</span></div>
+            <div class="mb-3"><h4 class="text-white font-bold">专业保障</h4><p class="text-slate-400 text-xs">适合8000m级攀登</p></div>
+            <p class="text-2xl font-bold text-primary-light mb-3"><span x-text="formatPrice(1299)"></span><span class="text-xs font-normal text-slate-400">/次</span></p>
+            <ul class="space-y-1 text-xs text-slate-300 mb-3">
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>意外伤害 200万</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>紧急直升机救援</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>医疗费用 20万</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>器材损失 5万</li>
+            </ul>
+            <button @click="showInsurance=false;openPayment(1299)" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">选择方案</button>
+          </div>
+          <div class="bg-slate-800 rounded-2xl p-4 mb-3">
+            <div class="flex items-center justify-between mb-3">
+              <div><h4 class="text-white font-bold">全面保障</h4><p class="text-slate-400 text-xs">探险队专属</p></div>
+              <span class="text-xl font-bold text-primary-light" x-text="formatPrice(3999)"><span class="text-xs font-normal text-slate-400">/次</span></span>
+            </div>
+            <ul class="space-y-1 text-xs text-slate-300 mb-3">
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>意外伤害 500万</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>无限额救援</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>家属安置保障</li>
+              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>器材全损 15万</li>
+            </ul>
+            <button @click="showInsurance=false;openPayment(3999)" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-sm font-semibold transition-colors">选择方案</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gear Publish Modal -->
+    <div x-show="showGearPublish"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showGearPublish=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-xl text-white">发布装备</h3>
+            <button @click="showGearPublish=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">装备名称</label>
+              <input x-model="newGear.name" type="text" placeholder="例：Black Diamond 冰斧" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">品牌</label>
+              <input x-model="newGear.brand" type="text" placeholder="例：Black Diamond" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">价格 (¥)</label>
+              <input x-model="newGear.price" type="number" placeholder="0" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">成色</label>
+              <div class="flex gap-2">
+                <template x-for="cond in [{v:'new',n:'全新'},{v:'good',n:'九成新'},{v:'fair',n:'八成新'},{v:'used',n:'有磨损'}]" :key="cond.v">
+                  <button @click="newGear.condition=cond.v" :class="newGear.condition===cond.v ? 'bg-primary text-white' : 'bg-slate-700 text-slate-300'" class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all" x-text="cond.n"></button>
+                </template>
+              </div>
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">描述</label>
+              <textarea x-model="newGear.description" rows="3" placeholder="描述装备状态、尺寸等信息..." class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600 resize-none"></textarea>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-5">
+            <button @click="showGearPublish=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
+            <button @click="submitGear()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">发布</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Team Modal -->
+    <div x-show="showCreateTeam"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showCreateTeam=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-xl text-white">创建队伍</h3>
+            <button @click="showCreateTeam=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">队伍名称</label>
+              <input x-model="newTeam.name" type="text" placeholder="例：珠峰突击队2025" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">目标山峰</label>
+              <input x-model="newTeam.peak" type="text" placeholder="例：珠穆朗玛峰" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">出发日期</label>
+              <input x-model="newTeam.date" type="date" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">难度等级</label>
+              <div class="flex gap-2">
+                <template x-for="lv in ['初级','中级','专业级','极限']" :key="lv">
+                  <button @click="newTeam.level=lv" :class="newTeam.level===lv ? 'bg-primary text-white' : 'bg-slate-700 text-slate-300'" class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all" x-text="lv"></button>
+                </template>
+              </div>
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">名额 (<span x-text="newTeam.spots"></span>人)</label>
+              <input x-model="newTeam.spots" type="range" min="2" max="20" class="w-full accent-primary">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">队伍说明</label>
+              <textarea x-model="newTeam.description" rows="3" placeholder="介绍队伍计划、要求等..." class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600 resize-none"></textarea>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-5">
+            <button @click="showCreateTeam=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
+            <button @click="createTeam()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">创建</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Chat Window Modal -->
+  <div x-show="showChatWindow"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 translate-y-full"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0 translate-y-full"
+       class="fixed inset-0 z-[150] flex flex-col bg-slate-900" style="max-width:430px;margin:0 auto;">
+    <template x-if="activeChatSession">
+      <div class="flex flex-col h-full">
+        <!-- Header -->
+        <div class="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-slate-900 flex-shrink-0">
+          <button @click="showChatWindow=false" class="p-2 rounded-full hover:bg-white/10 transition-colors">
+            <span class="material-symbols-outlined text-slate-300">arrow_back</span>
+          </button>
+          <div class="relative">
+            <img :src="activeChatSession.avatar" class="w-10 h-10 rounded-full object-cover">
+            <div x-show="activeChatSession.online" class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-slate-900"></div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-white font-semibold" x-text="activeChatSession.name"></p>
+            <p class="text-xs" :class="activeChatSession.online ? 'text-green-400' : 'text-slate-500'" x-text="activeChatSession.online ? '在线' : '离线'"></p>
+          </div>
+          <span class="text-xl" x-text="activeChatSession.flag"></span>
+        </div>
+        <!-- Messages -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-3">
+          <template x-for="(msg, idx) in activeChatSession.messages" :key="idx">
+            <div :class="msg.from === 'me' ? 'flex flex-row-reverse items-end gap-2' : 'flex items-end gap-2'">
+              <template x-if="msg.from !== 'me'">
+                <img :src="activeChatSession.avatar" class="w-7 h-7 rounded-full object-cover flex-shrink-0">
+              </template>
+              <div :class="msg.from === 'me' ? 'items-end' : 'items-start'" class="flex flex-col max-w-[75%]">
+                <template x-if="msg.from === 'other' && msg.name">
+                  <p class="text-slate-400 text-xs mb-1" x-text="msg.name"></p>
+                </template>
+                <div :class="msg.from === 'me' ? 'bg-primary text-white' : 'bg-slate-700 text-slate-100'" class="rounded-2xl px-3 py-2 text-sm" x-text="msg.text"></div>
+                <p class="text-slate-500 text-xs mt-1" x-text="msg.time + (msg.from === 'me' ? ' ✓✓' : '')"></p>
+              </div>
+            </div>
+          </template>
+        </div>
+        <!-- Input -->
+        <div class="flex items-center gap-2 px-4 py-3 border-t border-white/10 bg-slate-900 flex-shrink-0">
+          <button class="p-2 rounded-full hover:bg-white/10 transition-colors">
+            <span class="material-symbols-outlined text-slate-400 text-xl">photo_camera</span>
+          </button>
+          <input x-model="chatInput" type="text" placeholder="输入消息..." class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-500">
+          <button @click="if(chatInput.trim()){activeChatSession.messages.push({from:'me',text:chatInput,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});chatInput='';}" class="w-9 h-9 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
+            <span class="material-symbols-outlined text-white text-base">send</span>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  </main>
+
+  <!-- SOS button - fixed right center -->
+  <button
+    x-show="currentPage === 'home' || currentPage === 'track'"
+    @click="showSOSConfirm = true"
+    class="fixed right-3 z-40 w-10 h-10 bg-red-600 rounded-full flex items-center justify-center shadow-lg pulse-red"
+    style="top: 50%; transform: translateY(-50%); max-width: none;">
+    <span class="text-white text-xs font-bold">SOS</span>
+  </button>
+
+  <!-- SOS 二次确认弹窗 -->
+  <div x-show="showSOSConfirm"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95"
+       class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="max-width:430px;margin:0 auto;">
+    <div class="bg-slate-800 rounded-2xl p-5 mx-6 text-center">
+      <p class="text-red-400 font-bold text-lg mb-2">🆘 确认发送紧急求救？</p>
+      <p class="text-slate-400 text-sm mb-4">此操作将向救援中心发送您的GPS位置</p>
+      <div class="flex gap-3">
+        <button @click="showSOSConfirm=false" class="flex-1 bg-slate-700 text-white rounded-xl py-2.5 font-semibold">取消</button>
+        <button @click="showSOSConfirm=false;showSOS=true" class="flex-1 bg-red-600 text-white rounded-xl py-2.5 font-semibold">确认求救</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED BOTTOM NAV -->
+  <nav class="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10" style="max-width:430px;margin:0 auto;">
+    <div class="flex items-center justify-around px-2 py-2">
+      <template x-for="tab in navTabs" :key="tab.id">
+        <button @click="currentPage=tab.id"
+                class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
+                :class="currentPage===tab.id ? 'text-primary-light' : 'text-slate-500 hover:text-slate-300'">
+          <span class="material-symbols-outlined text-2xl"
+                :class="currentPage===tab.id ? 'filled' : ''"
+                x-text="tab.icon"></span>
+          <span class="text-xs font-medium" x-text="tab.name"></span>
+        </button>
+      </template>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+function alpineLink() {
+  return {
+    currentPage: 'home',
+    heroSlide: 0,
+    heroTouchStartX: 0,
+    heroSlides: [
+      { name: '珠穆朗玛峰', sub: '海拔 8,849m · 中国/尼泊尔', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800' },
+      { name: 'K2 乔戈里峰', sub: '海拔 8,611m · 巴基斯坦/中国', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800' },
+      { name: '麦金利山 Denali', sub: '海拔 6,190m · 阿拉斯加', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800' },
+    ],
+    activeCategory: '8000ers',
+    gearMode: 'buy',
+    activeChatType: 'all',
+    currentLang: 'zh',
+    showLangPicker: false,
+    showSearch: false,
+    searchQuery: '',
+    searchResults: [],
+    searchHistory: ['珠穆朗玛峰', 'K2', '马特洪峰'],
+    useMetric: true,
+    currentCurrency: 'CNY',
+    showPeakDetail: false,
+    selectedPeak: null,
+    showBooking: false,
+    bookingData: { mountain: null, date: '', guide: null, members: 1, notes: '' },
+    showSOS: false,
+    showSOSConfirm: false,
+    showChatWindow: false,
+    activeChatSession: null,
+    chatSubTab: 'all',
+    meSubPage: 'profile',
+    chatSessions: [
+      {
+        id: 1, name: '扎西次仁', nameEn: 'Zhaxi Ciren',
+        avatar: 'https://i.pravatar.cc/150?u=guide1',
+        flag: '🇨🇳', type: 'guide', online: true, unread: 2,
+        lastMsg: '好的，4月是最佳攀登窗口！', time: '10:26',
+        messages: [
+          { from: 'them', text: '您好！我是珠峰认证向导扎西次仁，请问您计划什么时候出发？', time: '10:23' },
+          { from: 'me', text: '你好！我计划明年4月，想攀登珠峰南坡路线', time: '10:25' },
+          { from: 'them', text: '好的，4月是最佳攀登窗口！我可以为您制定详细行程，我们来具体谈谈吧', time: '10:26' },
+        ]
+      },
+      {
+        id: 2, name: 'Tenzin Sherpa', nameEn: 'Tenzin Sherpa',
+        flag: '🇳🇵', type: 'guide', online: true, unread: 0,
+        avatar: 'https://i.pravatar.cc/150?u=guide2',
+        lastMsg: 'My rate is $320/day, including all equipment support.', time: '09:22',
+        messages: [
+          { from: 'them', text: 'Hi! I have availability in October for K2. Are you interested?', time: '09:15' },
+          { from: 'me', text: 'Yes! What is your rate per day?', time: '09:20' },
+          { from: 'them', text: 'My rate is $320/day, including all equipment support and safety briefings.', time: '09:22' },
+        ]
+      },
+      {
+        id: 3, name: '珠峰2026远征队', nameEn: 'Everest 2026 Expedition',
+        flag: '🏔️', type: 'club', online: false, unread: 5,
+        avatar: 'https://i.pravatar.cc/150?u=team1',
+        lastMsg: '明天出发的朋友注意，天气窗口确认开启！', time: '10:00',
+        members: ['🇨��','🇳🇵','🇩🇪','🇺🇸','🇰🇷'],
+        messages: [
+          { from: 'other', name: '李明远', text: '大家好，路线规划已上传到共享文件夹', time: '昨天' },
+          { from: 'other', name: 'Tenzin', text: 'I reviewed the route, looks good!', time: '昨天' },
+          { from: 'me', text: '收到！装备清单我已经更新', time: '昨天' },
+          { from: 'other', name: '队长', text: '明天出发的朋友注意，天气窗口确认开启！', time: '10:00' },
+        ]
+      },
+      {
+        id: 4, name: '西藏登山俱乐部群', nameEn: 'Tibet Mountaineering Club',
+        flag: '🏔️', type: 'club', online: false, unread: 0,
+        avatar: 'https://i.pravatar.cc/150?u=club1',
+        lastMsg: '扎西：明天出发的朋友注意...', time: '昨天',
+        members: ['🇨🇳','🇨🇳','🇳🇵','🇺🇸'],
+        messages: [
+          { from: 'other', name: '扎西', text: '明天出发的朋友注意，注意保暖和高反', time: '昨天' },
+        ]
+      },
+    ],
+    sosStep: 0,
+    sosImages: [],
+    showSettings: false,
+    settingsType: 'profile',
+    showComments: false,
+    selectedPostForComment: null,
+    showShare: false,
+    selectedPostForShare: null,
+    showPostEditor: false,
+    newPost: { content: '', location: '', images: [] },
+    showPostEmojiPicker: false,
+    showChat: false,
+    activeChatConv: null,
+    chatInput: '',
+    selectedConversation: null,
+    showChatDetail: false,
+    showGearPublish: false,
+    newGear: { name: '', brand: '', price: '', condition: 'good', description: '' },
+    showTeamDetail: false,
+    selectedTeam: null,
+    showCreateTeam: false,
+    newTeam: { name: '', peak: '', date: '', level: '', spots: 4, description: '' },
+    showInsurance: false,
+    insuranceRegion: '喜马拉雅',
+    paymentAmount: 0,
+    paymentMethod: 'alipay',
+    showGuideApply: false,
+    guideApplyForm: { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' },
+    showGuideDetail: false,
+    showGuideProfile: false,
+    selectedGuide: null,
+    showExpeditionDetail: false,
+    selectedExpedition: null,
+    showClubDetail: false,
+    selectedClub: null,
+    showArticle: false,
+    selectedArticle: null,
+    showGearDetail: false,
+    selectedGear: null,
+    showWorldPeakDetail: false,
+    selectedWorldPeak: null,
+    showAlpineDetail: false,
+    selectedAlpine: null,
+    toasts: [],
+    newComment: '',
+    availableLangs: [
+      { code: 'zh', native: '简体中文', flag: '🇨🇳' },
+      { code: 'en', native: 'English', flag: '🇬🇧' },
+      { code: 'zh-TW', native: '繁體中文', flag: '🇹🇼' },
+      { code: 'ja', native: '日本語', flag: '🇯🇵' },
+      { code: 'ne', native: 'नेपाली', flag: '🇳🇵' },
+      { code: 'hi', native: 'हिन्दी', flag: '🇮🇳' },
+      { code: 'fr', native: 'Français', flag: '🇫🇷' },
+      { code: 'it', native: 'Italiano', flag: '🇮🇹' },
+      { code: 'es', native: 'Español', flag: '🇪🇸' },
+    ],
+    translations: {
+      zh: { app_name: '巅峰探索', summit: '峰顶', search: '搜索', language: '语言', home: '首页', explore: '探索', community: '社区', track: '轨迹', gear: '装备', me: '我的', booking: '预约', submit: '提交', cancel: '取消', close: '关闭', save: '保存', confirm: '确认', back: '返回', edit: '编辑', delete: '删除', share: '分享', like: '点赞', comment: '评论', follow: '关注', login: '登录', logout: '退出', settings: '设置', sos: 'SOS 紧急救援', loading: '加载中...', success: '成功', error: '错误', weather: '天气', altitude: '海拔', difficulty: '难度', country: '国家', price: '价格', date: '日期', guide: '向导', members: '成员', notes: '备注', send_sos: '发送 SOS', book_now: '立即预约', peak_detail: '山峰详情', booking_title: '预约攀登' },
+      en: { app_name: 'SummitLink', summit: 'Summit', search: 'Search', language: 'Language', home: 'Home', explore: 'Explore', community: 'Community', track: 'Track', gear: 'Gear', me: 'Me', booking: 'Booking', submit: 'Submit', cancel: 'Cancel', close: 'Close', save: 'Save', confirm: 'Confirm', back: 'Back', edit: 'Edit', delete: 'Delete', share: 'Share', like: 'Like', comment: 'Comment', follow: 'Follow', login: 'Login', logout: 'Logout', settings: 'Settings', sos: 'SOS Emergency', loading: 'Loading...', success: 'Success', error: 'Error', weather: 'Weather', altitude: 'Altitude', difficulty: 'Difficulty', country: 'Country', price: 'Price', date: 'Date', guide: 'Guide', members: 'Members', notes: 'Notes', send_sos: 'Send SOS', book_now: 'Book Now', peak_detail: 'Peak Detail', booking_title: 'Book Climbing' },
+      'zh-TW': { app_name: '巔峰探索', summit: '峰頂', search: '搜尋', language: '語言', home: '首頁', explore: '探索', community: '社群', track: '軌跡', gear: '裝備', me: '我的', booking: '預約', submit: '提交', cancel: '取消', close: '關閉', save: '儲存', confirm: '確認', back: '返回', edit: '編輯', delete: '刪除', share: '分享', like: '按讚', comment: '評論', follow: '追蹤', login: '登入', logout: '登出', settings: '設定', sos: 'SOS 緊急救援', loading: '載入中...', success: '成功', error: '錯誤', weather: '天氣', altitude: '海拔', difficulty: '難度', country: '國家', price: '價格', date: '日期', guide: '嚮導', members: '成員', notes: '備註', send_sos: '發送 SOS', book_now: '立即預約', peak_detail: '山峰詳情', booking_title: '預約攀登' },
+      ja: { app_name: 'サミットリンク', summit: '山頂', search: '検索', language: '言語', home: 'ホーム', explore: '探索', community: 'コミュニティ', track: 'トラック', gear: 'ギア', me: '自分', booking: '予約', submit: '送信', cancel: 'キャンセル', close: '閉じる', save: '保存', confirm: '確認', back: '戻る', edit: '編集', delete: '削除', share: '共有', like: 'いいね', comment: 'コメント', follow: 'フォロー', login: 'ログイン', logout: 'ログアウト', settings: '設定', sos: 'SOS 緊急救助', loading: '読み込み中...', success: '成功', error: 'エラー', weather: '天気', altitude: '高度', difficulty: '難易度', country: '国', price: '価格', date: '日付', guide: 'ガイド', members: 'メンバー', notes: 'メモ', send_sos: 'SOS送信', book_now: '今すぐ予約', peak_detail: '山の詳細', booking_title: 'クライミング予約' },
+      ne: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोज्नुहोस्', language: 'भाषा', home: 'गृह', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्र्याक', gear: 'गियर', me: 'म', booking: 'बुकिङ', submit: 'पेश गर्नुहोस्', cancel: 'रद्द गर्नुहोस्', close: 'बन्द गर्नुहोस्', save: 'सुरक्षित', confirm: 'पुष्टि गर्नुहोस्', back: 'पछाडि', edit: 'सम्पादन', delete: 'मेटाउनुहोस्', share: 'साझा गर्नुहोस्', like: 'मन पर्छ', comment: 'टिप्पणी', follow: 'अनुसरण', login: 'लगिन', logout: 'लगआउट', settings: 'सेटिङ', sos: 'SOS आपतकालीन', loading: 'लोड हुँदैछ...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'उचाइ', difficulty: 'कठिनाइ', country: 'देश', price: 'मूल्य', date: 'मिति', guide: 'गाइड', members: 'सदस्यहरू', notes: 'नोट', send_sos: 'SOS पठाउनुहोस्', book_now: 'अहिले बुक गर्नुहोस्', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिङ' },
+      hi: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोजें', language: 'भाषा', home: 'होम', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्रैक', gear: 'गियर', me: 'मैं', booking: 'बुकिंग', submit: 'जमा करें', cancel: 'रद्द करें', close: 'बंद करें', save: 'सहेजें', confirm: 'पुष्टि करें', back: 'वापस', edit: 'संपादित करें', delete: 'हटाएं', share: 'साझा करें', like: 'पसंद', comment: 'टिप्पणी', follow: 'अनुसरण करें', login: 'लॉगिन', logout: 'लॉगआउट', settings: 'सेटिंग', sos: 'SOS आपातकालीन', loading: 'लोड हो रहा है...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'ऊंचाई', difficulty: 'कठिनाई', country: 'देश', price: 'कीमत', date: 'तारीख', guide: 'गाइड', members: 'सदस्य', notes: 'नोट', send_sos: 'SOS भेजें', book_now: 'अभी बुक करें', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिंग' },
+      fr: { app_name: 'SommetsLink', summit: 'Sommet', search: 'Rechercher', language: 'Langue', home: 'Accueil', explore: 'Explorer', community: 'Communauté', track: 'Piste', gear: 'Équipement', me: 'Moi', booking: 'Réservation', submit: 'Soumettre', cancel: 'Annuler', close: 'Fermer', save: 'Enregistrer', confirm: 'Confirmer', back: 'Retour', edit: 'Modifier', delete: 'Supprimer', share: 'Partager', like: "J'aime", comment: 'Commenter', follow: 'Suivre', login: 'Connexion', logout: 'Déconnexion', settings: 'Paramètres', sos: 'SOS Urgence', loading: 'Chargement...', success: 'Succès', error: 'Erreur', weather: 'Météo', altitude: 'Altitude', difficulty: 'Difficulté', country: 'Pays', price: 'Prix', date: 'Date', guide: 'Guide', members: 'Membres', notes: 'Notes', send_sos: 'Envoyer SOS', book_now: 'Réserver maintenant', peak_detail: 'Détail du sommet', booking_title: "Réserver l'escalade" },
+      it: { app_name: 'SummitLink', summit: 'Vetta', search: 'Cerca', language: 'Lingua', home: 'Home', explore: 'Esplora', community: 'Comunità', track: 'Percorso', gear: 'Attrezzatura', me: 'Io', booking: 'Prenotazione', submit: 'Invia', cancel: 'Annulla', close: 'Chiudi', save: 'Salva', confirm: 'Conferma', back: 'Indietro', edit: 'Modifica', delete: 'Elimina', share: 'Condividi', like: 'Mi piace', comment: 'Commenta', follow: 'Segui', login: 'Accedi', logout: 'Esci', settings: 'Impostazioni', sos: 'SOS Emergenza', loading: 'Caricamento...', success: 'Successo', error: 'Errore', weather: 'Meteo', altitude: 'Altitudine', difficulty: 'Difficoltà', country: 'Paese', price: 'Prezzo', date: 'Data', guide: 'Guida', members: 'Membri', notes: 'Note', send_sos: 'Invia SOS', book_now: 'Prenota ora', peak_detail: 'Dettaglio cima', booking_title: 'Prenota scalata' },
+      es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
+    },
+    t(key) { const lang = this.translations[this.currentLang] || this.translations['zh']; return lang[key] || this.translations['zh'][key] || key; },
+    nearbyGuides: [
+      { id: 101, name: '扎西旺堆', flag: '🇨🇳', nationality: '中国', avatar: 'https://i.pravatar.cc/150?u=guide1', specialty: '珠峰/K2/南极洲', languages: ['中文','English'], rating: 4.9, reviews: 127, dayRate: 350, tag: '🏅 认证精英' },
+      { id: 102, name: 'Ang Dorji', flag: '🇳🇵', nationality: '尼泊尔', avatar: 'https://i.pravatar.cc/150?u=guide2', specialty: '喜马拉雅全系列', languages: ['English','Nepali'], rating: 4.8, reviews: 98, dayRate: 280, tag: '⭐ 本周最热' },
+      { id: 103, name: 'Marc Dubois', flag: '🇫🇷', nationality: '法国', avatar: 'https://i.pravatar.cc/150?u=guide3', specialty: '阿尔卑斯/安第斯', languages: ['Français','English'], rating: 4.7, reviews: 64, dayRate: 420, tag: '🌐 多语言' },
+    ],
+    summitLeaderboard: [
+      { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
+      { id: 2, name: 'Pemba Sherpa', flag: '🇳🇵', avatar: 'https://i.pravatar.cc/150?u=lb2', peak: 'K2 8611m', date: '4月10日' },
+      { id: 3, name: 'Hans Weber', flag: '🇩🇪', avatar: 'https://i.pravatar.cc/150?u=lb3', peak: '干城章嘉 8586m', date: '4月9日' },
+      { id: 4, name: 'Sofia Martínez', flag: '🇪🇸', avatar: 'https://i.pravatar.cc/150?u=lb4', peak: '洛子峰 8516m', date: '4月8日' },
+      { id: 5, name: '张伟峰', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb5', peak: '马卡鲁 8485m', date: '4月7日' },
+      { id: 6, name: 'Raj Thapa', flag: '🇮🇳', avatar: 'https://i.pravatar.cc/150?u=lb6', peak: '卓奥友 8188m', date: '4月6日' },
+      { id: 7, name: 'Emma Wilson', flag: '🇬🇧', avatar: 'https://i.pravatar.cc/150?u=lb7', peak: '道拉吉里 8167m', date: '4月5日' },
+      { id: 8, name: 'Kenji Tanaka', flag: '🇯🇵', avatar: 'https://i.pravatar.cc/150?u=lb8', peak: '马纳斯鲁 8163m', date: '4月4日' },
+      { id: 9, name: 'Carlos Lima', flag: '🇧🇷', avatar: 'https://i.pravatar.cc/150?u=lb9', peak: '安纳普尔纳 8091m', date: '4月3日' },
+      { id: 10, name: 'Fatima Hassan', flag: '🇵🇰', avatar: 'https://i.pravatar.cc/150?u=lb10', peak: '南伽帕尔巴特 8126m', date: '4月2日' },
+    ],
+    eightThousanders: [
+      { id: 1, name: '珠穆朗玛峰', nameEn: 'Mount Everest', altitude: 8849, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', weather: { condition: 'cloudy', temp: -20, wind: 45 }, bestSeason: '5月、10月', description: '世界最高峰，位于中尼边境。每年吸引数百名攀登者挑战极限。' },
+      { id: 2, name: 'K2 乔戈里峰', nameEn: 'K2', altitude: 8611, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', weather: { condition: 'sunny', temp: -15, wind: 35 }, bestSeason: '7月、8月', description: '世界第二高峰，被称为"野蛮山峰"，死亡率高达25%。' },
+      { id: 3, name: '干城章嘉峰', nameEn: 'Kangchenjunga', altitude: 8586, country: '尼泊尔/印度', countryFlag: '🇳🇵🇮🇳', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400', weather: { condition: 'snowy', temp: -18, wind: 40 }, bestSeason: '5月、10月', description: '世界第三高峰，当地人视为神圣之峰，禁止登顶最高点。' },
+      { id: 4, name: '洛子峰', nameEn: 'Lhotse', altitude: 8516, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', weather: { condition: 'partly_cloudy', temp: -16, wind: 30 }, bestSeason: '5月', description: '世界第四高峰，与珠峰相邻，通常同时攀登。' },
+      { id: 5, name: '马卡鲁峰', nameEn: 'Makalu', altitude: 8485, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', weather: { condition: 'cloudy', temp: -17, wind: 38 }, bestSeason: '5月', description: '世界第五高峰，四棱锥形的金字塔状山峰。' },
+      { id: 6, name: '卓奥友峰', nameEn: 'Cho Oyu', altitude: 8188, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', weather: { condition: 'partly_cloudy', temp: -14, wind: 28 }, bestSeason: '9月、10月', description: '世界第六高峰，被认为是技术要求相对较低的八千米级峰。' },
+      { id: 7, name: '道拉吉里峰', nameEn: 'Dhaulagiri', altitude: 8167, country: '尼泊尔', countryFlag: '🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400', weather: { condition: 'snowy', temp: -19, wind: 42 }, bestSeason: '5月', description: '世界第七高峰，以极端的雪崩危险著称。' },
+      { id: 8, name: '马纳斯鲁峰', nameEn: 'Manaslu', altitude: 8163, country: '尼泊尔', countryFlag: '🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400', weather: { condition: 'partly_cloudy', temp: -15, wind: 33 }, bestSeason: '5月、10月', description: '世界第八高峰，"灵魂之山"，尼泊尔境内。' },
+      { id: 9, name: '南伽帕尔巴特峰', nameEn: 'Nanga Parbat', altitude: 8126, country: '巴基斯坦', countryFlag: '🇵🇰', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', weather: { condition: 'cloudy', temp: -16, wind: 36 }, bestSeason: '7月', description: '世界第九高峰，"杀手山"，死亡率极高。' },
+      { id: 10, name: '安纳普尔纳峰', nameEn: 'Annapurna', altitude: 8091, country: '尼泊尔', countryFlag: '🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', weather: { condition: 'partly_cloudy', temp: -13, wind: 30 }, bestSeason: '5月、10月', description: '世界第十高峰，死亡率曾长居8000m峰首位。' },
+      { id: 11, name: '加舒尔布鲁木I峰', nameEn: 'Gasherbrum I', altitude: 8080, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', weather: { condition: 'sunny', temp: -14, wind: 32 }, bestSeason: '7月', description: '世界第十一高峰，又称"隐峰"。' },
+      { id: 12, name: '布洛阿特峰', nameEn: 'Broad Peak', altitude: 8051, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', weather: { condition: 'partly_cloudy', temp: -13, wind: 27 }, bestSeason: '7月', description: '世界第十二高峰，喀喇昆仑山脉。' },
+      { id: 13, name: '加舒尔布鲁木II峰', nameEn: 'Gasherbrum II', altitude: 8034, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400', weather: { condition: 'sunny', temp: -12, wind: 25 }, bestSeason: '7月', description: '世界第十三高峰，相对技术难度较低。' },
+      { id: 14, name: '希夏邦马峰', nameEn: 'Shishapangma', altitude: 8027, country: '中国', countryFlag: '🇨🇳', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', weather: { condition: 'partly_cloudy', temp: -11, wind: 24 }, bestSeason: '5月、10月', description: '世界第十四高峰，唯一完全在中国境内的八千米级高峰。' },
+    ],
+    continentalPeaks: [
+      { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', continent: '亚洲' },
+      { id: 2, name: '麦金利山', nameEn: 'Denali', altitude: 6190, country: '美国', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', continent: '北美洲' },
+      { id: 3, name: '阿空加瓜山', nameEn: 'Aconcagua', altitude: 6961, country: '阿根廷', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', continent: '南美洲' },
+      { id: 4, name: '乞力马扎罗山', nameEn: 'Kilimanjaro', altitude: 5895, country: '坦桑尼亚', difficulty: '中等', icon: '🏔️', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', continent: '非洲' },
+      { id: 5, name: '文森峰', nameEn: 'Vinson Massif', altitude: 4892, country: '南极洲', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', continent: '南极洲' },
+      { id: 6, name: '厄尔布鲁士山', nameEn: 'Elbrus', altitude: 5642, country: '俄罗斯', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400', continent: '欧洲' },
+      { id: 7, name: '查亚峰', nameEn: 'Puncak Jaya', altitude: 4884, country: '印度尼西亚', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', continent: '大洋洲' },
+    ],
+    worldPeaks: [
+      { id: 1, name: '马特洪峰', nameEn: 'Matterhorn', altitude: 4478, country: '瑞士/意大利', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', type: 'alpine' },
+      { id: 2, name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, country: '法国/意大利', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', type: 'alpine' },
+      { id: 3, name: '大帕拉迪索峰', nameEn: 'Gran Paradiso', altitude: 4061, country: '意大利', difficulty: '中等', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', type: 'alpine' },
+    ],
+    climbingSpots: [
+      { id: 1, name: '黄龙溪攀岩', nameEn: 'Huanglongxi Climbing', country: '中国', difficulty: '初级', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400' },
+      { id: 2, name: '张家界岩壁', nameEn: 'Zhangjiajie Cliff', country: '中国', difficulty: '中级', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400' },
+      { id: 3, name: '阳朔月亮山', nameEn: 'Yangshuo Moon Hill', country: '中国', difficulty: '中级', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400' },
+    ],
+    categories: [
+      { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
+      { id: 'continental', name: '洲最高峰', icon: 'public' },
+      { id: 'world', name: '世界经典', icon: 'travel_explore' },
+      { id: 'alpine', name: '技术攀登', icon: 'terrain' },
+    ],
+    communityPosts: [
+      { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
+      { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
+      { id: 3, author: '王芳', authorAvatar: 'https://i.pravatar.cc/150?u=wang', timeAgo: '1天前', content: '马特洪峰北壁首次尝试，虽然未能登顶，但收获了宝贵的经验。山在那里，我还会回来的。', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '马特洪峰, 瑞士', likes: 89, comments: 15, isLiked: false, isFavorited: false, commentPreview: [{ author: '陈强', text: '勇敢！下次一定能成功！' }] },
+    ],
+    climbDiaries: [
+      { id: 1, title: '珠峰BC到C1的旅程', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', altitude: 6065, difficulty: '极难', duration: '3天', date: '2024-05-10', peak: '珠穆朗玛峰', likes: 234, comments: 45, views: 1200, tags: ['珠峰', '高海拔', '远征'], excerpt: '从大本营出发，穿越冰川到达C1营地，记录了沿途的风景和挑战...' },
+      { id: 2, title: 'K2绝壁攀登记录', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '李明', avatar: 'https://i.pravatar.cc/150?u=li', altitude: 8611, difficulty: '极难', duration: '45天', date: '2024-07-25', peak: 'K2', likes: 567, comments: 89, views: 3400, tags: ['K2', '技术攀登', '挑战'], excerpt: '历时45天的K2远征，经历了风暴、高反和团队合作的考验...' },
+      { id: 3, title: '马特洪峰北壁技术路线', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', author: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', altitude: 4478, difficulty: '难', duration: '2天', date: '2024-08-15', peak: '马特洪峰', likes: 123, comments: 28, views: 890, tags: ['阿尔卑斯', '技术路线', '欧洲'], excerpt: '马特洪峰北壁是阿尔卑斯最具挑战性的路线之一，本文记录了攀登过程...' },
+    ],
+    clubs: [
+      { id: 1, name: '中国高山协会', type: '专业', region: '中国', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专注于中国高山探险和技术攀登的专业协会，拥有多名国家级攀登运动员', members: 1280, expeditions: 45, founded: '2005', verified: true, specialty: '8000米峰', achievements: ['珠峰无氧登顶', 'K2首次全女队登顶', '14座8000米峰完成者'] },
+      { id: 2, name: '阿尔派探险俱乐部', type: '综合', region: '北京', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '面向攀登爱好者的综合性俱乐部，提供从初级到专业的培训和远征服务', members: 560, expeditions: 28, founded: '2010', verified: true, specialty: '技术攀登', achievements: ['洛子峰新路线开辟', '南极文森峰团队登顶'] },
+      { id: 3, name: '北京户外探险队', type: '休闲', region: '北京', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', description: '以休闲户外和中低海拔攀登为主的俱乐部，适合初学者和爱好者参与', members: 890, expeditions: 120, founded: '2015', verified: true, specialty: '中低海拔', achievements: ['年度最佳户外俱乐部', '组织公益攀登活动100+'] },
+    ],
+    expeditions: [
+      { id: 1, title: '2025珠峰商业远征', peak: '珠穆朗玛峰', date: '2025-04-01', duration: '60天', difficulty: '极难', spots: 3, totalSpots: 8, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang', price: 380000, image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专业向导带领的珠峰南坡商业远征，全程高山支援，适合有经验的攀登者' },
+      { id: 2, title: 'K2夏季挑战队', peak: 'K2', date: '2025-06-15', duration: '45天', difficulty: '极难', spots: 2, totalSpots: 6, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li', price: 450000, image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', description: 'K2 标准路线挑战，要求参与者有8000米以上攀登经历' },
+      { id: 3, title: '马特洪峰技术攀登营', peak: '马特洪峰', date: '2025-08-01', duration: '14天', difficulty: '难', spots: 4, totalSpots: 6, leader: '王芳', leaderAvatar: 'https://i.pravatar.cc/150?u=wang', price: 35000, image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '由资深向导带领的马特洪峰技术攀登，含技术培训和北壁尝试' },
+    ],
+    guides: [
+      { id: 1, name: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', rating: 4.9, reviews: 128, experience: 15, languages: ['中文', '英语', '尼泊尔语'], summits: ['珠穆朗玛峰', 'K2', '干城章嘉峰', '洛子峰'], price: 35000, available: true, specialty: '8000米峰专家', bio: '15年高山攀登经验，成功登顶全部14座8000米峰，专注于帮助客户安全实现高山梦想' },
+      { id: 2, name: '李明', avatar: 'https://i.pravatar.cc/150?u=li', rating: 4.8, reviews: 96, experience: 12, languages: ['中文', '英语'], summits: ['K2', '马特洪峰', '白朗峰', '麦金利山'], price: 28000, available: true, specialty: '技术攀登专家', bio: '12年攀登经验，专注于技术性路线，曾开辟多条新路线，擅长冰雪技术教学' },
+      { id: 3, name: 'Sara Neymann', avatar: 'https://i.pravatar.cc/150?u=sara', rating: 4.7, reviews: 74, experience: 10, languages: ['英语', '法语', '意大利语'], summits: ['马特洪峰', '白朗峰', '大帕拉迪索峰', '埃格尔北壁'], price: 25000, available: true, specialty: '阿尔卑斯专家', bio: '十年阿尔卑斯攀登经验，UIAGM认证向导，专注于西欧技术路线' },
+    ],
+    gearItems: [
+      { id: 1, name: '黑钻Momentum高山靴', brand: 'Black Diamond', price: 2800, condition: '九成新', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', description: '用过两次，无明显磨损，尺码43', seller: '张磊', sellerAvatar: 'https://i.pravatar.cc/150?u=zhang' },
+      { id: 2, name: 'Petzl高山头盔', brand: 'Petzl', price: 680, condition: '全新', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', description: '全新未使用，原价980元，尺寸M/L可调', seller: '李明', sellerAvatar: 'https://i.pravatar.cc/150?u=li' },
+      { id: 3, name: 'Mammut 8.0干绳', brand: 'Mammut', price: 1200, condition: '八成新', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '60米干绳，使用约10次，无严重磨损，经检验可继续使用', seller: '王芳', sellerAvatar: 'https://i.pravatar.cc/150?u=wang' },
+    ],
+    guideArticles: [
+      { id: 1, title: '8000米峰攀登基础知识', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', readTime: '15分钟', category: '高海拔' },
+      { id: 2, title: '冰雪技术入门指南', cover: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', author: '李明', readTime: '10分钟', category: '技术' },
+      { id: 3, title: '高海拔营养补给策略', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '王芳', readTime: '8分钟', category: '健康' },
+    ],
+    insuranceProducts: [
+      { id: 1, name: '高山探险险', price: 2980, coverage: '300万', period: '30天', type: 'premium' },
+      { id: 2, name: '标准登山险', price: 980, coverage: '100万', period: '14天', type: 'standard' },
+      { id: 3, name: '基础户外险', price: 280, coverage: '30万', period: '7天', type: 'basic' },
+    ],
+    conversations: [
+      { id: 1, name: '救援指挥中心', avatar: 'https://i.pravatar.cc/150?u=rescue', type: 'rescue', lastMsg: '您好，有紧急情况请立即联系', time: '10:30', unread: 0, messages: [] },
+      { id: 2, name: '张磊（向导）', avatar: 'https://i.pravatar.cc/150?u=zhang', type: 'guide', lastMsg: '明天我们6点出发', time: '09:15', unread: 2, messages: [] },
+      { id: 3, name: '珠峰2025队', avatar: 'https://i.pravatar.cc/150?u=team', type: 'team', lastMsg: '装备检查完毕', time: '昨天', unread: 5, messages: [] },
+    ],
+    tracks: [
+      { id: 1, name: '珠峰大本营徒步', date: '2024-03-15', distance: 45.2, elevation: 2300, duration: '5天', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400' },
+      { id: 2, name: 'K2 BC 线路', date: '2024-07-20', distance: 62.8, elevation: 3800, duration: '8天', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400' },
+    ],
+    teams: [
+      { id: 1, name: '珠峰突击队2025', peak: '珠穆朗玛峰', date: '2025-05-01', level: '专业级', spots: 2, totalSpots: 6, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang' },
+      { id: 2, name: '马特洪峰探险团', peak: '马特洪峰', date: '2025-08-15', level: '中级', spots: 3, totalSpots: 4, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li' },
+    ],
+    emergencyContacts: [
+      { name: '中国登山救援', number: '12345', country: '🇨🇳' },
+      { name: '尼泊尔山地救援', number: '+977-1-4231234', country: '🇳🇵' },
+      { name: 'International SOS', number: '+86-10-6462-9100', country: '🌍' },
+    ],
+    navTabs: [
+      { id: 'home', icon: 'home', name: '首页' },
+      { id: 'explore', icon: 'explore', name: '探索' },
+      { id: 'chat', icon: 'chat', name: '聊天' },
+      { id: 'gear', icon: 'backpack', name: '装备' },
+      { id: 'me', icon: 'person', name: '我的' },
+    ],
+    weather: { location: '珠穆朗玛峰大本营', condition: 'partly_cloudy', temp: -8, wind: 25, humidity: 45, visibility: 12 },
+    userProfile: { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 },
+
+    // Toast notifications
+    showToast(message, type = 'success') {
+      const id = Date.now();
+      this.toasts.push({ id, message, type });
+      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
+    },
+
+    // Search
+    performSearch() {
+      if (!this.searchQuery.trim()) { this.searchResults = []; return; }
+      const q = this.searchQuery.toLowerCase();
+      const results = [];
+      [...this.eightThousanders, ...this.continentalPeaks, ...this.worldPeaks].forEach(p => {
+        if ((p.name && p.name.toLowerCase().includes(q)) || (p.nameEn && p.nameEn.toLowerCase().includes(q)) || (p.country && p.country.toLowerCase().includes(q))) {
+          results.push({ ...p, type: 'peak' });
+        }
+      });
+      this.climbingSpots.forEach(s => {
+        if ((s.name && s.name.toLowerCase().includes(q)) || (s.nameEn && s.nameEn.toLowerCase().includes(q)) || (s.country && s.country.toLowerCase().includes(q))) {
+          results.push({ ...s, type: 'spot' });
+        }
+      });
+      this.guides.forEach(g => { if (g.name && g.name.toLowerCase().includes(q)) results.push({ ...g, type: 'guide' }); });
+      this.clubs.forEach(c => { if (c.name && c.name.toLowerCase().includes(q)) results.push({ ...c, type: 'club' }); });
+      this.gearItems.forEach(i => { if (i.name && i.name.toLowerCase().includes(q)) results.push({ ...i, type: 'gear' }); });
+      this.searchResults = results;
+    },
+    selectSearchResult(result) {
+      if (result.type === 'peak') this.openPeakDetail(result);
+      else if (result.type === 'spot') this.openAlpineDetail(result);
+      else if (result.type === 'guide') this.viewGuideProfile(result);
+      else if (result.type === 'club') this.openClubDetail(result);
+      else if (result.type === 'gear') this.openGearDetail(result);
+      this.showSearch = false;
+    },
+    searchByKeyword(keyword) { this.searchQuery = keyword; this.performSearch(); },
+    removeHistory(index) { this.searchHistory.splice(index, 1); },
+
+    // Peak detail
+    openPeakDetail(peak) { this.selectedPeak = peak; this.showPeakDetail = true; },
+    openWorldPeakDetail(peak) { this.selectedPeak = peak; this.showPeakDetail = true; },
+    openAlpineDetail(spot) { this.selectedPeak = spot; this.showPeakDetail = true; },
+
+    // Booking
+    openBooking(item) { this.bookingData.mountain = item.name || item; this.showBooking = true; },
+    openBookingWithGuide(peak, guide) { this.bookingData.mountain = peak.name; this.bookingData.guide = guide.name; this.showBooking = true; },
+    submitBooking() {
+      if (!this.bookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
+      this.showBooking = false;
+      // Calculate deposit: 3000 CNY per person
+      const deposit = 3000 * (this.bookingData.members || 1);
+      this.openPayment(deposit);
+    },
+
+    // Community interactions
+    toggleLike(post) { post.isLiked = !post.isLiked; post.likes += post.isLiked ? 1 : -1; },
+    toggleFavorite(post) { post.isFavorited = !post.isFavorited; },
+    openComments(post) { this.selectedPostForComment = post; this.showComments = true; },
+    closeComments() { this.showComments = false; this.selectedPostForComment = null; },
+    addComment() {
+      if (!this.newComment.trim()) return;
+      if (this.selectedPostForComment) {
+        if (!this.selectedPostForComment.commentPreview) this.selectedPostForComment.commentPreview = [];
+        this.selectedPostForComment.commentPreview.push({ author: this.userProfile.name, text: this.newComment });
+        this.selectedPostForComment.comments++;
+      }
+      this.newComment = '';
+    },
+    sharePost(post) { this.selectedPostForShare = post; this.showShare = true; },
+    closeShareModal() { this.showShare = false; },
+    doShare(platform) { this.showToast('已分享到 ' + platform); this.closeShareModal(); },
+
+    // Post editor
+    openPostEditor() { this.showPostEditor = true; },
+    submitPost() {
+      if (!this.newPost.content.trim()) return;
+      this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: this.newPost.images[0] || null, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
+      this.newPost = { content: '', location: '', images: [] };
+      this.showPostEditor = false;
+      this.showToast('发布成功！');
+    },
+    addPostImage() { this.newPost.images.push('https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'); },
+    removePostImage(idx) { this.newPost.images.splice(idx, 1); },
+    selectPostEmoji(emoji) { this.newPost.content += emoji; },
+    togglePostEmojiPicker() { this.showPostEmojiPicker = !this.showPostEmojiPicker; },
+
+    // Chat
+    selectEmoji(emoji) { this.chatInput += emoji; },
+    sendMessage() {
+      if (!this.chatInput.trim()) return;
+      if (this.selectedConversation) {
+        this.selectedConversation.messages = this.selectedConversation.messages || [];
+        this.selectedConversation.messages.push({ from: 'me', text: this.chatInput, time: new Date().toLocaleTimeString() });
+      }
+      this.chatInput = '';
+    },
+    openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
+    openChatWithUser(name, avatar) { this.selectedConversation = { name, avatar, messages: [] }; this.showChatDetail = true; },
+    get filteredConversations() {
+      if (!this.activeChatType || this.activeChatType === 'all') return this.conversations;
+      return this.conversations.filter(c => c.type === this.activeChatType);
+    },
+
+    // Guides
+    viewGuideProfile(guide) { this.selectedGuide = guide; this.showGuideDetail = true; },
+    contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar); },
+    bookGuideService(guide) { this.openBookingWithGuide({ name: '' }, guide); },
+    selectGuideDate(date) { this.bookingData.date = date; },
+    isGuideDateAvailable(date) { return true; },
+
+    // SOS
+    openSOS() { this.showSOS = true; this.sosStep = 0; },
+    sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
+    cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
+    refreshLocation() { this.showToast('位置已刷新'); },
+    shareLocation() { this.showToast('位置已分享'); },
+    callEmergency(number) { this.showToast('正在拨打 ' + number); },
+    callContact(contact) { this.showToast('正在联系 ' + contact.name); },
+    callVIPHotline() { this.showToast('正在拨打 VIP 热线'); },
+    saveMedicalInfo() { this.showToast('医疗信息已保存'); },
+    handleSOSImageUpload(event) {
+      const files = event.target.files;
+      if (files) {
+        Array.from(files).forEach(f => {
+          if (!f.type.startsWith('image/')) return;
+          if (f.size > 10 * 1024 * 1024) { this.showToast('图片大小不能超过10MB', 'error'); return; }
+          this.sosImages.push(URL.createObjectURL(f));
+        });
+      }
+    },
+
+    // Insurance
+    openInsurance() { this.showInsurance = true; },
+    buyInsurance(type) { this.showToast('已选择保险方案：' + type); },
+    purchaseInsurance(product) { this.showToast('购买成功：' + product.name); this.showInsurance = false; },
+    fileInsuranceClaim() { this.showToast('理赔申请已提交'); },
+    bookVIPService() { this.showToast('VIP 服务预约成功'); },
+
+    // Expeditions & Clubs
+    openExpeditionDetail(exp) { this.selectedExpedition = exp; this.showExpeditionDetail = true; },
+    openClubDetail(club) { this.selectedClub = club; this.showClubDetail = true; },
+    joinClub() { this.showToast('已成功加入俱乐部！'); this.showClubDetail = false; },
+    openArticle(guide) { this.selectedArticle = guide; this.showArticle = true; },
+
+    // Gear
+    openGearDetail(item) { this.selectedGear = item; this.showGearDetail = true; },
+    openGearPublish() { this.showGearPublish = true; },
+    submitGear() { this.showToast('装备已发布！'); this.showGearPublish = false; },
+    contactSeller(item) { this.openChatWithUser(item.seller || '卖家', item.sellerAvatar || ''); },
+    getConditionClass(condition) {
+      const map = { '全新': 'text-green-400', '九成新': 'text-emerald-400', '八成新': 'text-yellow-400', '七成新': 'text-orange-400' };
+      return map[condition] || 'text-slate-400';
+    },
+
+    // Teams
+    openTeamDetail(team) { this.selectedTeam = team; this.showTeamDetail = true; },
+    closeTeamDetail() { this.showTeamDetail = false; },
+    joinTeam(team) { this.showToast('已申请加入：' + team.name); this.closeTeamDetail(); },
+    openCreateTeam() { this.showCreateTeam = true; },
+    closeCreateTeam() { this.showCreateTeam = false; },
+    createTeam() { this.showToast('队伍创建成功！'); this.closeCreateTeam(); },
+
+    // Tracks
+    openNewTrack() { this.showToast('GPS 轨迹记录功能即将上线'); },
+    openTrackDetail(track) { this.showToast(track.name + ' · ' + track.distance + 'km'); },
+
+    // Utility methods
+    getDifficultyClass(difficulty) {
+      const map = { '极难': 'text-red-500', '高': 'text-orange-400', '中': 'text-yellow-400', '低': 'text-green-400' };
+      return map[difficulty] || 'text-slate-400';
+    },
+    getWeatherIcon(condition) {
+      const map = { 'sunny': 'wb_sunny', 'cloudy': 'cloud', 'snowy': 'ac_unit', 'windy': 'air', 'stormy': 'thunderstorm' };
+      return map[condition] || 'wb_sunny';
+    },
+    formatAlt(alt) { return this.useMetric ? alt + 'm' : Math.round(alt * 3.281) + 'ft'; },
+    formatWind(speed) { return this.useMetric ? speed + ' km/h' : Math.round(speed * 0.621) + ' mph'; },
+    formatPrice(price) {
+      if (this.currentCurrency === 'USD') return '$' + Math.round(price / 7.2).toLocaleString();
+      if (this.currentCurrency === 'EUR') return '€' + Math.round(price / 7.8).toLocaleString();
+      return '¥' + price.toLocaleString('zh-CN');
+    },
+    openPayment(amount) { this.paymentAmount = amount; this.showPayment = true; },
+    confirmPayment() {
+      this.showPayment = false;
+      this.showToast('支付成功！订单已确认 🎉');
+    },
+    submitGuideApply() {
+      if (!this.guideApplyForm.name || !this.guideApplyForm.cert) {
+        this.showToast('请填写姓名和证书信息', 'error'); return;
+      }
+      this.showGuideApply = false;
+      this.showToast('申请已提交，7天内审核完成 ✅');
+    },
+    goToPage(id) { this.currentPage = id; },
+    viewImage(url) { window.open(url, '_blank'); },
+    viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
+    openSidebar() { this.showToast('侧边菜单即将推出'); },
+    getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
+    getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
+    openSettings(type) { this.settingsType = type; this.showSettings = true; },
+
+    init() {
+      // Auto-rotate hero carousel every 5 seconds
+      setInterval(() => {
+        this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
+      }, 5000);
+    },
+  };
+}
+</script>
+</body>
+</html>
