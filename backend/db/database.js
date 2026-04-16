@@ -148,4 +148,18 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 `);
 
+// 迁移：新增字段（如果不存在）
+const existingUserCols = db.pragma('table_info(users)').map(c => c.name);
+if (!existingUserCols.includes('is_admin')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
+}
+if (!existingUserCols.includes('is_banned')) {
+  db.exec('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0');
+}
+
+const existingPostCols = db.pragma('table_info(posts)').map(c => c.name);
+if (!existingPostCols.includes('status')) {
+  db.exec("ALTER TABLE posts ADD COLUMN status TEXT DEFAULT 'pending'");
+}
+
 module.exports = db;
