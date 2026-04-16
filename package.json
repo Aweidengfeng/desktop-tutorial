@@ -1,0 +1,16 @@
+{
+  "name": "desktop-tutorial",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd backend && npm install",
+    "start": "node backend/db/seed.js && node backend/app.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^12.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
