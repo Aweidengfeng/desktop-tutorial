@@ -922,7 +922,10 @@
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
         <input x-model="loginForm.password" type="password" placeholder="请输入密码" @keydown.enter="doLogin()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
-      <button @click="doLogin()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors">登录</button>
+      <button @click="doLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
+        <span x-text="loginLoading ? '登录中…' : '登录'"></span>
+      </button>
       <p class="text-center text-slate-400 text-sm">还没有账号？<button @click="showLogin=false;showRegister=true" class="text-primary-light font-semibold hover:underline">立即注册</button></p>
     </div>
   </div>
@@ -1900,6 +1903,7 @@ function alpineLink() {
     authToken: localStorage.getItem('summitlink_token') || null,
     showLogin: false,
     showRegister: false,
+    loginLoading: false,
     loginForm: { phone: '', password: '' },
     registerForm: { name: '', phone: '', password: '' },
     heroSlide: 0,
@@ -2403,6 +2407,8 @@ function alpineLink() {
       return h;
     },
     async doLogin() {
+      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      this.loginLoading = true;
       try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
         const data = await res.json();
@@ -2415,8 +2421,11 @@ function alpineLink() {
         this.loginForm = { phone: '', password: '' };
         this.showToast('登录成功，欢迎回来 ' + data.user.name + '！');
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.loginLoading = false; }
     },
     async doRegister() {
+      if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.registerForm) });
         const data = await res.json();

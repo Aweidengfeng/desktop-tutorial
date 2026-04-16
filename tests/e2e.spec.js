@@ -34,8 +34,8 @@ async function doLogin(page) {
   await phoneInput.fill(TEST_PHONE);
   // 填入密码
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
-  // 提交登录表单
-  await page.locator('button[type="submit"]').first().click();
+  // 提交登录表单（点击弹窗内的「登录」按钮，排除顶部导航栏按钮）
+  await page.locator('.bg-slate-800 button:has-text("登录"), [x-show="showLogin"] button:has-text("登录")').last().click();
 
   // 等待登录 API 响应，确认服务端已处理请求
   return loginResponse;
