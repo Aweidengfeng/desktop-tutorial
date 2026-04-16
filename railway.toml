@@ -1,5 +1,6 @@
 [build]
-watchPatterns = ["backend/**", "*.html"]
+builder = "nixpacks"
+buildCommand = "cd backend && npm install"
 
 [deploy]
 startCommand = "cd backend && node db/seed.js && node app.js"
