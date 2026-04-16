@@ -34,8 +34,8 @@ async function doLogin(page) {
   await phoneInput.fill(TEST_PHONE);
   // 填入密码
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
-  // 提交登录表单（点击弹窗内的「登录」按钮，排除顶部导航栏按钮）
-  await page.locator('.bg-slate-800 button:has-text("登录"), [x-show="showLogin"] button:has-text("登录")').last().click();
+  // 提交登录表单（点击弹窗内的「登录」按钮，仅匹配登录弹窗内的按钮）
+  await page.locator('[x-show="showLogin"] button:has-text("登录")').first().click();
 
   // 等待登录 API 响应，确认服务端已处理请求
   return loginResponse;
@@ -75,18 +75,13 @@ test.describe('山峰数据加载', () => {
   });
 
   test('点击「8000米巨峰」Tab 应过滤显示对应山峰', async ({ page }) => {
-    await page.goto('/summitlink');
-    await page.waitForLoadState('networkidle');
-
-    // 监听带 type 参数的请求（在点击前注册）
+    // 在导航前注册监听，以捕获页面初始化时发起的请求（init() 自动调用 loadPeaks('8000ers')）
     const filteredResponse = page.waitForResponse(
       resp => resp.url().includes('/api/peaks?type=8000ers') && resp.status() === 200,
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
 
-    // 点击 8000ers tab（中文按钮文字）
-    const tabButton = page.locator('button:has-text("8000米"), button:has-text("8000"), [data-type="8000ers"]').first();
-    await tabButton.click();
+    await page.goto('/summitlink');
 
     // 等待过滤请求
     const resp = await filteredResponse;
