@@ -3,6 +3,6 @@ builder = "NIXPACKS"
 buildCommand = "cd backend && npm install"
 
 [deploy]
-startCommand = "cd backend && node db/seed.js && node app.js"
+startCommand = "node backend/db/seed.js && node backend/app.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
