@@ -36,6 +36,13 @@ app.use('/api/posts', require('./routes/posts'));
 app.use('/api/pay', require('./routes/pay'));
 app.use('/api/weather', require('./routes/weather'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/admin', require('./routes/admin'));
+
+// Admin 面板
+const adminHtmlFile = path.join(rootPath, 'admin.html');
+app.get('/admin', (req, res) => {
+  res.sendFile(adminHtmlFile);
+});
 
 // 健康检查
 app.get('/health', (req, res) => {
