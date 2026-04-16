@@ -1,0 +1,5 @@
+[build]
+nixpkgs = ["python3"]
+
+[nodejs]
+version = "20"
