@@ -2,13 +2,29 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 
-const SECRET = process.env.JWT_SECRET || 'summitlink_secret_change_this_in_production';
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: JWT_SECRET environment variable is not set in production!');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: JWT_SECRET is not set. Using default dev secret. Do NOT use in production!');
+  }
+}
+const JWT_SECRET = SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: '登录尝试次数过多，请15分钟后再试' },
+});
 
 function makeToken(id) {
-  return jwt.sign({ id }, SECRET, { expiresIn: '30d' });
+  return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
 }
 
 function safeUser(user) {
@@ -21,6 +37,7 @@ function safeUser(user) {
     expeditions: user.expeditions,
     followers: user.followers,
     following: user.following,
+    phone: user.phone,
   };
 }
 
@@ -30,6 +47,12 @@ router.post('/register', (req, res) => {
     const { name, phone, password } = req.body;
     if (!name || !phone || !password) {
       return res.status(400).json({ error: '请填写姓名、手机号和密码' });
+    }
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ error: '手机号格式不正确' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: '密码至少6位' });
     }
     const username = '@' + name.toLowerCase().replace(/\s+/g, '');
     const avatar = 'https://i.pravatar.cc/150?u=' + phone;
@@ -50,9 +73,12 @@ router.post('/register', (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
+router.post('/login', loginLimiter, (req, res) => {
   try {
     const { phone, password } = req.body;
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ error: '手机号格式不正确' });
+    }
     const user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
     if (!user) return res.status(401).json({ error: '手机号或密码错误' });
     const ok = bcrypt.compareSync(password, user.password);

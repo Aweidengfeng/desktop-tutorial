@@ -7,7 +7,8 @@ module.exports = function authMiddleware(req, res, next) {
   }
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'summitlink_secret_change_this_in_production');
+    const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+    const decoded = jwt.verify(token, secret);
     req.user = { id: decoded.id };
     next();
   } catch (e) {
