@@ -12,7 +12,8 @@ router.get('/', (req, res) => {
       stmt = db.prepare(`
         SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
                image, type, description, best_season as bestSeason,
-               success_rate as successRate, first_ascent as firstAscent, deaths
+               success_rate as successRate, first_ascent as firstAscent, deaths,
+               latitude, longitude
         FROM peaks WHERE type = ?
       `);
       return res.json(stmt.all(type));
@@ -20,7 +21,8 @@ router.get('/', (req, res) => {
     stmt = db.prepare(`
       SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
              image, type, description, best_season as bestSeason,
-             success_rate as successRate, first_ascent as firstAscent, deaths
+             success_rate as successRate, first_ascent as firstAscent, deaths,
+             latitude, longitude
       FROM peaks
     `);
     res.json(stmt.all());

@@ -287,7 +287,7 @@
         </div>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
           <template x-for="peak in eightThousanders" :key="peak.id">
-            <div @click="selectedPeak = peak; showPeakDetail = true" class="flex-shrink-0 w-40 rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+            <div @click="openPeakDetail(peak)" class="flex-shrink-0 w-40 rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
               <div class="relative h-28">
                 <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
@@ -395,6 +395,78 @@
              x-transition:enter-end="opacity-100">
       <div class="px-4 pt-2 pb-3">
         <h2 class="font-display font-bold text-xl text-white mb-4">探索山峰</h2>
+        <!-- 全球天气搜索框 -->
+        <div class="mb-4">
+          <div class="flex gap-2">
+            <div class="flex-1 flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
+              <span class="material-symbols-outlined text-slate-400 text-lg">wb_sunny</span>
+              <input x-model="weatherSearch" type="text"
+                     placeholder="搜索全球任意地点天气... / Search weather anywhere..."
+                     class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500"
+                     @keydown.enter="searchWeather()">
+            </div>
+            <button @click="searchWeather()" class="px-4 bg-primary hover:bg-primary-light text-white rounded-xl text-sm font-medium transition-colors">
+              搜索
+            </button>
+          </div>
+          <!-- 搜索结果 -->
+          <div x-show="showWeatherSearchResult" class="mt-3">
+            <template x-if="weatherSearchLoading">
+              <div class="bg-slate-800 rounded-2xl p-4 text-slate-400 text-sm text-center">天气加载中...</div>
+            </template>
+            <template x-if="!weatherSearchLoading && weatherSearchResult">
+              <div class="bg-slate-800 rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                  <p class="text-white font-semibold" x-text="weatherSearchResult.error ? '暂无数据' : weatherSearchResult.location"></p>
+                  <button @click="showWeatherSearchResult=false" class="text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                  </button>
+                </div>
+                <template x-if="!weatherSearchResult.error">
+                  <div>
+                    <div class="grid grid-cols-4 gap-2 text-center mb-3">
+                      <div class="bg-slate-700 rounded-xl p-2">
+                        <p class="text-white font-bold text-base" x-text="weatherSearchResult.temp + '°C'"></p>
+                        <p class="text-xs text-slate-400">温度</p>
+                      </div>
+                      <div class="bg-slate-700 rounded-xl p-2">
+                        <p class="text-white font-bold text-sm" x-text="weatherSearchResult.wind + ' km/h'"></p>
+                        <p class="text-xs text-slate-400">风速</p>
+                      </div>
+                      <div class="bg-slate-700 rounded-xl p-2">
+                        <p class="text-white font-bold text-sm" x-text="weatherSearchResult.humidity + '%'"></p>
+                        <p class="text-xs text-slate-400">湿度</p>
+                      </div>
+                      <div class="bg-slate-700 rounded-xl p-2">
+                        <p class="text-white font-bold text-sm" x-text="weatherSearchResult.visibility + 'km'"></p>
+                        <p class="text-xs text-slate-400">能见度</p>
+                      </div>
+                    </div>
+                    <template x-if="weatherSearchForecast && weatherSearchForecast.length > 0">
+                      <div>
+                        <p class="text-xs text-slate-400 mb-2">📅 7天预报</p>
+                        <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+                          <template x-for="day in weatherSearchForecast" :key="day.date">
+                            <div class="flex-shrink-0 bg-slate-700 rounded-xl p-2 text-center min-w-[66px]">
+                              <p class="text-xs text-slate-400" x-text="day.date.slice(5)"></p>
+                              <p class="text-white text-xs font-semibold mt-1" x-text="day.description"></p>
+                              <p class="text-sky-400 text-xs mt-1" x-text="day.temp_max + '°'"></p>
+                              <p class="text-slate-400 text-xs" x-text="day.temp_min + '°'"></p>
+                              <p class="text-slate-500 text-xs mt-1" x-text="day.wind + 'km/h'"></p>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="weatherSearchResult.error">
+                  <p class="text-slate-400 text-sm" x-text="weatherSearchResult.error"></p>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
         <div class="flex gap-2 overflow-x-auto scroll-hide pb-2 mb-4">
           <template x-for="cat in categories" :key="cat.id">
             <button @click="activeCategory = cat.id"
@@ -410,7 +482,7 @@
         <div x-show="activeCategory === '8000ers'">
           <div class="grid grid-cols-2 gap-3">
             <template x-for="peak in eightThousanders" :key="peak.id">
-              <div @click="selectedPeak=peak;showPeakDetail=true" class="rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+              <div @click="openPeakDetail(peak)" class="rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
                 <div class="relative h-32">
                   <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
                   <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
@@ -437,7 +509,7 @@
         <div x-show="activeCategory === 'continental'">
           <div class="space-y-3">
             <template x-for="peak in continentalPeaks" :key="peak.id">
-              <div class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div @click="openPeakDetail(peak)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
                 <img :src="peak.image" :alt="peak.name" class="w-24 h-24 object-cover flex-shrink-0">
                 <div class="py-3 flex-1 pr-3">
                   <div class="flex items-start justify-between gap-2">
@@ -462,7 +534,7 @@
         <div x-show="activeCategory === 'world'">
           <div class="space-y-3">
             <template x-for="peak in worldPeaks" :key="peak.id">
-              <div class="glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
+              <div @click="openPeakDetail(peak)" class="glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
                 <div class="relative h-36">
                   <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
                   <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
@@ -483,7 +555,7 @@
         <div x-show="activeCategory === 'alpine'">
           <div class="space-y-3">
             <template x-for="spot in climbingSpots" :key="spot.id">
-              <div class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div @click="openAlpineDetail(spot)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
                 <img :src="spot.image" :alt="spot.name" class="w-24 h-24 object-cover flex-shrink-0">
                 <div class="py-3 flex-1">
                   <p class="text-white font-semibold" x-text="spot.name"></p>
@@ -1530,12 +1602,70 @@
                   <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.country"></p>
                 </div>
               </div>
-              <template x-if="selectedPeak.weather">
-                <div class="bg-slate-800 rounded-xl p-3 mb-4 flex items-center gap-4">
-                  <span class="text-2xl">🌡️</span>
-                  <div>
-                    <p class="text-xs text-slate-400">当前天气</p>
-                    <p class="text-white text-sm font-semibold" x-text="selectedPeak.weather.temp + '°C · 风速 ' + selectedPeak.weather.wind + ' km/h'"></p>
+              <template x-if="selectedPeak.successRate || selectedPeak.firstAscent">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                  <template x-if="selectedPeak.successRate">
+                    <div class="bg-slate-800 rounded-xl p-3 text-center">
+                      <p class="text-xs text-slate-400">成功率</p>
+                      <p class="text-emerald-400 font-bold text-sm mt-1" x-text="selectedPeak.successRate"></p>
+                    </div>
+                  </template>
+                  <template x-if="selectedPeak.firstAscent">
+                    <div class="bg-slate-800 rounded-xl p-3 text-center">
+                      <p class="text-xs text-slate-400">首次登顶</p>
+                      <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.firstAscent"></p>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <!-- 实时天气 -->
+              <div class="mb-4">
+                <template x-if="peakWeatherLoading">
+                  <div class="bg-slate-800 rounded-xl p-3 flex items-center gap-3">
+                    <span class="text-xl">🌡️</span>
+                    <p class="text-slate-400 text-sm">天气加载中...</p>
+                  </div>
+                </template>
+                <template x-if="!peakWeatherLoading && peakWeather && !peakWeather.error">
+                  <div class="bg-slate-800 rounded-xl p-3">
+                    <p class="text-xs text-slate-400 mb-2">⛅ 当前天气</p>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <p class="text-white font-bold text-lg" x-text="peakWeather.temp + '°C'"></p>
+                        <p class="text-xs text-slate-400">温度</p>
+                      </div>
+                      <div>
+                        <p class="text-white font-bold text-sm" x-text="peakWeather.wind + ' km/h'"></p>
+                        <p class="text-xs text-slate-400">风速</p>
+                      </div>
+                      <div>
+                        <p class="text-white font-bold text-sm" x-text="peakWeather.humidity + '%'"></p>
+                        <p class="text-xs text-slate-400">湿度</p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="!peakWeatherLoading && (!peakWeather || peakWeather.error)">
+                  <div class="bg-slate-800 rounded-xl p-3 flex items-center gap-3">
+                    <span class="text-xl">🌡️</span>
+                    <p class="text-slate-400 text-sm">天气数据暂不可用</p>
+                  </div>
+                </template>
+              </div>
+              <!-- 7天天气预报 -->
+              <template x-if="peakForecast && peakForecast.length > 0">
+                <div class="mb-4">
+                  <p class="text-xs text-slate-400 mb-2">📅 7天天气预报</p>
+                  <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+                    <template x-for="day in peakForecast" :key="day.date">
+                      <div class="flex-shrink-0 bg-slate-800 rounded-xl p-2 text-center min-w-[72px]">
+                        <p class="text-xs text-slate-400" x-text="day.date.slice(5)"></p>
+                        <p class="text-white text-xs font-semibold mt-1" x-text="day.description"></p>
+                        <p class="text-sky-400 text-xs mt-1" x-text="day.temp_max + '°'"></p>
+                        <p class="text-slate-400 text-xs" x-text="day.temp_min + '°'"></p>
+                        <p class="text-slate-500 text-xs mt-1" x-text="day.wind + 'km/h'"></p>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </template>
@@ -3091,6 +3221,14 @@ function alpineLink() {
     currentCurrency: 'CNY',
     showPeakDetail: false,
     selectedPeak: null,
+    peakWeather: null,
+    peakForecast: [],
+    peakWeatherLoading: false,
+    weatherSearch: '',
+    weatherSearchResult: null,
+    weatherSearchForecast: [],
+    weatherSearchLoading: false,
+    showWeatherSearchResult: false,
     showBooking: false,
     bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '' },
     showSOS: false,
@@ -3287,41 +3425,10 @@ function alpineLink() {
       { id: 9, name: 'Carlos Lima', flag: '🇧🇷', avatar: 'https://i.pravatar.cc/150?u=lb9', peak: '安纳普尔纳 8091m', date: '4月3日' },
       { id: 10, name: 'Fatima Hassan', flag: '🇵🇰', avatar: 'https://i.pravatar.cc/150?u=lb10', peak: '南伽帕尔巴特 8126m', date: '4月2日' },
     ],
-    eightThousanders: [
-      { id: 1, name: '珠穆朗玛峰', nameEn: 'Mount Everest', altitude: 8849, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', weather: { condition: 'cloudy', temp: -20, wind: 45 }, bestSeason: '5月、10月', description: '世界最高峰，位于中尼边境。每年吸引数百名攀登者挑战极限。' },
-      { id: 2, name: 'K2 乔戈里峰', nameEn: 'K2', altitude: 8611, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', weather: { condition: 'sunny', temp: -15, wind: 35 }, bestSeason: '7月、8月', description: '世界第二高峰，被称为"野蛮山峰"，死亡率高达25%。' },
-      { id: 3, name: '干城章嘉峰', nameEn: 'Kangchenjunga', altitude: 8586, country: '尼泊尔/印度', countryFlag: '🇳🇵🇮🇳', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400', weather: { condition: 'snowy', temp: -18, wind: 40 }, bestSeason: '5月、10月', description: '世界第三高峰，当地人视为神圣之峰，禁止登顶最高点。' },
-      { id: 4, name: '洛子峰', nameEn: 'Lhotse', altitude: 8516, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', weather: { condition: 'partly_cloudy', temp: -16, wind: 30 }, bestSeason: '5月', description: '世界第四高峰，与珠峰相邻，通常同时攀登。' },
-      { id: 5, name: '马卡鲁峰', nameEn: 'Makalu', altitude: 8485, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', weather: { condition: 'cloudy', temp: -17, wind: 38 }, bestSeason: '5月', description: '世界第五高峰，四棱锥形的金字塔状山峰。' },
-      { id: 6, name: '卓奥友峰', nameEn: 'Cho Oyu', altitude: 8188, country: '中国/尼泊尔', countryFlag: '🇨🇳🇳🇵', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', weather: { condition: 'partly_cloudy', temp: -14, wind: 28 }, bestSeason: '9月、10月', description: '世界第六高峰，被认为是技术要求相对较低的八千米级峰。' },
-      { id: 7, name: '道拉吉里峰', nameEn: 'Dhaulagiri', altitude: 8167, country: '尼泊尔', countryFlag: '🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400', weather: { condition: 'snowy', temp: -19, wind: 42 }, bestSeason: '5月', description: '世界第七高峰，以极端的雪崩危险著称。' },
-      { id: 8, name: '马纳斯鲁峰', nameEn: 'Manaslu', altitude: 8163, country: '尼泊尔', countryFlag: '🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400', weather: { condition: 'partly_cloudy', temp: -15, wind: 33 }, bestSeason: '5月、10月', description: '世界第八高峰，"灵魂之山"，尼泊尔境内。' },
-      { id: 9, name: '南伽帕尔巴特峰', nameEn: 'Nanga Parbat', altitude: 8126, country: '巴基斯坦', countryFlag: '🇵🇰', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', weather: { condition: 'cloudy', temp: -16, wind: 36 }, bestSeason: '7月', description: '世界第九高峰，"杀手山"，死亡率极高。' },
-      { id: 10, name: '安纳普尔纳峰', nameEn: 'Annapurna', altitude: 8091, country: '尼泊尔', countryFlag: '🇳🇵', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', weather: { condition: 'partly_cloudy', temp: -13, wind: 30 }, bestSeason: '5月、10月', description: '世界第十高峰，死亡率曾长居8000m峰首位。' },
-      { id: 11, name: '加舒尔布鲁木I峰', nameEn: 'Gasherbrum I', altitude: 8080, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', weather: { condition: 'sunny', temp: -14, wind: 32 }, bestSeason: '7月', description: '世界第十一高峰，又称"隐峰"。' },
-      { id: 12, name: '布洛阿特峰', nameEn: 'Broad Peak', altitude: 8051, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', weather: { condition: 'partly_cloudy', temp: -13, wind: 27 }, bestSeason: '7月', description: '世界第十二高峰，喀喇昆仑山脉。' },
-      { id: 13, name: '加舒尔布鲁木II峰', nameEn: 'Gasherbrum II', altitude: 8034, country: '巴基斯坦/中国', countryFlag: '🇵🇰🇨🇳', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400', weather: { condition: 'sunny', temp: -12, wind: 25 }, bestSeason: '7月', description: '世界第十三高峰，相对技术难度较低。' },
-      { id: 14, name: '希夏邦马峰', nameEn: 'Shishapangma', altitude: 8027, country: '中国', countryFlag: '🇨🇳', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', weather: { condition: 'partly_cloudy', temp: -11, wind: 24 }, bestSeason: '5月、10月', description: '世界第十四高峰，唯一完全在中国境内的八千米级高峰。' },
-    ],
-    continentalPeaks: [
-      { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', difficulty: '极难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', continent: '亚洲' },
-      { id: 2, name: '麦金利山', nameEn: 'Denali', altitude: 6190, country: '美国', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', continent: '北美洲' },
-      { id: 3, name: '阿空加瓜山', nameEn: 'Aconcagua', altitude: 6961, country: '阿根廷', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', continent: '南美洲' },
-      { id: 4, name: '乞力马扎罗山', nameEn: 'Kilimanjaro', altitude: 5895, country: '坦桑尼亚', difficulty: '中等', icon: '🏔️', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', continent: '非洲' },
-      { id: 5, name: '文森峰', nameEn: 'Vinson Massif', altitude: 4892, country: '南极洲', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', continent: '南极洲' },
-      { id: 6, name: '厄尔布鲁士山', nameEn: 'Elbrus', altitude: 5642, country: '俄罗斯', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400', continent: '欧洲' },
-      { id: 7, name: '查亚峰', nameEn: 'Puncak Jaya', altitude: 4884, country: '印度尼西亚', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', continent: '大洋洲' },
-    ],
-    worldPeaks: [
-      { id: 1, name: '马特洪峰', nameEn: 'Matterhorn', altitude: 4478, country: '瑞士/意大利', difficulty: '难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', type: 'alpine' },
-      { id: 2, name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, country: '法国/意大利', difficulty: '中难', icon: '🏔️', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', type: 'alpine' },
-      { id: 3, name: '大帕拉迪索峰', nameEn: 'Gran Paradiso', altitude: 4061, country: '意大利', difficulty: '中等', icon: '🏔️', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', type: 'alpine' },
-    ],
-    climbingSpots: [
-      { id: 1, name: '黄龙溪攀岩', nameEn: 'Huanglongxi Climbing', country: '中国', difficulty: '初级', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400' },
-      { id: 2, name: '张家界岩壁', nameEn: 'Zhangjiajie Cliff', country: '中国', difficulty: '中级', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400' },
-      { id: 3, name: '阳朔月亮山', nameEn: 'Yangshuo Moon Hill', country: '中国', difficulty: '中级', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400' },
-    ],
+    eightThousanders: [],
+    continentalPeaks: [],
+    worldPeaks: [],
+    climbingSpots: [],
     categories: [
       { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
       { id: 'continental', name: '洲最高峰', icon: 'public' },
@@ -3436,9 +3543,62 @@ function alpineLink() {
     removeHistory(index) { this.searchHistory.splice(index, 1); },
 
     // Peak detail
-    openPeakDetail(peak) { this.selectedPeak = peak; this.showPeakDetail = true; },
-    openWorldPeakDetail(peak) { this.selectedPeak = peak; this.showPeakDetail = true; },
-    openAlpineDetail(spot) { this.selectedPeak = spot; this.showPeakDetail = true; },
+    openPeakDetail(peak) {
+      this.selectedPeak = peak;
+      this.showPeakDetail = true;
+      this.peakWeather = null;
+      this.peakForecast = [];
+      this.loadPeakWeather(peak);
+    },
+    openWorldPeakDetail(peak) { this.openPeakDetail(peak); },
+    openAlpineDetail(spot) { this.openPeakDetail(spot); },
+    async loadPeakWeather(peak) {
+      if (!peak) return;
+      this.peakWeatherLoading = true;
+      try {
+        let url;
+        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
+          url = `/api/weather?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
+        } else {
+          url = `/api/weather?location=${encodeURIComponent(peak.name)}`;
+        }
+        const res = await fetch(url);
+        if (res.ok) this.peakWeather = await res.json();
+      } catch(e) {}
+      try {
+        let furl;
+        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
+          furl = `/api/weather/forecast?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
+        } else {
+          furl = `/api/weather/forecast?location=${encodeURIComponent(peak.name)}`;
+        }
+        const fres = await fetch(furl);
+        if (fres.ok) {
+          const fd = await fres.json();
+          this.peakForecast = fd.forecast || [];
+        }
+      } catch(e) {}
+      this.peakWeatherLoading = false;
+    },
+    async searchWeather() {
+      if (!this.weatherSearch.trim()) return;
+      this.weatherSearchLoading = true;
+      this.weatherSearchResult = null;
+      this.weatherSearchForecast = [];
+      this.showWeatherSearchResult = true;
+      try {
+        const loc = encodeURIComponent(this.weatherSearch.trim());
+        const [wres, fres] = await Promise.all([
+          fetch(`/api/weather?location=${loc}`),
+          fetch(`/api/weather/forecast?location=${loc}`)
+        ]);
+        if (wres.ok) this.weatherSearchResult = await wres.json();
+        if (fres.ok) { const fd = await fres.json(); this.weatherSearchForecast = fd.forecast || []; }
+      } catch(e) {
+        this.weatherSearchResult = { error: '天气数据暂不可用' };
+      }
+      this.weatherSearchLoading = false;
+    },
 
     // Booking
     openBooking(item) { this.bookingData.mountain = item.name || item; this.showBooking = true; },
@@ -3809,11 +3969,11 @@ function alpineLink() {
         const res = await fetch('/api/peaks?type=' + t);
         if (!res.ok) return;
         const data = await res.json();
-        const withWeather = data.map(p => ({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', weather: { condition: 'sunny', temp: -15, wind: 30 } }));
-        if (t === '8000ers') this.eightThousanders = withWeather;
-        else if (t === 'continental') this.continentalPeaks = withWeather;
-        else if (t === 'world') this.worldPeaks = withWeather;
-        else if (t === 'alpine') this.climbingSpots = withWeather.map(p => ({ ...p, nameEn: p.nameEn || p.name }));
+        const mapped = data.map(p => ({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
+        if (t === '8000ers') this.eightThousanders = mapped;
+        else if (t === 'continental') this.continentalPeaks = mapped;
+        else if (t === 'world') this.worldPeaks = mapped;
+        else if (t === 'alpine') this.climbingSpots = mapped;
       } catch(e) {}
     },
     async loadGuides() {
@@ -4437,7 +4597,7 @@ function alpineLink() {
       if (!slide.linkType || slide.linkType === 'none') return;
       if (slide.linkType === 'peak') {
         const peak = [...this.eightThousanders, ...this.continentalPeaks].find(p => p.nameEn && p.nameEn.toLowerCase() === slide.linkTarget.toLowerCase());
-        if (peak) { this.selectedPeak = peak; this.showPeakDetail = true; }
+        if (peak) { this.openPeakDetail(peak); }
       } else if (slide.linkType === 'page') {
         if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
         else { this.currentPage = slide.linkTarget || 'explore'; }

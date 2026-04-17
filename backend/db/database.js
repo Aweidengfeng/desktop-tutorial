@@ -783,4 +783,8 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 `);
 
+// 迁移：为 peaks 表添加 latitude/longitude 列（已有数据库兼容）
+try { db.exec('ALTER TABLE peaks ADD COLUMN latitude REAL'); } catch(e) {}
+try { db.exec('ALTER TABLE peaks ADD COLUMN longitude REAL'); } catch(e) {}
+
 module.exports = db;
