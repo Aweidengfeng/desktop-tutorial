@@ -6,10 +6,13 @@ const auth = require('../middleware/auth');
 // GET /api/clubs
 router.get('/', (req, res) => {
   try {
+    const { limit, sort } = req.query;
+    const orderBy = sort === 'members' ? 'members_count DESC' : 'members_count DESC';
+    const limitClause = limit ? `LIMIT ${parseInt(limit, 10) || 20}` : '';
     const clubs = db.prepare(`
       SELECT id, name, description, cover, specialty, region, type,
              members_count as members, expeditions, verified, founded, status, created_at
-      FROM clubs WHERE status = 'active' ORDER BY members_count DESC
+      FROM clubs WHERE status = 'active' ORDER BY ${orderBy} ${limitClause}
     `).all();
     res.json(clubs);
   } catch (e) {
@@ -184,6 +187,36 @@ router.post('/', auth, (req, res) => {
     db.prepare('UPDATE clubs SET members_count = 1 WHERE id = ?').run(result.lastInsertRowid);
     const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(result.lastInsertRowid);
     res.json(club);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/clubs/:id — 更新俱乐部信息（需是创建者）
+router.put('/:id', auth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const member = db.prepare('SELECT role FROM club_members WHERE club_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const isCreator = club.creator_id === req.user.id;
+    const isAdmin = member && (member.role === 'admin' || member.role === 'founder');
+    if (!isCreator && !isAdmin) return res.status(403).json({ error: '无权限修改俱乐部信息' });
+    const { name, description, cover, specialty, region, type, contact, wechat, website, cover_image, logo } = req.body;
+    db.prepare(`
+      UPDATE clubs SET name=?, description=?, cover=?, specialty=?, region=?, type=?,
+                       contact=?, wechat=?, website=?, cover_image=?, logo=?
+      WHERE id=?
+    `).run(
+      name || club.name, description !== undefined ? description : club.description,
+      cover !== undefined ? cover : club.cover, specialty !== undefined ? specialty : club.specialty,
+      region !== undefined ? region : club.region, type || club.type,
+      contact !== undefined ? contact : club.contact, wechat !== undefined ? wechat : club.wechat,
+      website !== undefined ? website : club.website, cover_image !== undefined ? cover_image : club.cover_image,
+      logo !== undefined ? logo : club.logo,
+      req.params.id
+    );
+    const updated = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id);
+    res.json(updated);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

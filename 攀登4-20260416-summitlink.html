@@ -125,7 +125,7 @@
       <!-- Hero Carousel -->
       <div class="relative h-56 overflow-hidden" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
         <template x-for="(slide,i) in heroSlides" :key="i">
-          <div class="absolute inset-0 transition-opacity duration-700" :class="heroSlide===i ? 'opacity-100' : 'opacity-0'">
+          <div @click="handleBannerClick(slide)" class="absolute inset-0 transition-opacity duration-700 cursor-pointer" :class="heroSlide===i ? 'opacity-100' : 'opacity-0'">
             <img :src="slide.image" :alt="slide.name" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
           </div>
@@ -192,10 +192,55 @@
             <span class="text-2xl">📍</span>
             <span class="text-xs text-slate-300 font-medium text-center leading-tight">记录轨迹</span>
           </button>
+          <button @click="openInsurance()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🛡️</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">攀登保险</span>
+          </button>
+        </div>
+        <div class="grid grid-cols-4 gap-2 mt-2">
           <button @click="currentPage='gear'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
             <span class="text-2xl">🎒</span>
             <span class="text-xs text-slate-300 font-medium text-center leading-tight">装备市场</span>
           </button>
+          <button @click="currentPage='community';activeChatType='clubs'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🏛️</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">俱乐部</span>
+          </button>
+          <button @click="currentPage='community';activeChatType='teams'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">👥</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">找队友</span>
+          </button>
+          <button @click="openCustomsForm()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🗺️</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">定制计划</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Featured Clubs — 精选俱乐部 -->
+      <div class="mb-5">
+        <div class="px-4 flex items-center justify-between mb-3">
+          <h3 class="font-display font-bold text-white">精选俱乐部</h3>
+          <button @click="currentPage='community';activeChatType='clubs'" class="text-xs text-primary-light">查看全部</button>
+        </div>
+        <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
+          <template x-for="club in featuredClubs" :key="club.id">
+            <div @click="openClubProfile(club.id)" class="flex-shrink-0 w-36 glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
+              <div class="relative h-20">
+                <img :src="club.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+                <div x-show="club.verified" class="absolute top-1.5 right-1.5">
+                  <span class="text-[10px] bg-primary px-1.5 py-0.5 rounded-full text-white font-semibold">✓</span>
+                </div>
+              </div>
+              <div class="p-2.5">
+                <p class="text-white text-xs font-bold truncate" x-text="club.name"></p>
+                <p class="text-slate-400 text-[11px] mt-0.5" x-text="(club.members || 0) + ' 成员'"></p>
+                <span class="text-[10px] bg-primary/20 text-primary-light px-1.5 py-0.5 rounded-full mt-1 inline-block" x-text="club.specialty || club.type"></span>
+              </div>
+            </div>
+          </template>
+          <div x-show="featuredClubs.length === 0" class="flex-shrink-0 w-full text-center py-4 text-slate-500 text-xs">加载中...</div>
         </div>
       </div>
 
@@ -289,14 +334,14 @@
         </div>
         <div class="space-y-3">
           <template x-for="track in tracks" :key="track.id">
-            <div class="glass rounded-2xl overflow-hidden flex gap-3">
-              <img :src="track.image" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
+            <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
               <div class="py-3 pr-3 flex-1 min-w-0">
                 <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
                 <p class="text-slate-400 text-xs mt-1" x-text="track.date"></p>
                 <div class="flex gap-3 mt-2">
-                  <span class="text-xs text-slate-300">📍 <span x-text="track.distance + 'km'"></span></span>
-                  <span class="text-xs text-slate-300">↑ <span x-text="track.elevation + 'm'"></span></span>
+                  <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || track.distance || 0) + 'km'"></span></span>
+                  <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || track.elevation || 0) + 'm'"></span></span>
                   <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
                 </div>
               </div>
@@ -308,24 +353,35 @@
       <!-- 本月登顶榜 -->
       <div class="px-4 mb-5">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="font-display font-bold text-white">🏆 本月登顶榜</h3>
+          <h3 class="font-display font-bold text-white">🏆 本月攀登榜</h3>
+        </div>
+        <!-- Sort Tabs -->
+        <div class="flex gap-1 bg-slate-800 rounded-xl p-1 mb-3">
+          <button @click="leaderboardSort='count';loadLeaderboard()" :class="leaderboardSort==='count' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">按次数</button>
+          <button @click="leaderboardSort='elevation';loadLeaderboard()" :class="leaderboardSort==='elevation' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">按海拔</button>
+          <button @click="leaderboardSort='distance';loadLeaderboard()" :class="leaderboardSort==='distance' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">按里程</button>
         </div>
         <div class="glass rounded-2xl overflow-hidden">
-          <template x-for="(entry, idx) in summitLeaderboard" :key="entry.id">
+          <template x-for="(entry, idx) in summitLeaderboard" :key="entry.id || idx">
             <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
-              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                    :class="idx===0 ? 'bg-yellow-500 text-white' : idx===1 ? 'bg-slate-400 text-white' : idx===2 ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-400'"
                    x-text="idx+1"></div>
-              <img :src="entry.avatar" class="w-8 h-8 rounded-full object-cover">
+              <img :src="entry.avatar || ('https://i.pravatar.cc/150?u=lb' + (entry.id || idx))" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
               <div class="flex-1 min-w-0">
-                <p class="text-white text-sm font-semibold truncate">
-                  <span x-text="entry.flag"></span> <span x-text="entry.name"></span>
-                </p>
-                <p class="text-slate-400 text-xs truncate" x-text="entry.peak"></p>
+                <p class="text-white text-sm font-semibold truncate" x-text="entry.name || entry.flag + ' ' + entry.name"></p>
+                <p class="text-slate-400 text-xs truncate" x-text="entry.best_peak || entry.peak || ''"></p>
               </div>
-              <p class="text-primary-light text-xs font-bold flex-shrink-0" x-text="entry.date"></p>
+              <div class="text-right flex-shrink-0">
+                <p class="text-primary-light text-xs font-bold" x-text="leaderboardSort==='elevation' ? ((entry.max_elevation || 0) + 'm') : leaderboardSort==='distance' ? ((entry.total_distance || 0) + 'km') : ((entry.summit_count || 0) + '次')"></p>
+                <p class="text-slate-500 text-[11px]" x-text="entry.date || (entry.level || '')"></p>
+              </div>
             </div>
           </template>
+          <div x-show="summitLeaderboard.length === 0" class="text-center py-8 text-slate-500 text-sm">
+            <span class="material-symbols-outlined text-4xl">emoji_events</span>
+            <p class="mt-2">本月暂无排名，开始你的第一次攀登！</p>
+          </div>
         </div>
       </div>
     </section>
@@ -441,7 +497,7 @@
         </div>
 
         <!-- No match (intentional bug state when activeCategory='summits') -->
-        <div x-show="!['8000ers','continental','world','alpine'].includes(activeCategory)" class="text-center py-12">
+        <div x-show="!['8000ers','continental','world','alpine','guides'].includes(activeCategory)" class="text-center py-12">
           <span class="material-symbols-outlined text-slate-600 text-6xl">landscape</span>
           <p class="text-slate-500 mt-3">请选择分类</p>
         </div>
@@ -503,10 +559,18 @@
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
       <div class="px-4 pt-2">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-3">
           <h2 class="font-display font-bold text-xl text-white">社区</h2>
           <button @click="showPostEditor=true" class="flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-primary-light transition-colors">
             <span class="material-symbols-outlined text-base">add</span>发布
+          </button>
+        </div>
+        <!-- Search Bar -->
+        <div class="glass rounded-2xl flex items-center gap-2 px-3 py-2 mb-3">
+          <span class="material-symbols-outlined text-slate-400 text-xl">search</span>
+          <input type="text" x-model="communitySearchQuery" @input="filterCommunityPosts()" placeholder="搜索动态、用户、攻略..." class="bg-transparent text-white text-sm flex-1 outline-none placeholder-slate-500">
+          <button x-show="communitySearchQuery" @click="communitySearchQuery='';filterCommunityPosts()" class="text-slate-400 hover:text-white">
+            <span class="material-symbols-outlined text-sm">close</span>
           </button>
         </div>
         <!-- Tab Bar -->
@@ -553,7 +617,7 @@
         <!-- Posts Section -->
         <div x-show="activeChatType==='posts' || activeChatType==='all'" class="mb-5">
           <h3 class="font-semibold text-white mb-3" x-show="activeChatType==='all'">最新动态</h3>
-          <template x-for="post in communityPosts" :key="post.id">
+          <template x-for="post in (communitySearchQuery ? filteredCommunityPosts : communityPosts)" :key="post.id">
             <div class="glass rounded-2xl p-4 mb-3">
               <div class="flex items-center gap-3 mb-3">
                 <img :src="post.authorAvatar || post.author_avatar || 'https://i.pravatar.cc/150?u='+post.id" class="w-9 h-9 rounded-full object-cover">
@@ -721,19 +785,26 @@
         <h3 class="font-display font-bold text-white mb-3">历史轨迹</h3>
         <div class="space-y-3">
           <template x-for="track in tracks" :key="track.id">
-            <div class="glass rounded-2xl overflow-hidden flex gap-3">
-              <img :src="track.image" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
+            <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
               <div class="py-3 pr-3 flex-1 min-w-0">
                 <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
-                <p class="text-slate-400 text-xs mt-1" x-text="track.date"></p>
+                <p class="text-slate-400 text-xs mt-1" x-text="track.peak_name || track.date"></p>
                 <div class="flex gap-3 mt-2">
-                  <span class="text-xs text-slate-300">📍 <span x-text="track.distance + 'km'"></span></span>
-                  <span class="text-xs text-slate-300">↑ <span x-text="track.elevation + 'm'"></span></span>
+                  <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || track.distance || 0) + 'km'"></span></span>
+                  <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || track.elevation || 0) + 'm'"></span></span>
                   <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
                 </div>
               </div>
+              <div class="flex items-center pr-3">
+                <span class="material-symbols-outlined text-slate-600 text-lg">chevron_right</span>
+              </div>
             </div>
           </template>
+          <div x-show="tracks.length === 0" class="text-center py-8 text-slate-500">
+            <span class="material-symbols-outlined text-4xl">route</span>
+            <p class="mt-2 text-sm">暂无轨迹记录，开始第一次攀登吧！</p>
+          </div>
         </div>
       </div>
     </section>
@@ -931,25 +1002,23 @@
           </div>
         </div>
 
-        <!-- Community Quick Links -->
+        <!-- My Content Shortcuts -->
         <div class="mb-4">
-          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">社区</p>
-          <div class="grid grid-cols-4 gap-2">
-            <button @click="currentPage='community';activeChatType='posts'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">我的内容</p>
+          <div class="grid grid-cols-2 gap-2">
+            <button @click="currentPage='community';activeChatType='posts'" class="flex items-center gap-2.5 bg-slate-800 hover:bg-slate-700 rounded-2xl px-4 py-3 transition-colors">
               <span class="text-xl">📝</span>
-              <span class="text-xs text-slate-300 font-medium">动态</span>
+              <div class="text-left">
+                <p class="text-sm text-white font-medium">我的动态</p>
+                <p class="text-xs text-slate-400">动态与日记</p>
+              </div>
             </button>
-            <button @click="currentPage='community';activeChatType='diary'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <button @click="currentPage='community';activeChatType='articles'" class="flex items-center gap-2.5 bg-slate-800 hover:bg-slate-700 rounded-2xl px-4 py-3 transition-colors">
               <span class="text-xl">📖</span>
-              <span class="text-xs text-slate-300 font-medium">日记</span>
-            </button>
-            <button @click="currentPage='community';activeChatType='teams'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-              <span class="text-xl">👥</span>
-              <span class="text-xs text-slate-300 font-medium">组队</span>
-            </button>
-            <button @click="currentPage='community';activeChatType='clubs'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-              <span class="text-xl">🏛️</span>
-              <span class="text-xs text-slate-300 font-medium">俱乐部</span>
+              <div class="text-left">
+                <p class="text-sm text-white font-medium">我的帖子</p>
+                <p class="text-xs text-slate-400">攻略与分享</p>
+              </div>
             </button>
           </div>
         </div>
@@ -1982,6 +2051,85 @@
       </div>
     </div>
 
+    <!-- Track Detail Modal (Problem 7) -->
+    <div x-show="showTrackDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showTrackDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[88vh] overflow-y-auto">
+        <template x-if="selectedTrackDetail">
+          <div>
+            <!-- Cover Image -->
+            <div class="relative h-48">
+              <img :src="selectedTrackDetail.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800'" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+              <button @click="showTrackDetail=false" class="absolute top-4 right-4 p-2 bg-black/50 rounded-full">
+                <span class="material-symbols-outlined text-white text-lg">close</span>
+              </button>
+              <div class="absolute bottom-4 left-4">
+                <h3 class="font-display font-bold text-xl text-white" x-text="selectedTrackDetail.name"></h3>
+                <p class="text-slate-300 text-sm" x-text="(selectedTrackDetail.peak_name || '') + (selectedTrackDetail.date ? ' · ' + selectedTrackDetail.date : '')"></p>
+              </div>
+            </div>
+            <!-- Stats Grid -->
+            <div class="p-4">
+              <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="glass rounded-xl p-3 text-center">
+                  <p class="text-lg font-bold text-primary-light" x-text="(selectedTrackDetail.distance_km || selectedTrackDetail.distance || 0) + 'km'"></p>
+                  <p class="text-xs text-slate-400 mt-0.5">总里程</p>
+                </div>
+                <div class="glass rounded-xl p-3 text-center">
+                  <p class="text-lg font-bold text-primary-light" x-text="(selectedTrackDetail.elevation_gain || selectedTrackDetail.elevation || 0) + 'm'"></p>
+                  <p class="text-xs text-slate-400 mt-0.5">累计爬升</p>
+                </div>
+                <div class="glass rounded-xl p-3 text-center">
+                  <p class="text-lg font-bold text-primary-light" x-text="selectedTrackDetail.duration || '--'"></p>
+                  <p class="text-xs text-slate-400 mt-0.5">用时</p>
+                </div>
+              </div>
+              <!-- Elevation Details -->
+              <div class="glass rounded-xl p-4 mb-4" x-show="selectedTrackDetail.max_elevation || selectedTrackDetail.start_elevation">
+                <h4 class="text-white font-semibold mb-3 text-sm">海拔信息</h4>
+                <div class="grid grid-cols-2 gap-3">
+                  <div x-show="selectedTrackDetail.start_elevation">
+                    <p class="text-xs text-slate-400">起点海拔</p>
+                    <p class="text-white font-semibold" x-text="(selectedTrackDetail.start_elevation || 0) + 'm'"></p>
+                  </div>
+                  <div x-show="selectedTrackDetail.max_elevation">
+                    <p class="text-xs text-slate-400">最高点</p>
+                    <p class="text-white font-semibold" x-text="(selectedTrackDetail.max_elevation || 0) + 'm'"></p>
+                  </div>
+                  <div x-show="selectedTrackDetail.duration_minutes">
+                    <p class="text-xs text-slate-400">平均速度</p>
+                    <p class="text-white font-semibold" x-text="selectedTrackDetail.duration_minutes ? (((selectedTrackDetail.distance_km || 0) / (selectedTrackDetail.duration_minutes / 60)).toFixed(1) + ' km/h') : '--'"></p>
+                  </div>
+                </div>
+              </div>
+              <!-- Weather -->
+              <div x-show="selectedTrackDetail.weather" class="glass rounded-xl p-4 mb-4">
+                <h4 class="text-white font-semibold mb-1 text-sm">天气记录</h4>
+                <p class="text-slate-300 text-sm" x-text="selectedTrackDetail.weather"></p>
+              </div>
+              <!-- Notes -->
+              <div x-show="selectedTrackDetail.notes" class="glass rounded-xl p-4 mb-4">
+                <h4 class="text-white font-semibold mb-1 text-sm">备注</h4>
+                <p class="text-slate-300 text-sm leading-relaxed" x-text="selectedTrackDetail.notes"></p>
+              </div>
+              <!-- Share Button -->
+              <button @click="shareTrack(selectedTrackDetail)" class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-light text-white font-semibold py-3 rounded-2xl transition-colors">
+                <span class="material-symbols-outlined text-base">share</span>分享轨迹
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
     <!-- Insurance Modal -->
     <div x-show="showInsurance"
          x-transition:enter="transition ease-out duration-300"
@@ -2000,61 +2148,93 @@
               <span class="material-symbols-outlined text-slate-400">close</span>
             </button>
           </div>
-          <!-- Region Tabs -->
-          <div class="flex gap-2 overflow-x-auto scroll-hide pb-3 mb-4">
-            <template x-for="r in ['喜马拉雅','安第斯','阿尔卑斯','阿拉斯加','非洲','高加索','大洋洲']" :key="r">
-              <button @click="insuranceRegion=r" class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-                      :class="insuranceRegion===r ? 'bg-primary text-white' : 'bg-slate-700 text-slate-400'">
-                <span x-text="r"></span>
-              </button>
-            </template>
-          </div>
           <!-- Partners -->
-          <div class="flex gap-3 items-center mb-4">
-            <span class="text-xs text-slate-500">合作方：</span>
-            <span class="text-sm">🇨🇳 中国人寿</span>
-            <span class="text-sm">🇫🇷 AXA</span>
-            <span class="text-sm">🇩🇪 Allianz</span>
-            <span class="text-sm">🇬🇧 Lloyd's</span>
+          <div class="flex gap-3 items-center mb-4 overflow-x-auto scroll-hide">
+            <span class="text-xs text-slate-500 flex-shrink-0">合作方：</span>
+            <span class="text-sm flex-shrink-0">🇨🇳 中国人寿</span>
+            <span class="text-sm flex-shrink-0">🇨🇳 中国平安</span>
+            <span class="text-sm flex-shrink-0">🇫🇷 AXA</span>
+            <span class="text-sm flex-shrink-0">🇬🇧 Lloyd's</span>
           </div>
-          <div class="bg-slate-800 rounded-2xl p-4 mb-3">
-            <div class="flex items-center justify-between mb-3">
-              <div><h4 class="text-white font-bold">基础保障</h4><p class="text-slate-400 text-xs">适合初级攀登者</p></div>
-              <span class="text-xl font-bold text-primary-light" x-text="formatPrice(299)"><span class="text-xs font-normal text-slate-400">/次</span></span>
-            </div>
-            <ul class="space-y-1 text-xs text-slate-300 mb-3">
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>意外伤害 50万</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>紧急救援 20万</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>医疗费用 5万</li>
-            </ul>
-            <button @click="showInsurance=false;openPayment(299)" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-sm font-semibold transition-colors">选择方案</button>
-          </div>
-          <div class="bg-primary/20 border border-primary-light/30 rounded-2xl p-4 mb-3 relative">
-            <div class="absolute top-3 right-3"><span class="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-semibold">推荐</span></div>
-            <div class="mb-3"><h4 class="text-white font-bold">专业保障</h4><p class="text-slate-400 text-xs">适合8000m级攀登</p></div>
-            <p class="text-2xl font-bold text-primary-light mb-3"><span x-text="formatPrice(1299)"></span><span class="text-xs font-normal text-slate-400">/次</span></p>
-            <ul class="space-y-1 text-xs text-slate-300 mb-3">
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>意外伤害 200万</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>紧急直升机救援</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>医疗费用 20万</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>器材损失 5万</li>
-            </ul>
-            <button @click="showInsurance=false;openPayment(1299)" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">选择方案</button>
-          </div>
-          <div class="bg-slate-800 rounded-2xl p-4 mb-3">
-            <div class="flex items-center justify-between mb-3">
-              <div><h4 class="text-white font-bold">全面保障</h4><p class="text-slate-400 text-xs">探险队专属</p></div>
-              <span class="text-xl font-bold text-primary-light" x-text="formatPrice(3999)"><span class="text-xs font-normal text-slate-400">/次</span></span>
-            </div>
-            <ul class="space-y-1 text-xs text-slate-300 mb-3">
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>意外伤害 500万</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>无限额救援</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>家属安置保障</li>
-              <li class="flex items-center gap-1.5"><span class="text-green-400">✓</span>器材全损 15万</li>
-            </ul>
-            <button @click="showInsurance=false;openPayment(3999)" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-sm font-semibold transition-colors">选择方案</button>
+          <!-- Insurance Plans from API -->
+          <div x-show="insurancePlansLoading" class="text-center py-6 text-slate-500 text-sm">加载中...</div>
+          <div x-show="!insurancePlansLoading" class="space-y-3">
+            <template x-for="(plan, idx) in insurancePlans" :key="plan.id">
+              <div class="rounded-2xl p-4" :class="idx===2 ? 'bg-primary/20 border border-primary-light/30' : 'bg-slate-800'">
+                <div x-show="idx===2" class="flex justify-end mb-1">
+                  <span class="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-semibold">推荐</span>
+                </div>
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <h4 class="text-white font-bold" x-text="plan.name"></h4>
+                    <p class="text-slate-400 text-xs mt-0.5" x-text="plan.region + ' · ' + plan.coverage_type"></p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xl font-bold text-primary-light" x-text="'¥' + (plan.price_cny || 0)"></p>
+                    <p class="text-xs text-slate-500">/次</p>
+                  </div>
+                </div>
+                <p class="text-slate-400 text-xs mb-2" x-text="plan.description"></p>
+                <div class="flex flex-wrap gap-1 mb-3">
+                  <template x-for="feat in (plan.features ? JSON.parse(plan.features) : [])" :key="feat">
+                    <span class="flex items-center gap-1 text-xs text-slate-300"><span class="text-green-400">✓</span><span x-text="feat"></span></span>
+                  </template>
+                </div>
+                <p class="text-xs text-slate-500 mb-2">承保方：<span class="text-slate-300" x-text="plan.provider"></span></p>
+                <template x-if="plan.buy_url">
+                  <a :href="plan.buy_url" target="_blank" class="block w-full text-center bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">立即购买</a>
+                </template>
+                <template x-if="!plan.buy_url">
+                  <button @click="openInsuranceInquiry(plan)" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">询价购买</button>
+                </template>
+              </div>
+            </template>
+            <div x-show="insurancePlans.length === 0 && !insurancePlansLoading" class="text-center py-6 text-slate-500 text-sm">暂无保险方案</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Insurance Inquiry Modal -->
+    <div x-show="showInsuranceInquiry"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[110] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showInsuranceInquiry=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display font-bold text-lg text-white">填写询价信息</h3>
+          <button @click="showInsuranceInquiry=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <div x-show="selectedInsurancePlan" class="glass rounded-xl p-3 mb-4">
+          <p class="text-white text-sm font-semibold" x-text="selectedInsurancePlan?.name"></p>
+          <p class="text-primary-light text-sm font-bold" x-text="'¥' + (selectedInsurancePlan?.price_cny || 0) + '/次'"></p>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">您的姓名</label>
+            <input x-model="insuranceInquiry.name" type="text" placeholder="请输入真实姓名" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none placeholder-slate-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">联系电话</label>
+            <input x-model="insuranceInquiry.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none placeholder-slate-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">攀登目标山峰（选填）</label>
+            <input x-model="insuranceInquiry.peak_name" type="text" placeholder="如：珠穆朗玛峰" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none placeholder-slate-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">出发日期（选填）</label>
+            <input x-model="insuranceInquiry.departure_date" type="date" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none">
+          </div>
+        </div>
+        <button @click="submitInsuranceInquiry()" class="w-full mt-5 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors">提交询价</button>
       </div>
     </div>
 
@@ -2988,8 +3168,20 @@ function alpineLink() {
     newTeam: { name: '', peak: '', date: '', level: '', spots: 4, description: '' },
     showInsurance: false,
     insuranceRegion: '喜马拉雅',
+    insurancePlans: [],
+    insurancePlansLoading: false,
+    showInsuranceInquiry: false,
+    selectedInsurancePlan: null,
+    insuranceInquiry: { name: '', phone: '', peak_name: '', departure_date: '' },
     paymentAmount: 0,
     paymentMethod: 'alipay',
+    showTrackDetail: false,
+    selectedTrackDetail: null,
+    featuredClubs: [],
+    banners: [],
+    leaderboardSort: 'count',
+    communitySearchQuery: '',
+    filteredCommunityPosts: [],
     showGuideApply: false,
     guideApplyForm: { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' },
     showGuideDetail: false,
@@ -3133,6 +3325,7 @@ function alpineLink() {
       { id: 'continental', name: '洲最高峰', icon: 'public' },
       { id: 'world', name: '世界经典', icon: 'travel_explore' },
       { id: 'alpine', name: '技术攀登', icon: 'terrain' },
+      { id: 'guides', name: '专业向导', icon: 'person_pin' },
     ],
     communityPosts: [
       { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
@@ -3387,8 +3580,7 @@ function alpineLink() {
       }
     },
 
-    // Insurance
-    openInsurance() { this.showInsurance = true; },
+    // Insurance (legacy helpers)
     buyInsurance(type) { this.showToast('已选择保险方案：' + type); },
     purchaseInsurance(product) { this.showToast('购买成功：' + product.name); this.showInsurance = false; },
     fileInsuranceClaim() { this.showToast('理赔申请已提交'); },
@@ -3465,7 +3657,24 @@ function alpineLink() {
 
     // Tracks
     openNewTrack() { this.showToast('GPS 轨迹记录功能即将上线'); },
-    openTrackDetail(track) { this.showToast(track.name + ' · ' + track.distance + 'km'); },
+    async openTrackDetail(track) {
+      this.selectedTrackDetail = track;
+      this.showTrackDetail = true;
+      if (this.authToken && track.id) {
+        try {
+          const res = await fetch('/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
+          if (res.ok) { this.selectedTrackDetail = await res.json(); }
+        } catch(e) {}
+      }
+    },
+    shareTrack(track) {
+      const url = window.location.origin + '/api/tracks/' + track.id;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => this.showToast('链接已复制 🔗'));
+      } else {
+        this.showToast('轨迹：' + track.name);
+      }
+    },
 
     // Utility methods
     getDifficultyClass(difficulty) {
@@ -3648,14 +3857,21 @@ function alpineLink() {
           isFavorited: false,
           commentPreview: [],
         }));
+        this.filteredCommunityPosts = this.communityPosts;
       } catch(e) {}
     },
     async loadLeaderboard() {
       try {
-        const res = await fetch('/api/leaderboard/monthly');
+        const res = await fetch('/api/leaderboard?sort=' + (this.leaderboardSort || 'count'));
         if (!res.ok) return;
         const data = await res.json();
-        this.summitLeaderboard = data;
+        // Use real leaders if available, otherwise keep static data
+        if (data.leaders && data.leaders.length > 0) {
+          this.summitLeaderboard = data.leaders.map((l, i) => ({
+            ...l,
+            flag: l.flag || '🏔️',
+          }));
+        }
       } catch(e) {}
     },
     async loadWeather() {
@@ -3669,8 +3885,15 @@ function alpineLink() {
     async loadTracks() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/tracks/my', { headers: this.getAuthHeaders() });
-        if (!res.ok) return;
+        const res = await fetch('/api/tracks', { headers: this.getAuthHeaders() });
+        if (!res.ok) {
+          // Fallback to /my for backward compat
+          const res2 = await fetch('/api/tracks/my', { headers: this.getAuthHeaders() });
+          if (!res2.ok) return;
+          const data2 = await res2.json();
+          if (data2.length > 0) this.tracks = data2;
+          return;
+        }
         const data = await res.json();
         if (data.length > 0) this.tracks = data;
       } catch(e) {}
@@ -4175,6 +4398,100 @@ function alpineLink() {
       } catch(e) { this.showToast('操作失败', 'error'); }
     },
 
+    // ─── Featured Clubs (Problem 1) ─────────────────────────────────────────
+    async loadFeaturedClubs() {
+      try {
+        const res = await fetch('/api/clubs?limit=6&sort=members');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.featuredClubs = data.map(c => ({
+              ...c,
+              cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+              verified: !!c.verified,
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+
+    // ─── Banners (Problem 6) ────────────────────────────────────────────────
+    async loadBanners() {
+      try {
+        const res = await fetch('/api/banners');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.banners = data;
+            this.heroSlides = data.map(b => ({
+              name: b.title, sub: b.subtitle || '', image: b.image_url,
+              linkType: b.link_type, linkTarget: b.link_target,
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+    handleBannerClick(slide) {
+      if (!slide.linkType || slide.linkType === 'none') return;
+      if (slide.linkType === 'peak') {
+        const peak = [...this.eightThousanders, ...this.continentalPeaks].find(p => p.nameEn && p.nameEn.toLowerCase() === slide.linkTarget.toLowerCase());
+        if (peak) { this.selectedPeak = peak; this.showPeakDetail = true; }
+      } else if (slide.linkType === 'page') {
+        if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
+        else { this.currentPage = slide.linkTarget || 'explore'; }
+      } else if (slide.linkType === 'insurance') {
+        this.openInsurance();
+      }
+    },
+
+    // ─── Insurance (Problem 4) ───────────────────────────────────────────────
+    async openInsurance() {
+      this.showInsurance = true;
+      if (this.insurancePlans.length === 0) await this.loadInsurancePlans();
+    },
+    async loadInsurancePlans() {
+      this.insurancePlansLoading = true;
+      try {
+        const res = await fetch('/api/insurance/plans');
+        if (res.ok) this.insurancePlans = await res.json();
+      } catch(e) {}
+      this.insurancePlansLoading = false;
+    },
+    openInsuranceInquiry(plan) {
+      if (!this.requireAuth()) return;
+      this.selectedInsurancePlan = plan;
+      this.insuranceInquiry = { name: this.userProfile.name || '', phone: '', peak_name: '', departure_date: '' };
+      this.showInsuranceInquiry = true;
+    },
+    async submitInsuranceInquiry() {
+      if (!this.insuranceInquiry.name || !this.insuranceInquiry.phone) {
+        this.showToast('请填写姓名和联系电话', 'error'); return;
+      }
+      try {
+        const res = await fetch('/api/insurance/inquire', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ ...this.insuranceInquiry, plan_id: this.selectedInsurancePlan?.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showInsuranceInquiry = false;
+          this.showInsurance = false;
+          this.showToast('询价已提交，我们将在24小时内联系您 📱');
+        } else { this.showToast(data.error || '提交失败', 'error'); }
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+
+    // ─── Community Search (Problem 2) ────────────────────────────────────────
+    filterCommunityPosts() {
+      const q = (this.communitySearchQuery || '').toLowerCase().trim();
+      if (!q) { this.filteredCommunityPosts = this.communityPosts; return; }
+      this.filteredCommunityPosts = this.communityPosts.filter(p =>
+        (p.content && p.content.toLowerCase().includes(q)) ||
+        (p.author && p.author.toLowerCase().includes(q)) ||
+        (p.location && p.location.toLowerCase().includes(q))
+      );
+    },
+
     init() {
       // Auto-rotate hero carousel every 5 seconds
       setInterval(() => {
@@ -4186,17 +4503,19 @@ function alpineLink() {
       this.loadGuides();
       this.loadTeams();
       this.loadGear('buy');
-      this.loadPosts();
+      this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
       this.loadLeaderboard();
       this.loadWeather();
       this.loadClubs();
+      this.loadFeaturedClubs();
+      this.loadBanners();
       this.loadRescueContacts();
       this.loadConversations();
       // Load notification count after token verify
       this.$watch('authToken', (val) => {
-        if (val) this.loadUnreadCount();
+        if (val) { this.loadUnreadCount(); this.loadTracks(); }
       });
-      if (this.authToken) this.loadUnreadCount();
+      if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
       // Watch gearMode changes to reload gear (reset category first to avoid double-call)
       this.$watch('gearMode', (val) => {
         if (this.gearCategory !== '全部') {
@@ -4210,11 +4529,14 @@ function alpineLink() {
       // Watch activeCategory changes to reload peaks
       this.$watch('activeCategory', (val) => {
         if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
+        if (val === 'guides') this.loadGuides();
       });
       // Watch activeChatType to load articles when articles tab is selected
       this.$watch('activeChatType', (val) => {
         if (val === 'articles' && this.articles.length === 0) this.loadArticles();
       });
+      // Watch communityPosts to sync filteredCommunityPosts
+      this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });
     },
   };
 }
