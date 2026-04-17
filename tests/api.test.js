@@ -62,8 +62,8 @@ async function testLogin() {
   });
 
   await runTest('POST /api/auth/register - 注册新用户', async () => {
-    // 使用随机手机号避免重复
-    const randomPhone = '1380013' + String(Math.floor(Math.random() * 9000) + 1000);
+    // 使用1亿级别的随机号码（8位随机后缀），避免与历史注册数据冲突及并发冲突
+    const randomPhone = '139' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

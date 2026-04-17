@@ -51,6 +51,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+          if-no-files-found: warn
 
       # ── 上传失败截图 ─────────────────────────────────────────────────────────
       - name: Upload test screenshots
@@ -60,3 +61,4 @@ jobs:
           name: test-screenshots
           path: test-results/
           retention-days: 14
+          if-no-files-found: warn
