@@ -1437,42 +1437,26 @@
           </button>
         </div>
         <div class="flex-1 overflow-y-auto p-5 space-y-4">
-          <div class="flex gap-3">
-            <img src="https://i.pravatar.cc/150?u=c1" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-white text-sm font-semibold">雪域行者</span>
-                <span class="text-slate-500 text-xs">2小时前</span>
+          <div x-show="commentsLoading" class="text-center py-4 text-slate-400 text-sm">加载中...</div>
+          <template x-for="comment in selectedPostComments" :key="comment.id">
+            <div class="flex gap-3">
+              <img :src="comment.authorAvatar || 'https://i.pravatar.cc/150?u=c'+comment.id" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-white text-sm font-semibold" x-text="comment.authorName"></span>
+                  <span class="text-slate-500 text-xs" x-text="comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('zh-CN') : ''"></span>
+                </div>
+                <p class="text-slate-300 text-sm" x-text="comment.content"></p>
               </div>
-              <p class="text-slate-300 text-sm">太厉害了！加油，为你骄傲！💪</p>
             </div>
-          </div>
-          <div class="flex gap-3">
-            <img src="https://i.pravatar.cc/150?u=c2" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-white text-sm font-semibold">高峰挑战者</span>
-                <span class="text-slate-500 text-xs">3小时前</span>
-              </div>
-              <p class="text-slate-300 text-sm">注意安全，好好适应高原反应！</p>
-            </div>
-          </div>
-          <div class="flex gap-3">
-            <img src="https://i.pravatar.cc/150?u=c3" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-white text-sm font-semibold">攀岩达人</span>
-                <span class="text-slate-500 text-xs">4小时前</span>
-              </div>
-              <p class="text-slate-300 text-sm">梦想的起点！期待看到你登顶的那一刻 🏔️</p>
-            </div>
-          </div>
+          </template>
+          <div x-show="!commentsLoading && selectedPostComments.length === 0" class="text-center py-6 text-slate-500 text-sm">暂无评论，快来发表第一条吧～</div>
         </div>
         <div class="p-4 border-t border-white/10">
           <div class="flex gap-3 items-center">
             <img :src="userProfile.avatar" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
-            <input type="text" placeholder="发表评论..." class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
-            <button class="w-8 h-8 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
+            <input x-model="newComment" type="text" placeholder="发表评论..." @keydown.enter="addComment()" class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            <button @click="addComment()" class="w-8 h-8 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
               <span class="material-symbols-outlined text-white text-base">send</span>
             </button>
           </div>
@@ -1892,13 +1876,152 @@
             <span class="material-symbols-outlined text-slate-400 text-xl">photo_camera</span>
           </button>
           <input x-model="chatInput" type="text" placeholder="输入消息..." class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-500">
-          <button @click="if(chatInput.trim()){activeChatSession.messages.push({from:'me',text:chatInput,time:new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})});chatInput='';}" class="w-9 h-9 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
+          <button @click="sendChatMessage()" class="w-9 h-9 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
             <span class="material-symbols-outlined text-white text-base">send</span>
           </button>
         </div>
       </div>
     </template>
   </div>
+
+    <!-- Guide Detail Modal -->
+    <div x-show="showGuideDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showGuideDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[88vh] overflow-y-auto">
+        <template x-if="selectedGuide">
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="font-display font-bold text-xl text-white" x-text="selectedGuide.name"></h3>
+              <button @click="showGuideDetail=false" class="p-1.5 rounded-full hover:bg-white/10">
+                <span class="material-symbols-outlined text-slate-400">close</span>
+              </button>
+            </div>
+            <div class="flex items-center gap-4 mb-5">
+              <img :src="selectedGuide.avatar" class="w-20 h-20 rounded-2xl object-cover flex-shrink-0">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-2xl" x-text="selectedGuide.flag || ''"></span>
+                  <span class="text-white font-semibold" x-text="selectedGuide.nationality || ''"></span>
+                </div>
+                <div class="flex items-center gap-1 mb-1">
+                  <span class="text-yellow-400">★</span>
+                  <span class="text-white font-bold" x-text="selectedGuide.rating"></span>
+                  <span class="text-slate-400 text-sm" x-text="'(' + (selectedGuide.reviews || 0) + '条评价)'"></span>
+                </div>
+                <p class="text-primary-light font-bold text-lg" x-text="'¥' + (selectedGuide.dayRate || selectedGuide.day_rate || 0) + '/天'"></p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-slate-400 text-xs mb-1">专长山峰</p>
+                <p class="text-white text-sm font-semibold truncate" x-text="selectedGuide.specialty || '-'"></p>
+              </div>
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-slate-400 text-xs mb-1">服务地区</p>
+                <p class="text-white text-sm font-semibold truncate" x-text="selectedGuide.region || '-'"></p>
+              </div>
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-slate-400 text-xs mb-1">认证证书</p>
+                <p class="text-white text-sm font-semibold truncate" x-text="selectedGuide.cert || '-'"></p>
+              </div>
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-slate-400 text-xs mb-1">服务语言</p>
+                <p class="text-white text-sm font-semibold truncate" x-text="(Array.isArray(selectedGuide.languages) ? selectedGuide.languages.join('/') : (selectedGuide.languages || '-'))"></p>
+              </div>
+            </div>
+            <div x-show="selectedGuide.bio" class="bg-slate-800/50 rounded-xl p-3 mb-4">
+              <p class="text-slate-300 text-sm" x-text="selectedGuide.bio"></p>
+            </div>
+            <div x-show="selectedGuide.summits && selectedGuide.summits.length > 0" class="mb-4">
+              <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">带队登顶记录</p>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="s in (selectedGuide.summits || [])" :key="s">
+                  <span class="text-xs bg-primary/20 text-primary-light px-2 py-1 rounded-full" x-text="s"></span>
+                </template>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <button @click="showGuideDetail=false;openChatWithUser(selectedGuide.name,selectedGuide.avatar);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">私信向导</button>
+              <button @click="showGuideDetail=false;bookGuideService(selectedGuide)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Club Detail Modal -->
+    <div x-show="showClubDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showClubDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[88vh] overflow-y-auto">
+        <template x-if="selectedClub">
+          <div>
+            <div class="relative h-40 flex-shrink-0">
+              <img :src="selectedClub.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" class="w-full h-full object-cover">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
+              <button @click="showClubDetail=false" class="absolute top-4 right-4 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-base">close</span>
+              </button>
+              <div class="absolute bottom-3 left-4">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-xl font-display font-bold text-white" x-text="selectedClub.name"></h3>
+                  <span x-show="selectedClub.verified" class="text-xs bg-primary px-2 py-0.5 rounded-full text-white font-semibold">✓ 认证</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-5">
+              <p class="text-slate-400 text-sm mb-4" x-text="selectedClub.description"></p>
+              <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-slate-800 rounded-xl p-3 text-center">
+                  <p class="text-white font-bold text-lg" x-text="selectedClub.members || 0"></p>
+                  <p class="text-slate-400 text-xs mt-0.5">成员</p>
+                </div>
+                <div class="bg-slate-800 rounded-xl p-3 text-center">
+                  <p class="text-white font-bold text-lg" x-text="selectedClub.expeditions || 0"></p>
+                  <p class="text-slate-400 text-xs mt-0.5">远征</p>
+                </div>
+                <div class="bg-slate-800 rounded-xl p-3 text-center">
+                  <p class="text-white font-bold text-lg" x-text="selectedClub.founded || '-'"></p>
+                  <p class="text-slate-400 text-xs mt-0.5">成立</p>
+                </div>
+              </div>
+              <div class="bg-slate-800/50 rounded-xl p-3 mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-light text-base">star</span>
+                <span class="text-primary-light text-sm font-semibold" x-text="selectedClub.specialty || '综合攀登'"></span>
+              </div>
+              <div x-show="selectedClub.achievements && selectedClub.achievements.length > 0" class="mb-4">
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">荣誉成就</p>
+                <div class="space-y-1.5">
+                  <template x-for="ach in (selectedClub.achievements || [])" :key="ach">
+                    <div class="flex items-center gap-2">
+                      <span class="text-yellow-400 text-xs">🏆</span>
+                      <span class="text-slate-300 text-xs" x-text="ach"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div class="flex gap-3">
+                <button @click="showClubDetail=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">关闭</button>
+                <button @click="joinClub()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">加入俱乐部</button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
 
   </main>
 
@@ -2080,6 +2203,8 @@ function alpineLink() {
     selectedAlpine: null,
     toasts: [],
     newComment: '',
+    selectedPostComments: [],
+    commentsLoading: false,
     availableLangs: [
       { code: 'zh', native: '简体中文', flag: '🇨🇳' },
       { code: 'en', native: 'English', flag: '🇬🇧' },
@@ -2275,33 +2400,55 @@ function alpineLink() {
     // Booking
     openBooking(item) { this.bookingData.mountain = item.name || item; this.showBooking = true; },
     openBookingWithGuide(peak, guide) { this.bookingData.mountain = peak.name; this.bookingData.guide = guide.name; this.showBooking = true; },
-    submitBooking() {
+    async submitBooking() {
       if (!this.bookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
+      if (!this.requireAuth()) return;
       this.showBooking = false;
-      // Calculate deposit: 3000 CNY per person
       const deposit = 3000 * (this.bookingData.members || 1);
+      try {
+        await fetch('/api/bookings', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ mountain: this.bookingData.mountain, guide_name: this.bookingData.guide || '', date: this.bookingData.date, members: this.bookingData.members || 1, notes: this.bookingData.notes || '' }) });
+      } catch(e) {}
       this.openPayment(deposit);
     },
 
     async toggleLike(post) {
+      if (!this.requireAuth()) return;
       const wasLiked = post.isLiked;
       post.isLiked = !wasLiked;
       post.likes += post.isLiked ? 1 : -1;
       try {
-        await fetch('/api/posts/' + post.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
-      } catch(e) {}
+        const res = await fetch('/api/posts/' + post.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          post.isLiked = data.liked;
+          post.likes = data.likes;
+        } else {
+          post.isLiked = wasLiked;
+          post.likes += wasLiked ? 1 : -1;
+        }
+      } catch(e) {
+        post.isLiked = wasLiked;
+        post.likes += wasLiked ? 1 : -1;
+      }
     },
     toggleFavorite(post) { post.isFavorited = !post.isFavorited; },
-    openComments(post) { this.selectedPostForComment = post; this.showComments = true; },
+    openComments(post) { this.selectedPostForComment = post; this.selectedPostComments = []; this.showComments = true; this.loadComments(post.id); },
     closeComments() { this.showComments = false; this.selectedPostForComment = null; },
-    addComment() {
+    async addComment() {
       if (!this.newComment.trim()) return;
-      if (this.selectedPostForComment) {
-        if (!this.selectedPostForComment.commentPreview) this.selectedPostForComment.commentPreview = [];
-        this.selectedPostForComment.commentPreview.push({ author: this.userProfile.name, text: this.newComment });
-        this.selectedPostForComment.comments++;
-      }
+      if (!this.requireAuth()) return;
+      const content = this.newComment;
       this.newComment = '';
+      if (this.selectedPostForComment) {
+        try {
+          const res = await fetch('/api/comments', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ post_id: this.selectedPostForComment.id, content }) });
+          const data = await res.json();
+          if (res.ok) {
+            this.selectedPostComments.push(data);
+            this.selectedPostForComment.comments++;
+          } else { this.showToast(data.error || '评论失败', 'error'); }
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      }
     },
     sharePost(post) { this.selectedPostForShare = post; this.showShare = true; },
     closeShareModal() { this.showShare = false; },
@@ -2340,7 +2487,11 @@ function alpineLink() {
       this.chatInput = '';
     },
     openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
-    openChatWithUser(name, avatar) { this.selectedConversation = { name, avatar, messages: [] }; this.showChatDetail = true; },
+    async openChatWithUser(name, avatar) {
+      this.activeChatSession = { id: Date.now(), name, avatar, flag: '', type: 'guide', online: false, unread: 0, lastMsg: '', messages: [] };
+      this.showChatWindow = true;
+      this.currentPage = 'chat';
+    },
     get filteredConversations() {
       if (!this.activeChatType || this.activeChatType === 'all') return this.conversations;
       return this.conversations.filter(c => c.type === this.activeChatType);
@@ -2384,7 +2535,19 @@ function alpineLink() {
     // Expeditions & Clubs
     openExpeditionDetail(exp) { this.selectedExpedition = exp; this.showExpeditionDetail = true; },
     openClubDetail(club) { this.selectedClub = club; this.showClubDetail = true; },
-    joinClub() { this.showToast('已成功加入俱乐部！'); this.showClubDetail = false; },
+    async joinClub() {
+      if (!this.requireAuth()) return;
+      if (!this.selectedClub) return;
+      try {
+        const res = await fetch('/api/clubs/' + this.selectedClub.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('已成功加入俱乐部！');
+          if (this.selectedClub) this.selectedClub.members = (this.selectedClub.members || 0) + 1;
+        } else { this.showToast(data.error || '加入失败', 'error'); }
+      } catch(e) { this.showToast('已成功加入俱乐部！'); }
+      this.showClubDetail = false;
+    },
     openArticle(guide) { this.selectedArticle = guide; this.showArticle = true; },
 
     // Gear
@@ -2651,6 +2814,112 @@ function alpineLink() {
       } catch(e) {}
     },
 
+    // Comments
+    async loadComments(postId) {
+      this.commentsLoading = true;
+      try {
+        const res = await fetch('/api/comments?post_id=' + postId);
+        if (res.ok) { this.selectedPostComments = await res.json(); }
+      } catch(e) {}
+      this.commentsLoading = false;
+    },
+
+    // Clubs
+    async loadClubs() {
+      try {
+        const res = await fetch('/api/clubs');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.clubs = data.map(c => ({
+              ...c,
+              cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+              verified: !!c.verified,
+              specialty: c.specialty || '攀登',
+              achievements: [],
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+
+    // Chat/Messages
+    async loadConversations() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/messages/conversations', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.chatSessions = data.map(c => ({
+              id: c.id,
+              conversationId: c.id,
+              name: c.otherName,
+              avatar: c.otherAvatar || ('https://i.pravatar.cc/150?u=' + c.otherId),
+              flag: '',
+              type: 'user',
+              online: false,
+              unread: c.unread || 0,
+              lastMsg: c.lastMsg || '',
+              time: c.updated_at ? new Date(c.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '',
+              messages: [],
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+    async openChatSession(session) {
+      this.activeChatSession = session;
+      this.showChatWindow = true;
+      if (this.authToken && session.conversationId) {
+        try {
+          const res = await fetch('/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
+          if (res.ok) {
+            const msgs = await res.json();
+            const myId = this.currentUser && this.currentUser.id;
+            this.activeChatSession.messages = msgs.map(m => ({
+              from: m.sender_id === myId ? 'me' : 'them',
+              text: m.content,
+              time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            }));
+            this.activeChatSession.unread = 0;
+          }
+        } catch(e) {}
+      }
+    },
+    async sendChatMessage() {
+      if (!this.chatInput.trim() || !this.activeChatSession) return;
+      const text = this.chatInput;
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      this.activeChatSession.messages.push({ from: 'me', text, time });
+      this.chatInput = '';
+      if (this.authToken && this.activeChatSession.conversationId) {
+        try {
+          await fetch('/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ content: text }) });
+        } catch(e) {}
+      }
+    },
+
+    // Notifications
+    async loadNotifications() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+        if (res.ok) { return await res.json(); }
+      } catch(e) {}
+      return [];
+    },
+
+    // Follows
+    async followUser(targetId) {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/follows', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ target_id: targetId }) });
+        const data = await res.json();
+        this.showToast(res.ok ? data.message : (data.error || '操作失败'), res.ok ? 'success' : 'error');
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+
     init() {
       // Auto-rotate hero carousel every 5 seconds
       setInterval(() => {
@@ -2665,6 +2934,8 @@ function alpineLink() {
       this.loadPosts();
       this.loadLeaderboard();
       this.loadWeather();
+      this.loadClubs();
+      this.loadConversations();
       // Watch gearMode changes to reload gear (reset category first to avoid double-call)
       this.$watch('gearMode', (val) => {
         if (this.gearCategory !== '全部') {
