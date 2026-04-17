@@ -403,17 +403,15 @@
         async doLogin() {
           this.loginLoading = true;
           try {
-            const { token } = await (await fetch('/api/admin/login', {
+            const r = await fetch('/api/admin/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(this.loginForm),
-            })).then(async r => {
-              const d = await r.json();
-              if (!r.ok) throw new Error(d.error || '登录失败');
-              return d;
             });
-            this.token = token;
-            localStorage.setItem('adminToken', token);
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || '登录失败');
+            this.token = d.token;
+            localStorage.setItem('adminToken', d.token);
             this.loadPage();
           } catch (e) {
             this.showToast(e.message, 'error');
