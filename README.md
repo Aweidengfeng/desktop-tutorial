@@ -29,11 +29,74 @@ Write your name on line 6, save it, and then head back to GitHub Desktop.
 - **节流与缓存**：请求间隔 ≥ 1s；结果缓存到 `localStorage`，7 天内复用，减少对 Nominatim 的压力。
 - **友好提示**：当 Nominatim 也找不到时，提示：「未找到该地点，请尝试使用英文名或更具体的名称（例如 "Mount Everest Base Camp, Nepal"）」。
 
-### 相关文件
+### 4. 地图 API 切换为高德 Web JS API v2
+
+- **轨迹地图**：「轨迹」页的地图替换为高德真实地图，支持实时定位（`AMap.Geolocation`）和轨迹 Polyline 显示。
+- **坐标转换**：后端 `tracks.points` 仍以 WGS84（`{lat, lng, ele, ts}`）存储，前端通过 `AMap.convertFrom` 将 GPS 坐标转为 GCJ-02 再绘制。
+- **封装工具函数**：`initAMap(containerId, options)`、`locateMe()`、`renderTrackDetailMap(track)` 统一管理地图逻辑。
+
+> ⚠️ **上线前必须替换 AMap Key**：
+>
+> 1. 前往 [https://console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) 注册并申请一个 **Web 端（JS API）** 类型的 Key（个人认证免费）。
+> 2. 打开 `攀登4-20260416-summitlink.html`，将文件顶部中的 `YOUR_AMAP_KEY` 替换为你的真实 Key：
+>    ```html
+>    <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
+>    ```
+> 3. 开发环境可在高德控制台将本地域（如 `localhost`）加入白名单。
+
+### 5. 探索模块去预约
+
+- 「探索山峰」页面的商业攀登模块**移除了「立即预约」按钮**，专注于路线介绍/图文展示。
+- 「向导」卡片上的「预约」按钮同样移除，点击卡片可查看向导详情，通过「私信向导」联系。
+- 所有付款/下单流程统一走底部导航「商业攀登」独立入口。
+
+### 6. 聊天发图
+
+- 聊天输入栏新增「📷 图片」按钮，支持多选图片；发送前可预览，点 × 删除。
+- 消息结构新增 `type`（`text` / `image` / `mixed`）和 `images: []` 字段。
+- 图片上传走 `POST /api/upload/multiple`；消息气泡自动渲染图片，点击可全屏预览（Lightbox）。
+- `POST /api/messages/conversations/:id/messages` 加 **30 次/分钟** 速率限制。
+
+### 7. 社区发图/评论发图
+
+- 发帖编辑器「照片」按钮改为真实文件选择，支持多图预览与上传；帖子表新增 `images TEXT JSON` 字段。
+- 评论区同样支持带图评论（照片按钮 + 预览）；评论表新增 `images TEXT JSON` 字段。
+- 帖子列表正确渲染多图九宫格（最多显示 9 张），超出显示 `+N`；点击图片全屏预览。
+
+## 接口说明
+
+| 接口 | 说明 |
+|------|------|
+| `POST /api/upload` | 单图上传（JWT 鉴权，5MB 限制）|
+| `POST /api/upload/multiple` | 多图上传，最多 9 张（JWT 鉴权，5MB/张）|
+| `POST /api/messages/conversations/:id/messages` | 发送消息，支持 `content`、`type`、`images` 字段，限 30 次/分钟 |
+| `GET /api/messages/conversations/:id/messages` | 获取消息列表，返回 `type` 和 `images` 字段 |
+| `POST /api/posts` | 发帖，支持 `images` 字段（URL 数组）|
+| `GET /api/posts` | 帖子列表，返回 `images` 字段 |
+| `POST /api/comments` | 评论，支持 `images` 字段，`content` 为空但有图片时允许提交 |
+| `GET /api/comments` | 评论列表，返回 `images` 字段 |
+| `GET /api/tracks/:id` | 轨迹详情，返回 `points` 字段（WGS84 坐标数组）|
+| `POST /api/tracks` | 新增轨迹，支持 `points` 字段 |
+
+## DB Schema 变更
+
+| 表 | 新增字段 | 说明 |
+|----|---------|------|
+| `messages` | `type TEXT DEFAULT 'text'` | 消息类型：text / image / mixed |
+| `messages` | `images TEXT` | 图片 URL JSON 数组 |
+| `posts` | `images TEXT` | 图片 URL JSON 数组 |
+| `comments` | `images TEXT` | 图片 URL JSON 数组 |
+| `tracks` | `points TEXT` | WGS84 坐标点 JSON 数组 `[{lat,lng,ele,ts}]` |
+
+## 相关文件
 
 | 文件 | 变更说明 |
 |------|---------|
-| `攀登4-20260416-summitlink.html` | 新增商业攀登模块 UI、营地天气 data-camp 属性、OSM geocoding 函数及下拉 |
-| `backend/routes/weather.js` | 修正多座山峰营地坐标，使 C2/C3 落到不同天气格点 |
-| `tests/commercial-peaks.spec.js` | 新增 Playwright 测试：商业峰模块渲染、C2/C3 独立节点、geocodeByOSM 函数存在性 |
+| `攀登4-20260416-summitlink.html` | AMap 替换 Leaflet、探索去预约、聊天/帖子/评论图片上传与渲染、Lightbox、AMap工具函数 |
+| `backend/routes/upload.js` | JWT 鉴权、`crypto.randomUUID()` 安全文件名、5MB 限制 |
+| `backend/routes/messages.js` | 消息接口支持 `type` 和 `images` 字段，30次/分钟限流 |
+| `backend/routes/posts.js` | 帖子接口支持 `images` 字段 |
+| `backend/routes/comments.js` | 评论接口支持 `images` 字段，允许纯图片评论 |
+| `backend/routes/tracks.js` | 轨迹接口支持 `points` 字段（WGS84 JSON）|
+| `backend/db/database.js` | 迁移：messages/posts/comments 表加 `images`，messages 加 `type` |
 

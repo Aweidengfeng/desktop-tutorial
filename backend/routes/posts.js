@@ -8,13 +8,14 @@ router.get('/', (req, res) => {
   try {
     const posts = db.prepare(`
       SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, location, likes, comments, tags, emojis, created_at as createdAt
+             content, image, images, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts ORDER BY created_at DESC
     `).all();
     const parsed = posts.map(p => ({
       ...p,
       tags: p.tags ? JSON.parse(p.tags) : [],
-      emojis: p.emojis ? JSON.parse(p.emojis) : []
+      emojis: p.emojis ? JSON.parse(p.emojis) : [],
+      images: p.images ? JSON.parse(p.images) : []
     }));
     res.json(parsed);
   } catch (e) {
@@ -27,12 +28,13 @@ router.get('/:id', (req, res) => {
   try {
     const post = db.prepare(`
       SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, location, likes, comments, tags, emojis, created_at as createdAt
+             content, image, images, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts WHERE id = ?
     `).get(req.params.id);
     if (!post) return res.status(404).json({ error: '动态不存在' });
     post.tags = post.tags ? JSON.parse(post.tags) : [];
     post.emojis = post.emojis ? JSON.parse(post.emojis) : [];
+    post.images = post.images ? JSON.parse(post.images) : [];
     res.json(post);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -42,21 +44,25 @@ router.get('/:id', (req, res) => {
 // POST /api/posts（需要JWT）
 router.post('/', auth, (req, res) => {
   try {
-    const { content, image, location, tags, emojis } = req.body;
+    const { content, image, images, location, tags, emojis } = req.body;
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     const tagsStr = tags ? JSON.stringify(tags) : null;
     const emojisStr = emojis ? JSON.stringify(emojis) : null;
+    const imagesArr = Array.isArray(images) ? images : [];
+    const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
+    const firstImage = image || imagesArr[0] || '';
     const result = db.prepare(`
-      INSERT INTO posts (user_id, author_name, author_avatar, content, image, location, tags, emojis)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, user.name, user.avatar, content, image || '', location || '', tagsStr, emojisStr);
+      INSERT INTO posts (user_id, author_name, author_avatar, content, image, images, location, tags, emojis)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, user.name, user.avatar, content, firstImage, imagesStr, location || '', tagsStr, emojisStr);
     const post = db.prepare(`
       SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, location, likes, comments, tags, emojis, created_at as createdAt
+             content, image, images, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts WHERE id = ?
     `).get(result.lastInsertRowid);
     post.tags = post.tags ? JSON.parse(post.tags) : [];
     post.emojis = post.emojis ? JSON.parse(post.emojis) : [];
+    post.images = post.images ? JSON.parse(post.images) : [];
     res.json(post);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

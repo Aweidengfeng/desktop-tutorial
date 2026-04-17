@@ -880,9 +880,6 @@ if (!existingGuideCols2.includes('peaks_led')) {
 if (!existingGuideCols2.includes('wechat')) {
   db.exec('ALTER TABLE guides ADD COLUMN wechat TEXT DEFAULT NULL');
 }
-if (!existingGuideCols2.includes('affiliation_club_id')) {
-  db.exec('ALTER TABLE guides ADD COLUMN affiliation_club_id INTEGER DEFAULT NULL');
-}
 if (!existingGuideCols2.includes('cert')) {
   db.exec('ALTER TABLE guides ADD COLUMN cert TEXT DEFAULT NULL');
 }
@@ -951,6 +948,27 @@ if (!existingTrackCols2.includes('is_public')) {
 }
 if (!existingTrackCols2.includes('title')) {
   db.exec('ALTER TABLE tracks ADD COLUMN title TEXT DEFAULT NULL');
+}
+
+// 迁移：posts 表加 images JSON 字段
+const existingPostColsV2 = db.pragma('table_info(posts)').map(c => c.name);
+if (!existingPostColsV2.includes('images')) {
+  db.exec('ALTER TABLE posts ADD COLUMN images TEXT');
+}
+
+// 迁移：comments 表加 images JSON 字段
+const existingCommentColsV2 = db.pragma('table_info(comments)').map(c => c.name);
+if (!existingCommentColsV2.includes('images')) {
+  db.exec('ALTER TABLE comments ADD COLUMN images TEXT');
+}
+
+// 迁移：messages 表加 type 和 images 字段
+const existingMsgCols = db.pragma('table_info(messages)').map(c => c.name);
+if (!existingMsgCols.includes('type')) {
+  db.exec("ALTER TABLE messages ADD COLUMN type TEXT DEFAULT 'text'");
+}
+if (!existingMsgCols.includes('images')) {
+  db.exec('ALTER TABLE messages ADD COLUMN images TEXT');
 }
 
 // 新增表：短信验证码临时存储
