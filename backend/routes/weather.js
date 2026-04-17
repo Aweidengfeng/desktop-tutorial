@@ -266,11 +266,14 @@ function resolveParams(location, lat, lon) {
 
 // GET /api/weather?location=珠峰大本营
 // GET /api/weather?lat=28.0&lon=86.85
+// GET /api/weather (no params) → returns default empty weather info (200)
 router.get('/', async (req, res) => {
   try {
     const { location, lat, lon } = req.query;
     const resolved = resolveParams(location, lat, lon);
-    if (!resolved) return res.status(400).json({ error: '请提供 location 或 lat/lon 参数' });
+    if (!resolved) {
+      return res.json({ location: '', temp: null, wind: null, humidity: null, visibility: null, message: '请提供 location 或 lat/lon 参数' });
+    }
 
     const data = await fetchWeather(resolved.params);
 
@@ -382,18 +385,69 @@ router.get('/camps', async (req, res) => {
 });
 
 // GET /api/weather/popular-peaks — 热门攀登山峰天气（首页滚动展示）
-// 先返回 mock 数据，TODO: 接入 OpenWeather API
-router.get('/popular-peaks', (req, res) => {
-  // TODO: 接入 OpenWeather API，从 peakCoords 依次查询热门山峰实时天气
-  const mockPeaks = [
-    { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, lat: 27.98, lon: 86.92, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
-    { name: 'K2', nameEn: 'K2', altitude: 8611, lat: 35.88, lon: 76.51, temp: -35, wind: 62, humidity: 25, condition: '多云', conditionIcon: '⛅', emoji: '🏔️' },
-    { name: '丹拿利峰', nameEn: 'Denali', altitude: 6190, lat: 63.07, lon: -151.00, temp: -22, wind: 38, humidity: 55, condition: '阴', conditionIcon: '☁️', emoji: '🏔️' },
-    { name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, lat: 45.83, lon: 6.86, temp: -12, wind: 28, humidity: 70, condition: '小雪', conditionIcon: '🌨️', emoji: '🏔️' },
-    { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, lat: 43.35, lon: 42.44, temp: -18, wind: 32, humidity: 48, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
-    { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, lat: 27.86, lon: 86.86, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
-  ];
-  res.json(mockPeaks);
+// 实时接入 OpenWeather API，失败时降级为 mock 数据
+const POPULAR_PEAKS_META = [
+  { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, lat: 27.98, lon: 86.92, emoji: '🏔️' },
+  { name: 'K2', nameEn: 'K2', altitude: 8611, lat: 35.88, lon: 76.51, emoji: '🏔️' },
+  { name: '丹拿利峰', nameEn: 'Denali', altitude: 6190, lat: 63.07, lon: -151.00, emoji: '🏔️' },
+  { name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, lat: 45.83, lon: 6.86, emoji: '🏔️' },
+  { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, lat: 43.35, lon: 42.44, emoji: '🏔️' },
+  { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, lat: 27.86, lon: 86.86, emoji: '🏔️' },
+];
+
+const POPULAR_PEAKS_MOCK = [
+  { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, lat: 27.98, lon: 86.92, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
+  { name: 'K2', nameEn: 'K2', altitude: 8611, lat: 35.88, lon: 76.51, temp: -35, wind: 62, humidity: 25, condition: '多云', conditionIcon: '⛅', emoji: '🏔️' },
+  { name: '丹拿利峰', nameEn: 'Denali', altitude: 6190, lat: 63.07, lon: -151.00, temp: -22, wind: 38, humidity: 55, condition: '阴', conditionIcon: '☁️', emoji: '🏔️' },
+  { name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, lat: 45.83, lon: 6.86, temp: -12, wind: 28, humidity: 70, condition: '小雪', conditionIcon: '🌨️', emoji: '🏔️' },
+  { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, lat: 43.35, lon: 42.44, temp: -18, wind: 32, humidity: 48, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
+  { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, lat: 27.86, lon: 86.86, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
+];
+
+function getConditionIconFromOwm(icon) {
+  if (!icon) return '🌡️';
+  if (icon.startsWith('01')) return '☀️';
+  if (icon.startsWith('02')) return '⛅';
+  if (icon.startsWith('03') || icon.startsWith('04')) return '☁️';
+  if (icon.startsWith('09') || icon.startsWith('10')) return '🌧️';
+  if (icon.startsWith('11')) return '⛈️';
+  if (icon.startsWith('13')) return '🌨️';
+  if (icon.startsWith('50')) return '🌫️';
+  return '🌡️';
+}
+
+router.get('/popular-peaks', async (req, res) => {
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+  if (!apiKey) {
+    return res.json(POPULAR_PEAKS_MOCK);
+  }
+  try {
+    const results = await Promise.allSettled(
+      POPULAR_PEAKS_META.map(p => fetchWeather({ lat: p.lat, lon: p.lon }))
+    );
+    const data = POPULAR_PEAKS_META.map((peak, i) => {
+      if (results[i].status === 'fulfilled') {
+        const w = results[i].value;
+        // 近地面温度（开尔文转摄氏），再按气温直减率 6.5°C/1000m 估算山峰温度
+        const surfaceTemp = w.main.temp - 273.15;
+        const altAdj = Math.round((peak.altitude - 500) / 1000 * 6.5);
+        const temp = Math.round(surfaceTemp - altAdj);
+        return {
+          ...peak,
+          temp,
+          wind: Math.round(w.wind.speed * 3.6),
+          humidity: w.main.humidity,
+          condition: translateWeather(w.weather[0].description),
+          conditionIcon: getConditionIconFromOwm(w.weather[0].icon),
+        };
+      }
+      // 单峰失败时用 mock 值
+      return POPULAR_PEAKS_MOCK[i];
+    });
+    res.json(data);
+  } catch (e) {
+    res.json(POPULAR_PEAKS_MOCK);
+  }
 });
 
 module.exports = router;

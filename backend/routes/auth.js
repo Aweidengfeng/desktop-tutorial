@@ -55,7 +55,7 @@ router.post('/register', (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
     }
-    const username = '@' + name.toLowerCase().replace(/\s+/g, '');
+    const username = '@' + name.toLowerCase().replace(/\s+/g, '') + '_' + phone.slice(-4);
     const avatar = 'https://i.pravatar.cc/150?u=' + phone;
     const hash = bcrypt.hashSync(password, 10);
     const stmt = db.prepare(`
@@ -67,7 +67,10 @@ router.post('/register', (req, res) => {
     res.json({ token: makeToken(user.id), user: safeUser(user) });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) {
-      return res.status(400).json({ error: '手机号已注册' });
+      if (e.message.includes('phone')) {
+        return res.status(400).json({ error: '手机号已注册' });
+      }
+      return res.status(400).json({ error: '注册失败，请稍后重试' });
     }
     res.status(500).json({ error: '服务器错误' });
   }
