@@ -414,15 +414,76 @@
             <template x-if="weatherSearchLoading">
               <div class="bg-slate-800 rounded-2xl p-4 text-slate-400 text-sm text-center">天气加载中...</div>
             </template>
-            <template x-if="!weatherSearchLoading && weatherSearchResult">
+            <template x-if="!weatherSearchLoading && (weatherSearchResult || weatherSearchCamps.length > 0)">
               <div class="bg-slate-800 rounded-2xl p-4">
                 <div class="flex items-center justify-between mb-3">
-                  <p class="text-white font-semibold" x-text="weatherSearchResult.error ? '暂无数据' : weatherSearchResult.location"></p>
-                  <button @click="showWeatherSearchResult=false" class="text-slate-400 hover:text-white">
+                  <p class="text-white font-semibold" x-text="weatherSearchResult && weatherSearchResult.error ? '暂无数据' : (weatherSearchResult ? weatherSearchResult.location : weatherSearch)"></p>
+                  <button @click="showWeatherSearchResult=false;weatherSearchCamps=[]" class="text-slate-400 hover:text-white">
                     <span class="material-symbols-outlined text-lg">close</span>
                   </button>
                 </div>
-                <template x-if="!weatherSearchResult.error">
+
+                <!-- 有营地分层数据时展示各营地天气 -->
+                <template x-if="weatherSearchCamps.length > 0">
+                  <div>
+                    <p class="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">⛅ 各营地实时天气</p>
+                    <div class="space-y-2">
+                      <template x-for="camp in weatherSearchCamps" :key="camp.name">
+                        <div class="bg-slate-700 rounded-xl p-3">
+                          <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                              <span x-text="camp.emoji" class="text-base"></span>
+                              <span class="text-white text-sm font-semibold" x-text="camp.name"></span>
+                            </div>
+                            <span class="text-xs bg-primary/30 text-primary-light px-2 py-0.5 rounded-full font-bold" x-text="camp.altitude + 'm'"></span>
+                          </div>
+                          <template x-if="camp.weather">
+                            <div class="grid grid-cols-4 gap-1.5 text-center">
+                              <div class="bg-slate-600/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-sm" x-text="camp.weather.temp + '°'"></p>
+                                <p class="text-slate-400 text-[10px]">温度</p>
+                              </div>
+                              <div class="bg-slate-600/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-xs" x-text="camp.weather.wind + 'km/h'"></p>
+                                <p class="text-slate-400 text-[10px]">风速</p>
+                              </div>
+                              <div class="bg-slate-600/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-xs" x-text="camp.weather.humidity + '%'"></p>
+                                <p class="text-slate-400 text-[10px]">湿度</p>
+                              </div>
+                              <div class="bg-slate-600/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-xs" x-text="camp.weather.visibility + 'km'"></p>
+                                <p class="text-slate-400 text-[10px]">能见度</p>
+                              </div>
+                            </div>
+                          </template>
+                          <template x-if="!camp.weather">
+                            <p class="text-slate-500 text-xs text-center py-1">天气数据暂不可用</p>
+                          </template>
+                          <!-- 营地7天预报 -->
+                          <template x-if="camp.forecast && camp.forecast.length > 0">
+                            <div class="mt-2">
+                              <div class="flex gap-1.5 overflow-x-auto scroll-hide pb-0.5">
+                                <template x-for="day in camp.forecast" :key="day.date">
+                                  <div class="flex-shrink-0 bg-slate-600/50 rounded-lg p-1.5 text-center min-w-[52px]">
+                                    <p class="text-slate-400 text-[10px]" x-text="day.date.slice(5)"></p>
+                                    <p class="text-white text-[10px] font-semibold mt-0.5" x-text="day.description"></p>
+                                    <p class="text-sky-400 text-[10px]" x-text="day.temp_max + '°'"></p>
+                                    <p class="text-slate-400 text-[10px]" x-text="day.temp_min + '°'"></p>
+                                    <p class="text-slate-500 text-[10px]" x-text="day.wind + 'k'"></p>
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 普通地点天气（非山峰或无营地数据） -->
+                <template x-if="weatherSearchCamps.length === 0 && weatherSearchResult && !weatherSearchResult.error">
                   <div>
                     <div class="grid grid-cols-4 gap-2 text-center mb-3">
                       <div class="bg-slate-700 rounded-xl p-2">
@@ -460,7 +521,8 @@
                     </template>
                   </div>
                 </template>
-                <template x-if="weatherSearchResult.error">
+
+                <template x-if="weatherSearchCamps.length === 0 && weatherSearchResult && weatherSearchResult.error">
                   <p class="text-slate-400 text-sm" x-text="weatherSearchResult.error"></p>
                 </template>
               </div>
@@ -1618,57 +1680,124 @@
                   </template>
                 </div>
               </template>
-              <!-- 实时天气 -->
+              <!-- 营地分层天气 -->
               <div class="mb-4">
-                <template x-if="peakWeatherLoading">
+                <template x-if="peakCampWeathersLoading">
                   <div class="bg-slate-800 rounded-xl p-3 flex items-center gap-3">
-                    <span class="text-xl">🌡️</span>
-                    <p class="text-slate-400 text-sm">天气加载中...</p>
+                    <span class="text-xl animate-spin">⟳</span>
+                    <p class="text-slate-400 text-sm">营地天气加载中...</p>
                   </div>
                 </template>
-                <template x-if="!peakWeatherLoading && peakWeather && !peakWeather.error">
-                  <div class="bg-slate-800 rounded-xl p-3">
-                    <p class="text-xs text-slate-400 mb-2">⛅ 当前天气</p>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <p class="text-white font-bold text-lg" x-text="peakWeather.temp + '°C'"></p>
-                        <p class="text-xs text-slate-400">温度</p>
-                      </div>
-                      <div>
-                        <p class="text-white font-bold text-sm" x-text="peakWeather.wind + ' km/h'"></p>
-                        <p class="text-xs text-slate-400">风速</p>
-                      </div>
-                      <div>
-                        <p class="text-white font-bold text-sm" x-text="peakWeather.humidity + '%'"></p>
-                        <p class="text-xs text-slate-400">湿度</p>
-                      </div>
+                <template x-if="!peakCampWeathersLoading && peakCampWeathers.length > 0">
+                  <div>
+                    <p class="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">⛅ 各营地实时天气</p>
+                    <div class="space-y-2">
+                      <template x-for="camp in peakCampWeathers" :key="camp.name">
+                        <div class="bg-slate-800 rounded-xl p-3">
+                          <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                              <span x-text="camp.emoji" class="text-base"></span>
+                              <span class="text-white text-sm font-semibold" x-text="camp.name"></span>
+                            </div>
+                            <span class="text-xs bg-primary/30 text-primary-light px-2 py-0.5 rounded-full font-bold" x-text="camp.altitude + 'm'"></span>
+                          </div>
+                          <template x-if="camp.weather">
+                            <div class="grid grid-cols-4 gap-1.5 text-center">
+                              <div class="bg-slate-700/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-sm" x-text="camp.weather.temp + '°'"></p>
+                                <p class="text-slate-400 text-[10px]">温度</p>
+                              </div>
+                              <div class="bg-slate-700/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-xs" x-text="camp.weather.wind + 'km/h'"></p>
+                                <p class="text-slate-400 text-[10px]">风速</p>
+                              </div>
+                              <div class="bg-slate-700/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-xs" x-text="camp.weather.humidity + '%'"></p>
+                                <p class="text-slate-400 text-[10px]">湿度</p>
+                              </div>
+                              <div class="bg-slate-700/60 rounded-lg p-1.5">
+                                <p class="text-white font-bold text-xs" x-text="camp.weather.visibility + 'km'"></p>
+                                <p class="text-slate-400 text-[10px]">能见度</p>
+                              </div>
+                            </div>
+                          </template>
+                          <template x-if="!camp.weather">
+                            <p class="text-slate-500 text-xs text-center py-1">天气数据暂不可用</p>
+                          </template>
+                          <!-- 该营地7天预报 -->
+                          <template x-if="camp.forecast && camp.forecast.length > 0">
+                            <div class="mt-2">
+                              <div class="flex gap-1.5 overflow-x-auto scroll-hide pb-0.5">
+                                <template x-for="day in camp.forecast" :key="day.date">
+                                  <div class="flex-shrink-0 bg-slate-700/50 rounded-lg p-1.5 text-center min-w-[52px]">
+                                    <p class="text-slate-400 text-[10px]" x-text="day.date.slice(5)"></p>
+                                    <p class="text-white text-[10px] font-semibold mt-0.5" x-text="day.description"></p>
+                                    <p class="text-sky-400 text-[10px]" x-text="day.temp_max + '°'"></p>
+                                    <p class="text-slate-400 text-[10px]" x-text="day.temp_min + '°'"></p>
+                                    <p class="text-slate-500 text-[10px]" x-text="day.wind + 'k'"></p>
+                                  </div>
+                                </template>
+                              </div>
+                            </div>
+                          </template>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </template>
-                <template x-if="!peakWeatherLoading && (!peakWeather || peakWeather.error)">
-                  <div class="bg-slate-800 rounded-xl p-3 flex items-center gap-3">
-                    <span class="text-xl">🌡️</span>
-                    <p class="text-slate-400 text-sm">天气数据暂不可用</p>
-                  </div>
-                </template>
-              </div>
-              <!-- 7天天气预报 -->
-              <template x-if="peakForecast && peakForecast.length > 0">
-                <div class="mb-4">
-                  <p class="text-xs text-slate-400 mb-2">📅 7天天气预报</p>
-                  <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
-                    <template x-for="day in peakForecast" :key="day.date">
-                      <div class="flex-shrink-0 bg-slate-800 rounded-xl p-2 text-center min-w-[72px]">
-                        <p class="text-xs text-slate-400" x-text="day.date.slice(5)"></p>
-                        <p class="text-white text-xs font-semibold mt-1" x-text="day.description"></p>
-                        <p class="text-sky-400 text-xs mt-1" x-text="day.temp_max + '°'"></p>
-                        <p class="text-slate-400 text-xs" x-text="day.temp_min + '°'"></p>
-                        <p class="text-slate-500 text-xs mt-1" x-text="day.wind + 'km/h'"></p>
+                <!-- 当无营地数据时 fallback 到原始单点天气 -->
+                <template x-if="!peakCampWeathersLoading && peakCampWeathers.length === 0">
+                  <div>
+                    <template x-if="peakWeatherLoading">
+                      <div class="bg-slate-800 rounded-xl p-3 flex items-center gap-3">
+                        <span class="text-xl">🌡️</span>
+                        <p class="text-slate-400 text-sm">天气加载中...</p>
+                      </div>
+                    </template>
+                    <template x-if="!peakWeatherLoading && peakWeather && !peakWeather.error">
+                      <div class="bg-slate-800 rounded-xl p-3">
+                        <p class="text-xs text-slate-400 mb-2">⛅ 当前天气</p>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <p class="text-white font-bold text-lg" x-text="peakWeather.temp + '°C'"></p>
+                            <p class="text-xs text-slate-400">温度</p>
+                          </div>
+                          <div>
+                            <p class="text-white font-bold text-sm" x-text="peakWeather.wind + ' km/h'"></p>
+                            <p class="text-xs text-slate-400">风速</p>
+                          </div>
+                          <div>
+                            <p class="text-white font-bold text-sm" x-text="peakWeather.humidity + '%'"></p>
+                            <p class="text-xs text-slate-400">湿度</p>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <template x-if="!peakWeatherLoading && (!peakWeather || peakWeather.error)">
+                      <div class="bg-slate-800 rounded-xl p-3 flex items-center gap-3">
+                        <span class="text-xl">🌡️</span>
+                        <p class="text-slate-400 text-sm">天气数据暂不可用</p>
+                      </div>
+                    </template>
+                    <template x-if="peakForecast && peakForecast.length > 0">
+                      <div class="mt-3">
+                        <p class="text-xs text-slate-400 mb-2">📅 7天天气预报</p>
+                        <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+                          <template x-for="day in peakForecast" :key="day.date">
+                            <div class="flex-shrink-0 bg-slate-700 rounded-xl p-2 text-center min-w-[60px]">
+                              <p class="text-xs text-slate-400" x-text="day.date.slice(5)"></p>
+                              <p class="text-white text-xs font-semibold mt-1" x-text="day.description"></p>
+                              <p class="text-sky-400 text-xs mt-1" x-text="day.temp_max + '°'"></p>
+                              <p class="text-slate-400 text-xs" x-text="day.temp_min + '°'"></p>
+                              <p class="text-slate-500 text-xs mt-1" x-text="day.wind + 'km/h'"></p>
+                            </div>
+                          </template>
+                        </div>
                       </div>
                     </template>
                   </div>
-                </div>
-              </template>
+                </template>
+              </div>
               <template x-if="selectedPeak.description">
                 <p class="text-slate-400 text-sm mb-5" x-text="selectedPeak.description"></p>
               </template>
@@ -3224,9 +3353,12 @@ function alpineLink() {
     peakWeather: null,
     peakForecast: [],
     peakWeatherLoading: false,
+    peakCampWeathers: [],
+    peakCampWeathersLoading: false,
     weatherSearch: '',
     weatherSearchResult: null,
     weatherSearchForecast: [],
+    weatherSearchCamps: [],
     weatherSearchLoading: false,
     showWeatherSearchResult: false,
     showBooking: false,
@@ -3548,7 +3680,9 @@ function alpineLink() {
       this.showPeakDetail = true;
       this.peakWeather = null;
       this.peakForecast = [];
+      this.peakCampWeathers = [];
       this.loadPeakWeather(peak);
+      this.loadCampWeathers(peak);
     },
     openWorldPeakDetail(peak) { this.openPeakDetail(peak); },
     openAlpineDetail(spot) { this.openPeakDetail(spot); },
@@ -3580,22 +3714,68 @@ function alpineLink() {
       } catch(e) {}
       this.peakWeatherLoading = false;
     },
+    async loadCampWeathers(peak) {
+      if (!peak) return;
+      this.peakCampWeathersLoading = true;
+      this.peakCampWeathers = [];
+      try {
+        const res = await fetch(`/api/weather/camps?peak=${encodeURIComponent(peak.name)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.camps && data.camps.length > 0) {
+            this.peakCampWeathers = data.camps;
+          }
+        }
+      } catch(e) {}
+      this.peakCampWeathersLoading = false;
+    },
     async searchWeather() {
       if (!this.weatherSearch.trim()) return;
       this.weatherSearchLoading = true;
       this.weatherSearchResult = null;
       this.weatherSearchForecast = [];
+      this.weatherSearchCamps = [];
       this.showWeatherSearchResult = true;
+      const loc = this.weatherSearch.trim();
+      const locEnc = encodeURIComponent(loc);
       try {
-        const loc = encodeURIComponent(this.weatherSearch.trim());
+        // 先尝试获取营地分层天气（山峰名称匹配）
+        const campsRes = await fetch(`/api/weather/camps?peak=${locEnc}`);
+        if (campsRes.ok) {
+          const campsData = await campsRes.json();
+          if (campsData.camps && campsData.camps.length > 0) {
+            this.weatherSearchCamps = campsData.camps;
+            // 同时获取普通天气作为 header 显示
+            try {
+              const wres = await fetch(`/api/weather?location=${locEnc}`);
+              if (wres.ok) this.weatherSearchResult = await wres.json();
+              else this.weatherSearchResult = { location: loc, temp: '-', wind: '-', humidity: '-', visibility: '-' };
+            } catch(e) {
+              this.weatherSearchResult = { location: loc, temp: '-', wind: '-', humidity: '-', visibility: '-' };
+            }
+            this.weatherSearchLoading = false;
+            return;
+          }
+        }
+      } catch(e) {}
+      // 普通地点天气查询
+      try {
         const [wres, fres] = await Promise.all([
-          fetch(`/api/weather?location=${loc}`),
-          fetch(`/api/weather/forecast?location=${loc}`)
+          fetch(`/api/weather?location=${locEnc}`),
+          fetch(`/api/weather/forecast?location=${locEnc}`)
         ]);
-        if (wres.ok) this.weatherSearchResult = await wres.json();
-        if (fres.ok) { const fd = await fres.json(); this.weatherSearchForecast = fd.forecast || []; }
+        if (wres.ok) {
+          this.weatherSearchResult = await wres.json();
+        } else {
+          const errData = await wres.json().catch(() => ({}));
+          this.weatherSearchResult = { error: errData.error || '未找到该地点天气，请检查地名是否正确' };
+        }
+        if (fres.ok) {
+          const fd = await fres.json();
+          this.weatherSearchForecast = fd.forecast || [];
+        }
       } catch(e) {
-        this.weatherSearchResult = { error: '天气数据暂不可用' };
+        this.weatherSearchResult = { error: '网络错误，请稍后重试' };
       }
       this.weatherSearchLoading = false;
     },
