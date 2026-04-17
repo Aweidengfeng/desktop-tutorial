@@ -3,6 +3,38 @@ const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 
+// POST /api/clubs/apply — 提交俱乐部入驻申请（需要JWT）
+router.post('/apply', auth, (req, res) => {
+  try {
+    const { club_name, description, specialty, region, type, contact, wechat, website, cert_url } = req.body;
+    if (!club_name || !contact) return res.status(400).json({ error: '俱乐部名称和联系方式不能为空' });
+    const existing = db.prepare("SELECT id FROM club_applications WHERE user_id = ? AND status = 'pending'").get(req.user.id);
+    if (existing) return res.status(400).json({ error: '您已有待审核的申请，请等待审核结果' });
+    const result = db.prepare(`
+      INSERT INTO club_applications (user_id, club_name, description, specialty, region, type, contact, wechat, website, cert_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, club_name, description || null, specialty || null, region || null,
+           type || '综合', contact, wechat || null, website || null, cert_url || null);
+    const application = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(result.lastInsertRowid);
+    res.json(application);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/clubs/apply/status — 查询当前用户申请状态（需要JWT）
+router.get('/apply/status', auth, (req, res) => {
+  try {
+    const application = db.prepare(`
+      SELECT * FROM club_applications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1
+    `).get(req.user.id);
+    if (!application) return res.json({ status: 'none' });
+    res.json(application);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/clubs
 router.get('/', (req, res) => {
   try {
@@ -167,6 +199,24 @@ router.delete('/:id/activity/:actId', auth, (req, res) => {
     const result = db.prepare("UPDATE club_activities SET status='ended' WHERE id=? AND club_id=?").run(req.params.actId, req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: '活动不存在' });
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/clubs/:id/members/:userId — 俱乐部成员详情（需要JWT）
+router.get('/:id/members/:userId', auth, (req, res) => {
+  try {
+    const member = db.prepare(`
+      SELECT cm.id, cm.club_id, cm.user_id, cm.role, cm.joined_at,
+             u.name, u.avatar, u.level
+      FROM club_members cm
+      JOIN users u ON u.id = cm.user_id
+      WHERE cm.club_id = ? AND cm.user_id = ?
+    `).get(req.params.id, req.params.userId);
+    if (!member) return res.status(404).json({ error: '成员不存在' });
+    const climbCount = db.prepare('SELECT COUNT(*) as cnt FROM tracks WHERE user_id = ?').get(req.params.userId);
+    res.json({ ...member, climb_count: climbCount ? climbCount.cnt : 0 });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
