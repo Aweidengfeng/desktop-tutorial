@@ -455,6 +455,20 @@
           </div>
         </div>
 
+        <!-- 定制攀登入口 -->
+        <div class="mt-4">
+          <div @click="openCustomsForm()" class="rounded-2xl p-4 cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-4" style="background: linear-gradient(135deg,#2b6579,#1e4f60);">
+            <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+              <span class="material-symbols-outlined text-white text-2xl">route</span>
+            </div>
+            <div class="flex-1">
+              <p class="text-white font-bold text-sm">🏔️ 定制攀登计划</p>
+              <p class="text-blue-100 text-xs mt-0.5">专属方案 · 灵活日期 · 私人定制</p>
+            </div>
+            <span class="material-symbols-outlined text-white/70">arrow_forward</span>
+          </div>
+        </div>
+
         <!-- Guides Section -->
         <div class="mt-4 mb-2">
           <h3 class="font-display font-bold text-white mb-3">专业向导</h3>
@@ -497,7 +511,7 @@
         </div>
         <!-- Tab Bar -->
         <div class="flex gap-4 overflow-x-auto scroll-hide pb-3 mb-4 border-b border-white/10">
-          <template x-for="tab in [{id:'all',name:'全部'},{id:'posts',name:'动态'},{id:'diary',name:'日记'},{id:'clubs',name:'俱乐部'},{id:'teams',name:'组队'}]" :key="tab.id">
+          <template x-for="tab in [{id:'all',name:'全部'},{id:'posts',name:'动态'},{id:'diary',name:'日记'},{id:'clubs',name:'俱乐部'},{id:'teams',name:'组队'},{id:'articles',name:'攻略'}]" :key="tab.id">
             <button @click="activeChatType=tab.id"
                     :class="activeChatType===tab.id ? 'text-primary-light border-b-2 border-primary-light' : 'text-slate-400'"
                     class="flex-shrink-0 pb-1 text-sm font-medium transition-colors" x-text="tab.name"></button>
@@ -623,10 +637,49 @@
             </div>
           </template>
         </div>
+
+        <!-- Articles Section / 攻略知识库 -->
+        <div x-show="activeChatType==='articles'" class="mb-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-white">攻略与知识库</h3>
+          </div>
+          <!-- Category Filter -->
+          <div class="flex gap-2 overflow-x-auto scroll-hide pb-2 mb-3">
+            <template x-for="cat in [{id:'all',name:'全部'},{id:'expedition',name:'远征攻略'},{id:'technical',name:'技术攀登'},{id:'hiking',name:'徒步路线'},{id:'gear',name:'装备测评'}]" :key="cat.id">
+              <button @click="articleCategory=cat.id;loadArticles()"
+                      :class="articleCategory===cat.id ? 'bg-primary text-white' : 'glass text-slate-300'"
+                      class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all" x-text="cat.name"></button>
+            </template>
+          </div>
+          <!-- Articles List -->
+          <div x-show="articlesLoading" class="text-center py-6 text-slate-500 text-sm">加载中...</div>
+          <div x-show="!articlesLoading" class="space-y-3">
+            <template x-for="art in articles" :key="art.id">
+              <div @click="openArticleDetail(art)" class="glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
+                <img :src="art.cover_image" :alt="art.title" class="w-full h-32 object-cover" @error="$el.style.display='none'">
+                <div class="p-3">
+                  <div class="flex items-start justify-between gap-2 mb-1">
+                    <p class="text-white font-semibold text-sm leading-snug" x-text="art.title"></p>
+                    <span class="text-xs bg-primary/30 text-primary-light px-2 py-0.5 rounded-full flex-shrink-0" x-text="art.read_time_minutes + '分钟'"></span>
+                  </div>
+                  <div class="flex items-center gap-3 text-xs text-slate-500">
+                    <span x-text="art.author_name || '匿名作者'"></span>
+                    <span>👁 <span x-text="art.view_count"></span></span>
+                    <span>❤️ <span x-text="art.like_count"></span></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <div x-show="articles.length === 0 && !articlesLoading" class="text-center py-8 text-slate-500">
+              <span class="material-symbols-outlined text-4xl">article</span>
+              <p class="mt-2 text-sm">暂无文章</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- TRACK PAGE (standalone) -->
+
     <section x-show="currentPage === 'track'"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
@@ -968,7 +1021,168 @@
           <span class="material-symbols-outlined text-base">emergency</span>紧急求救
         </button>
 
+        <!-- ────────── 个人中心：新增功能区块 ────────── -->
+        <template x-if="currentUser">
+          <div>
+            <!-- 医疗信息 -->
+            <div class="glass rounded-2xl mb-4 overflow-hidden">
+              <button @click="meSection=meSection==='medical'?'profile':'medical';if(meSection==='medical')loadMedicalInfo()"
+                      class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors">
+                <div class="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-red-400 text-lg">medical_information</span>
+                </div>
+                <div class="flex-1 text-left">
+                  <p class="text-white text-sm font-medium">医疗信息</p>
+                  <p class="text-slate-500 text-xs">血型 · 过敏史 · 健康备注</p>
+                </div>
+                <span class="material-symbols-outlined text-slate-600" x-text="meSection==='medical'?'expand_less':'chevron_right'"></span>
+              </button>
+              <div x-show="meSection==='medical'" class="px-4 pb-4 space-y-3 border-t border-white/10">
+                <div class="pt-3">
+                  <label class="text-slate-400 text-xs mb-1 block">血型</label>
+                  <select x-model="medicalInfo.blood_type" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                    <option value="">请选择</option>
+                    <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                    <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-slate-400 text-xs mb-1 block">过敏史</label>
+                  <textarea x-model="medicalInfo.allergies" rows="2" placeholder="如：青霉素过敏" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none resize-none placeholder-slate-500"></textarea>
+                </div>
+                <div>
+                  <label class="text-slate-400 text-xs mb-1 block">健康状态备注</label>
+                  <textarea x-model="medicalInfo.health_notes" rows="2" placeholder="如：有高血压，定期服药" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none resize-none placeholder-slate-500"></textarea>
+                </div>
+                <button @click="saveMedicalInfo()" class="w-full bg-primary text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-primary-light transition-colors">保存医疗信息</button>
+              </div>
+            </div>
+
+            <!-- 紧急联系人 -->
+            <div class="glass rounded-2xl mb-4 overflow-hidden">
+              <button @click="meSection=meSection==='emergency'?'profile':'emergency';if(meSection==='emergency')loadEmergencyContacts()"
+                      class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors">
+                <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-orange-400 text-lg">contact_phone</span>
+                </div>
+                <div class="flex-1 text-left">
+                  <p class="text-white text-sm font-medium">紧急联系人</p>
+                  <p class="text-slate-500 text-xs" x-text="userEmergencyContacts.length + ' 位联系人'"></p>
+                </div>
+                <span class="material-symbols-outlined text-slate-600" x-text="meSection==='emergency'?'expand_less':'chevron_right'"></span>
+              </button>
+              <div x-show="meSection==='emergency'" class="px-4 pb-4 border-t border-white/10">
+                <div class="space-y-2 mt-3">
+                  <template x-for="c in userEmergencyContacts" :key="c.id">
+                    <div class="flex items-center gap-3 bg-slate-800 rounded-xl p-3">
+                      <div class="flex-1">
+                        <p class="text-white text-sm font-semibold" x-text="c.name"></p>
+                        <p class="text-slate-400 text-xs" x-text="(c.relationship || '') + (c.relationship ? ' · ' : '') + c.phone"></p>
+                      </div>
+                      <button @click="deleteEmergencyContact(c.id)" class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-red-400 text-base">delete</span>
+                      </button>
+                    </div>
+                  </template>
+                  <div x-show="userEmergencyContacts.length === 0" class="text-center text-slate-500 text-xs py-3">暂无联系人</div>
+                </div>
+                <div x-show="showAddContact" class="mt-3 space-y-2">
+                  <input x-model="newContact.name" placeholder="姓名" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none placeholder-slate-500">
+                  <input x-model="newContact.relationship" placeholder="关系（如：配偶）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none placeholder-slate-500">
+                  <input x-model="newContact.phone" type="tel" placeholder="电话" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none placeholder-slate-500">
+                  <div class="flex gap-2">
+                    <button @click="addEmergencyContact()" class="flex-1 bg-primary text-white rounded-xl py-2 text-sm font-semibold">确认添加</button>
+                    <button @click="showAddContact=false" class="flex-1 bg-slate-700 text-white rounded-xl py-2 text-sm">取消</button>
+                  </div>
+                </div>
+                <button x-show="!showAddContact" @click="showAddContact=true" class="w-full mt-3 border border-dashed border-white/20 text-slate-400 rounded-xl py-2.5 text-sm hover:bg-white/5 transition-colors flex items-center justify-center gap-1">
+                  <span class="material-symbols-outlined text-base">add</span>添加联系人
+                </button>
+              </div>
+            </div>
+
+            <!-- 装备清单 -->
+            <div class="glass rounded-2xl mb-4 overflow-hidden">
+              <button @click="meSection=meSection==='checklist'?'profile':'checklist';if(meSection==='checklist')loadGearChecklist()"
+                      class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors">
+                <div class="w-9 h-9 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-emerald-400 text-lg">checklist</span>
+                </div>
+                <div class="flex-1 text-left">
+                  <p class="text-white text-sm font-medium">装备清单</p>
+                  <p class="text-slate-500 text-xs" x-text="userGearChecklist.filter(i=>i.is_ready).length + '/' + userGearChecklist.length + ' 已准备'"></p>
+                </div>
+                <span class="material-symbols-outlined text-slate-600" x-text="meSection==='checklist'?'expand_less':'chevron_right'"></span>
+              </button>
+              <div x-show="meSection==='checklist'" class="px-4 pb-4 border-t border-white/10">
+                <!-- Progress Bar -->
+                <div class="mt-3 mb-3">
+                  <div class="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>准备进度</span>
+                    <span x-text="userGearChecklist.filter(i=>i.is_ready).length + '/' + userGearChecklist.length"></span>
+                  </div>
+                  <div class="h-2 bg-slate-700 rounded-full">
+                    <div class="h-2 bg-emerald-400 rounded-full transition-all"
+                         :style="'width:' + (userGearChecklist.length ? Math.round(userGearChecklist.filter(i=>i.is_ready).length/userGearChecklist.length*100) : 0) + '%'"></div>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <template x-for="item in userGearChecklist" :key="item.id">
+                    <div class="flex items-center gap-3 bg-slate-800 rounded-xl p-3">
+                      <input type="checkbox" :checked="item.is_ready" @change="toggleGearItem(item)"
+                             class="w-4 h-4 accent-emerald-400 cursor-pointer">
+                      <p class="flex-1 text-sm" :class="item.is_ready ? 'text-slate-400 line-through' : 'text-white'" x-text="item.item_name"></p>
+                    </div>
+                  </template>
+                  <div x-show="userGearChecklist.length === 0" class="text-center text-slate-500 text-xs py-3">暂无装备项</div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                  <input x-model="newGearItemName" placeholder="添加装备项" class="flex-1 bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none placeholder-slate-500"
+                         @keydown.enter="addGearItem()">
+                  <button @click="addGearItem()" class="px-4 bg-emerald-500/30 text-emerald-400 rounded-xl text-sm font-semibold hover:bg-emerald-500/50 transition-colors">添加</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 我的收藏 -->
+            <div class="glass rounded-2xl mb-4 overflow-hidden">
+              <button @click="meSection=meSection==='favorites'?'profile':'favorites';if(meSection==='favorites')loadFavorites()"
+                      class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors">
+                <div class="w-9 h-9 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-yellow-400 text-lg">star</span>
+                </div>
+                <div class="flex-1 text-left">
+                  <p class="text-white text-sm font-medium">我的收藏</p>
+                  <p class="text-slate-500 text-xs" x-text="userFavorites.length + ' 项收藏'"></p>
+                </div>
+                <span class="material-symbols-outlined text-slate-600" x-text="meSection==='favorites'?'expand_less':'chevron_right'"></span>
+              </button>
+              <div x-show="meSection==='favorites'" class="px-4 pb-4 border-t border-white/10">
+                <div class="space-y-2 mt-3">
+                  <template x-for="fav in userFavorites" :key="fav.id">
+                    <div class="flex items-center gap-3 bg-slate-800 rounded-xl p-3">
+                      <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary-light text-base"
+                              x-text="fav.type==='peak'?'landscape':fav.type==='article'?'article':fav.type==='gear'?'backpack':'person_pin'"></span>
+                      </div>
+                      <div class="flex-1">
+                        <p class="text-xs text-slate-400 capitalize" x-text="fav.type"></p>
+                        <p class="text-white text-sm">ID: <span x-text="fav.item_id"></span></p>
+                      </div>
+                      <button @click="removeFavorite(fav.id)" class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-red-400 text-base">delete</span>
+                      </button>
+                    </div>
+                  </template>
+                  <div x-show="userFavorites.length === 0" class="text-center text-slate-500 text-xs py-3">暂无收藏</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
         <!-- Logout -->
+
         <button @click="doLogout()" class="w-full glass rounded-2xl py-4 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-4 flex items-center justify-center gap-2">
           <span class="material-symbols-outlined text-base">logout</span>退出登录
         </button>
@@ -1345,7 +1559,7 @@
               <p class="text-slate-500 text-xs mt-1">珠穆朗玛峰大本营附近，海拔 5,364m</p>
             </div>
             <p class="text-slate-400 text-sm text-center mb-6">按下按钮将向紧急联系人和救援中心发送您的位置</p>
-            <button @click="sosStep=1" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-5 rounded-2xl pulse-red text-xl transition-colors mb-4">
+            <button @click="sendSOS()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-5 rounded-2xl pulse-red text-xl transition-colors mb-4">
               🆘 发送 SOS
             </button>
             <button @click="showSOS=false" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors text-sm">取消</button>
@@ -1358,18 +1572,19 @@
               <h4 class="text-white font-bold text-xl">SOS 已发送</h4>
               <p class="text-slate-400 text-sm mt-1">救援团队正在响应</p>
             </div>
-            <h4 class="text-white font-semibold mb-3">紧急联系人</h4>
+            <h4 class="text-white font-semibold mb-3">救援联系方式</h4>
             <div class="space-y-2">
-              <template x-for="contact in emergencyContacts" :key="contact.number">
+              <template x-for="contact in (rescueContacts.length ? rescueContacts : emergencyContacts)" :key="contact.id || contact.number">
                 <div class="bg-slate-800 rounded-xl p-3 flex items-center justify-between">
                   <div class="flex items-center gap-3">
-                    <span class="text-xl" x-text="contact.country"></span>
+                    <span class="text-xl" x-text="contact.country || '🆘'"></span>
                     <div>
                       <p class="text-white text-sm font-semibold" x-text="contact.name"></p>
-                      <p class="text-slate-400 text-xs" x-text="contact.number"></p>
+                      <p class="text-slate-400 text-xs" x-text="contact.phone || contact.number"></p>
+                      <p x-show="contact.region" class="text-slate-400 text-xs" x-text="contact.region"></p>
                     </div>
                   </div>
-                  <button class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <button @click="callEmergency(contact.phone || contact.number)" class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center">
                     <span class="material-symbols-outlined text-green-400 text-lg">call</span>
                   </button>
                 </div>
@@ -1381,7 +1596,105 @@
       </div>
     </div>
 
+    <!-- Customs Order Modal / 定制攀登 -->
+    <div x-show="showCustomsForm"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[150] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showCustomsForm=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display font-bold text-xl text-white">🏔️ 定制攀登申请</h3>
+            <button @click="showCustomsForm=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <div x-show="!customsSubmitted" class="space-y-4">
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">目标山峰 *</label>
+              <input x-model="customsForm.peak_name" type="text" placeholder="如：珠穆朗玛峰、K2" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">期望出发日期</label>
+              <input x-model="customsForm.preferred_date" type="date" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">人数</label>
+              <select x-model="customsForm.group_size" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none text-sm">
+                <template x-for="n in [1,2,3,4,5,6,7,8,10,12,15,20]" :key="n">
+                  <option :value="n" x-text="n + ' 人'"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">联系电话 *</label>
+              <input x-model="customsForm.contact_phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">备注说明</label>
+              <textarea x-model="customsForm.notes" rows="3" placeholder="如：团队经验、特殊要求等" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm resize-none placeholder-slate-500"></textarea>
+            </div>
+            <button @click="submitCustomsOrder()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-sm">
+              提交定制申请
+            </button>
+          </div>
+          <div x-show="customsSubmitted" class="text-center py-8">
+            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span class="material-symbols-outlined text-white text-3xl">check</span>
+            </div>
+            <h4 class="text-white font-bold text-xl mb-2">申请已提交！</h4>
+            <p class="text-slate-400 text-sm mb-1">我们将在48小时内与您联系</p>
+            <p class="text-primary-light text-sm font-semibold" x-show="customsOrderId">申请编号：<span x-text="'#' + customsOrderId"></span></p>
+            <button @click="showCustomsForm=false;customsSubmitted=false" class="mt-6 w-full bg-slate-700 text-white font-semibold py-3 rounded-xl text-sm">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Article Detail Modal / 文章详情 -->
+    <div x-show="showArticleDetail"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[150] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showArticleDetail=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+        <div class="p-5" x-show="selectedArticle">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs bg-primary/30 text-primary-light px-2 py-0.5 rounded-full" x-text="selectedArticle && ({expedition:'远征攻略',technical:'技术攀登',hiking:'徒步路线',gear:'装备测评'}[selectedArticle.category] || selectedArticle.category)"></span>
+            <button @click="showArticleDetail=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <img x-show="selectedArticle && selectedArticle.cover_image" :src="selectedArticle && selectedArticle.cover_image" class="w-full h-40 object-cover rounded-2xl mb-4">
+          <h3 class="font-display font-bold text-lg text-white mb-2" x-text="selectedArticle && selectedArticle.title"></h3>
+          <div class="flex items-center gap-3 text-xs text-slate-400 mb-4">
+            <span x-text="selectedArticle && (selectedArticle.author_name || '匿名作者')"></span>
+            <span>⏱ <span x-text="selectedArticle && selectedArticle.read_time_minutes"></span> 分钟阅读</span>
+            <span>👁 <span x-text="selectedArticle && selectedArticle.view_count"></span></span>
+          </div>
+          <div class="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap" x-text="selectedArticle && selectedArticle.content"></div>
+          <div class="mt-6 flex gap-3">
+            <button @click="likeArticle(selectedArticle)" class="flex-1 flex items-center justify-center gap-2 bg-red-500/20 text-red-400 py-3 rounded-xl font-semibold text-sm hover:bg-red-500/30 transition-colors">
+              <span class="material-symbols-outlined text-base">favorite</span>
+              点赞 (<span x-text="selectedArticle && selectedArticle.like_count"></span>)
+            </button>
+            <button @click="showArticleDetail=false" class="flex-1 bg-slate-700 text-white py-3 rounded-xl font-semibold text-sm hover:bg-slate-600 transition-colors">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Settings Modal -->
+
     <div x-show="showSettings"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
@@ -2713,6 +3026,29 @@ function alpineLink() {
     selectedWorldPeak: null,
     showAlpineDetail: false,
     selectedAlpine: null,
+    // Articles / 攻略知识库
+    articles: [],
+    articleCategory: 'all',
+    showArticleDetail: false,
+    selectedArticle: null,
+    articlesLoading: false,
+    // Customs / 定制攀登
+    showCustomsForm: false,
+    customsForm: { peak_name: '', preferred_date: '', group_size: 1, notes: '', contact_phone: '' },
+    customsSubmitted: false,
+    customsOrderId: null,
+    // Profile sub-sections
+    medicalInfo: { blood_type: '', allergies: '', health_notes: '' },
+    medicalInfoLoaded: false,
+    userEmergencyContacts: [],
+    showAddContact: false,
+    newContact: { name: '', relationship: '', phone: '' },
+    userGearChecklist: [],
+    newGearItemName: '',
+    userFavorites: [],
+    meSection: 'profile',
+    // Rescue contacts
+    rescueContacts: [],
     toasts: [],
     newComment: '',
     selectedPostComments: [],
@@ -3652,6 +3988,193 @@ function alpineLink() {
       this.showIncomingBookings = true;
     },
 
+    // ─── Articles / 攻略知识库 ───────────────────────────────────────────────
+    async loadArticles() {
+      this.articlesLoading = true;
+      try {
+        let url = '/api/articles';
+        if (this.articleCategory && this.articleCategory !== 'all') url += '?category=' + this.articleCategory;
+        const res = await fetch(url);
+        if (res.ok) this.articles = await res.json();
+      } catch(e) {}
+      this.articlesLoading = false;
+    },
+    async openArticleDetail(art) {
+      this.selectedArticle = art;
+      this.showArticleDetail = true;
+      try {
+        const res = await fetch('/api/articles/' + art.id);
+        if (res.ok) {
+          const full = await res.json();
+          this.selectedArticle = full;
+          // Update view count in list
+          const idx = this.articles.findIndex(a => a.id === art.id);
+          if (idx !== -1) this.articles[idx].view_count = full.view_count;
+        }
+      } catch(e) {}
+    },
+    async likeArticle(art) {
+      if (!this.requireAuth()) return;
+      if (!art) return;
+      try {
+        const res = await fetch('/api/articles/' + art.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          art.like_count = data.like_count;
+          this.showToast('已点赞 ❤️');
+        }
+      } catch(e) {}
+    },
+
+    // ─── Rescue / 全球紧急救援 ──────────────────────────────────────────────
+    async loadRescueContacts() {
+      try {
+        const res = await fetch('/api/rescue/contacts');
+        if (res.ok) this.rescueContacts = await res.json();
+      } catch(e) {}
+    },
+    async sendSOS() {
+      this.sosStep = 1;
+      this.showToast('SOS 已发送！救援正在响应', 'warning');
+      if (this.authToken) {
+        try {
+          await fetch('/api/rescue/sos', {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ location: '27.9881° N, 86.9250° E', peak_name: '珠穆朗玛峰大本营', message: 'SOS求救' })
+          });
+        } catch(e) {}
+      }
+    },
+
+    // ─── Customs / 定制攀登 ──────────────────────────────────────────────────
+    openCustomsForm() {
+      if (!this.requireAuth()) return;
+      this.customsSubmitted = false;
+      this.customsOrderId = null;
+      this.customsForm = { peak_name: '', preferred_date: '', group_size: 1, notes: '', contact_phone: '' };
+      this.showCustomsForm = true;
+    },
+    async submitCustomsOrder() {
+      if (!this.customsForm.peak_name || !this.customsForm.contact_phone) {
+        this.showToast('请填写山峰名称和联系电话', 'error'); return;
+      }
+      try {
+        const res = await fetch('/api/customs', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.customsForm)
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '提交失败', 'error'); return; }
+        this.customsOrderId = data.id;
+        this.customsSubmitted = true;
+        this.showToast('定制申请已提交 🎉');
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+
+    // ─── Profile sub-sections ────────────────────────────────────────────────
+    async loadMedicalInfo() {
+      if (!this.authToken || this.medicalInfoLoaded) return;
+      try {
+        const res = await fetch('/api/profile/medical', { headers: this.getAuthHeaders() });
+        if (res.ok) { this.medicalInfo = await res.json(); this.medicalInfoLoaded = true; }
+      } catch(e) {}
+    },
+    async saveMedicalInfo() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/profile/medical', {
+          method: 'PUT', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.medicalInfo)
+        });
+        if (res.ok) { this.medicalInfo = await res.json(); this.showToast('医疗信息已保存 ✅'); }
+        else { this.showToast('保存失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async loadEmergencyContacts() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/profile/emergency-contacts', { headers: this.getAuthHeaders() });
+        if (res.ok) this.userEmergencyContacts = await res.json();
+      } catch(e) {}
+    },
+    async addEmergencyContact() {
+      if (!this.newContact.name || !this.newContact.phone) {
+        this.showToast('请填写姓名和电话', 'error'); return;
+      }
+      try {
+        const res = await fetch('/api/profile/emergency-contacts', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.newContact)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.userEmergencyContacts.push(data);
+          this.newContact = { name: '', relationship: '', phone: '' };
+          this.showAddContact = false;
+          this.showToast('联系人已添加');
+        } else { this.showToast(data.error || '添加失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async deleteEmergencyContact(id) {
+      try {
+        const res = await fetch('/api/profile/emergency-contacts/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.userEmergencyContacts = this.userEmergencyContacts.filter(c => c.id !== id);
+          this.showToast('联系人已删除');
+        }
+      } catch(e) { this.showToast('操作失败', 'error'); }
+    },
+    async loadGearChecklist() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/profile/gear-checklist', { headers: this.getAuthHeaders() });
+        if (res.ok) this.userGearChecklist = await res.json();
+      } catch(e) {}
+    },
+    async addGearItem() {
+      if (!this.newGearItemName.trim()) return;
+      try {
+        const res = await fetch('/api/profile/gear-checklist', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ item_name: this.newGearItemName.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.userGearChecklist.push(data);
+          this.newGearItemName = '';
+          this.showToast('装备项已添加');
+        }
+      } catch(e) { this.showToast('操作失败', 'error'); }
+    },
+    async toggleGearItem(item) {
+      const newReady = !item.is_ready;
+      item.is_ready = newReady;
+      try {
+        const res = await fetch('/api/profile/gear-checklist/' + item.id, {
+          method: 'PUT', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ is_ready: newReady })
+        });
+        if (!res.ok) item.is_ready = !newReady;
+      } catch(e) { item.is_ready = !newReady; }
+    },
+    async loadFavorites() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/profile/favorites', { headers: this.getAuthHeaders() });
+        if (res.ok) this.userFavorites = await res.json();
+      } catch(e) {}
+    },
+    async removeFavorite(id) {
+      try {
+        const res = await fetch('/api/profile/favorites/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.userFavorites = this.userFavorites.filter(f => f.id !== id);
+          this.showToast('已取消收藏');
+        }
+      } catch(e) { this.showToast('操作失败', 'error'); }
+    },
+
     init() {
       // Auto-rotate hero carousel every 5 seconds
       setInterval(() => {
@@ -3667,6 +4190,7 @@ function alpineLink() {
       this.loadLeaderboard();
       this.loadWeather();
       this.loadClubs();
+      this.loadRescueContacts();
       this.loadConversations();
       // Load notification count after token verify
       this.$watch('authToken', (val) => {
@@ -3686,6 +4210,10 @@ function alpineLink() {
       // Watch activeCategory changes to reload peaks
       this.$watch('activeCategory', (val) => {
         if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
+      });
+      // Watch activeChatType to load articles when articles tab is selected
+      this.$watch('activeChatType', (val) => {
+        if (val === 'articles' && this.articles.length === 0) this.loadArticles();
       });
     },
   };
