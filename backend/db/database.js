@@ -603,6 +603,138 @@ if (trackCount.cnt === 0) {
   }
 }
 
+// 新增表：评论点赞、俱乐部入驻申请、组队成员、山峰用户建议
+db.exec(`
+CREATE TABLE IF NOT EXISTS comment_likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  comment_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, comment_id)
+);
+
+CREATE TABLE IF NOT EXISTS club_applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  club_name TEXT NOT NULL,
+  description TEXT,
+  specialty TEXT,
+  region TEXT,
+  type TEXT DEFAULT '综合',
+  contact TEXT,
+  wechat TEXT,
+  website TEXT,
+  cert_url TEXT,
+  status TEXT DEFAULT 'pending',
+  reject_reason TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS team_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  team_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  name TEXT,
+  avatar TEXT,
+  status TEXT DEFAULT 'pending',
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(team_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS peak_suggestions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  name_en TEXT,
+  altitude INTEGER,
+  country TEXT,
+  continent TEXT,
+  difficulty TEXT,
+  description TEXT,
+  best_season TEXT,
+  routes TEXT,
+  latitude REAL,
+  longitude REAL,
+  image TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 迁移：comments 表补充嵌套评论字段
+const existingCommentCols = db.pragma('table_info(comments)').map(c => c.name);
+if (!existingCommentCols.includes('parent_comment_id')) {
+  db.exec('ALTER TABLE comments ADD COLUMN parent_comment_id INTEGER DEFAULT NULL');
+}
+if (!existingCommentCols.includes('reply_to_user_id')) {
+  db.exec('ALTER TABLE comments ADD COLUMN reply_to_user_id INTEGER DEFAULT NULL');
+}
+if (!existingCommentCols.includes('reply_to_user_name')) {
+  db.exec('ALTER TABLE comments ADD COLUMN reply_to_user_name TEXT DEFAULT NULL');
+}
+if (!existingCommentCols.includes('likes')) {
+  db.exec('ALTER TABLE comments ADD COLUMN likes INTEGER DEFAULT 0');
+}
+
+// 迁移：posts 表补充 tags/emojis 字段
+if (!existingPostCols.includes('tags')) {
+  db.exec('ALTER TABLE posts ADD COLUMN tags TEXT DEFAULT NULL');
+}
+if (!existingPostCols.includes('emojis')) {
+  db.exec('ALTER TABLE posts ADD COLUMN emojis TEXT DEFAULT NULL');
+}
+
+// 迁移：peaks 表补充详细字段
+const existingPeakCols = db.pragma('table_info(peaks)').map(c => c.name);
+if (!existingPeakCols.includes('latitude')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN latitude REAL');
+}
+if (!existingPeakCols.includes('longitude')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN longitude REAL');
+}
+if (!existingPeakCols.includes('routes')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN routes TEXT');
+}
+if (!existingPeakCols.includes('camps')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN camps TEXT');
+}
+if (!existingPeakCols.includes('technical_grade')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN technical_grade TEXT');
+}
+if (!existingPeakCols.includes('permit_required')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN permit_required INTEGER DEFAULT 0');
+}
+if (!existingPeakCols.includes('permit_fee')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN permit_fee TEXT');
+}
+
+// 迁移：custom_orders 表补充接收方字段
+const existingCustomCols = db.pragma('table_info(custom_orders)').map(c => c.name);
+if (!existingCustomCols.includes('receiver_type')) {
+  db.exec("ALTER TABLE custom_orders ADD COLUMN receiver_type TEXT DEFAULT 'platform'");
+}
+if (!existingCustomCols.includes('receiver_id')) {
+  db.exec('ALTER TABLE custom_orders ADD COLUMN receiver_id INTEGER DEFAULT NULL');
+}
+if (!existingCustomCols.includes('receiver_name')) {
+  db.exec('ALTER TABLE custom_orders ADD COLUMN receiver_name TEXT DEFAULT NULL');
+}
+
+// 迁移：teams 表补充字段
+const existingTeamCols = db.pragma('table_info(teams)').map(c => c.name);
+if (!existingTeamCols.includes('equipment_required')) {
+  db.exec('ALTER TABLE teams ADD COLUMN equipment_required TEXT');
+}
+if (!existingTeamCols.includes('notes')) {
+  db.exec('ALTER TABLE teams ADD COLUMN notes TEXT');
+}
+if (!existingTeamCols.includes('difficulty')) {
+  db.exec('ALTER TABLE teams ADD COLUMN difficulty TEXT');
+}
+if (!existingTeamCols.includes('fee')) {
+  db.exec('ALTER TABLE teams ADD COLUMN fee TEXT');
+}
+
 // 新增表：俱乐部活动/商业套餐
 db.exec(`
 CREATE TABLE IF NOT EXISTS club_activities (
