@@ -477,6 +477,132 @@ if (articleCount.cnt === 0) {
   );
 }
 
+// 新增表：保险方案、保险询价、Banner、轨迹增强
+db.exec(`
+CREATE TABLE IF NOT EXISTS insurance_plans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  region TEXT,
+  coverage_type TEXT,
+  price_cny REAL DEFAULT 0,
+  price_usd REAL DEFAULT 0,
+  coverage_amount TEXT,
+  description TEXT,
+  features TEXT,
+  provider TEXT,
+  buy_url TEXT,
+  is_active INTEGER DEFAULT 1,
+  sort_order INTEGER DEFAULT 99
+);
+
+CREATE TABLE IF NOT EXISTS insurance_inquiries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  plan_id INTEGER,
+  plan_name TEXT,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  peak_name TEXT,
+  departure_date TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS banners (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  image_url TEXT NOT NULL,
+  link_type TEXT DEFAULT 'none',
+  link_target TEXT,
+  gradient_from TEXT DEFAULT '#1e4f60',
+  gradient_to TEXT DEFAULT '#0f172a',
+  sort_order INTEGER DEFAULT 99,
+  is_active INTEGER DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 迁移：tracks 表补充字段（新架构需要）
+const existingTrackCols = db.pragma('table_info(tracks)').map(c => c.name);
+if (!existingTrackCols.includes('peak_name')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN peak_name TEXT');
+}
+if (!existingTrackCols.includes('distance_km')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN distance_km REAL');
+}
+if (!existingTrackCols.includes('elevation_gain')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN elevation_gain INTEGER');
+}
+if (!existingTrackCols.includes('max_elevation')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN max_elevation INTEGER');
+}
+if (!existingTrackCols.includes('start_elevation')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN start_elevation INTEGER');
+}
+if (!existingTrackCols.includes('duration_minutes')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN duration_minutes INTEGER');
+}
+if (!existingTrackCols.includes('weather')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN weather TEXT');
+}
+if (!existingTrackCols.includes('notes')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN notes TEXT');
+}
+
+// 种子数据：保险方案（仅插入一次）
+const insuranceCount = db.prepare('SELECT COUNT(*) as cnt FROM insurance_plans').get();
+if (insuranceCount.cnt === 0) {
+  const insertPlan = db.prepare(`
+    INSERT INTO insurance_plans (name, region, coverage_type, price_cny, price_usd, coverage_amount, description, features, provider, buy_url, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertPlan.run('西藏高原综合险', '西藏/青藏高原', '综合', 299, 42, '50万人民币',
+    '覆盖西藏全境高海拔攀登活动，含直升机救援和医疗后送。', '["意外伤害50万","紧急救援20万","医疗费用5万","直升机救援"]', '中国人寿', '', 1);
+  insertPlan.run('四川山地专项险', '四川/横断山脉', '专项', 499, 69, '100万人民币',
+    '专为四川高海拔山地攀登设计，覆盖四姑娘山、贡嘎山等核心区域。', '["意外伤害100万","紧急救援30万","医疗费用10万","搜救费用20万"]', '中国平安', '', 2);
+  insertPlan.run('国际高山险', '全球', '国际', 1299, 180, '200万人民币',
+    '覆盖全球高山攀登，包含阿尔卑斯、安第斯、喜马拉雅等地区，无地域限制。', '["意外伤害200万","紧急直升机救援","医疗费用20万","器材损失5万","国际救援"]', 'AXA安盛', 'https://www.axa.com.cn', 3);
+  insertPlan.run('8000米专项险', '喜马拉雅/喀喇昆仑', '专项', 3999, 556, '500万人民币',
+    '专为8000米级高峰攀登者设计，提供最高级别保障，含家属安置和遗体运送。', '["意外伤害500万","无限额救援","家属安置保障","器材全损15万","遗体运送"]', 'Lloyd\'s劳合社', '', 4);
+  insertPlan.run('EBC徒步险', '尼泊尔', '徒步', 199, 28, '30万人民币',
+    '专为珠峰大本营（EBC）徒步设计，覆盖昆布地区全程，含高反医疗。', '["意外伤害30万","高反治疗10万","紧急救援15万","行程取消"]', '尼泊尔保险公司', '', 5);
+  insertPlan.run('综合装备险', '全球', '装备', 99, 14, '装备价值全额',
+    '专门保障攀登装备在运输、使用过程中的损坏和丢失，可附加到任意主险。', '["装备损坏全额赔付","运输丢失","盗窃保障","装备租借费用"]', '中国太平洋', '', 6);
+}
+
+// 种子数据：Banner（仅插入一次）
+const bannerCount = db.prepare('SELECT COUNT(*) as cnt FROM banners').get();
+if (bannerCount.cnt === 0) {
+  const insertBanner = db.prepare(`
+    INSERT INTO banners (title, subtitle, image_url, link_type, link_target, gradient_from, gradient_to, sort_order, is_active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertBanner.run('珠峰攀登季 2026', '海拔 8,849m · 中国/尼泊尔', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800', 'peak', 'everest', '#1e4f60', '#0f172a', 1, 1);
+  insertBanner.run('专业向导招募', '寻找你的攀登伙伴', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', 'page', 'guides', '#2d1b69', '#0f172a', 2, 1);
+  insertBanner.run('攀登保险特惠', '出发前的最后保障', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', 'insurance', '', '#1a3a2a', '#0f172a', 3, 1);
+}
+
+// 种子数据：轨迹示例（仅当tracks为空时插入，给默认用户）
+const trackCount = db.prepare('SELECT COUNT(*) as cnt FROM tracks').get();
+if (trackCount.cnt === 0) {
+  const defaultUser = db.prepare('SELECT id FROM users LIMIT 1').get();
+  if (defaultUser) {
+    const insertTrack = db.prepare(`
+      INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain, max_elevation, start_elevation, duration, duration_minutes, weather, notes, image)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertTrack.run(defaultUser.id, '珠峰大本营 EBC 线路', '珠穆朗玛峰', '2024-03-15',
+      45.2, 45.2, 2300, 2300, 5364, 3440, '5天', 7200,
+      '晴转多云，-5°C', '从卢卡拉飞往南市市，徒步抵达珠峰大本营（5364m），沿途穿越昆布冰川，风景壮观。',
+      'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400');
+    insertTrack.run(defaultUser.id, '四姑娘山二峰攀登', '四姑娘山二峰', '2024-07-20',
+      18.5, 18.5, 1800, 1800, 5276, 3600, '2天', 1440,
+      '晴，-10°C', '从日隆镇出发，攀登四姑娘山二峰（5276m），技术路段采用固定绳保护，成功登顶。',
+      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400');
+  }
+}
+
 // 新增表：俱乐部活动/商业套餐
 db.exec(`
 CREATE TABLE IF NOT EXISTS club_activities (
