@@ -3959,7 +3959,7 @@ function alpineLink() {
       } catch(e) {}
       const now = Date.now();
       if (now - this.osmLastRequestTime < 1000) {
-        await new Promise(r => setTimeout(r, 1000 - (now - this.osmLastRequestTime)));
+        await new Promise(resolve => setTimeout(resolve, 1000 - (now - this.osmLastRequestTime)));
       }
       this.osmLastRequestTime = Date.now();
       try {
@@ -3982,7 +3982,7 @@ function alpineLink() {
       if (!name || name.trim().length < 2) { this.osmSuggestions = []; this.showOsmSuggestions = false; return; }
       const now = Date.now();
       if (now - this.osmLastRequestTime < 1000) {
-        await new Promise(r => setTimeout(r, 1000 - (now - this.osmLastRequestTime)));
+        await new Promise(resolve => setTimeout(resolve, 1000 - (now - this.osmLastRequestTime)));
       }
       this.osmLastRequestTime = Date.now();
       this.osmSuggestionsLoading = true;
