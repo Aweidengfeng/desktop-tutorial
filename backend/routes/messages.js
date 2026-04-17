@@ -34,8 +34,8 @@ router.post('/conversations', auth, (req, res) => {
     if (!target_user_id) return res.status(400).json({ error: '请提供目标用户ID' });
     const targetUser = db.prepare('SELECT id, name, avatar FROM users WHERE id = ?').get(target_user_id);
     if (!targetUser) return res.status(404).json({ error: '用户不存在' });
-    const u1 = Math.min(req.user.id, parseInt(target_user_id));
-    const u2 = Math.max(req.user.id, parseInt(target_user_id));
+    const u1 = Math.min(req.user.id, parseInt(target_user_id, 10));
+    const u2 = Math.max(req.user.id, parseInt(target_user_id, 10));
     let conv = db.prepare('SELECT * FROM conversations WHERE user1_id = ? AND user2_id = ?').get(u1, u2);
     if (!conv) {
       const result = db.prepare('INSERT INTO conversations (user1_id, user2_id) VALUES (?, ?)').run(u1, u2);

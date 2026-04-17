@@ -180,8 +180,15 @@ router.put('/guides/:id/approve', adminAuth, (req, res) => {
     const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: '申请不存在' });
     db.prepare("UPDATE guide_applications SET status = 'approved' WHERE id = ?").run(req.params.id);
-    // Also update the guides table so the guide appears in front-end listings
-    db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ? AND status = 'pending'").run(app.user_id);
+    // Update or insert guide record so it appears in front-end listings
+    const existing = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(app.user_id);
+    if (existing) {
+      db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ?").run(app.user_id);
+    } else {
+      db.prepare(`INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, 'approved')`
+      ).run(app.user_id, app.name, app.cert, app.specialty, app.languages, app.day_rate, app.region);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

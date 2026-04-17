@@ -2406,8 +2406,9 @@ function alpineLink() {
       this.showBooking = false;
       const deposit = 3000 * (this.bookingData.members || 1);
       try {
-        await fetch('/api/bookings', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ mountain: this.bookingData.mountain, guide_name: this.bookingData.guide || '', date: this.bookingData.date, members: this.bookingData.members || 1, notes: this.bookingData.notes || '' }) });
-      } catch(e) {}
+        const res = await fetch('/api/bookings', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ mountain: this.bookingData.mountain, guide_name: this.bookingData.guide || '', date: this.bookingData.date, members: this.bookingData.members || 1, notes: this.bookingData.notes || '' }) });
+        if (!res.ok) { const d = await res.json(); this.showToast(d.error || '预约创建失败', 'error'); return; }
+      } catch(e) { this.showToast('网络错误，预约未保存', 'error'); }
       this.openPayment(deposit);
     },
 
@@ -2545,7 +2546,7 @@ function alpineLink() {
           this.showToast('已成功加入俱乐部！');
           if (this.selectedClub) this.selectedClub.members = (this.selectedClub.members || 0) + 1;
         } else { this.showToast(data.error || '加入失败', 'error'); }
-      } catch(e) { this.showToast('已成功加入俱乐部！'); }
+      } catch(e) { this.showToast('加入失败，请重试', 'error'); }
       this.showClubDetail = false;
     },
     openArticle(guide) { this.selectedArticle = guide; this.showArticle = true; },
@@ -2876,7 +2877,7 @@ function alpineLink() {
           const res = await fetch('/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
           if (res.ok) {
             const msgs = await res.json();
-            const myId = this.currentUser && this.currentUser.id;
+            const myId = this.currentUser ? this.currentUser.id : null;
             this.activeChatSession.messages = msgs.map(m => ({
               from: m.sender_id === myId ? 'me' : 'them',
               text: m.content,
