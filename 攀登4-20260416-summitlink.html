@@ -6042,6 +6042,7 @@ function alpineLink() {
       } catch(e) {}
       this.membershipLoading = false;
     },
+    async saveSettings() {
       if (this.settingsType === 'profile' && this.authToken) {
         try {
           const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name, avatar: this.userProfile.avatar }) });
