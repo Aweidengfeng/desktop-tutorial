@@ -38,6 +38,44 @@ for (const [name, lat, lon] of coordsUpdates) {
 
 // 检查是否已有数据，避免重复插入
 const peakCount = db.prepare('SELECT COUNT(*) as cnt FROM peaks').get();
+
+// ── 新增：俱乐部/线路/报价/向导 种子（按需补充，不受 peakCount 限制）──
+const clubSeedCount = db.prepare('SELECT COUNT(*) as cnt FROM clubs').get();
+if (clubSeedCount.cnt === 0) {
+  console.log('📦 填充俱乐部数据...');
+  const bcrypt = require('bcrypt');
+  const adminHash = bcrypt.hashSync('admin123456', 10);
+  let adminUser = db.prepare("SELECT id FROM users WHERE phone = '19999999999'").get();
+  if (!adminUser) {
+    const r = db.prepare("INSERT INTO users (name, username, phone, password, avatar, level, is_admin) VALUES (?,?,?,?,?,?,1)")
+      .run('平台管理员', '@admin', '19999999999', adminHash, 'https://i.pravatar.cc/150?u=admin', '管理员');
+    adminUser = { id: r.lastInsertRowid };
+  }
+  const insertClub = db.prepare(`INSERT OR IGNORE INTO clubs (name, description, cover, specialty, region, type, contact, verified, creator_id, logo) VALUES (?,?,?,?,?,?,?,1,?,?)`);
+  const c1 = insertClub.run('珠峰探险公司', '专注于喜马拉雅8000米峰商业远征，拥有15年运营经验，成功率高达90%', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', '8000m峰', '尼泊尔', '专业', '+977-1-4416388', adminUser.id, 'https://i.pravatar.cc/150?u=club1');
+  const c2 = insertClub.run('高山探险服务公司', '国内最大的商业攀登服务商，覆盖喜马拉雅、喀喇昆仑等区域', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', '综合攀登', '中国', '专业', '010-88881234', adminUser.id, 'https://i.pravatar.cc/150?u=club2');
+  const c3 = insertClub.run('成都川西登山学校', '专注于四川境内技术攀登和培训，幺妹峰、四姑娘山等线路专家', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', '技术攀登', '四川', '综合', '028-88886666', adminUser.id, 'https://i.pravatar.cc/150?u=club3');
+
+  // Update guides seed with affiliation
+  const existingGuides = db.prepare('SELECT id FROM guides LIMIT 3').all();
+  if (existingGuides.length >= 2 && c1.lastInsertRowid) {
+    db.prepare('UPDATE guides SET affiliation_club_id = ? WHERE id = ?').run(c1.lastInsertRowid, existingGuides[0].id);
+    db.prepare('UPDATE guides SET affiliation_club_id = ? WHERE id = ?').run(c2.lastInsertRowid, existingGuides[1].id);
+  }
+
+  // Route pricing seed
+  const routes = db.prepare('SELECT id, peak FROM climbing_routes LIMIT 4').all();
+  if (routes.length > 0 && c1.lastInsertRowid) {
+    for (const route of routes) {
+      db.prepare(`INSERT OR IGNORE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people) VALUES (?,?,?,?,?,?)`)
+        .run(c1.lastInsertRowid, route.id, 380000, JSON.stringify(['向导费','营地支援','餐饮','氧气','直升机应急']), 60, 8);
+      db.prepare(`INSERT OR IGNORE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people) VALUES (?,?,?,?,?,?)`)
+        .run(c2.lastInsertRowid, route.id, 320000, JSON.stringify(['向导费','营地支援','基础餐饮']), 60, 12);
+    }
+  }
+  console.log('✅ 俱乐部数据填充完成');
+}
+
 if (peakCount.cnt > 0) {
   console.log('ℹ️  数据库已有数据，跳过填充。');
   process.exit(0);

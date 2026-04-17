@@ -13,6 +13,9 @@
   <meta name="theme-color" content="#2b6579">
   <meta property="og:title" content="巅峰探索 / SummitLink">
   <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
+  <!-- Leaflet 地图 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -123,7 +126,7 @@
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
       <!-- Hero Carousel -->
-      <div class="relative h-56 overflow-hidden" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
+      <div class="relative overflow-hidden" style="aspect-ratio:16/9;max-height:280px;" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
         <template x-for="(slide,i) in heroSlides" :key="i">
           <div @click="handleBannerClick(slide)" class="absolute inset-0 transition-opacity duration-700 cursor-pointer" :class="heroSlide===i ? 'opacity-100' : 'opacity-0'">
             <img :src="slide.image" :alt="slide.name" class="w-full h-full object-cover">
@@ -1031,37 +1034,42 @@
              x-transition:enter-end="opacity-100">
       <div class="px-4 pt-2">
         <h2 class="font-display font-bold text-xl text-white mb-4">轨迹记录</h2>
-        <!-- GPS Map Placeholder -->
-        <div class="glass rounded-2xl h-48 mb-4 relative overflow-hidden flex items-center justify-center">
-          <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900"></div>
-          <div class="relative text-center">
-            <span class="material-symbols-outlined text-primary-light text-5xl">map</span>
-            <p class="text-slate-400 text-sm mt-2">GPS 地图</p>
-            <div class="flex items-center gap-1.5 justify-center mt-2">
-              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span class="text-green-400 text-xs font-semibold">GPS 已连接</span>
+        <!-- Leaflet Map -->
+        <div id="trackLeafletMap" class="glass rounded-2xl mb-4 relative overflow-hidden" style="height:220px;">
+          <div x-show="!trackMapInited" class="absolute inset-0 flex items-center justify-center bg-slate-800/80 z-10">
+            <div class="text-center">
+              <span class="material-symbols-outlined text-primary-light text-4xl">map</span>
+              <p class="text-slate-400 text-sm mt-1">点击"开始记录"初始化地图</p>
             </div>
           </div>
         </div>
         <!-- Live Stats -->
         <div class="grid grid-cols-3 gap-3 mb-4">
           <div class="glass rounded-2xl p-3 text-center">
-            <p class="text-2xl font-bold text-white">0.0</p>
-            <p class="text-xs text-slate-400 mt-1">距离 (km)</p>
+            <p class="text-2xl font-bold text-white" x-text="formatDistance(trackLiveStats.distance)"></p>
+            <p class="text-xs text-slate-400 mt-1" x-text="useMetric ? '距离 (km)' : '距离 (mi)'"></p>
           </div>
           <div class="glass rounded-2xl p-3 text-center">
-            <p class="text-2xl font-bold text-white">0</p>
-            <p class="text-xs text-slate-400 mt-1">海拔 (m)</p>
+            <p class="text-2xl font-bold text-white" x-text="formatElevation(trackLiveStats.elevation)"></p>
+            <p class="text-xs text-slate-400 mt-1" x-text="useMetric ? '海拔 (m)' : '海拔 (ft)'"></p>
           </div>
           <div class="glass rounded-2xl p-3 text-center">
-            <p class="text-2xl font-bold text-white">00:00</p>
+            <p class="text-2xl font-bold text-white" x-text="formatTrackDuration(trackLiveStats.seconds)"></p>
             <p class="text-xs text-slate-400 mt-1">时长</p>
           </div>
         </div>
-        <!-- Start Button -->
-        <button @click="openNewTrack()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl mb-5 transition-colors text-lg flex items-center justify-center gap-2">
-          <span class="material-symbols-outlined text-xl">play_arrow</span>开始记录
-        </button>
+        <!-- Track Control Buttons -->
+        <div class="flex gap-3 mb-5">
+          <button x-show="trackRecordingState==='idle'" @click="startTrackRecording()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-xl">play_arrow</span>开始记录
+          </button>
+          <button x-show="trackRecordingState==='recording'" @click="pauseTrackRecording()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-xl">pause</span>暂停
+          </button>
+          <button x-show="trackRecordingState!=='idle'" @click="saveTrackRecording()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-xl">save</span>保存
+          </button>
+        </div>
         <!-- Track History -->
         <h3 class="font-display font-bold text-white mb-3">我的历史轨迹</h3>
         <div class="space-y-3">
@@ -1612,7 +1620,13 @@
         <span class="material-symbols-outlined text-slate-400">close</span>
       </button>
     </div>
-    <div class="space-y-4">
+    <!-- Login Type Tabs -->
+    <div class="flex bg-slate-700 rounded-xl p-1 mb-4">
+      <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">密码登录</button>
+      <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">短信验证码</button>
+    </div>
+    <!-- Password Login -->
+    <div x-show="loginType==='password'" class="space-y-4">
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
         <input x-model="loginForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
@@ -1625,8 +1639,46 @@
         <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
         <span x-text="loginLoading ? '登录中…' : '登录'"></span>
       </button>
-      <p class="text-center text-slate-400 text-sm">还没有账号？<button @click="showLogin=false;showRegister=true" class="text-primary-light font-semibold hover:underline">立即注册</button></p>
     </div>
+    <!-- SMS Login -->
+    <div x-show="loginType==='sms'" class="space-y-4">
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
+        <input x-model="loginForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+      </div>
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">验证码</label>
+        <div class="flex gap-2">
+          <input x-model="smsCode" type="text" placeholder="6位验证码" maxlength="6" class="flex-1 bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+          <button @click="sendSmsCode()" :disabled="smsCountdown>0" class="flex-shrink-0 bg-primary hover:bg-primary-light disabled:bg-slate-600 text-white font-semibold px-3 py-3 rounded-xl text-xs transition-colors disabled:cursor-not-allowed">
+            <span x-text="smsCountdown > 0 ? smsCountdown + 's' : '发送'"></span>
+          </button>
+        </div>
+      </div>
+      <button @click="doSmsLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+        <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
+        <span x-text="loginLoading ? '验证中…' : '验证码登录'"></span>
+      </button>
+    </div>
+    <!-- Third Party Login -->
+    <div class="mt-4">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex-1 h-px bg-slate-700"></div>
+        <span class="text-slate-500 text-xs">其他登录方式</span>
+        <div class="flex-1 h-px bg-slate-700"></div>
+      </div>
+      <div class="flex gap-3 justify-center">
+        <button @click="doWechatLogin()" class="flex flex-col items-center gap-1 p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 transition-colors">
+          <span class="text-2xl">💬</span>
+          <span class="text-slate-300 text-xs">微信</span>
+        </button>
+        <button @click="doAppleLogin()" class="flex flex-col items-center gap-1 p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 transition-colors">
+          <span class="text-2xl">🍎</span>
+          <span class="text-slate-300 text-xs">Apple</span>
+        </button>
+      </div>
+    </div>
+    <p class="text-center text-slate-400 text-sm mt-4">还没有账号？<button @click="showLogin=false;showRegister=true" class="text-primary-light font-semibold hover:underline">立即注册</button></p>
   </div>
 </div>
 
@@ -2392,20 +2444,40 @@
           <div x-show="settingsType==='units'" class="space-y-4">
             <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">单位设置</h4>
             <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
-              <span class="text-white">公制 (km, m)</span>
-              <button @click="useMetric=true" :class="useMetric ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative">
+              <div>
+                <span class="text-white">公制 (km, m, ℃)</span>
+                <p class="text-slate-500 text-xs mt-0.5">公里、米、摄氏度</p>
+              </div>
+              <button @click="useMetric=true" :class="useMetric ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
                 <span :class="useMetric ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
               </button>
             </div>
             <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
-              <span class="text-white">英制 (mi, ft)</span>
-              <button @click="useMetric=false" :class="!useMetric ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative">
+              <div>
+                <span class="text-white">英制 (mi, ft, ℉)</span>
+                <p class="text-slate-500 text-xs mt-0.5">英里、英尺、华氏度</p>
+              </div>
+              <button @click="useMetric=false" :class="!useMetric ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
                 <span :class="!useMetric ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
               </button>
+            </div>
+            <div class="bg-slate-800/50 rounded-xl p-3 text-xs text-slate-400">
+              <p>切换后，全局距离、海拔、温度数值将同步更新。</p>
             </div>
           </div>
           <div x-show="settingsType==='profile'" class="space-y-4">
             <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">编辑资料</h4>
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">头像</label>
+              <div class="flex items-center gap-3">
+                <img :src="userProfile.avatar" class="w-14 h-14 rounded-2xl object-cover ring-2 ring-primary-light">
+                <label class="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-xl cursor-pointer transition-colors">
+                  <span class="material-symbols-outlined text-slate-300 text-lg">upload</span>
+                  <span class="text-slate-300 text-sm">更换头像</span>
+                  <input type="file" accept="image/*" class="hidden" @change="uploadAvatar($event)">
+                </label>
+              </div>
+            </div>
             <div>
               <label class="text-slate-400 text-xs mb-1.5 block">昵称</label>
               <input x-model="userProfile.name" type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
@@ -2415,7 +2487,54 @@
               <input x-model="userProfile.username" type="text" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm">
             </div>
           </div>
-          <div x-show="!['language','units','profile'].includes(settingsType)" class="text-center py-8">
+          <div x-show="settingsType==='privacy'" class="space-y-4">
+            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">隐私设置</h4>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div>
+                <p class="text-white text-sm">资料可见性</p>
+                <p class="text-slate-500 text-xs mt-0.5">所有人可见您的基本资料</p>
+              </div>
+              <button @click="privacySettings.profile_public = !privacySettings.profile_public"
+                      :class="privacySettings.profile_public ? 'bg-primary' : 'bg-slate-600'"
+                      class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
+                <span :class="privacySettings.profile_public ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div>
+                <p class="text-white text-sm">动态可见性</p>
+                <p class="text-slate-500 text-xs mt-0.5">所有人可见您发布的动态</p>
+              </div>
+              <button @click="privacySettings.posts_public = !privacySettings.posts_public"
+                      :class="privacySettings.posts_public ? 'bg-primary' : 'bg-slate-600'"
+                      class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
+                <span :class="privacySettings.posts_public ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div>
+                <p class="text-white text-sm">粉丝/关注可见</p>
+                <p class="text-slate-500 text-xs mt-0.5">显示您的粉丝和关注列表</p>
+              </div>
+              <button @click="privacySettings.follows_public = !privacySettings.follows_public"
+                      :class="privacySettings.follows_public ? 'bg-primary' : 'bg-slate-600'"
+                      class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
+                <span :class="privacySettings.follows_public ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div>
+                <p class="text-white text-sm">允许陌生人私信</p>
+                <p class="text-slate-500 text-xs mt-0.5">非关注用户可以给您发消息</p>
+              </div>
+              <button @click="privacySettings.allow_stranger_msg = !privacySettings.allow_stranger_msg"
+                      :class="privacySettings.allow_stranger_msg ? 'bg-primary' : 'bg-slate-600'"
+                      class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
+                <span :class="privacySettings.allow_stranger_msg ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+          </div>
+          <div x-show="!['language','units','profile','privacy'].includes(settingsType)" class="text-center py-8">
             <span class="material-symbols-outlined text-slate-600 text-5xl">settings</span>
             <p class="text-slate-400 mt-3">设置即将推出</p>
           </div>
@@ -2919,6 +3038,26 @@
                 <template x-for="cond in [{v:'new',n:'全新'},{v:'good',n:'九成新'},{v:'fair',n:'八成新'},{v:'used',n:'有磨损'}]" :key="cond.v">
                   <button @click="newGear.condition=cond.v" :class="newGear.condition===cond.v ? 'bg-primary text-white' : 'bg-slate-700 text-slate-300'" class="flex-1 py-2 rounded-xl text-xs font-semibold transition-all" x-text="cond.n"></button>
                 </template>
+              </div>
+            </div>
+            <!-- 图片上传 -->
+            <div>
+              <label class="text-slate-400 text-xs mb-1.5 block">装备照片（最多6张）</label>
+              <div class="flex flex-wrap gap-2 mb-2">
+                <template x-for="(img, idx) in newGear.images" :key="idx">
+                  <div class="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-700">
+                    <img :src="img" class="w-full h-full object-cover">
+                    <button @click.stop="newGear.images.splice(idx,1)" class="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                      <span class="material-symbols-outlined text-white" style="font-size:12px">close</span>
+                    </button>
+                  </div>
+                </template>
+                <label x-show="newGear.images.length < 6" class="w-20 h-20 rounded-xl bg-slate-700 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-600 transition-colors border-2 border-dashed border-slate-600">
+                  <span x-show="!gearImageUploading" class="material-symbols-outlined text-slate-400 text-2xl">add_photo_alternate</span>
+                  <span x-show="gearImageUploading" class="material-symbols-outlined text-primary-light animate-spin text-2xl">progress_activity</span>
+                  <span class="text-slate-500 text-[10px] mt-0.5">上传图片</span>
+                  <input type="file" accept="image/*" class="hidden" @change="uploadGearImage($event)">
+                </label>
               </div>
             </div>
             <div>
@@ -3862,11 +4001,27 @@
             <span class="material-symbols-outlined text-slate-400">close</span>
           </button>
         </div>
-        <div class="bg-slate-800 rounded-2xl p-3 mb-4">
-          <p class="text-white font-bold text-base" x-text="commercialBookingData.peakName"></p>
-          <p class="text-slate-400 text-xs mt-0.5" x-text="(commercialBookingData.difficulty||'') + ' · ' + (commercialBookingData.region||'')"></p>
+        <!-- 步骤指示器 -->
+        <div class="flex items-center mb-5 gap-1">
+          <template x-for="(step, i) in ['选山峰','选俱乐部','选向导','确认下单']" :key="i">
+            <div class="flex items-center flex-1">
+              <div class="flex flex-col items-center flex-1">
+                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+                     :class="commercialStep>i ? 'bg-emerald-500 text-white' : commercialStep===i ? 'bg-primary text-white' : 'bg-slate-700 text-slate-400'"
+                     x-text="commercialStep>i ? '✓' : (i+1)"></div>
+                <span class="text-[10px] mt-0.5" :class="commercialStep>=i ? 'text-primary-light' : 'text-slate-500'" x-text="step"></span>
+              </div>
+              <div x-show="i<3" class="w-4 h-px mb-3" :class="commercialStep>i ? 'bg-emerald-500' : 'bg-slate-700'"></div>
+            </div>
+          </template>
         </div>
-        <div class="space-y-4">
+
+        <!-- Step 0: 山峰信息确认 -->
+        <div x-show="commercialStep===0" class="space-y-4">
+          <div class="bg-slate-800 rounded-2xl p-4">
+            <p class="text-white font-bold text-lg" x-text="commercialBookingData.peakName"></p>
+            <p class="text-slate-400 text-sm mt-1" x-text="(commercialBookingData.difficulty||'') + ' · ' + (commercialBookingData.region||'')"></p>
+          </div>
           <div>
             <label class="text-slate-400 text-xs mb-1.5 block">出发日期 *</label>
             <input x-model="commercialBookingData.date" type="date" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
@@ -3879,12 +4034,24 @@
               <button @click="commercialBookingData.persons=Math.min(20,commercialBookingData.persons+1)" class="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center text-white text-xl hover:bg-slate-700">+</button>
             </div>
           </div>
-          <div>
-            <label class="text-slate-400 text-xs mb-1.5 block">服务套餐</label>
-            <div class="space-y-2">
+          <button @click="loadRouteClubs()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">下一步：选择运营俱乐部</button>
+        </div>
+
+        <!-- Step 1: 选择俱乐部 -->
+        <div x-show="commercialStep===1" class="space-y-3">
+          <p class="text-slate-400 text-sm mb-3">选择承担本次攀登运营的俱乐部（各家报价不同）</p>
+          <div x-show="commercialClubsLoading" class="text-center py-6 text-slate-400">
+            <span class="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+            <p class="text-sm mt-2">加载俱乐部...</p>
+          </div>
+          <div x-show="!commercialClubsLoading && commercialRouteClubs.length === 0" class="text-center py-6 text-slate-500 text-sm">
+            <span class="material-symbols-outlined text-3xl">group_off</span>
+            <p class="mt-2">暂无俱乐部开展该路线服务</p>
+            <p class="text-xs mt-1">请选择固定套餐继续</p>
+            <div class="mt-4 space-y-2">
               <template x-for="pkg in commercialPackages" :key="pkg.id">
-                <button @click="commercialBookingData.package=pkg.id"
-                        :class="commercialBookingData.package===pkg.id?'border-primary bg-primary/10':'border-slate-700 bg-slate-800'"
+                <button @click="commercialBookingData.package=pkg.id; commercialBookingData.selectedClub=null; commercialStep=2; loadClubGuides(null)"
+                        :class="commercialBookingData.package===pkg.id ? 'border-primary bg-primary/10' : 'border-slate-700 bg-slate-800'"
                         class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left">
                   <div class="flex-1">
                     <p class="text-white text-sm font-semibold" x-text="pkg.name"></p>
@@ -3895,23 +4062,88 @@
               </template>
             </div>
           </div>
+          <template x-for="club in commercialRouteClubs" :key="club.club_id">
+            <button @click="selectCommercialClub(club)" class="w-full flex gap-3 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 text-left transition-colors">
+              <div class="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="club.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=200'" class="w-full h-full object-cover">
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <p class="text-white font-bold text-sm" x-text="club.club_name"></p>
+                  <span x-show="club.verified" class="text-[10px] bg-primary/30 text-primary-light px-1.5 py-0.5 rounded-full">✓ 认证</span>
+                </div>
+                <p class="text-slate-400 text-xs truncate mt-0.5" x-text="club.club_description || ''"></p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-primary-light font-bold text-sm" x-text="'¥' + Number(club.price).toLocaleString() + '/人'"></span>
+                  <span x-show="club.duration" class="text-slate-500 text-xs" x-text="club.duration + '天行程'"></span>
+                </div>
+              </div>
+              <span class="material-symbols-outlined text-slate-500 flex-shrink-0 self-center">chevron_right</span>
+            </button>
+          </template>
+          <button @click="commercialStep=0" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl transition-colors text-sm">← 返回</button>
+        </div>
+
+        <!-- Step 2: 选择向导 -->
+        <div x-show="commercialStep===2" class="space-y-3">
+          <p class="text-slate-400 text-sm mb-2" x-show="commercialBookingData.selectedClub">
+            <span x-text="commercialBookingData.selectedClub?.club_name || ''"></span> 旗下向导
+          </p>
+          <div x-show="commercialGuidesLoading" class="text-center py-6 text-slate-400">
+            <span class="material-symbols-outlined animate-spin text-2xl">progress_activity</span>
+            <p class="text-sm mt-2">加载向导...</p>
+          </div>
+          <template x-for="guide in commercialClubGuides" :key="guide.id">
+            <button @click="selectCommercialGuide(guide)" class="w-full flex gap-3 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 text-left transition-colors">
+              <img :src="guide.avatar || 'https://i.pravatar.cc/60?u=guide'+guide.id" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-bold text-sm" x-text="guide.name"></p>
+                <p class="text-slate-400 text-xs truncate mt-0.5" x-text="guide.specialty || ''"></p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-yellow-400 text-xs">★ <span x-text="guide.rating || '5.0'"></span></span>
+                  <span class="text-slate-500 text-xs" x-text="'(' + (guide.reviews || 0) + '条评价)'"></span>
+                  <span x-show="guide.cert" class="text-emerald-400 text-xs" x-text="guide.cert"></span>
+                </div>
+              </div>
+              <span class="material-symbols-outlined text-slate-500 flex-shrink-0 self-center">chevron_right</span>
+            </button>
+          </template>
+          <div x-show="!commercialGuidesLoading && commercialClubGuides.length===0" class="text-center py-6">
+            <span class="material-symbols-outlined text-slate-600 text-3xl">person_off</span>
+            <p class="text-slate-400 text-sm mt-2">暂无可用向导</p>
+            <button @click="commercialStep=3" class="mt-3 bg-primary text-white px-4 py-2 rounded-xl text-sm">跳过此步骤</button>
+          </div>
+          <button @click="commercialStep=1" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl transition-colors text-sm">← 返回</button>
+        </div>
+
+        <!-- Step 3: 确认下单 -->
+        <div x-show="commercialStep===3" class="space-y-4">
+          <div class="bg-slate-800 rounded-2xl p-4 space-y-2">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">订单摘要</p>
+            <div class="flex justify-between text-sm"><span class="text-slate-400">山峰</span><span class="text-white" x-text="commercialBookingData.peakName"></span></div>
+            <div class="flex justify-between text-sm"><span class="text-slate-400">日期</span><span class="text-white" x-text="commercialBookingData.date || '-'"></span></div>
+            <div class="flex justify-between text-sm"><span class="text-slate-400">人数</span><span class="text-white" x-text="commercialBookingData.persons + ' 人'"></span></div>
+            <template x-if="commercialBookingData.selectedClub">
+              <div class="flex justify-between text-sm"><span class="text-slate-400">运营俱乐部</span><span class="text-white" x-text="commercialBookingData.selectedClub.club_name"></span></div>
+            </template>
+            <template x-if="commercialBookingData.selectedGuide">
+              <div class="flex justify-between text-sm"><span class="text-slate-400">向导</span><span class="text-white" x-text="commercialBookingData.selectedGuide.name"></span></div>
+            </template>
+            <div class="border-t border-white/10 pt-2 mt-2">
+              <div class="flex justify-between text-sm"><span class="text-slate-400">套餐费用</span><span class="text-white" x-text="'¥' + getCommercialSubtotal().toLocaleString()"></span></div>
+              <div class="flex justify-between text-sm mt-1"><span class="text-slate-400">平台服务费 (1.5%)</span><span class="text-white" x-text="'¥' + getCommercialFee().toLocaleString()"></span></div>
+              <div class="flex justify-between pt-2 border-t border-white/10 mt-2"><span class="text-white font-bold">总计</span><span class="text-primary-light font-bold text-base" x-text="'¥' + getCommercialTotal().toLocaleString()"></span></div>
+            </div>
+          </div>
           <div>
             <label class="text-slate-400 text-xs mb-1.5 block">特殊需求/备注</label>
             <textarea x-model="commercialBookingData.notes" rows="2" placeholder="如：高原反应史、饮食禁忌、特殊装备需求..." class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none resize-none placeholder-slate-500 focus:ring-2 focus:ring-primary"></textarea>
           </div>
-        </div>
-        <div class="bg-slate-800 rounded-2xl p-4 mt-4">
-          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">订单摘要</p>
-          <div class="space-y-2 text-sm">
-            <div class="flex justify-between"><span class="text-slate-400">套餐费用</span><span class="text-white" x-text="'¥' + getCommercialSubtotal().toLocaleString()"></span></div>
-            <div class="flex justify-between"><span class="text-slate-400">平台服务费 (1.5%)</span><span class="text-white" x-text="'¥' + getCommercialFee().toLocaleString()"></span></div>
-            <div class="flex justify-between border-t border-white/10 pt-2"><span class="text-white font-bold">总计</span><span class="text-primary-light font-bold text-base" x-text="'¥' + getCommercialTotal().toLocaleString()"></span></div>
+          <p class="text-slate-500 text-xs text-center">💡 款项托管于平台，服务完成后结算给运营商</p>
+          <div class="flex gap-3">
+            <button @click="commercialStep=2" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">← 返回</button>
+            <button @click="submitCommercialBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
           </div>
-          <p class="text-slate-500 text-xs mt-2">💡 款项托管于平台，服务完成后结算给运营商</p>
-        </div>
-        <div class="flex gap-3 mt-4">
-          <button @click="showCommercialBooking=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
-          <button @click="submitCommercialBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">提交预约</button>
         </div>
       </div>
     </div>
@@ -4102,8 +4334,19 @@ function alpineLink() {
     showLogin: false,
     showRegister: false,
     loginLoading: false,
+    loginType: 'password',
+    smsCode: '',
+    smsCountdown: 0,
+    smsTimer: null,
     loginForm: { phone: '', password: '' },
     registerForm: { name: '', phone: '', password: '' },
+    privacySettings: { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false },
+    gearImageUploading: false,
+    trackMapInited: false,
+    trackLeafletMap: null,
+    trackPolyline: null,
+    trackMarkers: [],
+    trackRecordedPoints: [],
     heroSlide: 0,
     heroTouchStartX: 0,
     heroSlides: [
@@ -4220,7 +4463,7 @@ function alpineLink() {
     selectedConversation: null,
     showChatDetail: false,
     showGearPublish: false,
-    newGear: { name: '', brand: '', price: '', condition: 'good', description: '' },
+    newGear: { name: '', brand: '', price: '', condition: 'good', description: '', images: [] },
     showTeamDetail: false,
     selectedTeam: null,
     showCreateTeam: false,
@@ -4450,7 +4693,12 @@ function alpineLink() {
     filteredPublicTracks: [],
     publicTrackSearch: { query: '', difficulty: '' },
     showCommercialBooking: false,
-    commercialBookingData: { peakName: '', difficulty: '', region: '', date: '', persons: 1, package: 'standard', notes: '' },
+    commercialBookingData: { peakName: '', difficulty: '', region: '', date: '', persons: 1, package: 'standard', notes: '', selectedClub: null, selectedGuide: null, routeId: null },
+    commercialStep: 0,
+    commercialRouteClubs: [],
+    commercialClubsLoading: false,
+    commercialClubGuides: [],
+    commercialGuidesLoading: false,
     commercialPackages: [
       { id: 'basic', name: '基础套餐', desc: '向导费 + 营地支援', price: 25000 },
       { id: 'standard', name: '标准套餐', desc: '向导费 + 营地 + 高山厨师 + 氧气', price: 45000 },
@@ -4942,16 +5190,61 @@ function alpineLink() {
     // Gear
     openGearDetail(item) { this.selectedGear = item; this.showGearDetail = true; },
     openGearPublish() { this.showGearPublish = true; },
+    async uploadGearImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.gearImageUploading = true;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          this.newGear.images.push(data.url);
+        } else {
+          this.showToast('图片上传失败', 'error');
+        }
+      } catch(e) { this.showToast('上传失败', 'error'); }
+      this.gearImageUploading = false;
+      event.target.value = '';
+    },
+    async uploadAvatar(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          this.userProfile.avatar = data.url;
+          if (this.authToken) {
+            await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ avatar: data.url, name: this.userProfile.name }) });
+          }
+          this.showToast('头像已更新 ✅');
+        } else {
+          this.showToast('头像上传失败', 'error');
+        }
+      } catch(e) { this.showToast('上传失败', 'error'); }
+      event.target.value = '';
+    },
     async submitGear() {
       if (!this.requireAuth()) return;
       if (!this.newGear.name || !this.newGear.price) { this.showToast('请填写装备名称和价格', 'error'); return; }
       try {
-        const res = await fetch('/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.newGear, price: Number(this.newGear.price), mode: 'used' }) });
+        const payload = {
+          ...this.newGear,
+          price: Number(this.newGear.price),
+          mode: 'used',
+          image: this.newGear.images && this.newGear.images.length > 0 ? this.newGear.images[0] : null,
+          images: JSON.stringify(this.newGear.images || []),
+        };
+        const res = await fetch('/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
         this.gearItems.unshift({ ...data, sellerAvatar: this.userProfile.avatar, seller: this.userProfile.name });
         this.showToast('装备已发布！');
-        this.newGear = { name: '', brand: '', price: '', condition: 'good', description: '' };
+        this.newGear = { name: '', brand: '', price: '', condition: 'good', description: '', images: [] };
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
       this.showGearPublish = false;
     },
@@ -4990,44 +5283,95 @@ function alpineLink() {
       this.closeCreateTeam();
     },
 
-    // Tracks
-    // Track Recording
-    openNewTrack() {
-      this.showNewTrackModal = true;
-      this.trackRecordingState = 'idle';
-      this.trackLiveStats = { distance: 0, elevation: 5364, seconds: 0 };
-      this.newTrackName = '';
-    },
-    closeNewTrack() {
-      if (this.trackRecordingState !== 'idle') {
-        if (!confirm('确定要放弃当前记录吗？')) return;
-        clearInterval(this.trackTimer);
-        this.trackRecordingState = 'idle';
-      }
-      this.showNewTrackModal = false;
+    // Track Recording with Leaflet map
+    initTrackMap() {
+      if (this.trackMapInited) return;
+      const container = document.getElementById('trackLeafletMap');
+      if (!container || typeof L === 'undefined') return;
+      this.trackLeafletMap = L.map('trackLeafletMap', { zoomControl: true, attributionControl: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(this.trackLeafletMap);
+      this.trackLeafletMap.setView([27.9881, 86.9250], 8); // Default: Everest area
+      this.trackMapInited = true;
     },
     startTrackRecording() {
+      this.initTrackMap();
       this.trackRecordingState = 'recording';
-      // Simulate GPS tracking (replace with real Geolocation API in production)
+      this.trackRecordedPoints = [];
+      // Try real GPS first
+      if (navigator.geolocation) {
+        this._geoWatch = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude: lat, longitude: lng, altitude: ele } = pos.coords;
+            const pt = [lat, lng];
+            this.trackRecordedPoints.push({ lat, lng, ele: ele || 0, ts: Date.now() });
+            if (this.trackLeafletMap) {
+              if (!this.trackPolyline) {
+                this.trackPolyline = L.polyline([pt], { color: '#2b6579', weight: 4 }).addTo(this.trackLeafletMap);
+              } else {
+                this.trackPolyline.addLatLng(pt);
+              }
+              this.trackLeafletMap.setView(pt, 14);
+            }
+            this.trackLiveStats.elevation = Math.round(ele || this.trackLiveStats.elevation);
+            if (this.trackRecordedPoints.length > 1) {
+              const prev = this.trackRecordedPoints[this.trackRecordedPoints.length - 2];
+              const d = this._haversine(prev.lat, prev.lng, lat, lng);
+              this.trackLiveStats.distance = Math.round((this.trackLiveStats.distance + d) * 1000) / 1000;
+            }
+          },
+          () => { this._startSimulatedTracking(); },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+      } else {
+        this._startSimulatedTracking();
+      }
+      // Timer
       this.trackTimer = setInterval(() => {
-        if (this.trackRecordingState !== 'recording') return;
-        this.trackLiveStats.seconds++;
-        // Simulate movement: small random distance/elevation increments
-        this.trackLiveStats.distance = Math.round((this.trackLiveStats.distance + 0.002 + Math.random() * 0.003) * 1000) / 1000;
-        this.trackLiveStats.elevation = Math.round(this.trackLiveStats.elevation + (Math.random() - 0.3) * 2);
+        if (this.trackRecordingState === 'recording') this.trackLiveStats.seconds++;
       }, 1000);
+    },
+    _startSimulatedTracking() {
+      // Simulate GPS near Everest base camp
+      const baseLat = 27.9881 + (Math.random() - 0.5) * 0.05;
+      const baseLng = 86.9250 + (Math.random() - 0.5) * 0.05;
+      let curLat = baseLat; let curLng = baseLng; let curEle = 5364;
+      this._simInterval = setInterval(() => {
+        if (this.trackRecordingState !== 'recording') return;
+        curLat += (Math.random() - 0.48) * 0.0005;
+        curLng += (Math.random() - 0.48) * 0.0005;
+        curEle += (Math.random() - 0.3) * 3;
+        const pt = [curLat, curLng];
+        this.trackRecordedPoints.push({ lat: curLat, lng: curLng, ele: curEle, ts: Date.now() });
+        if (this.trackLeafletMap) {
+          if (!this.trackPolyline) {
+            this.trackPolyline = L.polyline([pt], { color: '#2b6579', weight: 4 }).addTo(this.trackLeafletMap);
+          } else {
+            this.trackPolyline.addLatLng(pt);
+          }
+          this.trackLeafletMap.setView(pt, 13);
+        }
+        this.trackLiveStats.distance = Math.round((this.trackLiveStats.distance + 0.05) * 100) / 100;
+        this.trackLiveStats.elevation = Math.round(curEle);
+      }, 3000);
+    },
+    _haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     },
     pauseTrackRecording() {
       this.trackRecordingState = 'paused';
     },
-    resumeTrackRecording() {
-      this.trackRecordingState = 'recording';
-    },
-    stopTrackRecording() {
+    async saveTrackRecording() {
       clearInterval(this.trackTimer);
-      this.trackRecordingState = 'paused';
-      const name = this.newTrackName || ('轨迹记录 ' + new Date().toLocaleDateString('zh-CN'));
-      // Save track locally (POST /api/tracks in production)
+      clearInterval(this._simInterval);
+      if (this._geoWatch) navigator.geolocation.clearWatch(this._geoWatch);
+      const name = '轨迹记录 ' + new Date().toLocaleDateString('zh-CN');
       const newTrack = {
         id: 'local_' + Date.now(), name,
         date: new Date().toLocaleDateString('zh-CN'),
@@ -5035,11 +5379,53 @@ function alpineLink() {
         elevation: this.trackLiveStats.elevation,
         duration: this.formatTrackDuration(this.trackLiveStats.seconds),
         image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+        points: JSON.stringify(this.trackRecordedPoints),
       };
+      // Save to backend
+      if (this.authToken) {
+        try {
+          await fetch('/api/tracks', {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ name, points: this.trackRecordedPoints, distance: this.trackLiveStats.distance, elevation_gain: this.trackLiveStats.elevation, duration: this.formatTrackDuration(this.trackLiveStats.seconds) }),
+          });
+        } catch(e) {}
+      }
       this.tracks.unshift(newTrack);
       this.showToast('轨迹已保存：' + name + ' 🗺️');
-      this.showNewTrackModal = false;
       this.trackRecordingState = 'idle';
+      this.trackRecordedPoints = [];
+    },
+    openTrackDetail(track) {
+      this.selectedTrackDetail = track;
+      this.showTrackDetail = true;
+      // Show polyline on map if track has points
+      this.$nextTick(() => {
+        if (track.points) {
+          try {
+            const pts = typeof track.points === 'string' ? JSON.parse(track.points) : track.points;
+            if (pts && pts.length > 0 && this.trackLeafletMap) {
+              const latLngs = pts.map(p => [p.lat, p.lng]);
+              if (this.trackPolyline) this.trackLeafletMap.removeLayer(this.trackPolyline);
+              this.trackPolyline = L.polyline(latLngs, { color: '#e57c23', weight: 4 }).addTo(this.trackLeafletMap);
+              this.trackLeafletMap.fitBounds(this.trackPolyline.getBounds().pad(0.2));
+            }
+          } catch(e) {}
+        }
+      });
+    },
+    openNewTrack() {
+      this.initTrackMap();
+      this.trackLiveStats = { distance: 0, elevation: 5364, seconds: 0 };
+    },
+    closeNewTrack() {
+      if (this.trackRecordingState !== 'idle') {
+        if (!confirm('确定要放弃当前记录吗？')) return;
+        clearInterval(this.trackTimer);
+        clearInterval(this._simInterval);
+        if (this._geoWatch) navigator.geolocation.clearWatch(this._geoWatch);
+        this.trackRecordingState = 'idle';
+      }
     },
     formatTrackDuration(seconds) {
       const h = Math.floor(seconds / 3600);
@@ -5059,12 +5445,57 @@ function alpineLink() {
       }
       this.filteredPublicTracks = list;
     },
-    // Commercial Booking
+    // Commercial Booking - Step-by-step
     openCommercialBooking(peak) {
-      this.commercialBookingData = { peakName: peak.name, difficulty: peak.difficulty, region: peak.region, date: '', persons: 1, package: 'standard', notes: '' };
+      this.commercialBookingData = { peakName: peak.name, difficulty: peak.difficulty, region: peak.region, date: '', persons: 1, package: 'standard', notes: '', selectedClub: null, selectedGuide: null, routeId: null };
+      this.commercialStep = 0;
+      this.commercialRouteClubs = [];
+      this.commercialClubGuides = [];
       this.showCommercialBooking = true;
     },
+    async loadRouteClubs() {
+      if (!this.commercialBookingData.date) { this.showToast('请先选择出发日期', 'error'); return; }
+      this.commercialStep = 1;
+      this.commercialClubsLoading = true;
+      try {
+        // Try to find matching route from backend
+        const routesRes = await fetch('/api/routes');
+        if (routesRes.ok) {
+          const routes = await routesRes.json();
+          const matched = routes.find(r => r.peak && this.commercialBookingData.peakName.includes(r.peak.split(' ')[0]));
+          if (matched) {
+            this.commercialBookingData.routeId = matched.id;
+            const clubsRes = await fetch('/api/routes/' + matched.id + '/clubs');
+            if (clubsRes.ok) this.commercialRouteClubs = await clubsRes.json();
+          }
+        }
+      } catch(e) {}
+      this.commercialClubsLoading = false;
+    },
+    async selectCommercialClub(club) {
+      this.commercialBookingData.selectedClub = club;
+      this.commercialBookingData.package = 'club';
+      this.commercialStep = 2;
+      await this.loadClubGuides(club.club_id);
+    },
+    async loadClubGuides(clubId) {
+      this.commercialGuidesLoading = true;
+      this.commercialClubGuides = [];
+      if (!clubId) { this.commercialGuidesLoading = false; return; }
+      try {
+        const res = await fetch('/api/clubs/' + clubId + '/guides');
+        if (res.ok) this.commercialClubGuides = await res.json();
+      } catch(e) {}
+      this.commercialGuidesLoading = false;
+    },
+    selectCommercialGuide(guide) {
+      this.commercialBookingData.selectedGuide = guide;
+      this.commercialStep = 3;
+    },
     getCommercialSubtotal() {
+      if (this.commercialBookingData.selectedClub) {
+        return (this.commercialBookingData.selectedClub.price || 0) * this.commercialBookingData.persons;
+      }
       const pkg = this.commercialPackages.find(p => p.id === this.commercialBookingData.package) || this.commercialPackages[1];
       return pkg.price * this.commercialBookingData.persons;
     },
@@ -5072,7 +5503,8 @@ function alpineLink() {
     getCommercialTotal() { return this.getCommercialSubtotal() + this.getCommercialFee(); },
     async submitCommercialBooking() {
       if (!this.commercialBookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
-      // API: POST /api/bookings { type:'commercial', peak_name, date, persons, package, notes, amount }
+      const clubName = this.commercialBookingData.selectedClub?.club_name || '平台统一运营';
+      const guideName = this.commercialBookingData.selectedGuide?.name || '待分配';
       const order = {
         id: 'o_' + Date.now(),
         title: this.commercialBookingData.peakName + ' 商业攀登预约',
@@ -5082,7 +5514,28 @@ function alpineLink() {
         fee: this.getCommercialFee(),
         total: this.getCommercialTotal(),
         status: '待支付',
+        detail: '运营：' + clubName + ' · 向导：' + guideName,
       };
+      // Try to post to backend
+      if (this.authToken) {
+        try {
+          await fetch('/api/bookings', {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({
+              type: 'commercial',
+              peak_name: this.commercialBookingData.peakName,
+              route_id: this.commercialBookingData.routeId,
+              club_id: this.commercialBookingData.selectedClub?.club_id,
+              guide_id: this.commercialBookingData.selectedGuide?.id,
+              date: this.commercialBookingData.date,
+              people: this.commercialBookingData.persons,
+              price: this.getCommercialTotal(),
+              notes: this.commercialBookingData.notes,
+            }),
+          });
+        } catch(e) {}
+      }
       this.myOrders.unshift(order);
       this.showCommercialBooking = false;
       this.showToast('预约已提交，请前往"我的订单"完成支付 ✅');
@@ -5183,7 +5636,20 @@ function alpineLink() {
       const map = { 'sunny': 'wb_sunny', 'cloudy': 'cloud', 'snowy': 'ac_unit', 'windy': 'air', 'stormy': 'thunderstorm' };
       return map[condition] || 'wb_sunny';
     },
-    formatAlt(alt) { return this.useMetric ? alt + 'm' : Math.round(alt * 3.281) + 'ft'; },
+    // Unit formatting functions
+    formatDistance(km) {
+      if (this.useMetric) return (Math.round(km * 10) / 10) + ' km';
+      return (Math.round(km * 0.621 * 10) / 10) + ' mi';
+    },
+    formatElevation(m) {
+      if (this.useMetric) return Math.round(m) + ' m';
+      return Math.round(m * 3.281) + ' ft';
+    },
+    formatTemp(celsius) {
+      if (this.useMetric) return Math.round(celsius) + '°C';
+      return Math.round(celsius * 9/5 + 32) + '°F';
+    },
+    formatAlt(alt) { return this.formatElevation(alt); },
     formatWind(speed) { return this.useMetric ? speed + ' km/h' : Math.round(speed * 0.621) + ' mph'; },
     formatPrice(price) {
       if (this.currentCurrency === 'USD') return '$' + Math.round(price / 7.2).toLocaleString();
@@ -5238,7 +5704,12 @@ function alpineLink() {
         // TODO: 跳转支付页面 POST /api/clubs/payment
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
-    goToPage(id) { this.currentPage = id; },
+    goToPage(id) {
+      this.currentPage = id;
+      if (id === 'track') {
+        this.$nextTick(() => this.initTrackMap());
+      }
+    },
     viewImage(url) { window.open(url, '_blank'); },
     viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
     openSidebar() { this.showToast('侧边菜单即将推出'); },
@@ -5254,9 +5725,19 @@ function alpineLink() {
     async saveSettings() {
       if (this.settingsType === 'profile' && this.authToken) {
         try {
-          const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name }) });
+          const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name, avatar: this.userProfile.avatar }) });
           if (res.ok) { const u = await res.json(); this.currentUser = u; this.showToast('资料已保存 ✅'); }
           else { this.showToast('保存失败', 'error'); }
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      } else if (this.settingsType === 'units' && this.authToken) {
+        try {
+          await fetch('/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ useMetric: this.useMetric }) });
+          this.showToast('单位设置已保存 ✅');
+        } catch(e) {}
+      } else if (this.settingsType === 'privacy' && this.authToken) {
+        try {
+          await fetch('/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
+          this.showToast('隐私设置已保存 ✅');
         } catch(e) { this.showToast('网络错误', 'error'); }
       }
       this.showSettings = false;
@@ -5275,13 +5756,7 @@ function alpineLink() {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '登录失败', 'error'); return; }
-        this.authToken = data.token;
-        this.currentUser = data.user;
-        localStorage.setItem('summitlink_token', data.token);
-        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
-        this.showLogin = false;
-        this.loginForm = { phone: '', password: '' };
-        this.showToast('登录成功，欢迎回来 ' + data.user.name + '！');
+        this._handleLoginSuccess(data);
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
       finally { this.loginLoading = false; }
     },
@@ -5307,6 +5782,64 @@ function alpineLink() {
       localStorage.removeItem('summitlink_token');
       this.userProfile = { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 };
       this.showToast('已退出登录');
+    },
+    // SMS login
+    async sendSmsCode() {
+      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (this.smsCountdown > 0) return;
+      try {
+        const res = await fetch('/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
+        this.showToast('验证码已发送（开发模式：查看服务器控制台）');
+        this.smsCountdown = 60;
+        this.smsTimer = setInterval(() => {
+          this.smsCountdown--;
+          if (this.smsCountdown <= 0) { clearInterval(this.smsTimer); this.smsTimer = null; }
+        }, 1000);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async doSmsLogin() {
+      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!this.smsCode || this.smsCode.length !== 6) { this.showToast('请输入6位验证码', 'error'); return; }
+      this.loginLoading = true;
+      try {
+        const res = await fetch('/api/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone, code: this.smsCode }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '验证失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.loginLoading = false; }
+    },
+    async doWechatLogin() {
+      // Mock: generate a fake code
+      const fakeCode = 'wx_' + Date.now();
+      try {
+        const res = await fetch('/api/auth/wechat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: fakeCode }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '微信登录失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async doAppleLogin() {
+      // Mock: generate a fake identity token
+      const fakeToken = 'apple_mock_' + Date.now();
+      try {
+        const res = await fetch('/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: fakeToken }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || 'Apple 登录失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    _handleLoginSuccess(data) {
+      this.authToken = data.token;
+      this.currentUser = data.user;
+      localStorage.setItem('summitlink_token', data.token);
+      this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
+      this.showLogin = false;
+      this.loginForm = { phone: '', password: '' };
+      this.smsCode = '';
+      this.showToast('登录成功，欢迎 ' + data.user.name + '！');
     },
     requireAuth() {
       if (!this.authToken) { this.showLogin = true; return false; }
