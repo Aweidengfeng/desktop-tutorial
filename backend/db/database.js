@@ -880,6 +880,15 @@ if (!existingGuideCols2.includes('peaks_led')) {
 if (!existingGuideCols2.includes('wechat')) {
   db.exec('ALTER TABLE guides ADD COLUMN wechat TEXT DEFAULT NULL');
 }
+if (!existingGuideCols2.includes('affiliation_club_id')) {
+  db.exec('ALTER TABLE guides ADD COLUMN affiliation_club_id INTEGER DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('cert')) {
+  db.exec('ALTER TABLE guides ADD COLUMN cert TEXT DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('total_expeditions')) {
+  db.exec('ALTER TABLE guides ADD COLUMN total_expeditions INTEGER DEFAULT 0');
+}
 
 // 迁移：clubs 表补充额外字段
 const existingClubCols2 = db.pragma('table_info(clubs)').map(c => c.name);
@@ -897,6 +906,165 @@ if (!existingClubCols2.includes('cover_image')) {
 }
 if (!existingClubCols2.includes('logo')) {
   db.exec('ALTER TABLE clubs ADD COLUMN logo TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('intro')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN intro TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('price_list')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN price_list TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('rating')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN rating REAL DEFAULT 5.0');
+}
+
+// 迁移：users 表补充新字段
+const existingUserCols2 = db.pragma('table_info(users)').map(c => c.name);
+if (!existingUserCols2.includes('wechat_openid')) {
+  db.exec('ALTER TABLE users ADD COLUMN wechat_openid TEXT DEFAULT NULL');
+}
+if (!existingUserCols2.includes('apple_sub')) {
+  db.exec('ALTER TABLE users ADD COLUMN apple_sub TEXT DEFAULT NULL');
+}
+if (!existingUserCols2.includes('settings')) {
+  db.exec("ALTER TABLE users ADD COLUMN settings TEXT DEFAULT '{}'");
+}
+if (!existingUserCols2.includes('privacy')) {
+  db.exec("ALTER TABLE users ADD COLUMN privacy TEXT DEFAULT '{}'");
+}
+
+// 迁移：gear 表补充新字段
+const existingGearCols = db.pragma('table_info(gear)').map(c => c.name);
+if (!existingGearCols.includes('images')) {
+  db.exec('ALTER TABLE gear ADD COLUMN images TEXT DEFAULT NULL');
+}
+if (!existingGearCols.includes('detail_images')) {
+  db.exec('ALTER TABLE gear ADD COLUMN detail_images TEXT DEFAULT NULL');
+}
+
+// 迁移：tracks 表补充 points 字段
+const existingTrackCols2 = db.pragma('table_info(tracks)').map(c => c.name);
+if (!existingTrackCols2.includes('points')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN points TEXT DEFAULT NULL');
+}
+if (!existingTrackCols2.includes('is_public')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN is_public INTEGER DEFAULT 0');
+}
+if (!existingTrackCols2.includes('title')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN title TEXT DEFAULT NULL');
+}
+
+// 新增表：短信验证码临时存储
+db.exec(`
+CREATE TABLE IF NOT EXISTS sms_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS climbing_routes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  peak TEXT,
+  difficulty TEXT,
+  cover TEXT,
+  description TEXT,
+  altitude INTEGER DEFAULT 0,
+  duration_days INTEGER DEFAULT 0,
+  best_season TEXT,
+  region TEXT,
+  status TEXT DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS club_route_pricing (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  club_id INTEGER NOT NULL,
+  route_id INTEGER NOT NULL,
+  price REAL DEFAULT 0,
+  includes TEXT,
+  duration INTEGER DEFAULT 0,
+  max_people INTEGER DEFAULT 10,
+  status TEXT DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(club_id, route_id)
+);
+
+CREATE TABLE IF NOT EXISTS user_achievements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT,
+  earned_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_summits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  peak_name TEXT NOT NULL,
+  altitude INTEGER DEFAULT 0,
+  date TEXT,
+  notes TEXT,
+  image TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_expeditions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  date TEXT,
+  image TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 迁移：bookings 表补充路线字段
+const existingBookingCols2 = db.pragma('table_info(bookings)').map(c => c.name);
+if (!existingBookingCols2.includes('route_id')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN route_id INTEGER DEFAULT NULL');
+}
+if (!existingBookingCols2.includes('route_name')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN route_name TEXT DEFAULT NULL');
+}
+if (!existingBookingCols2.includes('people')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN people INTEGER DEFAULT 1');
+}
+if (!existingBookingCols2.includes('price')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN price REAL DEFAULT 0');
+}
+if (!existingBookingCols2.includes('booking_type')) {
+  db.exec("ALTER TABLE bookings ADD COLUMN booking_type TEXT DEFAULT 'commercial'");
+}
+
+// 种子数据：登山线路
+const routeCount = db.prepare('SELECT COUNT(*) as cnt FROM climbing_routes').get();
+if (routeCount.cnt === 0) {
+  const insertRoute = db.prepare(`
+    INSERT INTO climbing_routes (name, peak, difficulty, cover, description, altitude, duration_days, best_season, region)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertRoute.run('珠峰南坡标准线', '珠穆朗玛峰', '极难', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800', '经昆布冰瀑、西库姆冰斗，经4个营地攀登至顶峰，全程约2个月', 8849, 60, '4月-5月', '喜马拉雅');
+  insertRoute.run('K2阿布鲁兹山脊', 'K2', '极难', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', '经阿布鲁兹山脊标准路线攀登，含黑色金字塔和瓶颈段', 8611, 55, '6月-7月', '喀喇昆仑');
+  insertRoute.run('珠峰北坡标准线', '珠穆朗玛峰', '极难', 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800', '经西藏北坡，过北坳、第二台阶，中国队经典路线', 8849, 55, '5月', '西藏');
+  insertRoute.run('四姑娘山幺妹峰', '四姑娘山', '难', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', '四姑娘山最高峰，技术攀登路线，需要冰雪攀登经验', 6250, 10, '5月-6月, 10月', '四川');
+}
+
+// 种子数据：俱乐部-路线报价（依赖已有clubs数据）
+const pricingCount = db.prepare('SELECT COUNT(*) as cnt FROM club_route_pricing').get();
+if (pricingCount.cnt === 0) {
+  const firstClub = db.prepare("SELECT id FROM clubs LIMIT 1").get();
+  const firstRoute = db.prepare("SELECT id FROM climbing_routes LIMIT 1").get();
+  if (firstClub && firstRoute) {
+    db.prepare(`
+      INSERT OR IGNORE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(firstClub.id, firstRoute.id, 280000,
+      '["许可证","BC食宿","运输","高山向导","氧气装备","保险"]', 60, 8);
+  }
 }
 
 module.exports = db;

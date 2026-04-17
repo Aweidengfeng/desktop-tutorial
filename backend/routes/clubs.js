@@ -411,4 +411,95 @@ router.post('/payment', auth, (req, res) => {
   }
 });
 
+// GET /api/clubs/:id/guides — 俱乐部下的向导列表
+router.get('/:id/guides', (req, res) => {
+  try {
+    const guides = db.prepare(`
+      SELECT id, name, avatar, flag, nationality, rating, reviews,
+             specialty, day_rate as dayRate, cert, experience_years,
+             total_expeditions, bio, peaks_led
+      FROM guides
+      WHERE (affiliation_club_id = ? OR user_id IN (
+        SELECT user_id FROM club_members WHERE club_id = ?
+      )) AND status = 'approved'
+      ORDER BY rating DESC
+    `).all(req.params.id, req.params.id);
+    res.json(guides);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/clubs/:id — 更新俱乐部信息（创建者或管理员）
+router.put('/:id', auth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const adminUser = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+    if (club.creator_id !== req.user.id && !(adminUser && adminUser.is_admin)) {
+      return res.status(403).json({ error: '无权操作' });
+    }
+    const { name, description, cover, specialty, region, type, contact, wechat, website, logo, intro, price_list, rating, verified } = req.body;
+    db.prepare(`
+      UPDATE clubs SET
+        name = COALESCE(?, name),
+        description = COALESCE(?, description),
+        cover = COALESCE(?, cover),
+        specialty = COALESCE(?, specialty),
+        region = COALESCE(?, region),
+        type = COALESCE(?, type),
+        contact = COALESCE(?, contact),
+        wechat = COALESCE(?, wechat),
+        website = COALESCE(?, website),
+        logo = COALESCE(?, logo),
+        intro = COALESCE(?, intro),
+        price_list = COALESCE(?, price_list),
+        rating = COALESCE(?, rating),
+        verified = COALESCE(?, verified)
+      WHERE id = ?
+    `).run(name || null, description || null, cover || null,
+           specialty || null, region || null, type || null,
+           contact || null, wechat || null, website || null,
+           logo || null, intro || null,
+           price_list ? (typeof price_list === 'string' ? price_list : JSON.stringify(price_list)) : null,
+           rating || null, verified !== undefined ? (verified ? 1 : 0) : null,
+           req.params.id);
+    const updated = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/clubs/:id — 删除俱乐部（管理员）
+router.delete('/:id', auth, (req, res) => {
+  try {
+    const adminUser = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+    if (!adminUser || !adminUser.is_admin) return res.status(403).json({ error: '无权操作' });
+    db.prepare("UPDATE clubs SET status = 'deleted' WHERE id = ?").run(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/clubs — 管理员创建俱乐部
+router.post('/', auth, (req, res) => {
+  try {
+    const adminUser = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+    if (!adminUser || !adminUser.is_admin) return res.status(403).json({ error: '无权操作' });
+    const { name, description, cover, specialty, region, type, contact, wechat, website, logo } = req.body;
+    if (!name) return res.status(400).json({ error: '俱乐部名称不能为空' });
+    const result = db.prepare(`
+      INSERT INTO clubs (name, description, cover, specialty, region, type, contact, wechat, website, logo, creator_id, verified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(name, description || '', cover || '', specialty || '', region || '', type || '综合',
+           contact || '', wechat || '', website || '', logo || '', req.user.id);
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(result.lastInsertRowid);
+    res.json(club);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;
