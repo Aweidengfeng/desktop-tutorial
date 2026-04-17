@@ -1084,7 +1084,7 @@
         </div>
         <!-- Track Control Buttons -->
         <div class="flex gap-3 mb-5">
-          <button x-show="trackRecordingState==='idle'" @click="startTrackRecording()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+          <button x-show="trackRecordingState==='idle'" @click="openNewTrack()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
             <span class="material-symbols-outlined text-xl">play_arrow</span>开始记录
           </button>
           <button x-show="trackRecordingState==='recording'" @click="pauseTrackRecording()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
@@ -4012,20 +4012,13 @@
         <span class="material-symbols-outlined text-slate-400">close</span>
       </button>
     </div>
-    <!-- Map placeholder -->
-    <div class="relative bg-slate-800 flex-shrink-0" style="height:240px;">
-      <div class="absolute inset-0 flex items-center justify-center">
-        <span class="material-symbols-outlined text-primary-light/30" style="font-size:8rem;">map</span>
-      </div>
-      <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <div class="w-3 h-3 bg-primary rounded-full animate-pulse mb-2"></div>
-        <span class="text-white/80 text-xs bg-black/40 px-2 py-1 rounded-full">
-          <span x-show="trackRecordingState==='idle'">等待 GPS 信号...</span>
-          <span x-show="trackRecordingState!=='idle'">27.9881° N, 86.9250° E · 海拔 <span x-text="trackLiveStats.elevation"></span>m</span>
-        </span>
-      </div>
-      <div class="absolute top-3 right-3 w-10 h-10 bg-black/40 rounded-full flex items-center justify-center">
-        <span class="material-symbols-outlined text-white text-xl">explore</span>
+    <!-- AMap 实时地图 -->
+    <div class="relative flex-shrink-0 overflow-hidden" style="height:240px;">
+      <div id="recording-map" style="width:100%;height:100%;"></div>
+      <div class="absolute top-3 right-3 flex gap-2">
+        <button @click="locateRecordingMap()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
+          <span class="material-symbols-outlined text-base text-primary-light">my_location</span>
+        </button>
       </div>
     </div>
     <!-- Live Stats -->
@@ -4065,7 +4058,7 @@
         </button>
       </template>
       <template x-if="trackRecordingState!=='idle'">
-        <button @click="stopTrackRecording()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-5 rounded-2xl transition-colors flex items-center justify-center gap-1">
+        <button @click="saveTrackRecording()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-5 rounded-2xl transition-colors flex items-center justify-center gap-1">
           <span class="material-symbols-outlined">stop</span>结束保存
         </button>
       </template>
@@ -4550,6 +4543,7 @@ function alpineLink() {
     lightboxUrl: '',
     showLightbox: false,
     trackMap: null,
+    recordingMap: null,
     selectedConversation: null,
     showChatDetail: false,
     showGearPublish: false,
@@ -5428,6 +5422,23 @@ function alpineLink() {
       });
     },
 
+    locateRecordingMap() {
+      const activeMap = this.recordingMap || this.trackMap;
+      if (!activeMap || typeof AMap === 'undefined') return;
+      AMap.plugin('AMap.Geolocation', () => {
+        const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+        activeMap.addControl(geo);
+        geo.getCurrentPosition((status, result) => {
+          if (status === 'complete' && result.position) {
+            activeMap.setCenter([result.position.lng, result.position.lat]);
+            activeMap.setZoom(15);
+          } else {
+            this.showToast('定位失败，请检查GPS权限', 'error');
+          }
+        });
+      });
+    },
+
     // 在轨迹详情弹窗里渲染带 Polyline 的地图（WGS84 → GCJ-02）
     renderTrackDetailMap(track) {
       if (typeof AMap === 'undefined' || !track || !track.points || track.points.length < 2) return;
@@ -5458,17 +5469,18 @@ function alpineLink() {
           (pos) => {
             const { latitude: lat, longitude: lng, altitude: ele } = pos.coords;
             this.trackRecordedPoints.push({ lat, lng, ele: ele || 0, ts: Date.now() });
-            if (this.trackMap) {
+            const activeMap = this.recordingMap || this.trackMap;
+            if (activeMap && typeof AMap !== 'undefined') {
               const lnglat = new AMap.LngLat(lng, lat);
               if (!this._amapPolyline) {
-                this._amapPolyline = new AMap.Polyline({ path: [lnglat], strokeColor: '#2b6579', strokeWeight: 4, map: this.trackMap });
+                this._amapPolyline = new AMap.Polyline({ path: [lnglat], strokeColor: '#2b6579', strokeWeight: 4, map: activeMap });
               } else {
                 const path = this._amapPolyline.getPath();
                 path.push(lnglat);
                 this._amapPolyline.setPath(path);
               }
-              this.trackMap.setCenter(lnglat);
-              this.trackMap.setZoom(14);
+              activeMap.setCenter(lnglat);
+              activeMap.setZoom(14);
             }
             this.trackLiveStats.elevation = Math.round(ele || this.trackLiveStats.elevation);
             if (this.trackRecordedPoints.length > 1) {
@@ -5497,16 +5509,17 @@ function alpineLink() {
         curLng += (Math.random() - 0.48) * 0.0005;
         curEle += (Math.random() - 0.3) * 3;
         this.trackRecordedPoints.push({ lat: curLat, lng: curLng, ele: curEle, ts: Date.now() });
-        if (this.trackMap && typeof AMap !== 'undefined') {
+        const activeMap = this.recordingMap || this.trackMap;
+        if (activeMap && typeof AMap !== 'undefined') {
           const lnglat = new AMap.LngLat(curLng, curLat);
           if (!this._amapPolyline) {
-            this._amapPolyline = new AMap.Polyline({ path: [lnglat], strokeColor: '#2b6579', strokeWeight: 4, map: this.trackMap });
+            this._amapPolyline = new AMap.Polyline({ path: [lnglat], strokeColor: '#2b6579', strokeWeight: 4, map: activeMap });
           } else {
             const path = this._amapPolyline.getPath();
             path.push(lnglat);
             this._amapPolyline.setPath(path);
           }
-          this.trackMap.setCenter(lnglat);
+          activeMap.setCenter(lnglat);
         }
         this.trackLiveStats.distance = Math.round((this.trackLiveStats.distance + 0.05) * 100) / 100;
         this.trackLiveStats.elevation = Math.round(curEle);
@@ -5526,7 +5539,7 @@ function alpineLink() {
       clearInterval(this.trackTimer);
       clearInterval(this._simInterval);
       if (this._geoWatch) navigator.geolocation.clearWatch(this._geoWatch);
-      const name = '轨迹记录 ' + new Date().toLocaleDateString('zh-CN');
+      const name = this.newTrackName || ('轨迹记录 ' + new Date().toLocaleDateString('zh-CN'));
       const newTrack = {
         id: 'local_' + Date.now(), name,
         date: new Date().toLocaleDateString('zh-CN'),
@@ -5549,14 +5562,29 @@ function alpineLink() {
       this.showToast('轨迹已保存：' + name + ' 🗺️');
       this.trackRecordingState = 'idle';
       this.trackRecordedPoints = [];
+      this.newTrackName = '';
+      this._amapPolyline = null;
+      if (this.recordingMap) { this.recordingMap.destroy(); this.recordingMap = null; }
+      this.showNewTrackModal = false;
+    },
+    resumeTrackRecording() {
+      this.trackRecordingState = 'recording';
+    },
+    stopTrackRecording() {
+      this.trackRecordingState = 'paused';
     },
     openTrackDetail(track) {
       this.selectedTrackDetail = track;
       this.showTrackDetail = true;
     },
     openNewTrack() {
-      this.initTrackMap();
+      this.showNewTrackModal = true;
       this.trackLiveStats = { distance: 0, elevation: 5364, seconds: 0 };
+      this.$nextTick(() => {
+        if (!this.recordingMap) {
+          this.recordingMap = this.initAMap('recording-map', { zoom: 13 });
+        }
+      });
     },
     closeNewTrack() {
       if (this.trackRecordingState !== 'idle') {
@@ -5566,6 +5594,12 @@ function alpineLink() {
         if (this._geoWatch) navigator.geolocation.clearWatch(this._geoWatch);
         this.trackRecordingState = 'idle';
       }
+      if (this.recordingMap) {
+        this.recordingMap.destroy();
+        this.recordingMap = null;
+      }
+      this._amapPolyline = null;
+      this.showNewTrackModal = false;
     },
     formatTrackDuration(seconds) {
       const h = Math.floor(seconds / 3600);
