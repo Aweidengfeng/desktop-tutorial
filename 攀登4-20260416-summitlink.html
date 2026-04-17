@@ -3557,7 +3557,7 @@ function alpineLink() {
       this.peakWeatherLoading = true;
       try {
         let url;
-        if (peak.latitude != null && peak.longitude != null) {
+        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
           url = `/api/weather?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
         } else {
           url = `/api/weather?location=${encodeURIComponent(peak.name)}`;
@@ -3567,7 +3567,7 @@ function alpineLink() {
       } catch(e) {}
       try {
         let furl;
-        if (peak.latitude != null && peak.longitude != null) {
+        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
           furl = `/api/weather/forecast?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
         } else {
           furl = `/api/weather/forecast?location=${encodeURIComponent(peak.name)}`;
