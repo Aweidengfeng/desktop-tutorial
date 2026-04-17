@@ -719,7 +719,7 @@
                     </div>
                   </div>
                   <div class="text-right flex-shrink-0 ml-2">
-                    <p class="text-primary-light font-bold text-base" data-altitude x-text="peak.altitude.toLocaleString()+'m'"></p>
+                    <p class="text-primary-light font-bold text-base" data-altitude :data-altitude-value="peak.altitude" x-text="peak.altitude.toLocaleString()+'m'"></p>
                     <span class="text-[10px] px-2 py-0.5 rounded-full font-medium"
                           :class="peak.difficulty==='8000m级'?'bg-red-500/20 text-red-400':peak.difficulty==='技术型'?'bg-orange-500/20 text-orange-400':peak.difficulty==='进阶7000m'?'bg-yellow-500/20 text-yellow-400':'bg-green-500/20 text-green-400'"
                           x-text="peak.difficulty"></span>
@@ -759,7 +759,7 @@
                   </div>
                 </div>
                 <template x-if="peak.campKey">
-                  <button @click="weatherSearch=peak.campKey; showOsmSuggestions=false; searchWeather()"
+                  <button @click="weatherSearch=peak.campKey; showOsmSuggestions=false; searchWeather(); $nextTick(()=>document.querySelector('[x-show=\'showWeatherSearchResult\']')?.scrollIntoView({behavior:'smooth',block:'start'}))"
                           class="w-full mt-1 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary-light text-xs rounded-lg transition-colors flex items-center justify-center gap-1">
                     <span class="material-symbols-outlined text-sm">wb_sunny</span>
                     查看营地天气

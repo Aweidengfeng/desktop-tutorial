@@ -28,8 +28,8 @@ test.describe('商业向导攀登统计模块', () => {
     // 验证第一个峰是最高的
     const firstAlt = page.locator('[data-commercial-peak]').first().locator('[data-altitude]');
     if (await firstAlt.isVisible()) {
-      const altText = await firstAlt.textContent();
-      expect(parseInt(altText)).toBeGreaterThan(5000);
+      const altVal = await firstAlt.getAttribute('data-altitude-value');
+      expect(parseInt(altVal || '0')).toBeGreaterThan(5000);
     }
   });
 });
