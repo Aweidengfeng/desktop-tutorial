@@ -256,4 +256,109 @@ if (!existingPostCols.includes('status')) {
   db.exec("ALTER TABLE posts ADD COLUMN status TEXT DEFAULT 'pending'");
 }
 
+// 迁移：guides 表补充字段
+const existingGuideCols = db.pragma('table_info(guides)').map(c => c.name);
+if (!existingGuideCols.includes('bio')) {
+  db.exec('ALTER TABLE guides ADD COLUMN bio TEXT');
+}
+if (!existingGuideCols.includes('peaks_led')) {
+  db.exec("ALTER TABLE guides ADD COLUMN peaks_led TEXT");
+}
+if (!existingGuideCols.includes('total_expeditions')) {
+  db.exec('ALTER TABLE guides ADD COLUMN total_expeditions INTEGER DEFAULT 0');
+}
+if (!existingGuideCols.includes('cover_image')) {
+  db.exec('ALTER TABLE guides ADD COLUMN cover_image TEXT');
+}
+if (!existingGuideCols.includes('wechat')) {
+  db.exec('ALTER TABLE guides ADD COLUMN wechat TEXT');
+}
+if (!existingGuideCols.includes('experience_years')) {
+  db.exec('ALTER TABLE guides ADD COLUMN experience_years INTEGER DEFAULT 0');
+}
+
+// 迁移：clubs 表补充字段
+const existingClubCols = db.pragma('table_info(clubs)').map(c => c.name);
+if (!existingClubCols.includes('contact')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN contact TEXT');
+}
+if (!existingClubCols.includes('wechat')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN wechat TEXT');
+}
+if (!existingClubCols.includes('website')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN website TEXT');
+}
+if (!existingClubCols.includes('cover_image')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN cover_image TEXT');
+}
+if (!existingClubCols.includes('logo')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN logo TEXT');
+}
+
+// 迁移：bookings 表补充字段
+const existingBookingCols = db.pragma('table_info(bookings)').map(c => c.name);
+if (!existingBookingCols.includes('club_id')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN club_id INTEGER');
+}
+if (!existingBookingCols.includes('club_name')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN club_name TEXT');
+}
+if (!existingBookingCols.includes('type')) {
+  db.exec("ALTER TABLE bookings ADD COLUMN type TEXT DEFAULT 'guide'");
+}
+if (!existingBookingCols.includes('confirmed_at')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN confirmed_at DATETIME');
+}
+if (!existingBookingCols.includes('rejected_reason')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN rejected_reason TEXT');
+}
+
+// 新增表：俱乐部活动/商业套餐
+db.exec(`
+CREATE TABLE IF NOT EXISTS club_activities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  club_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  cover TEXT,
+  type TEXT DEFAULT 'activity',
+  mountain TEXT,
+  region TEXT,
+  price REAL DEFAULT 0,
+  max_members INTEGER DEFAULT 10,
+  current_members INTEGER DEFAULT 0,
+  start_date TEXT,
+  end_date TEXT,
+  difficulty TEXT,
+  includes TEXT,
+  status TEXT DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS guide_expeditions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guide_id INTEGER NOT NULL,
+  mountain TEXT NOT NULL,
+  date TEXT,
+  members INTEGER DEFAULT 1,
+  summit_success INTEGER DEFAULT 1,
+  photo TEXT,
+  description TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  target_type TEXT NOT NULL,
+  target_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  user_name TEXT,
+  user_avatar TEXT,
+  rating INTEGER DEFAULT 5,
+  content TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(target_type, target_id, user_id)
+);
+`);
+
 module.exports = db;
