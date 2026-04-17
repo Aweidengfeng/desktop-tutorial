@@ -428,10 +428,7 @@ router.get('/popular-peaks', async (req, res) => {
     const data = POPULAR_PEAKS_META.map((peak, i) => {
       if (results[i].status === 'fulfilled') {
         const w = results[i].value;
-        // 近地面温度（开尔文转摄氏），再按气温直减率 6.5°C/1000m 估算山峰温度
-        const surfaceTemp = w.main.temp - 273.15;
-        const altAdj = Math.round((peak.altitude - 500) / 1000 * 6.5);
-        const temp = Math.round(surfaceTemp - altAdj);
+        const temp = Math.round(w.main.temp - 273.15);
         return {
           ...peak,
           temp,
