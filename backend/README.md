@@ -107,7 +107,70 @@ npm start
 
 ---
 
-## 遇到问题？
+## 新增 API 接口说明
+
+### 文件上传
+- `POST /api/upload` — 上传图片（multipart/form-data, field: `file`），返回 `{ url, filename }`。支持 JPEG/PNG/GIF/WebP，最大 10MB。
+
+### 认证扩展
+- `POST /api/auth/sms/send` — 发送短信验证码（开发模式打印到控制台）`{ phone }`
+- `POST /api/auth/sms/verify` — 验证码登录/注册 `{ phone, code }`，返回 `{ token, user }`
+- `POST /api/auth/wechat` — 微信登录 mock `{ code }`，返回 `{ token, user }`
+- `POST /api/auth/apple` — Apple 登录 mock `{ identityToken }`，返回 `{ token, user }`
+- `PUT /api/auth/settings` — 保存用户设置 `{ useMetric, language }`（需 JWT）
+- `PUT /api/auth/privacy` — 保存隐私设置 `{ profile_public, posts_public, follows_public, allow_stranger_msg }`（需 JWT）
+
+### 攀登线路
+- `GET /api/routes` — 所有线路列表
+- `GET /api/routes/:id` — 线路详情
+- `GET /api/routes/:id/clubs` — 该线路下的所有报价俱乐部（含俱乐部信息 + 报价）
+- `POST /api/routes` — 创建线路（管理员）
+- `PUT /api/routes/:id` — 更新线路（管理员）
+- `DELETE /api/routes/:id` — 删除线路（管理员）
+- `POST /api/routes/pricing` — 设置俱乐部-线路报价
+
+### 俱乐部
+- `GET /api/clubs` — 列表（分页）
+- `GET /api/clubs/:id` — 详情
+- `GET /api/clubs/:id/guides` — 俱乐部旗下向导列表
+- `POST /api/clubs` — 创建（需 JWT）
+- `PUT /api/clubs/:id` — 更新（管理员/创建者）
+- `DELETE /api/clubs/:id` — 删除（管理员）
+- `PUT /api/clubs/:id/verify` — 切换认证状态（管理员）
+
+### 轨迹
+- `POST /api/tracks` — 保存轨迹 `{ name, points: [{lat,lng,ele,ts}...], distance, elevation_gain, duration }`（需 JWT）
+- `GET /api/tracks?user_id=` — 轨迹列表
+- `GET /api/tracks/:id` — 轨迹详情
+
+### 预约
+- `POST /api/bookings` — 创建预约（探索/商业）`{ type, peak_name, route_id, club_id, guide_id, date, people, price, notes }`（需 JWT）
+- `GET /api/bookings?user_id=` — 用户预约列表（需 JWT）
+
+### 用户
+- `GET /api/users/:id/achievements` — 用户成就（需 JWT）
+- `GET /api/users/:id/membership` — 会员信息（需 JWT）
+- `GET /api/users/:id/summits` — 登顶记录
+- `GET /api/users/:id/expeditions` — 远征记录
+- `GET /api/users/:id/followers` — 粉丝列表
+- `GET /api/users/:id/following` — 关注列表
+- `POST /api/follow` — 关注用户 `{ followee_id }`（需 JWT）
+- `DELETE /api/follow` — 取消关注 `{ followee_id }`（需 JWT）
+
+---
+
+## 环境变量说明（`.env`）
+
+| 变量名 | 说明 |
+|--------|------|
+| `PORT` | 监听端口（默认 8080）|
+| `JWT_SECRET` | JWT 签名密钥 |
+| `WECHAT_APPID` | 微信小程序 AppID（留占位）|
+| `WECHAT_SECRET` | 微信小程序 Secret（留占位）|
+| `APPLE_CLIENT_ID` | Apple Sign In Client ID（留占位）|
+| `APPLE_TEAM_ID` | Apple Developer Team ID（留占位）|
+| `APPLE_KEY_ID` | Apple Sign In Key ID（留占位）|
+
 
 **端口占用（Port 3000 in use）**
 

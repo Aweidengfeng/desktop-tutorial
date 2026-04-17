@@ -57,10 +57,16 @@ if (clubSeedCount.cnt === 0) {
   const c3 = insertClub.run('成都川西登山学校', '专注于四川境内技术攀登和培训，幺妹峰、四姑娘山等线路专家', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', '技术攀登', '四川', '综合', '028-88886666', adminUser.id, 'https://i.pravatar.cc/150?u=club3');
 
   // Update guides seed with affiliation
-  const existingGuides = db.prepare('SELECT id FROM guides LIMIT 3').all();
-  if (existingGuides.length >= 2 && c1.lastInsertRowid) {
-    db.prepare('UPDATE guides SET affiliation_club_id = ? WHERE id = ?').run(c1.lastInsertRowid, existingGuides[0].id);
-    db.prepare('UPDATE guides SET affiliation_club_id = ? WHERE id = ?').run(c2.lastInsertRowid, existingGuides[1].id);
+  const existingGuides = db.prepare('SELECT id FROM guides LIMIT 6').all();
+  const newClubs = db.prepare('SELECT id FROM clubs ORDER BY id LIMIT 3').all();
+  if (existingGuides.length >= 2 && newClubs.length >= 1) {
+    // Assign first 2 guides to club 1, next 2 to club 2, next 2 to club 3
+    for (let i = 0; i < existingGuides.length; i++) {
+      const clubIdx = Math.floor(i / 2);
+      if (newClubs[clubIdx]) {
+        db.prepare('UPDATE guides SET affiliation_club_id = ? WHERE id = ?').run(newClubs[clubIdx].id, existingGuides[i].id);
+      }
+    }
   }
 
   // Route pricing seed

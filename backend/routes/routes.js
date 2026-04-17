@@ -120,4 +120,16 @@ router.post('/pricing', auth, (req, res) => {
   }
 });
 
+// DELETE /api/routes/:id — 删除线路（管理员）
+router.delete('/:id', auth, (req, res) => {
+  try {
+    const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
+    if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });
+    db.prepare('UPDATE climbing_routes SET status = ? WHERE id = ?').run('deleted', req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;

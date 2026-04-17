@@ -4,3 +4,5 @@ test-results/
 *.db
 .env
 nohup.out
+backend/uploads/*
+!backend/uploads/.gitkeep
