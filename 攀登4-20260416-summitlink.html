@@ -140,7 +140,7 @@
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
       <!-- Hero Carousel -->
-      <div class="relative overflow-hidden" style="aspect-ratio:16/9;max-height:280px;" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
+      <div class="relative overflow-hidden" style="height:240px;" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
         <template x-for="(slide,i) in heroSlides" :key="i">
           <div @click="handleBannerClick(slide)" class="absolute inset-0 transition-opacity duration-700 cursor-pointer" :class="heroSlide===i ? 'opacity-100' : 'opacity-0'">
             <img :src="slide.image" :alt="slide.name" class="w-full h-full object-cover">
@@ -781,6 +781,10 @@
                     查看营地天气
                   </button>
                 </template>
+                <button @click="openCommercialBooking(peak)" class="w-full mt-2 py-2 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1">
+                  <span class="material-symbols-outlined text-sm">calendar_add_on</span>
+                  预约攀登
+                </button>
               </div>
             </template>
           </div>
@@ -1414,7 +1418,7 @@
             </div>
             <span class="material-symbols-outlined text-slate-600">chevron_right</span>
           </button>
-          <template x-for="item in [{icon:'backpack',name:'我的装备',sub:'8件装备',action:'gear'},{icon:'route',name:'我的轨迹',sub:'2条记录',action:'track'},{icon:'groups',name:'我的队伍',sub:'1支队伍',action:'teams'},{icon:'emoji_events',name:'我的成就',sub:'12项成就',action:''},{icon:'workspace_premium',name:'会员中心',sub:'专业会员',action:''}]" :key="item.name">
+          <template x-for="item in [{icon:'backpack',name:'我的装备',sub:'8件装备',action:'gear'},{icon:'route',name:'我的轨迹',sub:'2条记录',action:'track'},{icon:'groups',name:'我的队伍',sub:'1支队伍',action:'teams'},{icon:'emoji_events',name:'我的成就',sub:'12项成就',action:'achievements'},{icon:'workspace_premium',name:'会员中心',sub:'专业会员',action:'membership'}]" :key="item.name">
             <button @click="handleMenuAction(item.action)" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
               <div class="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center">
                 <span class="material-symbols-outlined text-primary-light text-lg" x-text="item.icon"></span>
@@ -2192,7 +2196,7 @@
                 </div>
               </template>
               <div class="flex gap-3">
-                <button @click="showPeakDetail=false;bookingData.mountain=selectedPeak.name;showBooking=true" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
+                <button @click="showPeakDetail=false;openCommercialBooking(selectedPeak)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
                 <button class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors">
                   <span class="material-symbols-outlined">bookmark</span>
                 </button>
@@ -3892,6 +3896,116 @@
     </div>
   </div>
 
+  <!-- ===== ACHIEVEMENTS MODAL ===== -->
+  <div x-show="showAchievementsModal"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 translate-y-full"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0 translate-y-full"
+       class="fixed inset-0 z-[130] flex flex-col bg-slate-900" style="max-width:430px;margin:0 auto;">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-white/10 flex-shrink-0">
+      <button @click="showAchievementsModal=false" class="p-2 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-300">arrow_back</span></button>
+      <h2 class="text-white font-display font-bold text-lg flex-1">🏆 我的成就</h2>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4">
+      <div x-show="achievementsLoading" class="flex flex-col items-center justify-center h-40 text-slate-500">
+        <span class="material-symbols-outlined animate-spin text-3xl mb-2">progress_activity</span>
+        <p class="text-sm">加载中...</p>
+      </div>
+      <div x-show="!achievementsLoading" class="grid grid-cols-2 gap-3">
+        <template x-for="ach in achievementsList" :key="ach.id">
+          <div class="glass rounded-2xl p-4 flex flex-col items-center text-center" :class="ach.earned_at ? '' : 'opacity-40'">
+            <span class="text-4xl mb-2" x-text="ach.icon || '🏅'"></span>
+            <p class="text-white font-bold text-sm" x-text="ach.name"></p>
+            <p class="text-slate-400 text-xs mt-1" x-text="ach.description"></p>
+            <p x-show="ach.earned_at" class="text-emerald-400 text-[10px] mt-2" x-text="ach.earned_at ? new Date(ach.earned_at).toLocaleDateString('zh-CN') : ''"></p>
+            <p x-show="!ach.earned_at" class="text-slate-500 text-[10px] mt-2">未解锁</p>
+          </div>
+        </template>
+        <div x-show="achievementsList.length === 0 && !achievementsLoading" class="col-span-2 flex flex-col items-center py-12 text-slate-500">
+          <span class="material-symbols-outlined text-4xl mb-2">emoji_events</span>
+          <p class="text-sm">暂无成就，继续攀登吧！</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MEMBERSHIP MODAL ===== -->
+  <div x-show="showMembershipModal"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 translate-y-full"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0 translate-y-full"
+       class="fixed inset-0 z-[130] flex flex-col bg-slate-900" style="max-width:430px;margin:0 auto;">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-white/10 flex-shrink-0">
+      <button @click="showMembershipModal=false" class="p-2 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-300">arrow_back</span></button>
+      <h2 class="text-white font-display font-bold text-lg flex-1">💎 会员中心</h2>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4">
+      <div x-show="membershipLoading" class="flex flex-col items-center justify-center h-40 text-slate-500">
+        <span class="material-symbols-outlined animate-spin text-3xl mb-2">progress_activity</span>
+        <p class="text-sm">加载中...</p>
+      </div>
+      <template x-if="!membershipLoading && membershipData">
+        <div class="space-y-4">
+          <!-- 等级卡片 -->
+          <div class="rounded-2xl p-5 text-center" :style="'background: linear-gradient(135deg, ' + (membershipData.member_color || '#6b7280') + '22, ' + (membershipData.member_color || '#6b7280') + '44); border: 1px solid ' + (membershipData.member_color || '#6b7280') + '66'">
+            <div class="text-4xl mb-2">👑</div>
+            <p class="text-white font-display font-bold text-xl" x-text="membershipData.member_level"></p>
+            <p class="text-slate-400 text-sm mt-1">积分：<span class="font-bold" :style="'color:' + (membershipData.member_color || '#6b7280')" x-text="(membershipData.points || 0).toLocaleString()"></span></p>
+          </div>
+          <!-- 统计 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="glass rounded-xl p-3 text-center">
+              <p class="text-primary-light font-bold text-2xl" x-text="membershipData.summits || 0"></p>
+              <p class="text-slate-400 text-xs mt-1">登顶次数</p>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <p class="text-primary-light font-bold text-2xl" x-text="membershipData.expeditions || 0"></p>
+              <p class="text-slate-400 text-xs mt-1">远征次数</p>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <p class="text-primary-light font-bold text-2xl" x-text="membershipData.followers || 0"></p>
+              <p class="text-slate-400 text-xs mt-1">粉丝</p>
+            </div>
+            <div class="glass rounded-xl p-3 text-center">
+              <p class="text-primary-light font-bold text-2xl" x-text="membershipData.following || 0"></p>
+              <p class="text-slate-400 text-xs mt-1">关注</p>
+            </div>
+          </div>
+          <!-- 权益 -->
+          <div class="glass rounded-2xl p-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">会员权益</p>
+            <div class="space-y-2">
+              <template x-for="benefit in (membershipData.benefits || [])" :key="benefit">
+                <div class="flex items-center gap-2">
+                  <span class="text-emerald-400 text-sm">✓</span>
+                  <span class="text-slate-300 text-sm" x-text="benefit"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- 等级进度说明 -->
+          <div class="glass rounded-2xl p-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">升级路径</p>
+            <div class="space-y-2 text-xs text-slate-400">
+              <div class="flex justify-between" :class="(membershipData.points||0)>=500?'text-emerald-400':''"><span>🟢 初级攀登者</span><span>500积分</span></div>
+              <div class="flex justify-between" :class="(membershipData.points||0)>=2000?'text-blue-400':''"><span>🔵 中级攀登者</span><span>2,000积分</span></div>
+              <div class="flex justify-between" :class="(membershipData.points||0)>=5000?'text-purple-400':''"><span>🟣 专家攀登者</span><span>5,000积分</span></div>
+              <div class="flex justify-between" :class="(membershipData.points||0)>=10000?'text-yellow-400':''"><span>🏆 传奇攀登者</span><span>10,000积分</span></div>
+            </div>
+            <p class="text-slate-500 text-xs mt-3">登顶+200积分/次，远征+100积分/次</p>
+          </div>
+          <p x-show="membershipData.since" class="text-center text-slate-500 text-xs" x-text="'加入时间：' + (membershipData.since ? new Date(membershipData.since).toLocaleDateString('zh-CN') : '')"></p>
+        </div>
+      </template>
+    </div>
+  </div>
+
   <!-- ===== MY BOOKINGS MODAL ===== -->
   <div x-show="showMyBookings"
        x-transition:enter="transition ease-out duration-300"
@@ -4580,6 +4694,14 @@ function alpineLink() {
       { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️' },
     ],
     banners: [],
+    // 我的成就
+    showAchievementsModal: false,
+    achievementsList: [],
+    achievementsLoading: false,
+    // 会员中心
+    showMembershipModal: false,
+    membershipData: null,
+    membershipLoading: false,
     leaderboardSort: 'count',
     communitySearchQuery: '',
     filteredCommunityPosts: [],
@@ -5621,7 +5743,9 @@ function alpineLink() {
     },
     // Commercial Booking - Step-by-step
     openCommercialBooking(peak) {
-      this.commercialBookingData = { peakName: peak.name, difficulty: peak.difficulty, region: peak.region, date: '', persons: 1, package: 'standard', notes: '', selectedClub: null, selectedGuide: null, routeId: null };
+      if (!this.requireAuth()) return;
+      const region = peak.region || peak.continent || peak.country || '';
+      this.commercialBookingData = { peakName: peak.name, difficulty: peak.difficulty, region, date: '', persons: 1, package: 'standard', notes: '', selectedClub: null, selectedGuide: null, routeId: null };
       this.commercialStep = 0;
       this.commercialRouteClubs = [];
       this.commercialClubGuides = [];
@@ -5894,9 +6018,30 @@ function alpineLink() {
       if (action === 'gear') { this.currentPage = 'gear'; }
       else if (action === 'track') { this.currentPage = 'track'; }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
+      else if (action === 'achievements') { this.openAchievements(); }
+      else if (action === 'membership') { this.openMembership(); }
       else { this.showToast('即将推出'); }
     },
-    async saveSettings() {
+    async openAchievements() {
+      if (!this.requireAuth()) return;
+      this.showAchievementsModal = true;
+      this.achievementsLoading = true;
+      try {
+        const res = await fetch(`/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.achievementsList = await res.json();
+      } catch(e) {}
+      this.achievementsLoading = false;
+    },
+    async openMembership() {
+      if (!this.requireAuth()) return;
+      this.showMembershipModal = true;
+      this.membershipLoading = true;
+      try {
+        const res = await fetch(`/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.membershipData = await res.json();
+      } catch(e) {}
+      this.membershipLoading = false;
+    },
       if (this.settingsType === 'profile' && this.authToken) {
         try {
           const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name, avatar: this.userProfile.avatar }) });
