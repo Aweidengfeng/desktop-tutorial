@@ -5,12 +5,22 @@ const db = require('../db/database');
 // POST /api/pay/create
 router.post('/create', (req, res) => {
   try {
-    const { amount, method, orderId } = req.body;
+    const { amount, method } = req.body;
     const orderNo = 'SL' + Date.now();
+    let userId = null;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+        const decoded = jwt.verify(authHeader.split(' ')[1], secret);
+        userId = decoded.id;
+      } catch (e) { /* no-op */ }
+    }
     db.prepare(`
-      INSERT INTO orders (order_no, amount, method, status)
-      VALUES (?, ?, ?, 'pending')
-    `).run(orderNo, amount, method || 'alipay');
+      INSERT INTO orders (user_id, order_no, amount, method, status)
+      VALUES (?, ?, ?, ?, 'pending')
+    `).run(userId, orderNo, amount, method || 'alipay');
     res.json({
       success: true,
       orderNo,

@@ -146,6 +146,100 @@ CREATE TABLE IF NOT EXISTS orders (
   status TEXT DEFAULT 'pending',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  author_name TEXT,
+  author_avatar TEXT,
+  content TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  post_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, post_id)
+);
+
+CREATE TABLE IF NOT EXISTS conversations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user1_id INTEGER NOT NULL,
+  user2_id INTEGER NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user1_id, user2_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL,
+  sender_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  is_read INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS clubs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  cover TEXT,
+  specialty TEXT,
+  region TEXT,
+  type TEXT DEFAULT '综合',
+  members_count INTEGER DEFAULT 0,
+  expeditions INTEGER DEFAULT 0,
+  verified INTEGER DEFAULT 0,
+  founded TEXT,
+  status TEXT DEFAULT 'active',
+  creator_id INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS club_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  club_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT DEFAULT 'member',
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(club_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  mountain TEXT,
+  guide_id INTEGER,
+  guide_name TEXT,
+  date TEXT,
+  members INTEGER DEFAULT 1,
+  notes TEXT,
+  amount REAL DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS follows (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  follower_id INTEGER NOT NULL,
+  following_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(follower_id, following_id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT,
+  content TEXT,
+  related_id INTEGER,
+  is_read INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // 迁移：新增字段（如果不存在）

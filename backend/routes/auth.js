@@ -29,6 +29,7 @@ function makeToken(id) {
 
 function safeUser(user) {
   return {
+    id: user.id,
     name: user.name,
     username: user.username,
     avatar: user.avatar,

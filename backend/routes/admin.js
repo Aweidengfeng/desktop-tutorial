@@ -52,6 +52,8 @@ router.get('/stats', adminAuth, (req, res) => {
     const totalUsers = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
     const totalPosts = db.prepare('SELECT COUNT(*) as c FROM posts').get().c;
     const totalOrders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
+    const totalClubs = db.prepare('SELECT COUNT(*) as c FROM clubs').get().c;
+    const totalBookings = db.prepare('SELECT COUNT(*) as c FROM bookings').get().c;
     const today = new Date().toISOString().slice(0, 10);
     const newUsersToday = db.prepare(
       "SELECT COUNT(*) as c FROM users WHERE date(created_at) = ?"
@@ -62,7 +64,10 @@ router.get('/stats', adminAuth, (req, res) => {
     const pendingGuides = db.prepare(
       "SELECT COUNT(*) as c FROM guide_applications WHERE status = 'pending'"
     ).get().c;
-    res.json({ totalUsers, totalPosts, totalOrders, newUsersToday, pendingPosts, pendingGuides });
+    const pendingBookings = db.prepare(
+      "SELECT COUNT(*) as c FROM bookings WHERE status = 'pending'"
+    ).get().c;
+    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -172,8 +177,18 @@ router.get('/guides', adminAuth, (req, res) => {
 // PUT /api/admin/guides/:id/approve
 router.put('/guides/:id/approve', adminAuth, (req, res) => {
   try {
-    const result = db.prepare("UPDATE guide_applications SET status = 'approved' WHERE id = ?").run(req.params.id);
-    if (result.changes === 0) return res.status(404).json({ error: '申请不存在' });
+    const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: '申请不存在' });
+    db.prepare("UPDATE guide_applications SET status = 'approved' WHERE id = ?").run(req.params.id);
+    // Update or insert guide record so it appears in front-end listings
+    const existing = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(app.user_id);
+    if (existing) {
+      db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ?").run(app.user_id);
+    } else {
+      db.prepare(`INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, 'approved')`
+      ).run(app.user_id, app.name, app.cert, app.specialty, app.languages, app.day_rate, app.region);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -183,8 +198,10 @@ router.put('/guides/:id/approve', adminAuth, (req, res) => {
 // PUT /api/admin/guides/:id/reject
 router.put('/guides/:id/reject', adminAuth, (req, res) => {
   try {
-    const result = db.prepare("UPDATE guide_applications SET status = 'rejected' WHERE id = ?").run(req.params.id);
-    if (result.changes === 0) return res.status(404).json({ error: '申请不存在' });
+    const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: '申请不存在' });
+    db.prepare("UPDATE guide_applications SET status = 'rejected' WHERE id = ?").run(req.params.id);
+    db.prepare("UPDATE guides SET status = 'rejected' WHERE user_id = ? AND status = 'pending'").run(app.user_id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -201,6 +218,100 @@ router.get('/orders', adminAuth, (req, res) => {
     ).all(parseInt(limit), offset);
     const total = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
     res.json({ orders, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/clubs
+router.get('/clubs', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const clubs = db.prepare(
+      'SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(parseInt(limit), offset);
+    const total = db.prepare('SELECT COUNT(*) as c FROM clubs').get().c;
+    res.json({ clubs, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/clubs/:id/verify
+router.put('/clubs/:id/verify', adminAuth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT id, verified FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const newVerified = club.verified ? 0 : 1;
+    db.prepare('UPDATE clubs SET verified = ? WHERE id = ?').run(newVerified, club.id);
+    res.json({ success: true, verified: newVerified });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/bookings
+router.get('/bookings', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `SELECT b.id, b.user_id, u.name as user_name, b.mountain,
+               b.guide_name, b.date, b.members, b.amount, b.status, b.created_at
+               FROM bookings b LEFT JOIN users u ON u.id = b.user_id`;
+    const params = [];
+    if (status) { sql += ' WHERE b.status = ?'; params.push(status); }
+    sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const bookings = db.prepare(sql).all(...params);
+    const countSql = status ? 'SELECT COUNT(*) as c FROM bookings WHERE status = ?' : 'SELECT COUNT(*) as c FROM bookings';
+    const countParams = status ? [status] : [];
+    const total = db.prepare(countSql).get(...countParams).c;
+    res.json({ bookings, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/bookings/:id/status
+router.put('/bookings/:id/status', adminAuth, (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+      return res.status(400).json({ error: '无效状态' });
+    }
+    const result = db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '预约不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/gear
+router.get('/gear', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const items = db.prepare(
+      `SELECT g.id, g.name, g.brand, g.price, g.condition_text, g.mode, g.category,
+              u.name as seller_name, g.created_at
+       FROM gear g LEFT JOIN users u ON u.id = g.seller_id
+       ORDER BY g.created_at DESC LIMIT ? OFFSET ?`
+    ).all(parseInt(limit), offset);
+    const total = db.prepare('SELECT COUNT(*) as c FROM gear').get().c;
+    res.json({ items, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/gear/:id
+router.delete('/gear/:id', adminAuth, (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM gear WHERE id = ?').run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '装备不存在' });
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
