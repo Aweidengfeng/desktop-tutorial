@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+// 消息发送速率限制：每分钟最多 30 条
+const msgRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: '发消息太频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // GET /api/messages/conversations（需要JWT）
 router.get('/conversations', auth, (req, res) => {
@@ -67,7 +77,7 @@ router.get('/conversations/:id/messages', auth, (req, res) => {
 
 // POST /api/messages/conversations/:id/messages（发送消息，需要JWT）
 // 支持 { content, type, images } — type: 'text'|'image'|'mixed'，images: string[]
-router.post('/conversations/:id/messages', auth, (req, res) => {
+router.post('/conversations/:id/messages', auth, msgRateLimit, (req, res) => {
   try {
     const { content, type, images } = req.body;
     const msgType = type || 'text';

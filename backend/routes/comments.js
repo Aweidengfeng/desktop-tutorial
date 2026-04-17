@@ -25,7 +25,9 @@ router.get('/', (req, res) => {
 router.post('/', auth, (req, res) => {
   try {
     const { post_id, content, images, parent_comment_id, reply_to_user_id } = req.body;
-    if (!post_id || !content) return res.status(400).json({ error: '请提供帖子ID和评论内容' });
+    const imagesArr = Array.isArray(images) ? images : [];
+    if (!post_id) return res.status(400).json({ error: '请提供帖子ID' });
+    if (!content && imagesArr.length === 0) return res.status(400).json({ error: '评论内容或图片不能为空' });
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     let replyToUserName = null;
@@ -33,7 +35,6 @@ router.post('/', auth, (req, res) => {
       const parentComment = db.prepare('SELECT author_name FROM comments WHERE id = ?').get(parent_comment_id);
       if (parentComment) replyToUserName = parentComment.author_name;
     }
-    const imagesArr = Array.isArray(images) ? images : [];
     const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
     const result = db.prepare(`
       INSERT INTO comments (post_id, user_id, author_name, author_avatar, content, images, parent_comment_id, reply_to_user_id, reply_to_user_name)

@@ -4937,7 +4937,7 @@ function alpineLink() {
           }
           const res = await fetch('/api/comments', {
             method: 'POST', headers: this.getAuthHeaders(),
-            body: JSON.stringify({ post_id: this.selectedPostForComment.id, content: content || ' ', images: imageUrls })
+            body: JSON.stringify({ post_id: this.selectedPostForComment.id, content: content || '', images: imageUrls })
           });
           const data = await res.json();
           if (res.ok) {
@@ -5654,14 +5654,18 @@ function alpineLink() {
         for (const blobUrl of blobUrls) {
           const resp = await fetch(blobUrl);
           const blob = await resp.blob();
-          formData.append('files', blob, 'image.jpg');
+          const ext = blob.type.split('/')[1] || 'jpg';
+          formData.append('files', blob, `image.${ext}`);
         }
         const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + this.authToken }, body: formData });
         if (res.ok) {
           const data = await res.json();
           return data.urls || [];
         }
-      } catch(e) {}
+        this.showToast('图片上传失败，请重试', 'error');
+      } catch(e) {
+        this.showToast('图片上传失败，请检查网络', 'error');
+      }
       return blobUrls; // fallback: return blob URLs for local preview
     },
 
