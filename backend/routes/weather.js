@@ -381,4 +381,19 @@ router.get('/camps', async (req, res) => {
   });
 });
 
+// GET /api/weather/popular-peaks — 热门攀登山峰天气（首页滚动展示）
+// 先返回 mock 数据，TODO: 接入 OpenWeather API
+router.get('/popular-peaks', (req, res) => {
+  // TODO: 接入 OpenWeather API，从 peakCoords 依次查询热门山峰实时天气
+  const mockPeaks = [
+    { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, lat: 27.98, lon: 86.92, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
+    { name: 'K2', nameEn: 'K2', altitude: 8611, lat: 35.88, lon: 76.51, temp: -35, wind: 62, humidity: 25, condition: '多云', conditionIcon: '⛅', emoji: '🏔️' },
+    { name: '丹拿利峰', nameEn: 'Denali', altitude: 6190, lat: 63.07, lon: -151.00, temp: -22, wind: 38, humidity: 55, condition: '阴', conditionIcon: '☁️', emoji: '🏔️' },
+    { name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, lat: 45.83, lon: 6.86, temp: -12, wind: 28, humidity: 70, condition: '小雪', conditionIcon: '🌨️', emoji: '🏔️' },
+    { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, lat: 43.35, lon: 42.44, temp: -18, wind: 32, humidity: 48, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
+    { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, lat: 27.86, lon: 86.86, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️', emoji: '🏔️' },
+  ];
+  res.json(mockPeaks);
+});
+
 module.exports = router;

@@ -13,7 +13,11 @@ router.get('/', (req, res) => {
         SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
                image, type, description, best_season as bestSeason,
                success_rate as successRate, first_ascent as firstAscent, deaths,
-               latitude, longitude
+               latitude, longitude,
+               annual_climbers as annualClimbers, commercial_teams as commercialTeams,
+               season_detail as seasonDetail, supplemental_oxygen as supplementalOxygen,
+               main_route as mainRoute, operating_company as operatingCompany,
+               data_source as dataSource
         FROM peaks WHERE type = ?
       `);
       return res.json(stmt.all(type));
@@ -22,7 +26,11 @@ router.get('/', (req, res) => {
       SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
              image, type, description, best_season as bestSeason,
              success_rate as successRate, first_ascent as firstAscent, deaths,
-             latitude, longitude
+             latitude, longitude,
+             annual_climbers as annualClimbers, commercial_teams as commercialTeams,
+             season_detail as seasonDetail, supplemental_oxygen as supplementalOxygen,
+             main_route as mainRoute, operating_company as operatingCompany,
+             data_source as dataSource
       FROM peaks
     `);
     res.json(stmt.all());
@@ -59,7 +67,11 @@ router.get('/:id', (req, res) => {
              image, type, description, best_season as bestSeason,
              success_rate as successRate, first_ascent as firstAscent, deaths,
              latitude, longitude, routes, camps, technical_grade as technicalGrade,
-             permit_required as permitRequired, permit_fee as permitFee
+             permit_required as permitRequired, permit_fee as permitFee,
+             annual_climbers as annualClimbers, commercial_teams as commercialTeams,
+             season_detail as seasonDetail, supplemental_oxygen as supplementalOxygen,
+             main_route as mainRoute, operating_company as operatingCompany,
+             data_source as dataSource
       FROM peaks WHERE id = ?
     `).get(req.params.id);
     if (!peak) return res.status(404).json({ error: '山峰不存在' });
