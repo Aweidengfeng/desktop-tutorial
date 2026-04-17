@@ -9,9 +9,19 @@ router.get('/', auth, (req, res) => {
     const notifications = db.prepare(`
       SELECT id, type, content, related_id, is_read, created_at
       FROM notifications WHERE user_id = ?
-      ORDER BY created_at DESC LIMIT 50
+      ORDER BY created_at DESC LIMIT 20
     `).all(req.user.id);
     res.json(notifications);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/notifications/unread-count（未读通知数）
+router.get('/unread-count', auth, (req, res) => {
+  try {
+    const result = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(req.user.id);
+    res.json({ count: result.count });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

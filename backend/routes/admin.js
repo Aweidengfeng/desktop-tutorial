@@ -257,7 +257,8 @@ router.get('/bookings', adminAuth, (req, res) => {
     const { page = 1, limit = 20, status = '' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     let sql = `SELECT b.id, b.user_id, u.name as user_name, b.mountain,
-               b.guide_name, b.date, b.members, b.amount, b.status, b.created_at
+               b.guide_name, b.club_name, b.type, b.date, b.members, b.amount, b.status,
+               b.confirmed_at, b.rejected_reason, b.created_at
                FROM bookings b LEFT JOIN users u ON u.id = b.user_id`;
     const params = [];
     if (status) { sql += ' WHERE b.status = ?'; params.push(status); }
@@ -311,6 +312,96 @@ router.delete('/gear/:id', adminAuth, (req, res) => {
   try {
     const result = db.prepare('DELETE FROM gear WHERE id = ?').run(req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: '装备不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/club-activities — 俱乐部活动管理
+router.get('/club-activities', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `SELECT ca.*, c.name as club_name FROM club_activities ca LEFT JOIN clubs c ON c.id = ca.club_id`;
+    const params = [];
+    if (status) { sql += ' WHERE ca.status = ?'; params.push(status); }
+    sql += ' ORDER BY ca.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const activities = db.prepare(sql).all(...params);
+    const countSql = status ? 'SELECT COUNT(*) as c FROM club_activities WHERE status = ?' : 'SELECT COUNT(*) as c FROM club_activities';
+    const countParams = status ? [status] : [];
+    const total = db.prepare(countSql).get(...countParams).c;
+    res.json({ activities, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/club-activities/:id/end — 下架活动
+router.put('/club-activities/:id/end', adminAuth, (req, res) => {
+  try {
+    const result = db.prepare("UPDATE club_activities SET status = 'ended' WHERE id = ?").run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '活动不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/club-activities/:id — 删除活动
+router.delete('/club-activities/:id', adminAuth, (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM club_activities WHERE id = ?').run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '活动不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/guide-expeditions — 向导带队记录管理
+router.get('/guide-expeditions', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const expeditions = db.prepare(`
+      SELECT ge.*, g.name as guide_name
+      FROM guide_expeditions ge LEFT JOIN guides g ON g.id = ge.guide_id
+      ORDER BY ge.created_at DESC LIMIT ? OFFSET ?
+    `).all(parseInt(limit), offset);
+    const total = db.prepare('SELECT COUNT(*) as c FROM guide_expeditions').get().c;
+    res.json({ expeditions, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/reviews — 评价管理
+router.get('/reviews', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, target_type = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = 'SELECT * FROM reviews';
+    const params = [];
+    if (target_type) { sql += ' WHERE target_type = ?'; params.push(target_type); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const reviews = db.prepare(sql).all(...params);
+    const countSql = target_type ? 'SELECT COUNT(*) as c FROM reviews WHERE target_type = ?' : 'SELECT COUNT(*) as c FROM reviews';
+    const countParams = target_type ? [target_type] : [];
+    const total = db.prepare(countSql).get(...countParams).c;
+    res.json({ reviews, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/reviews/:id — 删除评价
+router.delete('/reviews/:id', adminAuth, (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM reviews WHERE id = ?').run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '评价不存在' });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
