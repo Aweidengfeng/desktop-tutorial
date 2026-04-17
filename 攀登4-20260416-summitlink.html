@@ -1581,7 +1581,7 @@
                     <div>
                       <p class="text-white text-sm font-semibold" x-text="contact.name"></p>
                       <p class="text-slate-400 text-xs" x-text="contact.phone || contact.number"></p>
-                      <p x-show="contact.region" class="text-slate-500 text-xs" x-text="contact.region"></p>
+                      <p x-show="contact.region" class="text-slate-400 text-xs" x-text="contact.region"></p>
                     </div>
                   </div>
                   <button @click="callEmergency(contact.phone || contact.number)" class="w-9 h-9 bg-green-500/20 rounded-full flex items-center justify-center">

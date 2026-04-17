@@ -59,6 +59,8 @@ router.get('/:id', (req, res) => {
     if (!article) return res.status(404).json({ error: '文章不存在' });
     // Increment view count
     db.prepare('UPDATE articles SET view_count = view_count + 1 WHERE id = ?').run(req.params.id);
+    // Return article with updated view count
+    article.view_count = article.view_count + 1;
     res.json(article);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
