@@ -17,6 +17,11 @@ console.log('📁 __dirname:', __dirname);
 // 静态文件服务 - 根目录
 app.use(express.static(rootPath));
 
+// 静态文件服务 - 上传目录
+const uploadDir = path.join(rootPath, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+app.use('/uploads', express.static(uploadDir));
+
 // 专门处理HTML文件路由（避免中文文件名问题）
 const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
 app.get(['/summitlink', '/summitlink.html'], (req, res) => {
@@ -49,6 +54,7 @@ app.use('/api/customs', require('./routes/customs'));
 app.use('/api/rescue', require('./routes/rescue'));
 app.use('/api/insurance', require('./routes/insurance'));
 app.use('/api/banners', require('./routes/banners'));
+app.use('/api/upload', require('./routes/upload'));
 
 // Admin 面板
 const adminHtmlFile = path.join(rootPath, 'admin.html');

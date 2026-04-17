@@ -29,11 +29,50 @@ Write your name on line 6, save it, and then head back to GitHub Desktop.
 - **节流与缓存**：请求间隔 ≥ 1s；结果缓存到 `localStorage`，7 天内复用，减少对 Nominatim 的压力。
 - **友好提示**：当 Nominatim 也找不到时，提示：「未找到该地点，请尝试使用英文名或更具体的名称（例如 "Mount Everest Base Camp, Nepal"）」。
 
+### 4. 地图 API 切换为高德 Web JS API
+
+- **轨迹地图**：「轨迹」页的 GPS 占位图替换为高德真实地图，支持实时定位（`AMap.Geolocation`）和轨迹 polyline 显示。
+- **坐标转换**：后端 `tracks.points` 仍以 WGS84（`{lat, lng, ele, ts}`）存储，前端通过 `AMap.convertFrom` 将 GPS 坐标转为 GCJ-02 再绘制。
+- **`initAMap(containerId, options)` 工具函数**：所有地图场景统一调用，已封装到 Alpine.js 全局 data 中。
+
+> ⚠️ **上线前必须替换地图 Key**：
+>
+> 1. 前往 [https://console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) 注册并申请一个 **Web 端（JS API）** 类型的 Key（个人认证免费）。
+> 2. 打开 `攀登4-20260416-summitlink.html`，将第 17 行中的 `YOUR_AMAP_KEY` 替换为你的真实 Key：
+>    ```html
+>    <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
+>    ```
+> 3. 开发环境可在高德控制台将本地域（如 `localhost`）加入白名单。
+
+### 5. 探索模块去预约
+
+- 「探索山峰」页面的商业攀登模块**移除了「立即预约」按钮**，专注于路线介绍/图文展示。
+- 「向导」卡片上的「预约」按钮同样移除，点击卡片可查看向导详情，通过「私信向导」联系。
+- 所有付款/下单流程统一走底部导航「商业攀登」独立入口。
+
+### 6. 聊天发图
+
+- 聊天输入栏新增「📷 图片」按钮，支持多选图片；发送前可预览，点 × 删除。
+- 消息结构新增 `type`（`text` / `image` / `mixed`）和 `images: []` 字段。
+- 图片上传走 `POST /api/upload`（multer 多图）；消息气泡自动渲染图片，点击可全屏预览（Lightbox）。
+
+### 7. 社区发图/评论发图
+
+- 发帖编辑器「照片」按钮改为真实文件选择，支持多图预览与上传；帖子表新增 `images TEXT JSON` 字段。
+- 评论区同样支持带图评论（照片按钮 + 预览）；评论表新增 `images TEXT JSON` 字段。
+- 帖子列表正确渲染多图九宫格（最多显示 9 张），超出显示 `+N`；点击图片全屏预览。
+
 ### 相关文件
 
 | 文件 | 变更说明 |
 |------|---------|
-| `攀登4-20260416-summitlink.html` | 新增商业攀登模块 UI、营地天气 data-camp 属性、OSM geocoding 函数及下拉 |
-| `backend/routes/weather.js` | 修正多座山峰营地坐标，使 C2/C3 落到不同天气格点 |
-| `tests/commercial-peaks.spec.js` | 新增 Playwright 测试：商业峰模块渲染、C2/C3 独立节点、geocodeByOSM 函数存在性 |
+| `攀登4-20260416-summitlink.html` | AMap 脚本引入、轨迹地图容器、去预约、聊天/帖子/评论图片上传与渲染、Lightbox、AMap工具函数 |
+| `backend/app.js` | 注册 `/api/upload` 路由、挂载 `/uploads` 静态目录 |
+| `backend/routes/upload.js` | 新增 multer 多图上传接口 |
+| `backend/routes/messages.js` | 消息接口支持 `type` 和 `images` 字段 |
+| `backend/routes/posts.js` | 帖子接口支持 `images` 字段 |
+| `backend/routes/comments.js` | 评论接口支持 `images` 字段 |
+| `backend/routes/tracks.js` | 轨迹接口支持 `points` 字段（WGS84 JSON） |
+| `backend/db/database.js` | 迁移：messages/posts/comments 表加 `images`，messages 加 `type`，tracks 加 `points` |
+| `backend/package.json` | 新增依赖 `multer` |
 

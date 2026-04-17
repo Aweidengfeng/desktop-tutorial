@@ -549,6 +549,31 @@ if (!existingTrackCols.includes('weather')) {
 if (!existingTrackCols.includes('notes')) {
   db.exec('ALTER TABLE tracks ADD COLUMN notes TEXT');
 }
+// tracks.points 存储 JSON 格式的 WGS84 坐标点数组 [{lat,lng,ele,ts}]
+if (!existingTrackCols.includes('points')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN points TEXT');
+}
+
+// 迁移：posts 表加 images JSON 字段
+const existingPostCols2 = db.pragma('table_info(posts)').map(c => c.name);
+if (!existingPostCols2.includes('images')) {
+  db.exec('ALTER TABLE posts ADD COLUMN images TEXT');
+}
+
+// 迁移：comments 表加 images JSON 字段
+const existingCommentCols2 = db.pragma('table_info(comments)').map(c => c.name);
+if (!existingCommentCols2.includes('images')) {
+  db.exec('ALTER TABLE comments ADD COLUMN images TEXT');
+}
+
+// 迁移：messages 表加 type 和 images 字段
+const existingMsgCols = db.pragma('table_info(messages)').map(c => c.name);
+if (!existingMsgCols.includes('type')) {
+  db.exec("ALTER TABLE messages ADD COLUMN type TEXT DEFAULT 'text'");
+}
+if (!existingMsgCols.includes('images')) {
+  db.exec('ALTER TABLE messages ADD COLUMN images TEXT');
+}
 
 // 种子数据：保险方案（仅插入一次）
 const insuranceCount = db.prepare('SELECT COUNT(*) as cnt FROM insurance_plans').get();

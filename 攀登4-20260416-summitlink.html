@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- 高德地图 Web JS API v2 — 上线前请将 YOUR_AMAP_KEY 替换为真实 Key（见 README） -->
+  <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
   <meta name="theme-color" content="#2b6579">
   <meta property="og:title" content="巅峰探索 / SummitLink">
   <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
@@ -60,6 +62,21 @@
            x-transition:leave-start="opacity-100"
            x-transition:leave-end="opacity-0"></div>
     </template>
+  </div>
+
+  <!-- 图片大图预览 Lightbox -->
+  <div x-show="showLightbox" @click="showLightbox=false" @keydown.escape.window="showLightbox=false"
+       class="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0">
+    <img :src="lightboxUrl" class="max-w-full max-h-full object-contain rounded-xl shadow-2xl" @click.stop>
+    <button @click="showLightbox=false" class="absolute top-4 right-4 p-2 bg-black/60 rounded-full hover:bg-black/80 transition-colors">
+      <span class="material-symbols-outlined text-white text-2xl">close</span>
+    </button>
   </div>
 
   <!-- FIXED HEADER -->
@@ -764,12 +781,6 @@
                     查看营地天气
                   </button>
                 </template>
-                <!-- 商业攀登预约按钮 -->
-                <button @click="openCommercialBooking(peak)"
-                        class="w-full mt-2 py-2 bg-primary hover:bg-primary-light text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1">
-                  <span class="material-symbols-outlined text-sm">event_available</span>
-                  立即预约
-                </button>
               </div>
             </template>
           </div>
@@ -822,7 +833,6 @@
                 </div>
                 <div class="text-right flex-shrink-0">
                   <p class="text-primary-light font-bold text-sm" x-text="'$' + (g.dayRate || 0) + '/天'"></p>
-                  <button @click.stop="bookGuideService(g)" class="mt-1 px-3 py-1 bg-primary text-white text-xs rounded-full hover:bg-primary-light transition-colors">预约</button>
                 </div>
               </div>
             </template>
@@ -905,7 +915,24 @@
                 </div>
               </div>
               <p class="text-slate-300 text-sm mb-3" x-text="post.content"></p>
-              <img x-show="post.image" :src="post.image" class="w-full h-40 object-cover rounded-xl mb-3">
+              <!-- 单图 -->
+              <img x-show="post.image && (!post.images || post.images.length === 0)" :src="post.image" @click="lightboxUrl=post.image;showLightbox=true" class="w-full h-40 object-cover rounded-xl mb-3 cursor-pointer hover:opacity-90 transition-opacity">
+              <!-- 多图九宫格 -->
+              <template x-if="post.images && post.images.length > 0">
+                <div class="mb-3" :class="post.images.length === 1 ? '' : 'grid gap-1'" :style="post.images.length === 2 ? 'grid-template-columns:1fr 1fr' : post.images.length >= 3 ? 'grid-template-columns:1fr 1fr 1fr' : ''">
+                  <template x-for="(imgUrl, ii) in post.images.slice(0,9)" :key="ii">
+                    <div class="relative" :class="post.images.length === 1 ? 'w-full h-52' : 'aspect-square'">
+                      <img :src="imgUrl" @click="lightboxUrl=imgUrl;showLightbox=true"
+                           class="w-full h-full object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity">
+                      <template x-if="ii === 8 && post.images.length > 9">
+                        <div @click="lightboxUrl=post.images[8];showLightbox=true" class="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center cursor-pointer">
+                          <span class="text-white font-bold text-lg" x-text="'+' + (post.images.length - 9)"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
               <div class="flex items-center gap-4 pt-2 border-t border-white/10">
                 <button @click="toggleLike(post)" class="flex items-center gap-1.5 transition-colors text-sm" :class="post.isLiked ? 'text-red-400' : 'text-slate-400 hover:text-red-400'">
                   <span class="material-symbols-outlined text-base" :class="post.isLiked ? 'filled' : ''">favorite</span>
@@ -1031,16 +1058,13 @@
              x-transition:enter-end="opacity-100">
       <div class="px-4 pt-2">
         <h2 class="font-display font-bold text-xl text-white mb-4">轨迹记录</h2>
-        <!-- GPS Map Placeholder -->
-        <div class="glass rounded-2xl h-48 mb-4 relative overflow-hidden flex items-center justify-center">
-          <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900"></div>
-          <div class="relative text-center">
-            <span class="material-symbols-outlined text-primary-light text-5xl">map</span>
-            <p class="text-slate-400 text-sm mt-2">GPS 地图</p>
-            <div class="flex items-center gap-1.5 justify-center mt-2">
-              <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span class="text-green-400 text-xs font-semibold">GPS 已连接</span>
-            </div>
+        <!-- AMap GPS 地图 -->
+        <div id="track-map-container" class="glass rounded-2xl h-48 mb-4 relative overflow-hidden">
+          <div id="track-map" style="width:100%;height:100%;"></div>
+          <div class="absolute top-2 right-2 flex gap-1.5">
+            <button @click="locateMe()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
+              <span class="material-symbols-outlined text-base text-primary-light">my_location</span>
+            </button>
           </div>
         </div>
         <!-- Live Stats -->
@@ -2452,14 +2476,38 @@
                   <span class="text-slate-500 text-xs" x-text="comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('zh-CN') : ''"></span>
                 </div>
                 <p class="text-slate-300 text-sm" x-text="comment.content"></p>
+                <!-- 评论图片 -->
+                <template x-if="comment.images && comment.images.length > 0">
+                  <div class="flex flex-wrap gap-1 mt-1.5">
+                    <template x-for="(imgUrl, ci) in comment.images" :key="ci">
+                      <img :src="imgUrl" @click="lightboxUrl=imgUrl;showLightbox=true"
+                           class="w-16 h-16 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity">
+                    </template>
+                  </div>
+                </template>
               </div>
             </div>
           </template>
           <div x-show="!commentsLoading && selectedPostComments.length === 0" class="text-center py-6 text-slate-500 text-sm">暂无评论，快来发表第一条吧～</div>
         </div>
         <div class="p-4 border-t border-white/10">
+          <!-- 评论图片预览 -->
+          <div x-show="commentImagePreviews.length > 0" class="flex gap-2 overflow-x-auto scroll-hide pb-2 mb-2">
+            <template x-for="(url, i) in commentImagePreviews" :key="i">
+              <div class="relative flex-shrink-0">
+                <img :src="url" class="w-14 h-14 rounded-xl object-cover">
+                <button @click="commentImagePreviews.splice(i,1)" class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                  <span class="material-symbols-outlined text-white" style="font-size:10px">close</span>
+                </button>
+              </div>
+            </template>
+          </div>
           <div class="flex gap-3 items-center">
             <img :src="userProfile.avatar" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+            <label class="p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0">
+              <span class="material-symbols-outlined text-slate-400 text-lg">photo_camera</span>
+              <input type="file" accept="image/*" multiple class="hidden" @change="handleCommentImageSelect($event)">
+            </label>
             <input x-model="newComment" type="text" placeholder="发表评论..." @keydown.enter="addComment()" class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
             <button @click="addComment()" class="w-8 h-8 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
               <span class="material-symbols-outlined text-white text-base">send</span>
@@ -2535,14 +2583,26 @@
             <img :src="userProfile.avatar" class="w-9 h-9 rounded-full object-cover flex-shrink-0">
             <textarea x-model="newPost.content" rows="5" placeholder="分享你的攀登故事..." class="flex-1 bg-transparent text-white text-sm outline-none placeholder-slate-600 resize-none"></textarea>
           </div>
+          <!-- 已选图片预览 -->
+          <div x-show="newPost.images.length > 0" class="flex flex-wrap gap-2 mb-3">
+            <template x-for="(url, i) in newPost.images" :key="i">
+              <div class="relative">
+                <img :src="url" class="w-20 h-20 rounded-xl object-cover">
+                <button @click="newPost.images.splice(i,1)" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                  <span class="material-symbols-outlined text-white text-xs">close</span>
+                </button>
+              </div>
+            </template>
+          </div>
           <div class="bg-slate-800/50 rounded-xl px-3 py-2 flex items-center gap-2 mb-4">
             <span class="material-symbols-outlined text-slate-400 text-base">location_on</span>
             <input x-model="newPost.location" type="text" placeholder="添加位置..." class="bg-transparent text-slate-300 text-sm flex-1 outline-none placeholder-slate-600">
           </div>
           <div class="flex gap-4 border-t border-white/10 pt-4">
-            <button class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
+            <label class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm cursor-pointer">
               <span class="material-symbols-outlined text-base">photo_camera</span><span>照片</span>
-            </button>
+              <input type="file" accept="image/*" multiple class="hidden" @change="handlePostImageSelect($event)">
+            </label>
             <button class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
               <span class="material-symbols-outlined text-base">emoji_emotions</span><span>表情</span>
             </button>
@@ -2722,6 +2782,10 @@
             </div>
             <!-- Stats Grid -->
             <div class="p-4">
+              <!-- 轨迹地图（有 points 时渲染） -->
+              <template x-if="selectedTrackDetail && selectedTrackDetail.points && selectedTrackDetail.points.length > 1">
+                <div id="track-detail-map" class="w-full rounded-2xl mb-4 overflow-hidden" style="height:200px;" x-init="$nextTick(()=>renderTrackDetailMap(selectedTrackDetail))"></div>
+              </template>
               <div class="grid grid-cols-3 gap-3 mb-4">
                 <div class="glass rounded-xl p-3 text-center">
                   <p class="text-lg font-bold text-primary-light" x-text="(selectedTrackDetail.distance_km || selectedTrackDetail.distance || 0) + 'km'"></p>
@@ -3017,28 +3081,53 @@
           <span class="text-xl" x-text="activeChatSession.flag"></span>
         </div>
         <!-- Messages -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div class="flex-1 overflow-y-auto p-4 space-y-3" id="chat-messages-container">
           <template x-for="(msg, idx) in activeChatSession.messages" :key="idx">
             <div :class="msg.from === 'me' ? 'flex flex-row-reverse items-end gap-2' : 'flex items-end gap-2'">
               <template x-if="msg.from !== 'me'">
                 <img :src="activeChatSession.avatar" class="w-7 h-7 rounded-full object-cover flex-shrink-0">
               </template>
-              <div :class="msg.from === 'me' ? 'items-end' : 'items-start'" class="flex flex-col max-w-[75%]">
+              <div :class="msg.from === 'me' ? 'items-end' : 'items-start'" class="flex flex-col max-w-[80%]">
                 <template x-if="msg.from === 'other' && msg.name">
                   <p class="text-slate-400 text-xs mb-1" x-text="msg.name"></p>
                 </template>
-                <div :class="msg.from === 'me' ? 'bg-primary text-white' : 'bg-slate-700 text-slate-100'" class="rounded-2xl px-3 py-2 text-sm" x-text="msg.text"></div>
+                <!-- 文字气泡 -->
+                <template x-if="msg.text">
+                  <div :class="msg.from === 'me' ? 'bg-primary text-white' : 'bg-slate-700 text-slate-100'" class="rounded-2xl px-3 py-2 text-sm" x-text="msg.text"></div>
+                </template>
+                <!-- 图片气泡 -->
+                <template x-if="msg.images && msg.images.length > 0">
+                  <div class="flex flex-wrap gap-1 mt-1" :class="msg.from === 'me' ? 'justify-end' : 'justify-start'">
+                    <template x-for="(imgUrl, ii) in msg.images" :key="ii">
+                      <img :src="imgUrl" @click="lightboxUrl=imgUrl;showLightbox=true"
+                           class="rounded-xl object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                           :style="msg.images.length === 1 ? 'width:180px;height:180px;' : 'width:88px;height:88px;'">
+                    </template>
+                  </div>
+                </template>
                 <p class="text-slate-500 text-xs mt-1" x-text="msg.time + (msg.from === 'me' ? ' ✓✓' : '')"></p>
               </div>
             </div>
           </template>
         </div>
+        <!-- Chat image preview before send -->
+        <div x-show="chatImagePreviews.length > 0" class="px-4 py-2 border-t border-white/10 bg-slate-900 flex gap-2 overflow-x-auto scroll-hide flex-shrink-0">
+          <template x-for="(url, i) in chatImagePreviews" :key="i">
+            <div class="relative flex-shrink-0">
+              <img :src="url" class="w-16 h-16 rounded-xl object-cover">
+              <button @click="chatImagePreviews.splice(i,1)" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-xs">close</span>
+              </button>
+            </div>
+          </template>
+        </div>
         <!-- Input -->
         <div class="flex items-center gap-2 px-4 py-3 border-t border-white/10 bg-slate-900 flex-shrink-0">
-          <button class="p-2 rounded-full hover:bg-white/10 transition-colors">
+          <label class="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer">
             <span class="material-symbols-outlined text-slate-400 text-xl">photo_camera</span>
-          </button>
-          <input x-model="chatInput" type="text" placeholder="输入消息..." class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-500">
+            <input type="file" accept="image/*" multiple class="hidden" @change="handleChatImageSelect($event)">
+          </label>
+          <input x-model="chatInput" type="text" placeholder="输入消息..." @keydown.enter="sendChatMessage()" class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-500">
           <button @click="sendChatMessage()" class="w-9 h-9 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
             <span class="material-symbols-outlined text-white text-base">send</span>
           </button>
@@ -4217,8 +4306,16 @@ function alpineLink() {
     showChat: false,
     activeChatConv: null,
     chatInput: '',
+    chatImagePreviews: [],
+    commentImagePreviews: [],
     selectedConversation: null,
     showChatDetail: false,
+    lightboxUrl: '',
+    showLightbox: false,
+    trackMap: null,
+    trackRecordingActive: false,
+    trackRecordingPoints: [],
+    trackRecordingWatcher: null,
     showGearPublish: false,
     newGear: { name: '', brand: '', price: '', condition: 'good', description: '' },
     showTeamDetail: false,
@@ -4825,16 +4922,26 @@ function alpineLink() {
     openComments(post) { this.selectedPostForComment = post; this.selectedPostComments = []; this.showComments = true; this.loadComments(post.id); },
     closeComments() { this.showComments = false; this.selectedPostForComment = null; },
     async addComment() {
-      if (!this.newComment.trim()) return;
+      if (!this.newComment.trim() && this.commentImagePreviews.length === 0) return;
       if (!this.requireAuth()) return;
-      const content = this.newComment;
+      const content = this.newComment.trim() || '';
+      const imagePreviews = [...this.commentImagePreviews];
       this.newComment = '';
+      this.commentImagePreviews = [];
       if (this.selectedPostForComment) {
         try {
-          const res = await fetch('/api/comments', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ post_id: this.selectedPostForComment.id, content }) });
+          let imageUrls = imagePreviews;
+          const blobImages = imagePreviews.filter(u => u.startsWith('blob:'));
+          if (blobImages.length > 0) {
+            imageUrls = await this.uploadImages(blobImages);
+          }
+          const res = await fetch('/api/comments', {
+            method: 'POST', headers: this.getAuthHeaders(),
+            body: JSON.stringify({ post_id: this.selectedPostForComment.id, content: content || ' ', images: imageUrls })
+          });
           const data = await res.json();
           if (res.ok) {
-            this.selectedPostComments.push(data);
+            this.selectedPostComments.push({ ...data, images: data.images || imageUrls });
             this.selectedPostForComment.comments++;
           } else { this.showToast(data.error || '评论失败', 'error'); }
         } catch(e) { this.showToast('网络错误', 'error'); }
@@ -4850,12 +4957,23 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.newPost.content.trim()) return;
       try {
-        const res = await fetch('/api/posts', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, image: this.newPost.images[0] || null }) });
+        // 上传图片（blob URLs → 服务器 URLs）
+        let imageUrls = this.newPost.images;
+        const blobImages = imageUrls.filter(u => u.startsWith('blob:'));
+        if (blobImages.length > 0) {
+          const uploaded = await this.uploadImages(blobImages);
+          imageUrls = [...imageUrls.filter(u => !u.startsWith('blob:')), ...uploaded];
+        }
+        const res = await fetch('/api/posts', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null })
+        });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
         this.communityPosts.unshift({ ...data, author: data.authorName, timeAgo: '刚刚', isLiked: false, isFavorited: false, commentPreview: [] });
       } catch(e) {
-        this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: this.newPost.images[0] || null, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
+        const imageUrls = this.newPost.images;
+        this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: imageUrls[0] || null, images: imageUrls, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
       }
       this.newPost = { content: '', location: '', images: [] };
       this.showPostEditor = false;
@@ -5500,16 +5618,146 @@ function alpineLink() {
       }
     },
     async sendChatMessage() {
-      if (!this.chatInput.trim() || !this.activeChatSession) return;
-      const text = this.chatInput;
+      if (!this.chatInput.trim() && this.chatImagePreviews.length === 0) return;
+      if (!this.activeChatSession) return;
+      const text = this.chatInput.trim();
+      const images = [...this.chatImagePreviews];
       const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-      this.activeChatSession.messages.push({ from: 'me', text, time });
+      const msgType = text && images.length > 0 ? 'mixed' : (images.length > 0 ? 'image' : 'text');
+      this.activeChatSession.messages.push({ from: 'me', text: text || null, images, time });
       this.chatInput = '';
+      this.chatImagePreviews = [];
+      this.$nextTick(() => {
+        const el = document.getElementById('chat-messages-container');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
       if (this.authToken && this.activeChatSession.conversationId) {
         try {
-          await fetch('/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ content: text }) });
+          let uploadedUrls = [];
+          if (images.length > 0 && images[0].startsWith('blob:')) {
+            uploadedUrls = await this.uploadImages(images);
+          } else {
+            uploadedUrls = images;
+          }
+          await fetch('/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', {
+            method: 'POST', headers: this.getAuthHeaders(),
+            body: JSON.stringify({ content: text, type: msgType, images: uploadedUrls })
+          });
         } catch(e) {}
       }
+    },
+
+    // 通用图片上传（接受 blob URL 数组，返回服务器 URL 数组）
+    async uploadImages(blobUrls) {
+      try {
+        const formData = new FormData();
+        for (const blobUrl of blobUrls) {
+          const resp = await fetch(blobUrl);
+          const blob = await resp.blob();
+          formData.append('files', blob, 'image.jpg');
+        }
+        const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + this.authToken }, body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          return data.urls || [];
+        }
+      } catch(e) {}
+      return blobUrls; // fallback: return blob URLs for local preview
+    },
+
+    // 聊天选图
+    handleChatImageSelect(event) {
+      const files = Array.from(event.target.files || []);
+      files.forEach(f => {
+        if (f.type.startsWith('image/')) {
+          this.chatImagePreviews.push(URL.createObjectURL(f));
+        }
+      });
+      event.target.value = '';
+    },
+
+    // 发帖选图
+    handlePostImageSelect(event) {
+      const files = Array.from(event.target.files || []);
+      files.forEach(f => {
+        if (f.type.startsWith('image/')) {
+          this.newPost.images.push(URL.createObjectURL(f));
+        }
+      });
+      event.target.value = '';
+    },
+
+    // 评论选图
+    handleCommentImageSelect(event) {
+      const files = Array.from(event.target.files || []);
+      files.forEach(f => {
+        if (f.type.startsWith('image/')) {
+          this.commentImagePreviews.push(URL.createObjectURL(f));
+        }
+      });
+      event.target.value = '';
+    },
+
+    // 高德地图工具函数：初始化地图（可复用于多个场景）
+    initAMap(containerId, options = {}) {
+      if (typeof AMap === 'undefined') return null;
+      const defaultOptions = {
+        zoom: 13,
+        center: [116.397428, 39.90923],
+        mapStyle: 'amap://styles/dark',
+      };
+      try {
+        const map = new AMap.Map(containerId, { ...defaultOptions, ...options });
+        return map;
+      } catch(e) { return null; }
+    },
+
+    // 初始化轨迹记录地图
+    initTrackMap() {
+      if (this.trackMap) return;
+      this.trackMap = this.initAMap('track-map', { zoom: 13 });
+    },
+
+    // GPS 定位
+    locateMe() {
+      this.initTrackMap();
+      if (!this.trackMap || typeof AMap === 'undefined') return;
+      AMap.plugin('AMap.Geolocation', () => {
+        const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000, buttonPosition: 'RB' });
+        this.trackMap.addControl(geo);
+        geo.getCurrentPosition((status, result) => {
+          if (status === 'complete' && result.position) {
+            this.trackMap.setCenter([result.position.lng, result.position.lat]);
+            this.trackMap.setZoom(15);
+            new AMap.Marker({ position: result.position, map: this.trackMap });
+          } else {
+            this.showToast('定位失败，请检查GPS权限', 'error');
+          }
+        });
+      });
+    },
+
+    // 在轨迹详情弹窗里渲染带 Polyline 的地图
+    renderTrackDetailMap(track) {
+      if (typeof AMap === 'undefined' || !track || !track.points || track.points.length < 2) return;
+      try {
+        const points = track.points.map(p => {
+          const lnglat = new AMap.LngLat(p.lng, p.lat);
+          return lnglat;
+        });
+        const mapEl = document.getElementById('track-detail-map');
+        if (!mapEl) return;
+        const center = [track.points[0].lng, track.points[0].lat];
+        const detailMap = new AMap.Map('track-detail-map', { zoom: 13, center, mapStyle: 'amap://styles/dark' });
+        // 坐标转换 WGS84 → GCJ-02
+        AMap.convertFrom(track.points.map(p => [p.lng, p.lat]), 'gps', (status, result) => {
+          const path = status === 'complete' ? result.locations : points;
+          new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map: detailMap });
+          new AMap.Marker({ position: path[0], map: detailMap, label: { content: '起点', offset: new AMap.Pixel(-10, -30) } });
+          new AMap.Marker({ position: path[path.length - 1], map: detailMap, label: { content: '终点', offset: new AMap.Pixel(-10, -30) } });
+          detailMap.setFitView();
+        });
+      } catch(e) {}
     },
 
     // Notifications
@@ -6090,6 +6338,12 @@ function alpineLink() {
       // Watch activeChatType to load articles when articles tab is selected
       this.$watch('activeChatType', (val) => {
         if (val === 'articles' && this.articles.length === 0) this.loadArticles();
+      });
+      // 切换到轨迹页时初始化 AMap
+      this.$watch('currentPage', (val) => {
+        if (val === 'track') {
+          this.$nextTick(() => { this.initTrackMap(); });
+        }
       });
       // Watch communityPosts to sync filteredCommunityPosts
       this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });

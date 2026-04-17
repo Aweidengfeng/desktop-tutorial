@@ -55,30 +55,35 @@ router.get('/conversations/:id/messages', auth, (req, res) => {
     ).get(req.params.id, req.user.id, req.user.id);
     if (!conv) return res.status(403).json({ error: '无权访问此会话' });
     const msgs = db.prepare(
-      'SELECT id, sender_id, content, is_read, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC'
+      'SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC'
     ).all(req.params.id);
     db.prepare('UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND sender_id != ?').run(req.params.id, req.user.id);
-    res.json(msgs);
+    const parsed = msgs.map(m => ({ ...m, images: m.images ? JSON.parse(m.images) : [] }));
+    res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // POST /api/messages/conversations/:id/messages（发送消息，需要JWT）
+// 支持 { content, type, images } — type: 'text'|'image'|'mixed'，images: string[]
 router.post('/conversations/:id/messages', auth, (req, res) => {
   try {
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ error: '消息不能为空' });
+    const { content, type, images } = req.body;
+    const msgType = type || 'text';
+    const imagesArr = Array.isArray(images) ? images : [];
+    if (!content && imagesArr.length === 0) return res.status(400).json({ error: '消息不能为空' });
     const conv = db.prepare(
       'SELECT * FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)'
     ).get(req.params.id, req.user.id, req.user.id);
     if (!conv) return res.status(403).json({ error: '无权访问此会话' });
+    const imagesJson = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
     const result = db.prepare(
-      'INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)'
-    ).run(req.params.id, req.user.id, content);
+      'INSERT INTO messages (conversation_id, sender_id, content, type, images) VALUES (?, ?, ?, ?, ?)'
+    ).run(req.params.id, req.user.id, content || '', msgType, imagesJson);
     db.prepare('UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.params.id);
-    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
-    res.json(message);
+    const message = db.prepare('SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE id = ?').get(result.lastInsertRowid);
+    res.json({ ...message, images: message.images ? JSON.parse(message.images) : [] });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

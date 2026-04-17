@@ -10,11 +10,12 @@ router.get('/', (req, res) => {
     if (!post_id) return res.status(400).json({ error: '请提供帖子ID' });
     const comments = db.prepare(`
       SELECT id, post_id, user_id, author_name as authorName, author_avatar as authorAvatar,
-             content, parent_comment_id as parentCommentId, reply_to_user_id as replyToUserId,
+             content, images, parent_comment_id as parentCommentId, reply_to_user_id as replyToUserId,
              reply_to_user_name as replyToUserName, likes, created_at as createdAt
       FROM comments WHERE post_id = ? ORDER BY created_at ASC
     `).all(post_id);
-    res.json(comments);
+    const parsed = comments.map(c => ({ ...c, images: c.images ? JSON.parse(c.images) : [] }));
+    res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -23,7 +24,7 @@ router.get('/', (req, res) => {
 // POST /api/comments（需要JWT）
 router.post('/', auth, (req, res) => {
   try {
-    const { post_id, content, parent_comment_id, reply_to_user_id } = req.body;
+    const { post_id, content, images, parent_comment_id, reply_to_user_id } = req.body;
     if (!post_id || !content) return res.status(400).json({ error: '请提供帖子ID和评论内容' });
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: '用户不存在' });
@@ -32,19 +33,21 @@ router.post('/', auth, (req, res) => {
       const parentComment = db.prepare('SELECT author_name FROM comments WHERE id = ?').get(parent_comment_id);
       if (parentComment) replyToUserName = parentComment.author_name;
     }
+    const imagesArr = Array.isArray(images) ? images : [];
+    const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
     const result = db.prepare(`
-      INSERT INTO comments (post_id, user_id, author_name, author_avatar, content, parent_comment_id, reply_to_user_id, reply_to_user_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(post_id, req.user.id, user.name, user.avatar, content,
+      INSERT INTO comments (post_id, user_id, author_name, author_avatar, content, images, parent_comment_id, reply_to_user_id, reply_to_user_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(post_id, req.user.id, user.name, user.avatar, content, imagesStr,
            parent_comment_id || null, reply_to_user_id || null, replyToUserName);
     db.prepare('UPDATE posts SET comments = comments + 1 WHERE id = ?').run(post_id);
     const comment = db.prepare(`
       SELECT id, post_id, user_id, author_name as authorName, author_avatar as authorAvatar,
-             content, parent_comment_id as parentCommentId, reply_to_user_id as replyToUserId,
+             content, images, parent_comment_id as parentCommentId, reply_to_user_id as replyToUserId,
              reply_to_user_name as replyToUserName, likes, created_at as createdAt
       FROM comments WHERE id = ?
     `).get(result.lastInsertRowid);
-    res.json(comment);
+    res.json({ ...comment, images: comment.images ? JSON.parse(comment.images) : [] });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
