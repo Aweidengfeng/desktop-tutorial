@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const msgRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: '发送太频繁，请稍候再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // GET /api/messages/conversations（需要JWT）
 router.get('/conversations', auth, (req, res) => {
@@ -55,29 +64,34 @@ router.get('/conversations/:id/messages', auth, (req, res) => {
     ).get(req.params.id, req.user.id, req.user.id);
     if (!conv) return res.status(403).json({ error: '无权访问此会话' });
     const msgs = db.prepare(
-      'SELECT id, sender_id, content, is_read, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC'
+      'SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC'
     ).all(req.params.id);
     db.prepare('UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND sender_id != ?').run(req.params.id, req.user.id);
-    res.json(msgs);
+    const parsed = msgs.map(m => ({ ...m, images: m.images ? JSON.parse(m.images) : [] }));
+    res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
-// POST /api/messages/conversations/:id/messages（发送消息，需要JWT）
-router.post('/conversations/:id/messages', auth, (req, res) => {
+// POST /api/messages/conversations/:id/messages（发送消息，需要JWT，30次/分钟限流）
+router.post('/conversations/:id/messages', msgRateLimit, auth, (req, res) => {
   try {
-    const { content } = req.body;
-    if (!content) return res.status(400).json({ error: '消息不能为空' });
+    const { content, type, images } = req.body;
+    const imagesArr = Array.isArray(images) ? images : [];
+    if (!content && imagesArr.length === 0) return res.status(400).json({ error: '消息不能为空' });
     const conv = db.prepare(
       'SELECT * FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)'
     ).get(req.params.id, req.user.id, req.user.id);
     if (!conv) return res.status(403).json({ error: '无权访问此会话' });
+    const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
+    const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
     const result = db.prepare(
-      'INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)'
-    ).run(req.params.id, req.user.id, content);
+      'INSERT INTO messages (conversation_id, sender_id, content, type, images) VALUES (?, ?, ?, ?, ?)'
+    ).run(req.params.id, req.user.id, content || '', msgType, imagesStr);
     db.prepare('UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.params.id);
-    const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
+    const message = db.prepare('SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE id = ?').get(result.lastInsertRowid);
+    message.images = message.images ? JSON.parse(message.images) : [];
     res.json(message);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

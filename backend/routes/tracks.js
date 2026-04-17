@@ -8,11 +8,12 @@ router.get('/', auth, (req, res) => {
   try {
     const tracks = db.prepare(`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, created_at
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, created_at
       FROM tracks WHERE user_id = ?
       ORDER BY date DESC
     `).all(req.user.id);
-    res.json(tracks);
+    const parsed = tracks.map(t => ({ ...t, points: t.points ? JSON.parse(t.points) : [] }));
+    res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -23,11 +24,12 @@ router.get('/my', auth, (req, res) => {
   try {
     const tracks = db.prepare(`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
       FROM tracks WHERE user_id = ?
       ORDER BY date DESC
     `).all(req.user.id);
-    res.json(tracks);
+    const parsed = tracks.map(t => ({ ...t, points: t.points ? JSON.parse(t.points) : [] }));
+    res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -38,11 +40,12 @@ router.get('/:id', auth, (req, res) => {
   try {
     const track = db.prepare(`
       SELECT id, user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, created_at
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, created_at
       FROM tracks WHERE id = ?
     `).get(req.params.id);
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
     if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权访问' });
+    track.points = track.points ? JSON.parse(track.points) : [];
     res.json(track);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -53,22 +56,25 @@ router.get('/:id', auth, (req, res) => {
 router.post('/', auth, (req, res) => {
   try {
     const { name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-            max_elevation, start_elevation, duration, duration_minutes, weather, notes, image } = req.body;
+            max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points } = req.body;
+    const pointsArr = Array.isArray(points) ? points : [];
+    const pointsStr = pointsArr.length > 0 ? JSON.stringify(pointsArr) : null;
     const result = db.prepare(`
       INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-                          max_elevation, start_elevation, duration, duration_minutes, weather, notes, image)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(req.user.id, name, peak_name || name || '', date,
            distance || distance_km || 0, distance_km || distance || 0,
            elevation || elevation_gain || 0, elevation_gain || elevation || 0,
            max_elevation || 0, start_elevation || 0,
            duration || '', duration_minutes || 0,
-           weather || '', notes || '', image || '');
+           weather || '', notes || '', image || '', pointsStr);
     const track = db.prepare(`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
       FROM tracks WHERE id = ?
     `).get(result.lastInsertRowid);
+    track.points = track.points ? JSON.parse(track.points) : [];
     res.json(track);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
