@@ -398,12 +398,24 @@
         <!-- 全球天气搜索框 -->
         <div class="mb-4">
           <div class="flex gap-2">
-            <div class="flex-1 flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
+            <div class="flex-1 flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2 relative">
               <span class="material-symbols-outlined text-slate-400 text-lg">wb_sunny</span>
               <input x-model="weatherSearch" type="text"
                      placeholder="搜索全球任意地点天气... / Search weather anywhere..."
                      class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500"
-                     @keydown.enter="searchWeather()">
+                     @keydown.enter="showOsmSuggestions=false;searchWeather()"
+                     @input.debounce.500ms="fetchOsmSuggestions(weatherSearch)">
+              <!-- OSM 地名候选下拉 -->
+              <div x-show="showOsmSuggestions && osmSuggestions.length > 0"
+                   class="absolute z-20 left-0 right-0 top-full mt-1 bg-slate-700 rounded-xl shadow-lg overflow-hidden"
+                   style="max-height:200px;overflow-y:auto">
+                <template x-for="sug in osmSuggestions" :key="sug.displayName">
+                  <button @click="selectOsmSuggestion(sug)"
+                          class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-600 transition-colors border-b border-white/10 last:border-0">
+                    <span x-text="sug.displayName.split(',').slice(0,2).join(', ')"></span>
+                  </button>
+                </template>
+              </div>
             </div>
             <button @click="searchWeather()" class="px-4 bg-primary hover:bg-primary-light text-white rounded-xl text-sm font-medium transition-colors">
               搜索
@@ -429,7 +441,7 @@
                     <p class="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">⛅ 各营地实时天气</p>
                     <div class="space-y-2">
                       <template x-for="camp in weatherSearchCamps" :key="camp.name">
-                        <div class="bg-slate-700 rounded-xl p-3">
+                        <div class="bg-slate-700 rounded-xl p-3" :data-camp="camp.name">
                           <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-2">
                               <span x-text="camp.emoji" class="text-base"></span>
@@ -459,6 +471,9 @@
                           </template>
                           <template x-if="!camp.weather">
                             <p class="text-slate-500 text-xs text-center py-1">天气数据暂不可用</p>
+                          </template>
+                          <template x-if="camp.sameWeatherAsPrev">
+                            <p class="text-xs text-slate-500 mt-1 text-center">⚠ 因格点接近，天气数据相同</p>
                           </template>
                           <!-- 营地7天预报 -->
                           <template x-if="camp.forecast && camp.forecast.length > 0">
@@ -633,7 +648,129 @@
         </div>
 
         <!-- No match (intentional bug state when activeCategory='summits') -->
-        <div x-show="!['8000ers','continental','world','alpine','guides'].includes(activeCategory)" class="text-center py-12">
+        <!-- 商业攀登模块 -->
+        <div x-show="activeCategory === 'commercial'" class="pb-4">
+          <!-- 顶部统计概览 -->
+          <div class="mb-4">
+            <h3 class="font-display font-bold text-white mb-1 text-base">🏔️ 全球热门商业向导带队攀登雪山</h3>
+            <p class="text-slate-400 text-xs mb-3">数据来源：各运营商公开资料，带 <span class="text-yellow-400">估算</span> 标记的为推算数据</p>
+            <!-- Top 10 年攀登人数柱状图 -->
+            <div class="bg-slate-800 rounded-2xl p-3 mb-3">
+              <p class="text-xs text-slate-400 mb-2 font-semibold">📊 Top 10 年商业攀登人数</p>
+              <template x-for="(peak, idx) in [...commercialPeaks].sort((a,b)=>b.annualClimbers-a.annualClimbers).slice(0,10)" :key="peak.id">
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span class="text-slate-400 text-[10px] w-4 text-right flex-shrink-0" x-text="idx+1"></span>
+                  <span class="text-white text-[10px] w-20 flex-shrink-0 truncate" x-text="peak.name"></span>
+                  <div class="flex-1 bg-slate-700 rounded-full h-3 overflow-hidden">
+                    <div class="h-full rounded-full transition-all"
+                         :style="`width:${Math.round(peak.annualClimbers / [...commercialPeaks].sort((a,b)=>b.annualClimbers-a.annualClimbers)[0].annualClimbers * 100)}%;background:${idx<3?'#22c55e':idx<6?'#3b82f6':'#6366f1'}`"></div>
+                  </div>
+                  <span class="text-slate-300 text-[10px] w-14 flex-shrink-0 text-right" x-text="peak.annualClimbers.toLocaleString()+'人'"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- 筛选控件 -->
+          <div class="flex gap-2 mb-3 overflow-x-auto scroll-hide">
+            <select x-model="commercialFilter.region" class="bg-slate-800 text-white text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0">
+              <option value="">全部地区</option>
+              <option value="喜马拉雅">喜马拉雅</option>
+              <option value="喀喇昆仑">喀喇昆仑</option>
+              <option value="安第斯">安第斯</option>
+              <option value="帕米尔">帕米尔</option>
+              <option value="非洲">非洲</option>
+              <option value="高加索">高加索</option>
+              <option value="横断山脉">横断山脉</option>
+              <option value="昆仑山">昆仑山</option>
+              <option value="北美">北美</option>
+              <option value="大洋洲">大洋洲</option>
+              <option value="南极">南极</option>
+            </select>
+            <select x-model="commercialFilter.difficulty" class="bg-slate-800 text-white text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0">
+              <option value="">全部难度</option>
+              <option value="入门6000m">入门6000m</option>
+              <option value="进阶7000m">进阶7000m</option>
+              <option value="技术型">技术型</option>
+              <option value="8000m级">8000m级</option>
+            </select>
+            <select x-model="commercialFilter.sortBy" class="bg-slate-800 text-white text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0">
+              <option value="altitude">按海拔</option>
+              <option value="annualClimbers">按年攀登人数</option>
+              <option value="difficulty">按难度</option>
+            </select>
+          </div>
+          <!-- 山峰卡片列表 -->
+          <div class="space-y-3">
+            <template x-for="peak in getFilteredCommercialPeaks()" :key="peak.id">
+              <div class="bg-slate-800 rounded-2xl p-3" data-commercial-peak>
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-white font-bold text-sm" x-text="peak.name"></span>
+                      <span class="text-slate-400 text-xs" x-text="peak.nameEn"></span>
+                      <template x-if="peak.isEstimated">
+                        <span class="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">估算</span>
+                      </template>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <span class="text-xs text-slate-400" x-text="peak.country"></span>
+                      <span class="text-slate-600">·</span>
+                      <span class="text-xs text-slate-400" x-text="peak.region"></span>
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0 ml-2">
+                    <p class="text-primary-light font-bold text-base" data-altitude x-text="peak.altitude.toLocaleString()+'m'"></p>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                          :class="peak.difficulty==='8000m级'?'bg-red-500/20 text-red-400':peak.difficulty==='技术型'?'bg-orange-500/20 text-orange-400':peak.difficulty==='进阶7000m'?'bg-yellow-500/20 text-yellow-400':'bg-green-500/20 text-green-400'"
+                          x-text="peak.difficulty"></span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                  <div class="bg-slate-700/60 rounded-lg p-2">
+                    <p class="text-slate-400 text-[10px]">年攀登人数</p>
+                    <p class="text-white text-xs font-bold" x-text="peak.annualClimbers.toLocaleString()+'人'"></p>
+                  </div>
+                  <div class="bg-slate-700/60 rounded-lg p-2">
+                    <p class="text-slate-400 text-[10px]">年商业队伍</p>
+                    <p class="text-white text-xs font-bold" x-text="peak.annualTeams+'支'"></p>
+                  </div>
+                  <div class="bg-slate-700/60 rounded-lg p-2">
+                    <p class="text-slate-400 text-[10px]">最佳季节</p>
+                    <p class="text-white text-xs font-bold truncate" x-text="peak.season"></p>
+                  </div>
+                  <div class="bg-slate-700/60 rounded-lg p-2">
+                    <p class="text-slate-400 text-[10px]">补充氧气</p>
+                    <p class="text-white text-xs font-bold" x-text="peak.oxygen ? '通常使用' : '通常不用'"></p>
+                  </div>
+                </div>
+                <div class="mb-2">
+                  <p class="text-slate-400 text-[10px] mb-1">主要路线</p>
+                  <p class="text-slate-300 text-xs" x-text="peak.routes"></p>
+                </div>
+                <div class="mb-2">
+                  <p class="text-slate-400 text-[10px] mb-1">主要运营商</p>
+                  <div class="flex flex-wrap gap-1">
+                    <template x-for="op in peak.operators.slice(0,4)" :key="op">
+                      <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded" x-text="op"></span>
+                    </template>
+                    <template x-if="peak.operators.length > 4">
+                      <span class="text-[10px] text-slate-500" x-text="'+' + (peak.operators.length-4) + '家'"></span>
+                    </template>
+                  </div>
+                </div>
+                <template x-if="peak.campKey">
+                  <button @click="weatherSearch=peak.campKey; showOsmSuggestions=false; searchWeather()"
+                          class="w-full mt-1 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary-light text-xs rounded-lg transition-colors flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-sm">wb_sunny</span>
+                    查看营地天气
+                  </button>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div x-show="!['8000ers','continental','world','alpine','guides','commercial'].includes(activeCategory)" class="text-center py-12">
           <span class="material-symbols-outlined text-slate-600 text-6xl">landscape</span>
           <p class="text-slate-500 mt-3">请选择分类</p>
         </div>
@@ -1693,7 +1830,7 @@
                     <p class="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">⛅ 各营地实时天气</p>
                     <div class="space-y-2">
                       <template x-for="camp in peakCampWeathers" :key="camp.name">
-                        <div class="bg-slate-800 rounded-xl p-3">
+                        <div class="bg-slate-800 rounded-xl p-3" :data-camp="camp.name">
                           <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-2">
                               <span x-text="camp.emoji" class="text-base"></span>
@@ -1723,6 +1860,9 @@
                           </template>
                           <template x-if="!camp.weather">
                             <p class="text-slate-500 text-xs text-center py-1">天气数据暂不可用</p>
+                          </template>
+                          <template x-if="camp.sameWeatherAsPrev">
+                            <p class="text-xs text-slate-500 mt-1 text-center">⚠ 因格点接近，天气数据相同</p>
                           </template>
                           <!-- 该营地7天预报 -->
                           <template x-if="camp.forecast && camp.forecast.length > 0">
@@ -3319,6 +3459,40 @@
 </div>
 
 <script>
+// 全球热门商业向导带队攀登雪山统计数据
+const COMMERCIAL_PEAKS = [
+  { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Furtenbach Adventures', 'Himex', 'Madison Mountaineering'], routes: '东南山脊(南坡)/东北山脊(北坡)', oxygen: true, annualClimbers: 800, annualTeams: 35, isEstimated: true, campKey: '珠穆朗玛峰' },
+  { id: 2, name: '乔戈里峰', nameEn: 'K2', altitude: 8611, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Alpine Ascents', 'Nazir Sabir Expeditions', 'Pakistan Alpine Club', 'Latok Alpine'], routes: 'Abruzzi山脊路线', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: 'K2' },
+  { id: 3, name: '干城章嘉峰', nameEn: 'Kangchenjunga', altitude: 8586, country: '印度/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Pioneer Adventure'], routes: '西南壁路线', oxygen: true, annualClimbers: 80, annualTeams: 6, isEstimated: true, campKey: '干城章嘉峰' },
+  { id: 4, name: '洛子峰', nameEn: 'Lhotse', altitude: 8516, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['IMG', 'Seven Summit Treks', 'Alpine Ascents', 'Himex'], routes: '西壁/Couloir路线', oxygen: true, annualClimbers: 200, annualTeams: 15, isEstimated: true, campKey: '洛子峰' },
+  { id: 5, name: '马卡鲁峰', nameEn: 'Makalu', altitude: 8485, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Altitude Junkies'], routes: '北坡/西北山脊', oxygen: true, annualClimbers: 70, annualTeams: 5, isEstimated: true, campKey: '马卡鲁峰' },
+  { id: 6, name: '卓奥友峰', nameEn: 'Cho Oyu', altitude: 8201, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '秋季(9-10月)', operators: ['IMG', 'Asian Trekking', 'Furtenbach Adventures', 'Seven Summit Treks', 'Amical Alpin'], routes: '西北山脊路线', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: '卓奥友峰' },
+  { id: 7, name: '道拉吉里峰', nameEn: 'Dhaulagiri', altitude: 8167, country: '尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Alpine Ascents', 'Altitude Junkies'], routes: '东北山脊路线', oxygen: false, annualClimbers: 90, annualTeams: 7, isEstimated: true, campKey: '道拉吉里峰' },
+  { id: 8, name: '马纳斯鲁峰', nameEn: 'Manaslu', altitude: 8163, country: '尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '秋季(9-10月)', operators: ['Seven Summit Treks', 'IMG', 'Furtenbach Adventures', 'Amical Alpin', 'Asian Trekking'], routes: '东北面/东北山脊', oxygen: false, annualClimbers: 400, annualTeams: 30, isEstimated: true, campKey: '马纳斯卢峰' },
+  { id: 9, name: '南迦帕尔巴特峰', nameEn: 'Nanga Parbat', altitude: 8126, country: '巴基斯坦', region: '喜马拉雅', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Jasmine Tours', 'Latok Alpine'], routes: 'Kinshofer路线/鲁帕尔壁', oxygen: false, annualClimbers: 60, annualTeams: 5, isEstimated: true, campKey: '南迦帕尔巴特峰' },
+  { id: 10, name: '安纳普尔纳峰', nameEn: 'Annapurna', altitude: 8091, country: '尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Altitude Junkies'], routes: '北壁路线', oxygen: false, annualClimbers: 60, annualTeams: 5, isEstimated: true, campKey: '安纳普尔纳峰' },
+  { id: 11, name: '迦舒布鲁姆I峰', nameEn: 'Gasherbrum I', altitude: 8080, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'Latok Alpine'], routes: '美国路线/西北壁', oxygen: false, annualClimbers: 50, annualTeams: 4, isEstimated: true, campKey: '加舒尔布鲁姆I峰' },
+  { id: 12, name: '布洛阿特峰', nameEn: 'Broad Peak', altitude: 8051, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'Latok Alpine'], routes: '普通路线/西壁', oxygen: false, annualClimbers: 120, annualTeams: 10, isEstimated: true, campKey: '布洛阿特峰' },
+  { id: 13, name: '迦舒布鲁姆II峰', nameEn: 'Gasherbrum II', altitude: 8034, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'IMG', 'Furtenbach Adventures'], routes: '西南壁路线', oxygen: false, annualClimbers: 180, annualTeams: 14, isEstimated: true, campKey: '加舒尔布鲁姆II峰' },
+  { id: 14, name: '希夏邦马峰', nameEn: 'Shishapangma', altitude: 8027, country: '中国', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)/秋季(9-10月)', operators: ['IMG', 'Seven Summit Treks', 'Furtenbach Adventures', 'Amical Alpin'], routes: '北坡/西南壁', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: '希夏邦马峰' },
+  { id: 15, name: '慕士塔格峰', nameEn: 'Muztagh Ata', altitude: 7546, country: '中国', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['China Mountaineering Association', 'Alpenglow Expeditions', 'SummitClimb'], routes: '东坡标准路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: null },
+  { id: 16, name: '列宁峰', nameEn: 'Lenin Peak', altitude: 7134, country: '吉尔吉斯斯坦/塔吉克斯坦', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['Alpenglow Expeditions', 'SummitClimb', 'Vertical', 'Asia Mountains'], routes: '标准路线(Razdelnaya山脊)', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: null },
+  { id: 17, name: '阿玛达布拉姆峰', nameEn: 'Ama Dablam', altitude: 6812, country: '尼泊尔', region: '喜马拉雅', difficulty: '技术型', season: '秋季(10-11月)/春季(3-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Peak Freaks'], routes: '西南山脊路线', oxygen: false, annualClimbers: 350, annualTeams: 30, isEstimated: true, campKey: '阿玛达布拉姆峰' },
+  { id: 18, name: '阿空加瓜峰', nameEn: 'Aconcagua', altitude: 6961, country: '阿根廷', region: '安第斯', difficulty: '进阶7000m', season: '南半球夏季(12-2月)', operators: ['IMG', 'Alpine Ascents', 'RMI Expeditions', 'SummitClimb', 'Aymara Expeditions'], routes: '标准路线(普通路线)/波兰冰川', oxygen: false, annualClimbers: 3000, annualTeams: 120, isEstimated: false, campKey: '阿空加瓜峰' },
+  { id: 19, name: 'Denali', nameEn: 'Denali', altitude: 6190, country: '美国', region: '北美', difficulty: '进阶7000m', season: '春季(5-6月)', operators: ['RMI Expeditions', 'Alpine Ascents', 'AAI', 'Mountain Trip', 'Rainier Mountaineering'], routes: '西山脊/卡希尔顿路线', oxygen: false, annualClimbers: 1200, annualTeams: 80, isEstimated: false, campKey: '麦金利山' },
+  { id: 20, name: '乞力马扎罗山', nameEn: 'Kilimanjaro', altitude: 5895, country: '坦桑尼亚', region: '非洲', difficulty: '入门6000m', season: '旱季(1-3月/6-10月)', operators: ['Zara Tours', 'Thomson Safaris', 'Altezza Travel', 'Kilimanjaro Experts', 'Africa Dream Safaris'], routes: 'Marangu路线/Machame路线/Lemosho路线', oxygen: false, annualClimbers: 35000, annualTeams: 2000, isEstimated: false, campKey: '乞力马扎罗山' },
+  { id: 21, name: '厄尔布鲁士山', nameEn: 'Elbrus', altitude: 5642, country: '俄罗斯', region: '高加索', difficulty: '入门6000m', season: '夏季(6-8月)', operators: ['Alpine Ascents', 'IMG', 'Alpenglow Expeditions', 'MCS AlpClub', 'Risk.ru'], routes: '南坡标准路线/北坡路线', oxygen: false, annualClimbers: 15000, annualTeams: 800, isEstimated: true, campKey: '厄尔布鲁士山' },
+  { id: 22, name: '文森峰', nameEn: 'Vinson Massif', altitude: 4892, country: '南极洲', region: '南极', difficulty: '入门6000m', season: '南极夏季(11-1月)', operators: ['Alpine Ascents', 'Antarctic Logistics & Expeditions', 'IMG', 'Climbing the Seven Summits'], routes: '标准路线', oxygen: false, annualClimbers: 200, annualTeams: 20, isEstimated: true, campKey: '文森峰' },
+  { id: 23, name: '卡斯滕士金字塔', nameEn: 'Carstensz Pyramid', altitude: 4884, country: '印度尼西亚', region: '大洋洲', difficulty: '技术型', season: '全年(需申请许可)', operators: ['Alpine Ascents', 'Adventure Indonesia', 'Papua Jungle Expedition'], routes: '标准技术路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: null },
+  { id: 24, name: 'Mera Peak', nameEn: 'Mera Peak', altitude: 6461, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Mera Peak Climbing', 'Glacier Safari Treks'], routes: '标准路线(北侧)', oxygen: false, annualClimbers: 1500, annualTeams: 100, isEstimated: true, campKey: null },
+  { id: 25, name: 'Island Peak', nameEn: 'Island Peak (Imja Tse)', altitude: 6189, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Island Peak Climbing'], routes: '标准路线/西壁', oxygen: false, annualClimbers: 2000, annualTeams: 150, isEstimated: true, campKey: null },
+  { id: 26, name: '哈巴雪山', nameEn: 'Haba Snow Mountain', altitude: 5396, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['玉珠峰探险', '横断山向导公司', '四川高山探险', 'Alpenglow Expeditions'], routes: '标准路线(西侧)', oxygen: false, annualClimbers: 800, annualTeams: 60, isEstimated: true, campKey: null },
+  { id: 27, name: '四姑娘山大峰', nameEn: 'Four Girls Mountain (Da Peak)', altitude: 5025, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川四姑娘山探险', '蓝天救援队', '四川山地向导'], routes: '南坡标准路线', oxygen: false, annualClimbers: 600, annualTeams: 50, isEstimated: true, campKey: '四姑娘山' },
+  { id: 28, name: '幺妹峰', nameEn: 'Siguniang (Yaomei Peak)', altitude: 6250, country: '中国', region: '横断山脉', difficulty: '技术型', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川四姑娘山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 30, annualTeams: 3, isEstimated: true, campKey: '四姑娘山' },
+  { id: 29, name: '玉珠峰', nameEn: 'Yuzhufeng', altitude: 6178, country: '中国', region: '昆仑山', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['玉珠峰探险', '中国登山协会', '西藏高山探险'], routes: '北坡标准路线', oxygen: false, annualClimbers: 500, annualTeams: 40, isEstimated: true, campKey: '玉珠峰' },
+  { id: 30, name: '雀儿山', nameEn: 'Que Er Shan', altitude: 6168, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['四川高山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: null },
+];
+
 function alpineLink() {
   return {
     currentPage: 'home',
@@ -3361,6 +3535,15 @@ function alpineLink() {
     weatherSearchCamps: [],
     weatherSearchLoading: false,
     showWeatherSearchResult: false,
+    // 商业攀登数据
+    commercialPeaks: COMMERCIAL_PEAKS,
+    commercialFilter: { region: '', difficulty: '', sortBy: 'altitude' },
+    // OSM 地名查询状态
+    osmSuggestions: [],
+    osmSuggestionsLoading: false,
+    showOsmSuggestions: false,
+    osmLastRequestTime: 0,
+    osmSearchDebounceTimer: null,
     showBooking: false,
     bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '' },
     showSOS: false,
@@ -3567,6 +3750,7 @@ function alpineLink() {
       { id: 'world', name: '世界经典', icon: 'travel_explore' },
       { id: 'alpine', name: '技术攀登', icon: 'terrain' },
       { id: 'guides', name: '专业向导', icon: 'person_pin' },
+      { id: 'commercial', name: '商业攀登', icon: 'groups' },
     ],
     communityPosts: [
       { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
@@ -3723,11 +3907,135 @@ function alpineLink() {
         if (res.ok) {
           const data = await res.json();
           if (data.camps && data.camps.length > 0) {
-            this.peakCampWeathers = data.camps;
+            this.peakCampWeathers = this.markSameCampWeathers(data.camps);
           }
         }
       } catch(e) {}
       this.peakCampWeathersLoading = false;
+    },
+    // 标记相邻营地天气相同的情况
+    markSameCampWeathers(camps) {
+      for (let i = 1; i < camps.length; i++) {
+        const prev = camps[i - 1];
+        const curr = camps[i];
+        if (prev.weather && curr.weather &&
+            prev.weather.temp === curr.weather.temp &&
+            prev.weather.wind === curr.weather.wind &&
+            prev.weather.humidity === curr.weather.humidity) {
+          curr.sameWeatherAsPrev = true;
+        }
+      }
+      return camps;
+    },
+    // 获取过滤后的商业山峰列表
+    getFilteredCommercialPeaks() {
+      let peaks = this.commercialPeaks || [];
+      if (this.commercialFilter.region) {
+        peaks = peaks.filter(p => p.region === this.commercialFilter.region);
+      }
+      if (this.commercialFilter.difficulty) {
+        peaks = peaks.filter(p => p.difficulty === this.commercialFilter.difficulty);
+      }
+      if (this.commercialFilter.sortBy === 'altitude') {
+        peaks = [...peaks].sort((a, b) => b.altitude - a.altitude);
+      } else if (this.commercialFilter.sortBy === 'annualClimbers') {
+        peaks = [...peaks].sort((a, b) => b.annualClimbers - a.annualClimbers);
+      } else if (this.commercialFilter.sortBy === 'difficulty') {
+        const order = { '入门6000m': 1, '进阶7000m': 2, '技术型': 3, '8000m级': 4 };
+        peaks = [...peaks].sort((a, b) => (order[b.difficulty] || 0) - (order[a.difficulty] || 0));
+      }
+      return peaks;
+    },
+    // OpenStreetMap Nominatim 地名查询（带缓存和节流）
+    async geocodeByOSM(name) {
+      if (!name || !name.trim()) return null;
+      const key = 'osm_geo_' + name.trim().toLowerCase().replace(/\s+/g, '_');
+      try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          const obj = JSON.parse(cached);
+          if (Date.now() - obj.ts < 7 * 24 * 3600 * 1000) return obj;
+        }
+      } catch(e) {}
+      const now = Date.now();
+      if (now - this.osmLastRequestTime < 1000) {
+        await new Promise(r => setTimeout(r, 1000 - (now - this.osmLastRequestTime)));
+      }
+      this.osmLastRequestTime = Date.now();
+      try {
+        const q = encodeURIComponent(name.trim());
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' }
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data || data.length === 0) return null;
+        const first = data[0];
+        const result = { lat: parseFloat(first.lat), lon: parseFloat(first.lon), displayName: first.display_name, raw: first, ts: Date.now() };
+        try { localStorage.setItem(key, JSON.stringify(result)); } catch(e) {}
+        return result;
+      } catch(e) { return null; }
+    },
+    // 获取 Nominatim 候选列表（用于下拉）
+    async fetchOsmSuggestions(name) {
+      if (!name || name.trim().length < 2) { this.osmSuggestions = []; this.showOsmSuggestions = false; return; }
+      const now = Date.now();
+      if (now - this.osmLastRequestTime < 1000) {
+        await new Promise(r => setTimeout(r, 1000 - (now - this.osmLastRequestTime)));
+      }
+      this.osmLastRequestTime = Date.now();
+      this.osmSuggestionsLoading = true;
+      try {
+        const q = encodeURIComponent(name.trim());
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const res = await fetch(url, { headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' } });
+        if (!res.ok) { this.osmSuggestions = []; this.osmSuggestionsLoading = false; return; }
+        const data = await res.json();
+        this.osmSuggestions = data.map(item => ({
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon),
+          displayName: item.display_name,
+          raw: item,
+        }));
+        this.showOsmSuggestions = this.osmSuggestions.length > 0;
+      } catch(e) {
+        this.osmSuggestions = [];
+      }
+      this.osmSuggestionsLoading = false;
+    },
+    // 选择 Nominatim 候选项
+    selectOsmSuggestion(suggestion) {
+      this.weatherSearch = suggestion.displayName.split(',')[0].trim();
+      this.showOsmSuggestions = false;
+      this.osmSuggestions = [];
+      this._searchWeatherByCoords(suggestion.lat, suggestion.lon, suggestion.displayName);
+    },
+    // 通过坐标查询天气
+    async _searchWeatherByCoords(lat, lon, displayName) {
+      this.weatherSearchLoading = true;
+      this.weatherSearchResult = null;
+      this.weatherSearchForecast = [];
+      this.weatherSearchCamps = [];
+      this.showWeatherSearchResult = true;
+      try {
+        const [wres, fres] = await Promise.all([
+          fetch(`/api/weather?lat=${lat}&lon=${lon}&location=${encodeURIComponent(displayName)}`),
+          fetch(`/api/weather/forecast?lat=${lat}&lon=${lon}`)
+        ]);
+        if (wres.ok) {
+          this.weatherSearchResult = await wres.json();
+        } else {
+          this.weatherSearchResult = { error: '无法获取该地点天气', location: displayName };
+        }
+        if (fres.ok) {
+          const fd = await fres.json();
+          this.weatherSearchForecast = fd.forecast || [];
+        }
+      } catch(e) {
+        this.weatherSearchResult = { error: '网络错误，请稍后重试' };
+      }
+      this.weatherSearchLoading = false;
     },
     async searchWeather() {
       if (!this.weatherSearch.trim()) return;
@@ -3744,7 +4052,7 @@ function alpineLink() {
         if (campsRes.ok) {
           const campsData = await campsRes.json();
           if (campsData.camps && campsData.camps.length > 0) {
-            this.weatherSearchCamps = campsData.camps;
+            this.weatherSearchCamps = this.markSameCampWeathers(campsData.camps);
             // 同时获取普通天气作为 header 显示
             try {
               const wres = await fetch(`/api/weather?location=${locEnc}`);
@@ -3776,6 +4084,22 @@ function alpineLink() {
         }
       } catch(e) {
         this.weatherSearchResult = { error: '网络错误，请稍后重试' };
+      }
+      // OSM 地名解析回退：如果普通查询失败，尝试通过OSM获取坐标
+      if (this.weatherSearchResult && this.weatherSearchResult.error) {
+        const geo = await this.geocodeByOSM(loc);
+        if (geo) {
+          try {
+            const [wres2, fres2] = await Promise.all([
+              fetch(`/api/weather?lat=${geo.lat}&lon=${geo.lon}&location=${encodeURIComponent(geo.displayName)}`),
+              fetch(`/api/weather/forecast?lat=${geo.lat}&lon=${geo.lon}`)
+            ]);
+            if (wres2.ok) this.weatherSearchResult = await wres2.json();
+            if (fres2.ok) { const fd2 = await fres2.json(); this.weatherSearchForecast = fd2.forecast || []; }
+          } catch(e) {}
+        } else {
+          this.weatherSearchResult = { error: '未找到该地点，请尝试使用英文名或更具体的名称（例如 "Mount Everest Base Camp, Nepal"）' };
+        }
       }
       this.weatherSearchLoading = false;
     },
