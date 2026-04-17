@@ -27,7 +27,16 @@ const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
 app.get(['/summitlink', '/summitlink.html'], (req, res) => {
   console.log('📄 请求HTML文件:', htmlFile);
   console.log('📄 文件存在:', fs.existsSync(htmlFile));
-  res.sendFile(htmlFile);
+  const amapKey = process.env.AMAP_KEY || 'YOUR_AMAP_KEY';
+  fs.readFile(htmlFile, 'utf8', (err, html) => {
+    if (err) {
+      console.error('❌ 读取HTML文件失败:', err);
+      return res.status(500).send('Internal Server Error');
+    }
+    const result = html.replace('YOUR_AMAP_KEY', amapKey);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(result);
+  });
 });
 
 // 挂载路由
