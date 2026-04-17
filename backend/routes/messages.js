@@ -75,7 +75,7 @@ router.get('/conversations/:id/messages', auth, (req, res) => {
 });
 
 // POST /api/messages/conversations/:id/messages（发送消息，需要JWT，30次/分钟限流）
-router.post('/conversations/:id/messages', auth, msgRateLimit, (req, res) => {
+router.post('/conversations/:id/messages', msgRateLimit, auth, (req, res) => {
   try {
     const { content, type, images } = req.body;
     const imagesArr = Array.isArray(images) ? images : [];
