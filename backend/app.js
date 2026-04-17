@@ -43,6 +43,10 @@ app.use('/api/messages', require('./routes/messages'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/articles', require('./routes/articles'));
+app.use('/api/profile', require('./routes/profile'));
+app.use('/api/customs', require('./routes/customs'));
+app.use('/api/rescue', require('./routes/rescue'));
 
 // Admin 面板
 const adminHtmlFile = path.join(rootPath, 'admin.html');
