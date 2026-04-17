@@ -37,13 +37,23 @@ router.post('/', auth, (req, res) => {
   }
 });
 
-// POST /api/posts/:id/like（需要JWT）
+// POST /api/posts/:id/like（需要JWT，支持取消赞）
 router.post('/:id/like', auth, (req, res) => {
   try {
     const post = db.prepare('SELECT * FROM posts WHERE id = ?').get(req.params.id);
     if (!post) return res.status(404).json({ error: '帖子不存在' });
-    db.prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?').run(req.params.id);
-    res.json({ success: true, likes: post.likes + 1 });
+    const existing = db.prepare('SELECT id FROM likes WHERE user_id = ? AND post_id = ?').get(req.user.id, req.params.id);
+    if (existing) {
+      db.prepare('DELETE FROM likes WHERE user_id = ? AND post_id = ?').run(req.user.id, req.params.id);
+      db.prepare('UPDATE posts SET likes = MAX(0, likes - 1) WHERE id = ?').run(req.params.id);
+      const updated = db.prepare('SELECT likes FROM posts WHERE id = ?').get(req.params.id);
+      res.json({ success: true, liked: false, likes: updated.likes });
+    } else {
+      db.prepare('INSERT INTO likes (user_id, post_id) VALUES (?, ?)').run(req.user.id, req.params.id);
+      db.prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?').run(req.params.id);
+      const updated = db.prepare('SELECT likes FROM posts WHERE id = ?').get(req.params.id);
+      res.json({ success: true, liked: true, likes: updated.likes });
+    }
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
