@@ -787,4 +787,116 @@ CREATE TABLE IF NOT EXISTS reviews (
 try { db.exec('ALTER TABLE peaks ADD COLUMN latitude REAL'); } catch(e) {}
 try { db.exec('ALTER TABLE peaks ADD COLUMN longitude REAL'); } catch(e) {}
 
+// 迁移：为 peaks 表添加扩展数据字段（年攀登人数、商业队伍、补充氧气、主要路线、运营公司、数据来源）
+const existingPeakColsExt = db.pragma('table_info(peaks)').map(c => c.name);
+if (!existingPeakColsExt.includes('annual_climbers')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN annual_climbers INTEGER DEFAULT 0');
+}
+if (!existingPeakColsExt.includes('commercial_teams')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN commercial_teams INTEGER DEFAULT 0');
+}
+if (!existingPeakColsExt.includes('season_detail')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN season_detail TEXT');
+}
+if (!existingPeakColsExt.includes('supplemental_oxygen')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN supplemental_oxygen INTEGER DEFAULT 0');
+}
+if (!existingPeakColsExt.includes('main_route')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN main_route TEXT');
+}
+if (!existingPeakColsExt.includes('operating_company')) {
+  db.exec('ALTER TABLE peaks ADD COLUMN operating_company TEXT');
+}
+if (!existingPeakColsExt.includes('data_source')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN data_source TEXT DEFAULT '内部参考数据'");
+}
+
+// 新增表：俱乐部帖子、向导帖子（动态）
+db.exec(`
+CREATE TABLE IF NOT EXISTS club_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  club_id INTEGER NOT NULL,
+  author_name TEXT,
+  author_avatar TEXT,
+  content TEXT NOT NULL,
+  image TEXT,
+  location TEXT,
+  likes INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS guide_posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guide_id INTEGER NOT NULL,
+  author_name TEXT,
+  author_avatar TEXT,
+  content TEXT NOT NULL,
+  image TEXT,
+  location TEXT,
+  likes INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS guide_photos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guide_id INTEGER NOT NULL,
+  url TEXT NOT NULL,
+  caption TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS club_photos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  club_id INTEGER NOT NULL,
+  url TEXT NOT NULL,
+  caption TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 迁移：guides 表补充向导归属字段
+const existingGuideCols2 = db.pragma('table_info(guides)').map(c => c.name);
+if (!existingGuideCols2.includes('affiliation_type')) {
+  db.exec("ALTER TABLE guides ADD COLUMN affiliation_type TEXT DEFAULT 'freelance'");
+}
+if (!existingGuideCols2.includes('affiliation_club_id')) {
+  db.exec('ALTER TABLE guides ADD COLUMN affiliation_club_id INTEGER DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('affiliation_club_name')) {
+  db.exec('ALTER TABLE guides ADD COLUMN affiliation_club_name TEXT DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('bio')) {
+  db.exec('ALTER TABLE guides ADD COLUMN bio TEXT DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('cover_image')) {
+  db.exec('ALTER TABLE guides ADD COLUMN cover_image TEXT DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('experience_years')) {
+  db.exec('ALTER TABLE guides ADD COLUMN experience_years INTEGER DEFAULT 0');
+}
+if (!existingGuideCols2.includes('peaks_led')) {
+  db.exec('ALTER TABLE guides ADD COLUMN peaks_led TEXT DEFAULT NULL');
+}
+if (!existingGuideCols2.includes('wechat')) {
+  db.exec('ALTER TABLE guides ADD COLUMN wechat TEXT DEFAULT NULL');
+}
+
+// 迁移：clubs 表补充额外字段
+const existingClubCols2 = db.pragma('table_info(clubs)').map(c => c.name);
+if (!existingClubCols2.includes('contact')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN contact TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('wechat')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN wechat TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('website')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN website TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('cover_image')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN cover_image TEXT DEFAULT NULL');
+}
+if (!existingClubCols2.includes('logo')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN logo TEXT DEFAULT NULL');
+}
+
 module.exports = db;

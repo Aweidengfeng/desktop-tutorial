@@ -150,30 +150,29 @@
         </div>
       </div>
 
-      <!-- Weather Widget -->
+      <!-- 热门山峰天气 (Popular Peaks Weather) -->
       <div class="px-4 -mt-2 mb-4">
-        <div class="glass rounded-2xl p-4">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="text-xs text-slate-400" x-text="weather.location"></p>
-              <p class="text-3xl font-bold text-white"><span x-text="weather.temp"></span>°C</p>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-slate-400 font-semibold">⛅ 热门攀登山峰实时天气</p>
+          <span class="text-[10px] text-slate-500">滑动查看更多</span>
+        </div>
+        <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+          <template x-for="pw in popularPeaksWeather" :key="pw.name">
+            <div @click="currentPage='explore';activeCategory='8000ers'" class="flex-shrink-0 glass rounded-2xl p-3 cursor-pointer hover:bg-white/10 transition-colors min-w-[120px]">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-lg" x-text="pw.conditionIcon"></span>
+                <span class="text-[10px] bg-primary/20 text-primary-light px-1.5 py-0.5 rounded-full" x-text="pw.altitude + 'm'"></span>
+              </div>
+              <p class="text-white text-xs font-bold truncate" x-text="pw.name"></p>
+              <p class="text-slate-400 text-[10px] truncate" x-text="pw.nameEn"></p>
+              <p class="text-sky-400 font-bold text-base mt-1" x-text="pw.temp + '°C'"></p>
+              <div class="flex gap-2 mt-1">
+                <span class="text-[10px] text-slate-400">💨 <span x-text="pw.wind"></span>km/h</span>
+                <span class="text-[10px] text-slate-400">💧 <span x-text="pw.humidity"></span>%</span>
+              </div>
             </div>
-            <div class="text-4xl">🌤️</div>
-          </div>
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-slate-800/50 rounded-xl p-2">
-              <p class="text-xs text-slate-400">风速</p>
-              <p class="text-sm font-semibold text-white"><span x-text="weather.wind"></span> km/h</p>
-            </div>
-            <div class="bg-slate-800/50 rounded-xl p-2">
-              <p class="text-xs text-slate-400">湿度</p>
-              <p class="text-sm font-semibold text-white"><span x-text="weather.humidity"></span>%</p>
-            </div>
-            <div class="bg-slate-800/50 rounded-xl p-2">
-              <p class="text-xs text-slate-400">能见度</p>
-              <p class="text-sm font-semibold text-white"><span x-text="weather.visibility"></span> km</p>
-            </div>
-          </div>
+          </template>
+          <div x-show="popularPeaksWeather.length === 0" class="flex-shrink-0 glass rounded-2xl p-3 min-w-[120px] text-center text-slate-500 text-xs py-6">加载中...</div>
         </div>
       </div>
 
@@ -198,9 +197,9 @@
           </button>
         </div>
         <div class="grid grid-cols-4 gap-2 mt-2">
-          <button @click="currentPage='gear'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🎒</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">装备市场</span>
+          <button @click="currentPage='community'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">💬</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">社区</span>
           </button>
           <button @click="currentPage='community';activeChatType='clubs'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
             <span class="text-2xl">🏛️</span>
@@ -950,7 +949,10 @@
 
         <!-- Clubs Section -->
         <div x-show="activeChatType==='clubs'" class="mb-5">
-          <h3 class="font-semibold text-white mb-3">攀登俱乐部</h3>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-white">攀登俱乐部</h3>
+            <button @click="showClubApplyModal=true" class="text-xs bg-primary/20 text-primary-light px-3 py-1.5 rounded-full border border-primary/30 hover:bg-primary/30 transition-colors">+ 申请入驻</button>
+          </div>
           <template x-for="club in clubs" :key="club.id">
             <div @click="openClubProfile(club.id)" class="glass rounded-2xl overflow-hidden mb-3 cursor-pointer hover:bg-white/10 transition-colors">
               <div class="relative h-28">
@@ -1722,6 +1724,67 @@
   </div>
 </div>
 
+<!-- Club Apply Modal -->
+<div x-show="showClubApplyModal"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+  <div class="absolute inset-0 bg-black/70" @click="showClubApplyModal=false"></div>
+  <div class="relative bottom-sheet bg-slate-900 max-h-[92vh] overflow-y-auto">
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display font-bold text-xl text-white">俱乐部入驻申请</h3>
+        <button @click="showClubApplyModal=false" class="p-1.5 rounded-full hover:bg-white/10">
+          <span class="material-symbols-outlined text-slate-400">close</span>
+        </button>
+      </div>
+      <div class="bg-primary/10 border border-primary/30 rounded-xl p-3 mb-4 text-xs text-primary-light">
+        <p>📋 入驻需缴纳审核费用，提交后将进行资质核验（1-3个工作日）。</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">俱乐部名称 *</label>
+          <input type="text" x-model="clubApplyForm.club_name" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="请输入俱乐部全称">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">营业执照/注册证明 *</label>
+          <input type="text" x-model="clubApplyForm.cert_url" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="证件图片链接或上传">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">联系方式 *</label>
+          <input type="text" x-model="clubApplyForm.contact" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="手机号/邮箱">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">微信号</label>
+          <input type="text" x-model="clubApplyForm.wechat" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="微信联系方式">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">擅长领域 *</label>
+          <input type="text" x-model="clubApplyForm.specialty" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="如：8000米峰、技术攀登、初学者培训">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">服务地区</label>
+          <input type="text" x-model="clubApplyForm.region" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="如：喜马拉雅、阿尔卑斯、全国">
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">俱乐部介绍</label>
+          <textarea x-model="clubApplyForm.description" rows="3" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light resize-none placeholder-slate-500" placeholder="简要介绍俱乐部背景、资质和服务..."></textarea>
+        </div>
+        <div>
+          <label class="text-slate-400 text-xs mb-1.5 block">网站/社交媒体</label>
+          <input type="text" x-model="clubApplyForm.website" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-light" placeholder="https://...">
+        </div>
+        <button @click="submitClubApply()" class="w-full bg-primary hover:bg-primary-light text-white py-4 rounded-2xl font-bold text-base transition-colors">提交申请（待缴费）</button>
+        <p class="text-center text-slate-500 text-xs">提交后将跳转支付审核费用页面</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Language Picker Modal -->
 <div x-show="showLangPicker"
      x-transition:enter="transition ease-out duration-200"
@@ -1939,7 +2002,40 @@
                 </template>
               </div>
               <template x-if="selectedPeak.description">
-                <p class="text-slate-400 text-sm mb-5" x-text="selectedPeak.description"></p>
+                <p class="text-slate-400 text-sm mb-4" x-text="selectedPeak.description"></p>
+              </template>
+              <!-- Extended info (年攀登人数、商业队伍、季节、辅助氧气、主要路线) -->
+              <template x-if="selectedPeak.mainRoute || selectedPeak.seasonDetail || selectedPeak.annualClimbers">
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                  <template x-if="selectedPeak.mainRoute">
+                    <div class="bg-slate-800 rounded-xl p-2.5 col-span-2">
+                      <p class="text-xs text-slate-400 mb-0.5">主要路线</p>
+                      <p class="text-white text-xs font-semibold" x-text="selectedPeak.mainRoute"></p>
+                    </div>
+                  </template>
+                  <template x-if="selectedPeak.seasonDetail">
+                    <div class="bg-slate-800 rounded-xl p-2.5 col-span-2">
+                      <p class="text-xs text-slate-400 mb-0.5">攀登季节</p>
+                      <p class="text-white text-xs font-semibold" x-text="selectedPeak.seasonDetail"></p>
+                    </div>
+                  </template>
+                  <template x-if="selectedPeak.annualClimbers">
+                    <div class="bg-slate-800 rounded-xl p-2.5">
+                      <p class="text-xs text-slate-400 mb-0.5">年攀登人数</p>
+                      <p class="text-white text-xs font-semibold" x-text="(selectedPeak.annualClimbers || 0) + ' 人'"></p>
+                    </div>
+                  </template>
+                  <template x-if="selectedPeak.commercialTeams">
+                    <div class="bg-slate-800 rounded-xl p-2.5">
+                      <p class="text-xs text-slate-400 mb-0.5">商业队伍</p>
+                      <p class="text-white text-xs font-semibold" x-text="(selectedPeak.commercialTeams || 0) + ' 队'"></p>
+                    </div>
+                  </template>
+                  <div class="bg-slate-800 rounded-xl p-2.5">
+                    <p class="text-xs text-slate-400 mb-0.5">辅助氧气</p>
+                    <p class="text-white text-xs font-semibold" x-text="selectedPeak.supplementalOxygen ? '通常使用' : '通常不使用'"></p>
+                  </div>
+                </div>
               </template>
               <div class="flex gap-3">
                 <button @click="showPeakDetail=false;bookingData.mountain=selectedPeak.name;showBooking=true" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
@@ -3068,7 +3164,60 @@
               <button @click="submitGuideReview()" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">提交评价</button>
             </div>
           </template>
-          <!-- Action buttons -->
+          <!-- Affiliation (俱乐部 or 自由向导) -->
+          <div class="mb-4 bg-slate-800/50 rounded-xl p-3">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">归属</p>
+            <template x-if="currentGuideProfile.affiliation_type === 'club' && currentGuideProfile.affiliation_club_name">
+              <div class="flex items-center gap-2">
+                <span class="text-primary text-sm">🏛️</span>
+                <div>
+                  <p class="text-white text-sm font-semibold" x-text="currentGuideProfile.affiliation_club_name"></p>
+                  <p class="text-slate-400 text-xs">所属俱乐部</p>
+                </div>
+              </div>
+            </template>
+            <template x-if="currentGuideProfile.affiliation_type !== 'club'">
+              <div class="flex items-center gap-2">
+                <span class="text-green-400 text-sm">🧗</span>
+                <div>
+                  <p class="text-white text-sm font-semibold">自由向导</p>
+                  <p class="text-slate-400 text-xs">独立执业，未加入俱乐部</p>
+                </div>
+              </div>
+            </template>
+          </div>
+          <!-- Guide Posts (动态) -->
+          <div x-show="currentGuideProfile.posts && currentGuideProfile.posts.length > 0" class="mb-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">向导动态</p>
+            <div class="space-y-3">
+              <template x-for="post in (currentGuideProfile.posts || [])" :key="post.id">
+                <div class="bg-slate-800 rounded-xl p-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <img :src="post.author_avatar || currentGuideProfile.avatar" class="w-7 h-7 rounded-full object-cover">
+                    <div>
+                      <span class="text-white text-xs font-semibold" x-text="currentGuideProfile.name"></span>
+                      <span class="text-slate-500 text-xs ml-2" x-text="post.location ? '📍 ' + post.location : ''"></span>
+                    </div>
+                  </div>
+                  <p class="text-slate-300 text-sm mb-2" x-text="post.content"></p>
+                  <img x-show="post.image" :src="post.image" class="w-full rounded-xl object-cover max-h-36">
+                  <p class="text-slate-500 text-xs mt-1" x-text="'❤️ ' + (post.likes || 0)"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- Guide Photos (相册) -->
+          <div x-show="currentGuideProfile.photos && currentGuideProfile.photos.length > 0" class="mb-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">向导相册</p>
+            <div class="grid grid-cols-3 gap-1.5">
+              <template x-for="photo in (currentGuideProfile.photos || [])" :key="photo.id">
+                <div class="aspect-square rounded-xl overflow-hidden">
+                  <img :src="photo.url" :alt="photo.caption" class="w-full h-full object-cover">
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- Guide action buttons -->
           <div class="flex gap-3 pb-6">
             <button @click="showGuideProfileModal=false;openChatWithUser(currentGuideProfile.name,currentGuideProfile.avatar);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">私信向导</button>
             <button @click="openBookingForGuide(currentGuideProfile)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
@@ -3202,7 +3351,52 @@
               <button @click="showPublishActivity=true" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-colors">+ 发布活动/套餐</button>
             </div>
           </template>
-          <!-- Action buttons -->
+          <!-- Club Posts (动态) -->
+          <div x-show="currentClubProfile.posts && currentClubProfile.posts.length > 0" class="mb-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">俱乐部动态</p>
+            <div class="space-y-3">
+              <template x-for="post in (currentClubProfile.posts || [])" :key="post.id">
+                <div class="bg-slate-800 rounded-xl p-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <img :src="post.author_avatar || 'https://i.pravatar.cc/40?u=club'" class="w-7 h-7 rounded-full object-cover">
+                    <div>
+                      <span class="text-white text-xs font-semibold" x-text="post.author_name || currentClubProfile.name"></span>
+                      <span class="text-slate-500 text-xs ml-2" x-text="post.location ? '📍 ' + post.location : ''"></span>
+                    </div>
+                  </div>
+                  <p class="text-slate-300 text-sm mb-2" x-text="post.content"></p>
+                  <img x-show="post.image" :src="post.image" class="w-full rounded-xl object-cover max-h-36">
+                  <p class="text-slate-500 text-xs mt-1" x-text="'❤️ ' + (post.likes || 0)"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- Club Photos (相册) -->
+          <div x-show="currentClubProfile.photos && currentClubProfile.photos.length > 0" class="mb-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">俱乐部相册</p>
+            <div class="grid grid-cols-3 gap-1.5">
+              <template x-for="photo in (currentClubProfile.photos || [])" :key="photo.id">
+                <div class="aspect-square rounded-xl overflow-hidden">
+                  <img :src="photo.url" :alt="photo.caption" class="w-full h-full object-cover">
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- Club Guides (旗下向导) -->
+          <div x-show="currentClubProfile.guides_list && currentClubProfile.guides_list.length > 0" class="mb-4">
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">旗下向导</p>
+            <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+              <template x-for="g in (currentClubProfile.guides_list || [])" :key="g.id">
+                <div @click="showClubProfileModal=false;openGuideProfile(g.id)" class="flex-shrink-0 w-28 glass rounded-xl p-2.5 cursor-pointer hover:bg-white/10 transition-colors text-center">
+                  <img :src="g.avatar || 'https://i.pravatar.cc/60?u=guide_club_' + g.id" class="w-12 h-12 rounded-full object-cover mx-auto mb-1">
+                  <p class="text-white text-xs font-semibold truncate" x-text="g.name"></p>
+                  <p class="text-primary-light text-xs" x-text="(g.rating || 5.0) + '★'"></p>
+                  <p class="text-slate-400 text-[10px] truncate" x-text="g.specialty"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- Action buttons for club -->
           <div class="flex gap-3 pb-6">
             <button @click="showClubProfileModal=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">关闭</button>
             <button @click="joinCurrentClub()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">加入俱乐部</button>
@@ -3506,9 +3700,12 @@ function alpineLink() {
     heroSlide: 0,
     heroTouchStartX: 0,
     heroSlides: [
-      { name: '珠穆朗玛峰', sub: '海拔 8,849m · 中国/尼泊尔', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800' },
-      { name: 'K2 乔戈里峰', sub: '海拔 8,611m · 巴基斯坦/中国', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800' },
-      { name: '麦金利山 Denali', sub: '海拔 6,190m · 阿拉斯加', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800' },
+      { name: '珠穆朗玛峰', sub: '海拔 8,849m · 中国/尼泊尔 · 世界之巅', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800', linkType: 'peak', linkTarget: 'everest' },
+      { name: 'K2 乔戈里峰', sub: '海拔 8,611m · 巴基斯坦/中国 · 野蛮巨峰', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', linkType: 'peak', linkTarget: 'k2' },
+      { name: '麦金利山 Denali', sub: '海拔 6,190m · 阿拉斯加 · 北美之巅', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', linkType: 'peak', linkTarget: 'denali' },
+      { name: '马特洪峰 Matterhorn', sub: '海拔 4,478m · 瑞士/意大利 · 阿尔卑斯标志', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800', linkType: 'page', linkTarget: 'explore' },
+      { name: '阿玛达布拉姆', sub: '海拔 6,814m · 尼泊尔 · 喜马拉雅最美', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800', linkType: 'page', linkTarget: 'explore' },
+      { name: '乞力马扎罗山', sub: '海拔 5,895m · 坦桑尼亚 · 非洲之巅', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800', linkType: 'page', linkTarget: 'explore' },
     ],
     activeCategory: '8000ers',
     gearMode: 'buy',
@@ -3632,13 +3829,30 @@ function alpineLink() {
     paymentMethod: 'alipay',
     showTrackDetail: false,
     selectedTrackDetail: null,
-    featuredClubs: [],
+    featuredClubs: [
+      { id: 'm1', name: '中国高山协会', description: '专注于中国高山探险和技术攀登的专业协会', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', specialty: '8000米峰', members: 1280, expeditions: 45, verified: true, type: '专业' },
+      { id: 'm2', name: '阿尔派探险俱乐部', description: '综合性俱乐部，提供从初级到专业的培训和远征服务', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', specialty: '技术攀登', members: 560, expeditions: 28, verified: true, type: '综合' },
+      { id: 'm3', name: '北京户外探险队', description: '以休闲户外和中低海拔攀登为主，适合初学者', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', specialty: '中低海拔', members: 890, expeditions: 120, verified: true, type: '休闲' },
+      { id: 'm4', name: '喜马拉雅探险队', description: '专业的喜马拉雅远征组织，曾多次带队登顶8000米峰', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', specialty: '喜马拉雅', members: 320, expeditions: 18, verified: true, type: '专业' },
+      { id: 'm5', name: '成都山地俱乐部', description: '专注于川西高原和横断山脉攀登的本地俱乐部', cover: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', specialty: '川西高原', members: 450, expeditions: 67, verified: false, type: '区域' },
+      { id: 'm6', name: '丝路登山协会', description: '西北地区攀登爱好者的聚集地，专注昆仑山、天山攀登', cover: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', specialty: '昆仑/天山', members: 230, expeditions: 35, verified: false, type: '区域' },
+    ],
+    popularPeaksWeather: [
+      { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️' },
+      { name: 'K2', nameEn: 'K2', altitude: 8611, temp: -35, wind: 62, humidity: 25, condition: '多云', conditionIcon: '⛅' },
+      { name: '丹拿利峰', nameEn: 'Denali', altitude: 6190, temp: -22, wind: 38, humidity: 55, condition: '阴', conditionIcon: '☁️' },
+      { name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, temp: -12, wind: 28, humidity: 70, condition: '小雪', conditionIcon: '🌨️' },
+      { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, temp: -18, wind: 32, humidity: 48, condition: '晴', conditionIcon: '☀️' },
+      { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️' },
+    ],
     banners: [],
     leaderboardSort: 'count',
     communitySearchQuery: '',
     filteredCommunityPosts: [],
     showGuideApply: false,
     guideApplyForm: { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' },
+    showClubApplyModal: false,
+    clubApplyForm: { club_name: '', cert_url: '', contact: '', wechat: '', specialty: '', region: '', description: '', website: '' },
     showGuideDetail: false,
     showGuideProfile: false,
     selectedGuide: null,
@@ -4379,6 +4593,22 @@ function alpineLink() {
         this.showGuideApply = false;
         this.showToast('申请已提交，7天内审核完成 ✅');
         this.guideApplyForm = { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' };
+        // TODO: 引导用户到支付页面 /api/guides/payment
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+    async submitClubApply() {
+      if (!this.clubApplyForm.club_name || !this.clubApplyForm.contact) {
+        this.showToast('请填写俱乐部名称和联系方式', 'error'); return;
+      }
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/clubs/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.clubApplyForm) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
+        this.showClubApplyModal = false;
+        this.showToast('申请已提交，请完成支付以激活审核 ✅');
+        this.clubApplyForm = { club_name: '', cert_url: '', contact: '', wechat: '', specialty: '', region: '', description: '', website: '' };
+        // TODO: 跳转支付页面 POST /api/clubs/payment
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
     goToPage(id) { this.currentPage = id; },
@@ -4674,13 +4904,15 @@ function alpineLink() {
     // Guide profile full
     async openGuideProfile(guideId) {
       try {
-        const [guide, expeditions, reviews] = await Promise.all([
+        const [guide, expeditions, reviews, posts, photos] = await Promise.all([
           fetch('/api/guides/' + guideId).then(r => r.ok ? r.json() : null),
           fetch('/api/guides/' + guideId + '/expeditions').then(r => r.ok ? r.json() : []),
           fetch('/api/guides/' + guideId + '/reviews').then(r => r.ok ? r.json() : []),
+          fetch('/api/guides/' + guideId + '/posts').then(r => r.ok ? r.json() : []),
+          fetch('/api/guides/' + guideId + '/photos').then(r => r.ok ? r.json() : []),
         ]);
         if (!guide) { this.showToast('向导信息获取失败', 'error'); return; }
-        this.currentGuideProfile = { ...guide, expeditions, reviews_list: reviews };
+        this.currentGuideProfile = { ...guide, expeditions, reviews_list: reviews, posts, photos };
         this.guideReviewForm = { rating: 5, content: '' };
         this.showGuideProfileModal = true;
       } catch(e) { this.showToast('网络错误', 'error'); }
@@ -4714,14 +4946,17 @@ function alpineLink() {
     // Club profile full
     async openClubProfile(clubId) {
       try {
-        const [club, activities, members, reviews] = await Promise.all([
+        const [club, activities, members, reviews, posts, photos, guidesList] = await Promise.all([
           fetch('/api/clubs/' + clubId).then(r => r.ok ? r.json() : null),
           fetch('/api/clubs/' + clubId + '/activities').then(r => r.ok ? r.json() : []),
           fetch('/api/clubs/' + clubId + '/members').then(r => r.ok ? r.json() : []),
           fetch('/api/clubs/' + clubId + '/reviews').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/posts').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/photos').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/guides').then(r => r.ok ? r.json() : []),
         ]);
         if (!club) { this.showToast('俱乐部信息获取失败', 'error'); return; }
-        this.currentClubProfile = { ...club, activities, members_list: members, reviews_list: reviews };
+        this.currentClubProfile = { ...club, activities, members_list: members, reviews_list: reviews, posts, photos, guides_list: guidesList };
         this.clubActivityTab = 'activity';
         this.clubReviewForm = { rating: 5, content: '' };
         this.showClubProfileModal = true;
@@ -5067,7 +5302,7 @@ function alpineLink() {
     // ─── Featured Clubs (Problem 1) ─────────────────────────────────────────
     async loadFeaturedClubs() {
       try {
-        const res = await fetch('/api/clubs?limit=6&sort=members');
+        const res = await fetch('/api/clubs/featured');
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) {
@@ -5077,6 +5312,17 @@ function alpineLink() {
               verified: !!c.verified,
             }));
           }
+        }
+      } catch(e) {}
+    },
+
+    // ─── Popular Peaks Weather ────────────────────────────────────────────────
+    async loadPopularPeaksWeather() {
+      try {
+        const res = await fetch('/api/weather/popular-peaks');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) this.popularPeaksWeather = data;
         }
       } catch(e) {}
     },
@@ -5175,6 +5421,7 @@ function alpineLink() {
       this.loadClubs();
       this.loadFeaturedClubs();
       this.loadBanners();
+      this.loadPopularPeaksWeather();
       this.loadRescueContacts();
       this.loadConversations();
       // Load notification count after token verify

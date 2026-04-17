@@ -1,0 +1,7 @@
+📁 根目录: /home/runner/work/desktop-tutorial/desktop-tutorial
+📁 __dirname: /home/runner/work/desktop-tutorial/desktop-tutorial/backend
+WARNING: JWT_SECRET is not set. Using default dev secret. Do NOT use in production!
+(node:4516) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ SummitLink运行在 http://localhost:8080
+   HTML存在: true

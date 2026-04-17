@@ -35,6 +35,35 @@ router.get('/apply/status', auth, (req, res) => {
   }
 });
 
+// GET /api/clubs/featured — 精选俱乐部（首页展示，最多6个认证且活跃的俱乐部）
+// 注意：此路由必须在 /:id 之前注册
+router.get('/featured', (req, res) => {
+  try {
+    const clubs = db.prepare(`
+      SELECT id, name, description, cover, specialty, region, type,
+             members_count as members, expeditions, verified, founded, status, created_at
+      FROM clubs
+      WHERE status = 'active'
+      ORDER BY verified DESC, members_count DESC
+      LIMIT 6
+    `).all();
+    if (clubs.length < 3) {
+      const mockClubs = [
+        { id: 'm1', name: '中国高山协会', description: '专注于中国高山探险和技术攀登的专业协会', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', specialty: '8000米峰', members: 1280, expeditions: 45, verified: 1, type: '专业' },
+        { id: 'm2', name: '阿尔派探险俱乐部', description: '综合性俱乐部，提供从初级到专业的培训和远征服务', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', specialty: '技术攀登', members: 560, expeditions: 28, verified: 1, type: '综合' },
+        { id: 'm3', name: '北京户外探险队', description: '以休闲户外和中低海拔攀登为主，适合初学者', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', specialty: '中低海拔', members: 890, expeditions: 120, verified: 1, type: '休闲' },
+        { id: 'm4', name: '喜马拉雅探险队', description: '专业的喜马拉雅远征组织，曾多次带队登顶8000米峰', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', specialty: '喜马拉雅', members: 320, expeditions: 18, verified: 1, type: '专业' },
+        { id: 'm5', name: '成都山地俱乐部', description: '专注于川西高原和横断山脉攀登的本地俱乐部', cover: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', specialty: '川西高原', members: 450, expeditions: 67, verified: 0, type: '区域' },
+        { id: 'm6', name: '丝路登山协会', description: '西北地区攀登爱好者的聚集地，专注昆仑山、天山攀登', cover: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', specialty: '昆仑/天山', members: 230, expeditions: 35, verified: 0, type: '区域' },
+      ];
+      return res.json(mockClubs.slice(0, 6));
+    }
+    res.json(clubs);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/clubs
 router.get('/', (req, res) => {
   try {
@@ -294,6 +323,89 @@ router.delete('/:id/join', auth, (req, res) => {
     db.prepare('DELETE FROM club_members WHERE club_id = ? AND user_id = ?').run(req.params.id, req.user.id);
     db.prepare('UPDATE clubs SET members_count = MAX(0, members_count - 1) WHERE id = ?').run(req.params.id);
     res.json({ success: true, message: '已退出俱乐部' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/clubs/:id/posts — 俱乐部动态帖子
+router.get('/:id/posts', (req, res) => {
+  try {
+    const posts = db.prepare(`
+      SELECT * FROM club_posts WHERE club_id = ? ORDER BY created_at DESC LIMIT 20
+    `).all(req.params.id);
+    if (posts.length === 0) {
+      return res.json([
+        { id: 1, club_id: req.params.id, author_name: '俱乐部管理员', author_avatar: 'https://i.pravatar.cc/150?u=club_admin', content: '🏔️ 本次远征圆满结束！感谢所有队员的努力与配合，期待下次一起出发！', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, created_at: new Date(Date.now() - 86400000).toISOString() },
+        { id: 2, club_id: req.params.id, author_name: '队长张磊', author_avatar: 'https://i.pravatar.cc/150?u=guide1', content: '新一季攀登计划已发布！名额有限，感兴趣的小伙伴抓紧报名～', image: null, location: null, likes: 56, created_at: new Date(Date.now() - 172800000).toISOString() },
+        { id: 3, club_id: req.params.id, author_name: '向导扎西', author_avatar: 'https://i.pravatar.cc/150?u=guide2', content: '分享一些攀登技巧：高海拔适应期不宜操之过急，循序渐进才是关键 🧗', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '加德满都', likes: 89, created_at: new Date(Date.now() - 259200000).toISOString() },
+      ]);
+    }
+    res.json(posts);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/clubs/:id/photos — 俱乐部图片相册
+router.get('/:id/photos', (req, res) => {
+  try {
+    const photos = db.prepare(`
+      SELECT * FROM club_photos WHERE club_id = ? ORDER BY created_at DESC LIMIT 30
+    `).all(req.params.id);
+    if (photos.length === 0) {
+      return res.json([
+        { id: 1, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', caption: '珠峰大本营' },
+        { id: 2, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', caption: 'K2 远征途中' },
+        { id: 3, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', caption: '队员合影' },
+        { id: 4, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', caption: '山顶日落' },
+        { id: 5, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', caption: '冰川营地' },
+        { id: 6, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', caption: '高山攀登' },
+      ]);
+    }
+    res.json(photos);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/clubs/:id/guides — 俱乐部旗下向导列表
+router.get('/:id/guides', (req, res) => {
+  try {
+    const guides = db.prepare(`
+      SELECT g.id, g.name, g.avatar, g.flag, g.nationality, g.rating, g.reviews,
+             g.specialty, g.day_rate as dayRate, g.affiliation_type as affiliationType,
+             g.affiliation_club_id as affiliationClubId, g.experience_years as experienceYears
+      FROM guides g
+      WHERE g.affiliation_club_id = ? AND g.status = 'approved'
+      ORDER BY g.rating DESC
+    `).all(req.params.id);
+    res.json(guides);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/clubs/payment — 俱乐部入驻支付（预留，后续完善）
+// TODO: 接入真实支付系统（支付宝/微信支付）
+router.post('/payment', auth, (req, res) => {
+  try {
+    const { club_application_id, amount, payment_method } = req.body;
+    if (!club_application_id || !amount) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+    // TODO: 调用支付接口，生成订单
+    const mockOrderId = 'CLUB_PAY_' + Date.now() + '_' + req.user.id;
+    res.json({
+      success: true,
+      order_id: mockOrderId,
+      amount,
+      payment_method: payment_method || 'alipay',
+      status: 'pending',
+      message: '支付订单已创建，请完成支付',
+      // TODO: 返回支付跳转 URL / 二维码
+      pay_url: null,
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
