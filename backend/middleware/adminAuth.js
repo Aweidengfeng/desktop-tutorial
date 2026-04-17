@@ -1,11 +1,11 @@
 const jwt = require('jsonwebtoken');
 
 module.exports = function adminAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const token = req.cookies?.adminToken ||
+    (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
+  if (!token) {
     return res.status(401).json({ error: '未提供认证Token' });
   }
-  const token = authHeader.split(' ')[1];
   try {
     const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
     const decoded = jwt.verify(token, secret);
