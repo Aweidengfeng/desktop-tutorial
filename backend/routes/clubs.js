@@ -6,14 +6,12 @@ const auth = require('../middleware/auth');
 // GET /api/clubs
 router.get('/', (req, res) => {
   try {
-    const { limit, sort } = req.query;
-    const orderBy = sort === 'members' ? 'members_count DESC' : 'members_count DESC';
-    const limitClause = limit ? `LIMIT ${parseInt(limit, 10) || 20}` : '';
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 100);
     const clubs = db.prepare(`
       SELECT id, name, description, cover, specialty, region, type,
              members_count as members, expeditions, verified, founded, status, created_at
-      FROM clubs WHERE status = 'active' ORDER BY ${orderBy} ${limitClause}
-    `).all();
+      FROM clubs WHERE status = 'active' ORDER BY members_count DESC LIMIT ?
+    `).all(limit);
     res.json(clubs);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

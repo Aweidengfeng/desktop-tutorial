@@ -229,9 +229,11 @@
               <div class="relative h-20">
                 <img :src="club.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" class="w-full h-full object-cover">
                 <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
-                <div x-show="club.verified" class="absolute top-1.5 right-1.5">
-                  <span class="text-[10px] bg-primary px-1.5 py-0.5 rounded-full text-white font-semibold">✓</span>
-                </div>
+                <template x-if="club.verified">
+                  <div class="absolute top-1.5 right-1.5">
+                    <span class="text-[10px] bg-primary px-1.5 py-0.5 rounded-full text-white font-semibold">✓</span>
+                  </div>
+                </template>
               </div>
               <div class="p-2.5">
                 <p class="text-white text-xs font-bold truncate" x-text="club.name"></p>
@@ -369,7 +371,7 @@
                    x-text="idx+1"></div>
               <img :src="entry.avatar || ('https://i.pravatar.cc/150?u=lb' + (entry.id || idx))" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
               <div class="flex-1 min-w-0">
-                <p class="text-white text-sm font-semibold truncate" x-text="entry.name || entry.flag + ' ' + entry.name"></p>
+                <p class="text-white text-sm font-semibold truncate" x-text="entry.name"></p>
                 <p class="text-slate-400 text-xs truncate" x-text="entry.best_peak || entry.peak || ''"></p>
               </div>
               <div class="text-right flex-shrink-0">
