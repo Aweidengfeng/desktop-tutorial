@@ -168,7 +168,7 @@
       </div>
 
       <!-- 热门山峰天气 (Popular Peaks Weather) -->
-      <div class="px-4 -mt-2 mb-4">
+      <div class="px-4 mt-2 mb-4">
         <div class="flex items-center justify-between mb-2">
           <p class="text-xs text-slate-400 font-semibold">⛅ 热门攀登山峰实时天气</p>
           <span class="text-[10px] text-slate-500">滑动查看更多</span>
@@ -1065,6 +1065,11 @@
         <!-- AMap GPS 地图 -->
         <div id="track-map-container" class="glass rounded-2xl mb-4 relative overflow-hidden" style="height:220px;">
           <div id="track-map" style="width:100%;height:100%;"></div>
+          <!-- AMap 未加载时显示占位 -->
+          <div x-show="!trackMap" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
+            <span class="material-symbols-outlined text-4xl mb-2">map</span>
+            <p class="text-xs">地图加载中…</p>
+          </div>
           <div class="absolute top-2 right-2 flex gap-1.5">
             <button @click="locateMe()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
               <span class="material-symbols-outlined text-base text-primary-light">my_location</span>
@@ -2951,6 +2956,21 @@
                 <h4 class="text-white font-semibold mb-1 text-sm">备注</h4>
                 <p class="text-slate-300 text-sm leading-relaxed" x-text="selectedTrackDetail.notes"></p>
               </div>
+              <!-- 轨迹激励 -->
+              <div class="glass rounded-xl p-4 mb-4">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-white font-semibold text-sm">🎁 轨迹激励</h4>
+                  <span class="text-emerald-400 text-xs font-bold">+ <span x-text="calcTrackPoints(selectedTrackDetail)"></span> 积分</span>
+                </div>
+                <p class="text-slate-400 text-xs mb-3">里程 × 1 + 爬升每百米 × 1，基础奖励 50 分</p>
+                <button @click="claimTrackPoints(selectedTrackDetail)"
+                        :disabled="selectedTrackDetail._pointsClaimed"
+                        :class="selectedTrackDetail._pointsClaimed ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
+                        class="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                  <span class="material-symbols-outlined text-base" x-text="selectedTrackDetail._pointsClaimed ? 'check_circle' : 'redeem'"></span>
+                  <span x-text="selectedTrackDetail._pointsClaimed ? '已领取' : '领取积分'"></span>
+                </button>
+              </div>
               <!-- Share Button -->
               <button @click="shareTrack(selectedTrackDetail)" class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-light text-white font-semibold py-3 rounded-2xl transition-colors">
                 <span class="material-symbols-outlined text-base">share</span>分享轨迹
@@ -4504,8 +4524,8 @@ const COMMERCIAL_PEAKS = [
   { id: 12, name: '布洛阿特峰', nameEn: 'Broad Peak', altitude: 8051, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'Latok Alpine'], routes: '普通路线/西壁', oxygen: false, annualClimbers: 120, annualTeams: 10, isEstimated: true, campKey: '布洛阿特峰' },
   { id: 13, name: '迦舒布鲁姆II峰', nameEn: 'Gasherbrum II', altitude: 8034, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'IMG', 'Furtenbach Adventures'], routes: '西南壁路线', oxygen: false, annualClimbers: 180, annualTeams: 14, isEstimated: true, campKey: '加舒尔布鲁姆II峰' },
   { id: 14, name: '希夏邦马峰', nameEn: 'Shishapangma', altitude: 8027, country: '中国', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)/秋季(9-10月)', operators: ['IMG', 'Seven Summit Treks', 'Furtenbach Adventures', 'Amical Alpin'], routes: '北坡/西南壁', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: '希夏邦马峰' },
-  { id: 15, name: '慕士塔格峰', nameEn: 'Muztagh Ata', altitude: 7546, country: '中国', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['China Mountaineering Association', 'Alpenglow Expeditions', 'SummitClimb'], routes: '东坡标准路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: null },
-  { id: 16, name: '列宁峰', nameEn: 'Lenin Peak', altitude: 7134, country: '吉尔吉斯斯坦/塔吉克斯坦', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['Alpenglow Expeditions', 'SummitClimb', 'Vertical', 'Asia Mountains'], routes: '标准路线(Razdelnaya山脊)', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: null },
+  { id: 15, name: '慕士塔格峰', nameEn: 'Muztagh Ata', altitude: 7546, country: '中国', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['China Mountaineering Association', 'Alpenglow Expeditions', 'SummitClimb'], routes: '东坡标准路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: '慕士塔格峰' },
+  { id: 16, name: '列宁峰', nameEn: 'Lenin Peak', altitude: 7134, country: '吉尔吉斯斯坦/塔吉克斯坦', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['Alpenglow Expeditions', 'SummitClimb', 'Vertical', 'Asia Mountains'], routes: '标准路线(Razdelnaya山脊)', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: '列宁峰' },
   { id: 17, name: '阿玛达布拉姆峰', nameEn: 'Ama Dablam', altitude: 6812, country: '尼泊尔', region: '喜马拉雅', difficulty: '技术型', season: '秋季(10-11月)/春季(3-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Peak Freaks'], routes: '西南山脊路线', oxygen: false, annualClimbers: 350, annualTeams: 30, isEstimated: true, campKey: '阿玛达布拉姆峰' },
   { id: 18, name: '阿空加瓜峰', nameEn: 'Aconcagua', altitude: 6961, country: '阿根廷', region: '安第斯', difficulty: '进阶7000m', season: '南半球夏季(12-2月)', operators: ['IMG', 'Alpine Ascents', 'RMI Expeditions', 'SummitClimb', 'Aymara Expeditions'], routes: '标准路线(普通路线)/波兰冰川', oxygen: false, annualClimbers: 3000, annualTeams: 120, isEstimated: false, campKey: '阿空加瓜峰' },
   { id: 19, name: 'Denali', nameEn: 'Denali', altitude: 6190, country: '美国', region: '北美', difficulty: '进阶7000m', season: '春季(5-6月)', operators: ['RMI Expeditions', 'Alpine Ascents', 'AAI', 'Mountain Trip', 'Rainier Mountaineering'], routes: '西山脊/卡希尔顿路线', oxygen: false, annualClimbers: 1200, annualTeams: 80, isEstimated: false, campKey: '麦金利山' },
@@ -4513,13 +4533,17 @@ const COMMERCIAL_PEAKS = [
   { id: 21, name: '厄尔布鲁士山', nameEn: 'Elbrus', altitude: 5642, country: '俄罗斯', region: '高加索', difficulty: '入门6000m', season: '夏季(6-8月)', operators: ['Alpine Ascents', 'IMG', 'Alpenglow Expeditions', 'MCS AlpClub', 'Risk.ru'], routes: '南坡标准路线/北坡路线', oxygen: false, annualClimbers: 15000, annualTeams: 800, isEstimated: true, campKey: '厄尔布鲁士山' },
   { id: 22, name: '文森峰', nameEn: 'Vinson Massif', altitude: 4892, country: '南极洲', region: '南极', difficulty: '入门6000m', season: '南极夏季(11-1月)', operators: ['Alpine Ascents', 'Antarctic Logistics & Expeditions', 'IMG', 'Climbing the Seven Summits'], routes: '标准路线', oxygen: false, annualClimbers: 200, annualTeams: 20, isEstimated: true, campKey: '文森峰' },
   { id: 23, name: '卡斯滕士金字塔', nameEn: 'Carstensz Pyramid', altitude: 4884, country: '印度尼西亚', region: '大洋洲', difficulty: '技术型', season: '全年(需申请许可)', operators: ['Alpine Ascents', 'Adventure Indonesia', 'Papua Jungle Expedition'], routes: '标准技术路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: null },
-  { id: 24, name: 'Mera Peak', nameEn: 'Mera Peak', altitude: 6461, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Mera Peak Climbing', 'Glacier Safari Treks'], routes: '标准路线(北侧)', oxygen: false, annualClimbers: 1500, annualTeams: 100, isEstimated: true, campKey: null },
-  { id: 25, name: 'Island Peak', nameEn: 'Island Peak (Imja Tse)', altitude: 6189, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Island Peak Climbing'], routes: '标准路线/西壁', oxygen: false, annualClimbers: 2000, annualTeams: 150, isEstimated: true, campKey: null },
-  { id: 26, name: '哈巴雪山', nameEn: 'Haba Snow Mountain', altitude: 5396, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['玉珠峰探险', '横断山向导公司', '四川高山探险', 'Alpenglow Expeditions'], routes: '标准路线(西侧)', oxygen: false, annualClimbers: 800, annualTeams: 60, isEstimated: true, campKey: null },
+  { id: 24, name: '梅拉峰', nameEn: 'Mera Peak', altitude: 6461, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Mera Peak Climbing', 'Glacier Safari Treks'], routes: '标准路线(北侧)', oxygen: false, annualClimbers: 1500, annualTeams: 100, isEstimated: true, campKey: '梅拉峰' },
+  { id: 25, name: '岛峰', nameEn: 'Island Peak (Imja Tse)', altitude: 6189, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Island Peak Climbing'], routes: '标准路线/西壁', oxygen: false, annualClimbers: 2000, annualTeams: 150, isEstimated: true, campKey: '岛峰' },
+  { id: 26, name: '哈巴雪山', nameEn: 'Haba Snow Mountain', altitude: 5396, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['玉珠峰探险', '横断山向导公司', '四川高山探险', 'Alpenglow Expeditions'], routes: '标准路线(西侧)', oxygen: false, annualClimbers: 800, annualTeams: 60, isEstimated: true, campKey: '哈巴雪山' },
   { id: 27, name: '四姑娘山大峰', nameEn: 'Four Girls Mountain (Da Peak)', altitude: 5025, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川四姑娘山探险', '蓝天救援队', '四川山地向导'], routes: '南坡标准路线', oxygen: false, annualClimbers: 600, annualTeams: 50, isEstimated: true, campKey: '四姑娘山' },
   { id: 28, name: '幺妹峰', nameEn: 'Siguniang (Yaomei Peak)', altitude: 6250, country: '中国', region: '横断山脉', difficulty: '技术型', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川四姑娘山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 30, annualTeams: 3, isEstimated: true, campKey: '四姑娘山' },
   { id: 29, name: '玉珠峰', nameEn: 'Yuzhufeng', altitude: 6178, country: '中国', region: '昆仑山', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['玉珠峰探险', '中国登山协会', '西藏高山探险'], routes: '北坡标准路线', oxygen: false, annualClimbers: 500, annualTeams: 40, isEstimated: true, campKey: '玉珠峰' },
-  { id: 30, name: '雀儿山', nameEn: 'Que Er Shan', altitude: 6168, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['四川高山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: null },
+  { id: 30, name: '雀儿山', nameEn: 'Que Er Shan', altitude: 6168, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['四川高山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: '雀儿山' },
+  { id: 31, name: '玉龙雪山', nameEn: 'Yulong Snow Mountain', altitude: 5596, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(3-5月)/秋季(9-10月)', operators: ['云南山地向导公司', '丽江登山协会', '横断山探险'], routes: '主峰扇子陡北侧路线', oxygen: false, annualClimbers: 400, annualTeams: 30, isEstimated: true, campKey: '玉龙雪山' },
+  { id: 32, name: '贡嘎山', nameEn: 'Minya Konka', altitude: 7556, country: '中国', region: '横断山脉', difficulty: '技术型', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川高山探险', '成都山地向导联盟', '贡嘎登山服务'], routes: '东南山脊标准路线', oxygen: false, annualClimbers: 40, annualTeams: 4, isEstimated: true, campKey: '贡嘎山' },
+  { id: 33, name: '启孜峰', nameEn: 'Qizhi Peak', altitude: 6206, country: '中国', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['西藏高山探险', '中国登山协会', '拉萨登山向导'], routes: '西南坡标准路线', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: '启孜峰' },
+  { id: 34, name: '亚拉雪山', nameEn: 'Yala Snow Mountain', altitude: 5820, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-6月)/秋季(9-10月)', operators: ['四川高山探险', '康定山地向导', '蓝天户外'], routes: '南坡常规路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: '亚拉雪山' },
 ];
 
 function alpineLink() {
@@ -5088,9 +5112,13 @@ function alpineLink() {
       try {
         const q = encodeURIComponent(name.trim());
         const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(url, {
-          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' }
+          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         if (!res.ok) return null;
         const data = await res.json();
         if (!data || data.length === 0) return null;
@@ -5112,7 +5140,13 @@ function alpineLink() {
       try {
         const q = encodeURIComponent(name.trim());
         const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
-        const res = await fetch(url, { headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' } });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
         if (!res.ok) { this.osmSuggestions = []; this.osmSuggestionsLoading = false; return; }
         const data = await res.json();
         this.osmSuggestions = data.map(item => ({
@@ -5521,7 +5555,10 @@ function alpineLink() {
 
     // 初始化轨迹记录地图
     initTrackMap() {
-      if (this.trackMap) return;
+      if (this.trackMap) {
+        try { this.trackMap.resize(); } catch(e) {}
+        return;
+      }
       this.trackMap = this.initAMap('track-map', { zoom: 13 });
     },
 
@@ -5909,19 +5946,62 @@ function alpineLink() {
     async openTrackDetail(track) {
       this.selectedTrackDetail = track;
       this.showTrackDetail = true;
+      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      if (localStorage.getItem(claimedKey)) track._pointsClaimed = true;
       if (this.authToken && track.id) {
         try {
           const res = await fetch('/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
-          if (res.ok) { this.selectedTrackDetail = await res.json(); }
+          if (res.ok) {
+            this.selectedTrackDetail = await res.json();
+            if (localStorage.getItem(claimedKey)) this.selectedTrackDetail._pointsClaimed = true;
+          }
         } catch(e) {}
       }
     },
     shareTrack(track) {
-      const url = window.location.origin + '/api/tracks/' + track.id;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => this.showToast('链接已复制 🔗'));
+      const trackId = track.id ? ('?track=' + track.id) : '';
+      const url = window.location.origin + '/summitlink' + trackId;
+      const text = `${track.name || '我的轨迹'} 📍${(track.distance_km || track.distance || 0)}km ↑${(track.elevation_gain || track.elevation || 0)}m - 来自巅峰探索 SummitLink`;
+      if (navigator.share) {
+        navigator.share({ title: track.name || '轨迹分享', text, url }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text + '\n' + url).then(() => this.showToast('链接已复制 🔗'));
       } else {
-        this.showToast('轨迹：' + track.name);
+        this.showToast('轨迹：' + (track.name || '我的轨迹'));
+      }
+    },
+    calcTrackPoints(track) {
+      if (!track) return 0;
+      const dist = Math.max(0, parseFloat(track.distance_km || track.distance || 0));
+      const elev = Math.max(0, parseFloat(track.elevation_gain || track.elevation || 0));
+      return 50 + Math.round(dist) + Math.round(elev / 100);
+    },
+    async claimTrackPoints(track) {
+      if (!track || track._pointsClaimed) return;
+      if (!this.requireAuth()) return;
+      const pts = this.calcTrackPoints(track);
+      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      if (localStorage.getItem(claimedKey)) {
+        track._pointsClaimed = true;
+        return;
+      }
+      try {
+        const res = await fetch(`/api/tracks/${track.id}/claim-points`, {
+          method: 'POST',
+          headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ points: pts }),
+        });
+        if (res.ok || res.status === 404 || res.status === 405) {
+          track._pointsClaimed = true;
+          try { localStorage.setItem(claimedKey, '1'); } catch(e) {}
+          this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+        } else {
+          this.showToast('积分领取失败，请稍后重试', 'error');
+        }
+      } catch(e) {
+        track._pointsClaimed = true;
+        try { localStorage.setItem(claimedKey, '1'); } catch(e2) {}
+        this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
       }
     },
 
@@ -7026,9 +7106,25 @@ function alpineLink() {
       // Watch currentPage to init AMap when entering track page
       this.$watch('currentPage', (val) => {
         if (val === 'track') {
-          this.$nextTick(() => this.initTrackMap());
+          this.$nextTick(() => setTimeout(() => this.initTrackMap(), 150));
         }
       });
+      // Handle shared track URL: /summitlink?track=ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedTrackId = urlParams.get('track');
+      if (sharedTrackId) {
+        this.$nextTick(async () => {
+          try {
+            const res = await fetch('/api/tracks/' + sharedTrackId);
+            if (res.ok) {
+              const track = await res.json();
+              this.currentPage = 'track';
+              await this.$nextTick();
+              this.openTrackDetail(track);
+            }
+          } catch(e) {}
+        });
+      }
     },
   };
 }

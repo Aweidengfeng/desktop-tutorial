@@ -33,6 +33,15 @@ const peakCoords = {
   '梅鲁峰':   { lat: 30.88, lon: 79.10 },
   '阿玛达布拉姆峰': { lat: 27.86, lon: 86.86 },
   '岛峰':     { lat: 27.93, lon: 86.92 },
+  // 中低海拔雪山及入门峰
+  '慕士塔格峰': { lat: 38.27, lon: 75.11 },
+  '列宁峰':    { lat: 39.71, lon: 72.59 },
+  '梅拉峰':    { lat: 27.69, lon: 86.91 },
+  '哈巴雪山':  { lat: 27.42, lon: 100.00 },
+  '雀儿山':   { lat: 31.00, lon: 99.67 },
+  '玉珠峰':   { lat: 35.63, lon: 94.25 },
+  '启孜峰':   { lat: 29.35, lon: 90.46 },
+  '亚拉雪山':  { lat: 30.38, lon: 101.92 },
 };
 
 // 各山峰营地数据
@@ -188,6 +197,57 @@ const PEAK_CAMPS = {
     { name: '营地一 C1',         altitude: 5000, lat: 29.5950, lon: 101.8900, emoji: '⛺' },
     { name: '营地二 C2',         altitude: 6000, lat: 29.5960, lon: 101.8920, emoji: '⛺' },
     { name: '顶峰 Summit',       altitude: 7556, lat: 29.5942, lon: 101.8781, emoji: '🏔️' },
+  ],
+  '慕士塔格峰': [
+    { name: '大本营 BC',         altitude: 3600, lat: 38.2700, lon: 75.1100, emoji: '🏕️' },
+    { name: '营地一 C1',         altitude: 5300, lat: 38.2720, lon: 75.1120, emoji: '⛺' },
+    { name: '营地二 C2',         altitude: 6200, lat: 38.2740, lon: 75.1140, emoji: '⛺' },
+    { name: '营地三 C3',         altitude: 6900, lat: 38.2760, lon: 75.1160, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 7546, lat: 38.2742, lon: 75.1133, emoji: '🏔️' },
+  ],
+  '列宁峰': [
+    { name: '大本营 BC',         altitude: 3600, lat: 39.7100, lon: 72.5900, emoji: '🏕️' },
+    { name: '营地一 C1',         altitude: 4400, lat: 39.7120, lon: 72.5920, emoji: '⛺' },
+    { name: '营地二 C2',         altitude: 5400, lat: 39.7140, lon: 72.5940, emoji: '⛺' },
+    { name: '营地三 C3',         altitude: 6100, lat: 39.7160, lon: 72.5960, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 7134, lat: 39.7133, lon: 72.5953, emoji: '🏔️' },
+  ],
+  '梅拉峰': [
+    { name: '卡雷村 Khare',      altitude: 5045, lat: 27.6900, lon: 86.9100, emoji: '🏕️' },
+    { name: '高营地 High Camp',  altitude: 5800, lat: 27.6920, lon: 86.9120, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 6461, lat: 27.6908, lon: 86.9098, emoji: '🏔️' },
+  ],
+  '哈巴雪山': [
+    { name: '哈巴村大本营',      altitude: 3200, lat: 27.4200, lon: 100.0000, emoji: '🏕️' },
+    { name: '中营地 C1',         altitude: 4700, lat: 27.4220, lon: 100.0020, emoji: '⛺' },
+    { name: '高营地 C2',         altitude: 5100, lat: 27.4240, lon: 100.0040, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 5396, lat: 27.4242, lon: 100.0033, emoji: '🏔️' },
+  ],
+  '玉珠峰': [
+    { name: '大本营 BC',         altitude: 4700, lat: 35.6300, lon: 94.2500, emoji: '🏕️' },
+    { name: '前进营地 ABC',      altitude: 5200, lat: 35.6320, lon: 94.2520, emoji: '⛺' },
+    { name: '高营地 C1',         altitude: 5700, lat: 35.6340, lon: 94.2540, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 6178, lat: 35.6350, lon: 94.2533, emoji: '🏔️' },
+  ],
+  '雀儿山': [
+    { name: '大本营 BC',         altitude: 4400, lat: 31.0000, lon: 99.6700, emoji: '🏕️' },
+    { name: '营地一 C1',         altitude: 5200, lat: 31.0020, lon: 99.6720, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 6168, lat: 31.0033, lon: 99.6733, emoji: '🏔️' },
+  ],
+  '玉龙雪山': [
+    { name: '玉龙雪山索道上站',  altitude: 3356, lat: 27.1000, lon: 100.2200, emoji: '🏕️' },
+    { name: '冰川大本营',        altitude: 4500, lat: 27.1020, lon: 100.2220, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 5596, lat: 27.1025, lon: 100.2208, emoji: '🏔️' },
+  ],
+  '启孜峰': [
+    { name: '大本营 BC',         altitude: 5000, lat: 29.3500, lon: 90.4600, emoji: '🏕️' },
+    { name: '高营地 C1',         altitude: 5700, lat: 29.3520, lon: 90.4620, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 6206, lat: 29.3533, lon: 90.4633, emoji: '🏔️' },
+  ],
+  '亚拉雪山': [
+    { name: '大本营 BC',         altitude: 3700, lat: 30.3800, lon: 101.9200, emoji: '🏕️' },
+    { name: '营地一 C1',         altitude: 4600, lat: 30.3820, lon: 101.9220, emoji: '⛺' },
+    { name: '顶峰 Summit',       altitude: 5820, lat: 30.3833, lon: 101.9217, emoji: '🏔️' },
   ],
 };
 
