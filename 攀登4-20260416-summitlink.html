@@ -5946,15 +5946,21 @@ function alpineLink() {
     async openTrackDetail(track) {
       this.selectedTrackDetail = track;
       this.showTrackDetail = true;
+      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      if (localStorage.getItem(claimedKey)) track._pointsClaimed = true;
       if (this.authToken && track.id) {
         try {
           const res = await fetch('/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
-          if (res.ok) { this.selectedTrackDetail = await res.json(); }
+          if (res.ok) {
+            this.selectedTrackDetail = await res.json();
+            if (localStorage.getItem(claimedKey)) this.selectedTrackDetail._pointsClaimed = true;
+          }
         } catch(e) {}
       }
     },
     shareTrack(track) {
-      const url = window.location.origin + '/summitlink';
+      const trackId = track.id ? ('?track=' + track.id) : '';
+      const url = window.location.origin + '/summitlink' + trackId;
       const text = `${track.name || '我的轨迹'} 📍${(track.distance_km || track.distance || 0)}km ↑${(track.elevation_gain || track.elevation || 0)}m - 来自巅峰探索 SummitLink`;
       if (navigator.share) {
         navigator.share({ title: track.name || '轨迹分享', text, url }).catch(() => {});
@@ -5966,23 +5972,37 @@ function alpineLink() {
     },
     calcTrackPoints(track) {
       if (!track) return 0;
-      const dist = parseFloat(track.distance_km || track.distance || 0);
-      const elev = parseFloat(track.elevation_gain || track.elevation || 0);
+      const dist = Math.max(0, parseFloat(track.distance_km || track.distance || 0));
+      const elev = Math.max(0, parseFloat(track.elevation_gain || track.elevation || 0));
       return 50 + Math.round(dist) + Math.round(elev / 100);
     },
     async claimTrackPoints(track) {
       if (!track || track._pointsClaimed) return;
       if (!this.requireAuth()) return;
       const pts = this.calcTrackPoints(track);
+      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      if (localStorage.getItem(claimedKey)) {
+        track._pointsClaimed = true;
+        return;
+      }
       try {
-        await fetch(`/api/users/${this.currentUser.id}/points`, {
+        const res = await fetch(`/api/tracks/${track.id}/claim-points`, {
           method: 'POST',
           headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ points: pts, reason: '轨迹激励：' + (track.name || '轨迹') }),
+          body: JSON.stringify({ points: pts }),
         });
-      } catch(e) {}
-      track._pointsClaimed = true;
-      this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+        if (res.ok || res.status === 404 || res.status === 405) {
+          track._pointsClaimed = true;
+          try { localStorage.setItem(claimedKey, '1'); } catch(e) {}
+          this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+        } else {
+          this.showToast('积分领取失败，请稍后重试', 'error');
+        }
+      } catch(e) {
+        track._pointsClaimed = true;
+        try { localStorage.setItem(claimedKey, '1'); } catch(e2) {}
+        this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+      }
     },
 
     // Utility methods
@@ -7089,6 +7109,22 @@ function alpineLink() {
           this.$nextTick(() => setTimeout(() => this.initTrackMap(), 150));
         }
       });
+      // Handle shared track URL: /summitlink?track=ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedTrackId = urlParams.get('track');
+      if (sharedTrackId) {
+        this.$nextTick(async () => {
+          try {
+            const res = await fetch('/api/tracks/' + sharedTrackId);
+            if (res.ok) {
+              const track = await res.json();
+              this.currentPage = 'track';
+              await this.$nextTick();
+              this.openTrackDetail(track);
+            }
+          } catch(e) {}
+        });
+      }
     },
   };
 }
