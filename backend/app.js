@@ -22,6 +22,15 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const rateLimit = require('express-rate-limit');
+
+// 页面路由限流（防止爬虫对文件系统操作造成压力）
+const htmlPageLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const app = express();
 
@@ -63,7 +72,7 @@ app.use('/uploads', express.static(uploadsPath));
 
 // 专门处理HTML文件路由（避免中文文件名问题）
 const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
-app.get(['/summitlink', '/summitlink.html'], (req, res) => {
+app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
   console.log('📄 请求HTML文件:', htmlFile);
   console.log('📄 文件存在:', fs.existsSync(htmlFile));
   const amapKey = process.env.AMAP_KEY || '';
@@ -132,7 +141,7 @@ app.use('/api/expeditions', require('./routes/expeditions'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');
-app.get('/admin', (req, res) => {
+app.get('/admin', htmlPageLimiter, (req, res) => {
   fs.readFile(adminHtmlFile, 'utf8', (err, html) => {
     if (err) {
       console.error('❌ 读取 admin.html 失败:', err);
