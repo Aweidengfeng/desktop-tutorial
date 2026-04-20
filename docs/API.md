@@ -39,6 +39,11 @@
 26. [文件上传 `/api/upload`](#文件上传-apiupload)
 27. [管理后台 `/api/admin`](#管理后台-apiadmin)
 28. [系统 `/api/health`](#系统-apihealth)
+29. [向导服务 `/api/guides/:guideId/services`](#向导服务-apiguidesguididservices)
+30. [向导服务订单 `/api/guide-service-orders`](#向导服务订单-apiguide-service-orders)
+31. [俱乐部活动报名 `/api/clubs/:clubId/activities/:actId`](#俱乐部活动报名-apiclubsclubidactivitiesactid)
+32. [俱乐部活动订单 `/api/activity-orders`](#俱乐部活动订单-apiactivity-orders)
+33. [商业资质申请](#商业资质申请)
 
 ---
 
@@ -404,3 +409,62 @@
 | 方法 | 路径 | 鉴权 | 说明 |
 |------|------|------|------|
 | `GET` | `/api/health` | — | 健康检查，返回 `{ status, uptime, version }` |
+
+---
+
+## 向导服务 `/api/guides/:guideId/services`
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| `GET` | `/api/guides/:guideId/services` | — | 向导服务列表（公开；向导本人可见已删除项）|
+| `POST` | `/api/guides/:guideId/services` | �� JWT | 发布新服务 `{ title, type, mountain, region, price, price_unit, duration_days, max_clients, difficulty, description }` |
+| `PUT` | `/api/guides/:guideId/services/:id` | 🔐 JWT | 更新服务信息 |
+| `DELETE` | `/api/guides/:guideId/services/:id` | 🔐 JWT | 软删服务（status=deleted）|
+| `POST` | `/api/guides/:guideId/services/:id/book` | 🔐 JWT | 预约向导服务 `{ emergency_contact_name, emergency_contact_phone, agreed_waiver, waiver_version, notes }` → 返回 `{ order_no, order }` |
+| `GET` | `/api/guides/:guideId/services/:id/bookings` | 🔐 JWT | 向导查看该服务的预约列表（需为向导本人）|
+
+> **价目说明：** `price_unit` 支持 `per_day`、`per_person`、`per_session`。付费服务需向导通过商业资质认证（`commercial_verified=1`），否则返回 `422 { error: "commercial_not_verified" }`。
+
+---
+
+## 向导服务订单 `/api/guide-service-orders`
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| `GET` | `/api/guide-service-orders/my` | 🔐 JWT | 当前用户的向导服务订单列表（含关联 guide_services、guides）|
+| `POST` | `/api/guide-service-orders/:id/pay` | 🔐 JWT | 模拟支付（`pending_payment → paid`）|
+| `POST` | `/api/guide-service-orders/:id/cancel` | 🔐 JWT | 取消订单 |
+| `POST` | `/api/guide-service-orders/:id/refund-request` | 🔐 JWT | 申请退款 `{ reason }` |
+
+---
+
+## 俱乐部活动报名 `/api/clubs/:clubId/activities/:actId`
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| `POST` | `/api/clubs/:clubId/activities/:actId/enroll` | 🔐 JWT | 报名俱乐部活动 `{ emergency_contact_name, emergency_contact_phone, agreed_waiver, waiver_version }` → 返回 `{ order_no, order }` |
+| `GET` | `/api/clubs/:clubId/activities/:actId/enrollments` | 🔐 JWT | 查看报名用户列表（需为俱乐部创始人）|
+
+---
+
+## 俱乐部活动订单 `/api/activity-orders`
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| `GET` | `/api/activity-orders/my` | 🔐 JWT | 当前用户的活动订单列表（含关联 club_activities、clubs）|
+| `POST` | `/api/activity-orders/:id/pay` | 🔐 JWT | 模拟支付（`pending_payment → paid`）|
+| `POST` | `/api/activity-orders/:id/cancel` | 🔐 JWT | 取消订单 |
+| `POST` | `/api/activity-orders/:id/refund-request` | �� JWT | 申请退款 `{ reason }` |
+
+---
+
+## 商业资质申请
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|------|------|
+| `POST` | `/api/guides/:id/commercial-apply` | 🔐 JWT | 向导提交商业资质申请 `{ business_license_url, business_license_no, insurance_cert_url, bank_account_name, bank_account_no, bank_name }`（仅限向导本人）|
+| `POST` | `/api/clubs/:id/commercial-apply` | 🔐 JWT | 俱乐部提交商业资质申请（仅限创始人）|
+| `GET` | `/api/admin/guides/commercial` | 🔑 Admin | 向导商业资质申请列表（分页 `?page=1&limit=20`）|
+| `POST` | `/api/admin/guides/:id/commercial-review` | 🔑 Admin | 审核向导商业资质 `{ action: "approve"/"reject"/"need_info", note }` |
+| `GET` | `/api/admin/clubs/commercial` | 🔑 Admin | 俱乐部商业资质申请列表 |
+| `POST` | `/api/admin/clubs/:id/commercial-review` | 🔑 Admin | 审核俱乐部商业资质 |
