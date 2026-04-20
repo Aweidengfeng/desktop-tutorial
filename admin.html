@@ -853,6 +853,10 @@
           { id: 'club-activities', icon: '🎯', label: '活动管理' },
           { id: 'expeditions',     icon: '🏔️', label: '带队记录' },
           { id: 'reviews',         icon: '⭐', label: '评价管理' },
+          { id: 'expedition-orders', icon: '🗂️', label: '攀登订单' },
+          { id: 'applications',    icon: '📋', label: '申请审核' },
+          { id: 'suspicious-tracks', icon: '🚩', label: '可疑轨迹' },
+          { id: 'moderation-logs', icon: '🛡️', label: '审核日志' },
         ],
 
         // Stats
@@ -895,6 +899,21 @@
 
         // Reviews
         reviews: [], reviewsTotal: 0, reviewsPage: 1, reviewsLoading: false, reviewsFilter: '',
+
+        // Expedition Orders
+        expeditionOrders: [], expeditionOrdersTotal: 0, expeditionOrdersLoading: false, expeditionOrdersStatus: '',
+
+        // Applications
+        guideApplications: [], guideApplicationsLoading: false,
+        clubApplications: [], clubApplicationsLoading: false,
+        applicationsSubTab: 'guide',
+        reviewDrawer: { open: false, type: '', item: null, action: '', note: '' },
+
+        // Suspicious Tracks
+        suspiciousTracks: [], suspiciousTracksLoading: false,
+
+        // Moderation Logs
+        moderationLogs: [], moderationLogsTotal: 0, moderationLogsLoading: false,
 
         init() {
           if (this.token) this.loadPage();
