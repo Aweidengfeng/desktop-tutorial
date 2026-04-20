@@ -577,4 +577,114 @@ router.get('/sms-codes', adminLoginLimiter, devOnly, adminAuth, (req, res) => {
   }
 });
 
+const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
+
+// GET /api/admin/expedition-orders - 全量订单查询
+router.get('/expedition-orders', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { status, limit = 50, page = 1 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = 'SELECT * FROM expedition_orders';
+    const params = [];
+    if (status) { sql += ' WHERE status = ?'; params.push(status); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const orders = db.prepare(sql).all(...params);
+    const countSql = status ? 'SELECT COUNT(*) c FROM expedition_orders WHERE status=?' : 'SELECT COUNT(*) c FROM expedition_orders';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ orders, total });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// POST /api/admin/expedition-orders/:id/transition
+router.post('/expedition-orders/:id/transition', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { newStatus } = req.body;
+    const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ?').get(req.params.id);
+    if (!order) return res.status(404).json({ error: '订单不存在' });
+    const allowed = VALID_TRANSITIONS[order.status] || [];
+    if (!allowed.includes(newStatus)) {
+      return res.status(400).json({ error: `不允许从 ${order.status} 迁移到 ${newStatus}` });
+    }
+    const newHistory = appendStatusHistory(order.status_history, newStatus);
+    db.prepare('UPDATE expedition_orders SET status = ?, status_history = ? WHERE id = ?').run(newStatus, newHistory, order.id);
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(order.user_id, 'order', '订单状态更新', `您的订单 #${order.id} 状态已更新为 ${newStatus}`, `/orders/${order.id}`); } catch(e) {}
+    res.json({ success: true, status: newStatus });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// GET /api/admin/tracks?flagged=1
+router.get('/tracks', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { flagged, limit = 50, page = 1 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = 'SELECT t.*, u.name as user_name FROM tracks t LEFT JOIN users u ON u.id = t.user_id';
+    const params = [];
+    if (flagged !== undefined) { sql += ' WHERE t.flagged = ?'; params.push(parseInt(flagged)); }
+    sql += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const tracks = db.prepare(sql).all(...params);
+    res.json(tracks);
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// POST /api/admin/tracks/:id/unflag - 解除标记并补发积分
+router.post('/tracks/:id/unflag', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const track = db.prepare('SELECT * FROM tracks WHERE id = ?').get(req.params.id);
+    if (!track) return res.status(404).json({ error: '轨迹不存在' });
+    db.prepare('UPDATE tracks SET flagged = 0, flag_reason = NULL WHERE id = ?').run(req.params.id);
+    // 补发积分
+    try { db.prepare('UPDATE users SET points = COALESCE(points,0) + 10 WHERE id = ?').run(track.user_id); } catch(e) {}
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(track.user_id, 'track', '轨迹标记已解除', `您的轨迹「${track.name || ''}」已通过审核并补发积分`, `/tracks/${track.id}`); } catch(e) {}
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// GET /api/admin/moderation-logs
+router.get('/moderation-logs', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { limit = 50, page = 1 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const logs = db.prepare('SELECT * FROM moderation_logs ORDER BY created_at DESC LIMIT ? OFFSET ?').all(parseInt(limit), offset);
+    const total = db.prepare('SELECT COUNT(*) c FROM moderation_logs').get().c;
+    res.json({ logs, total });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// POST /api/admin/guide-applications/:id/review
+router.post('/guide-applications/:id/review', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { action, note } = req.body; // action: approve|reject|need_info
+    const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: '申请不存在' });
+    const statusMap = { approve: 'approved', reject: 'rejected', need_info: 'need_info' };
+    const newStatus = statusMap[action];
+    if (!newStatus) return res.status(400).json({ error: '无效操作' });
+    db.prepare('UPDATE guide_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
+    if (newStatus === 'approved') {
+      db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ?").run(app.user_id);
+    }
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(app.user_id, 'guide_review', '向导申请审核结果', `您的向导申请已${newStatus === 'approved' ? '通过' : newStatus === 'rejected' ? '驳回' : '需要补充材料'}`, '/profile'); } catch(e) {}
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// POST /api/admin/club-applications/:id/review
+router.post('/club-applications/:id/review', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { action, note } = req.body;
+    const clubApp = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(req.params.id);
+    if (!clubApp) return res.status(404).json({ error: '申请不存在' });
+    const statusMap = { approve: 'approved', reject: 'rejected', need_info: 'need_info' };
+    const newStatus = statusMap[action];
+    if (!newStatus) return res.status(400).json({ error: '无效操作' });
+    db.prepare('UPDATE club_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
+    if (newStatus === 'approved' && clubApp.club_id) {
+      db.prepare("UPDATE clubs SET verified = 1 WHERE id = ?").run(clubApp.club_id);
+    }
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
 module.exports = router;

@@ -1419,4 +1419,22 @@ if (!existingExpOrderCols.includes('refunded_at')) {
   db.exec('ALTER TABLE expedition_orders ADD COLUMN refunded_at DATETIME');
 }
 
+// Add note column to guide_applications if missing
+const guideAppColsNote = db.pragma('table_info(guide_applications)').map(c => c.name);
+if (!guideAppColsNote.includes('note')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN note TEXT');
+}
+// Add note column to club_applications if missing
+try {
+  const clubAppColsNote = db.pragma('table_info(club_applications)').map(c => c.name);
+  if (!clubAppColsNote.includes('note')) {
+    db.exec('ALTER TABLE club_applications ADD COLUMN note TEXT');
+  }
+} catch(e) {}
+// Add content_snippet column to moderation_logs if missing
+const moderationLogCols = db.pragma('table_info(moderation_logs)').map(c => c.name);
+if (!moderationLogCols.includes('content_snippet')) {
+  db.exec('ALTER TABLE moderation_logs ADD COLUMN content_snippet TEXT');
+}
+
 module.exports = db;

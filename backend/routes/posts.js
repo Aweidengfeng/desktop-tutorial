@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const moderation = require('../utils/moderation');
+const rateLimit = require('express-rate-limit');
+
+const postWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: '发布过于频繁，请稍后再试' } });
 
 // GET /api/posts?type=all
 router.get('/', (req, res) => {
@@ -42,9 +46,18 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/posts（需要JWT）
-router.post('/', auth, (req, res) => {
+router.post('/', postWriteLimiter, auth, (req, res) => {
   try {
     const { content, image, images, location, tags, emojis } = req.body;
+    if (content) {
+      const check = moderation.checkText(content);
+      if (!check.ok) {
+        try {
+          db.prepare('INSERT INTO moderation_logs (content_type, content_snippet, reason, user_id) VALUES (?, ?, ?, ?)').run('post', content.substring(0, 100), check.reason, req.user.id);
+        } catch(e) {}
+        return res.status(422).json({ error: 'content_blocked', reason: check.reason });
+      }
+    }
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     const tagsStr = tags ? JSON.stringify(tags) : null;
     const emojisStr = emojis ? JSON.stringify(emojis) : null;

@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const moderation = require('../utils/moderation');
+const rateLimit = require('express-rate-limit');
+
+const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' } });
 
 // GET /api/comments?post_id=X
 router.get('/', (req, res) => {
@@ -22,12 +26,21 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/comments（需要JWT）
-router.post('/', auth, (req, res) => {
+router.post('/', commentWriteLimiter, auth, (req, res) => {
   try {
     const { post_id, content, images, parent_comment_id, reply_to_user_id } = req.body;
     const imagesArr = Array.isArray(images) ? images : [];
     if (!post_id) return res.status(400).json({ error: '请提供帖子ID' });
     if (!content && imagesArr.length === 0) return res.status(400).json({ error: '评论内容或图片不能为空' });
+    if (content) {
+      const check = moderation.checkText(content);
+      if (!check.ok) {
+        try {
+          db.prepare('INSERT INTO moderation_logs (content_type, content_snippet, reason, user_id) VALUES (?, ?, ?, ?)').run('comment', content.substring(0, 100), check.reason, req.user.id);
+        } catch(e) {}
+        return res.status(422).json({ error: 'content_blocked', reason: check.reason });
+      }
+    }
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (!user) return res.status(404).json({ error: '用户不存在' });
     let replyToUserName = null;
