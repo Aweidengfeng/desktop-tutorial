@@ -1,3 +1,101 @@
+# 巅峰探索 / SummitLink 🏔️
+
+[![Build](https://img.shields.io/github/actions/workflow/status/gaoshanyindi/desktop-tutorial/ci.yml?branch=main&label=build)](https://github.com/gaoshanyindi/desktop-tutorial/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+
+全球高山攀登社交平台 — 探索山峰、记录轨迹、连接向导与俱乐部、查询天气。
+
+---
+
+## 🚀 快速开始
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/gaoshanyindi/desktop-tutorial.git
+cd desktop-tutorial
+
+# 2. 安装后端依赖
+cd backend && npm install && cd ..
+
+# 3. 配置环境变量
+cp backend/.env.example backend/.env
+# 编辑 backend/.env，填入 AMAP_KEY / OPENWEATHER_API_KEY 等
+
+# 4. 启动服务
+npm start
+# → 访问 http://localhost:8080/summitlink
+```
+
+---
+
+## 📋 环境变量
+
+详见 [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)。关键变量：
+
+| 变量 | 说明 |
+|------|------|
+| `JWT_SECRET` | JWT 签名密钥（**生产必须修改**）|
+| `AMAP_KEY` | 高德地图 Key |
+| `OPENWEATHER_API_KEY` | 天气 API Key |
+| `CORS_ORIGINS` | 生产 CORS 白名单 |
+| `SENTRY_DSN` | Sentry DSN（可选，未设置则不启用监控）|
+
+---
+
+## 🚢 部署
+
+详见 [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)。推荐使用 [Railway](https://railway.app) 平台，仓库已包含 `railway.toml` 配置。
+
+---
+
+## 📚 文档索引
+
+| 文档 | 说明 |
+|------|------|
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | 完整部署指南（本地开发 + Railway + Nginx + 监控）|
+| [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md) | 环境变量详细说明表 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系统架构图（Mermaid）+ 模块说明 |
+| [docs/API.md](./docs/API.md) | 后端 API 接口概览（按模块分组）|
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
+| [legal/README.md](./legal/README.md) | 隐私政策 / 用户协议 / 数据处理说明 |
+| [LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md) | 上线前检查清单 |
+
+---
+
+## 📁 目录结构
+
+```
+desktop-tutorial/
+├── 攀登4-20260416-summitlink.html  # 主前端页面（Alpine.js + Tailwind CSS）
+├── admin.html                       # 后台管理面板
+├── backend/                         # Node.js / Express 后端
+│   ├── app.js                       # 服务入口
+│   ├── routes/                      # API 路由（27 个模块）
+│   ├── db/                          # 数据库初始化与 seed
+│   ├── middleware/                  # auth / adminAuth 中间件
+│   ├── utils/                       # 工具函数
+│   └── uploads/                     # 上传文件目录（本地开发）
+├── tests/                           # E2E 测试（Playwright）
+├── docs/                            # 部署 / 环境变量 / 架构 / API 文档
+├── legal/                           # 隐私政策 / 用户协议草稿
+├── railway.toml                     # Railway 平台部署配置
+├── railpack.toml                    # Railpack 构建配置
+├── playwright.config.js             # Playwright 配置
+├── CONTRIBUTING.md                  # 贡献指南
+└── LAUNCH_CHECKLIST.md              # 上线前检查清单
+```
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request，详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
+---
+
+## 更新日志（原有内容）
+
 # Welcome to GitHub Desktop!
 
 This is your README. READMEs are where you can communicate what your project is and how to use it.
