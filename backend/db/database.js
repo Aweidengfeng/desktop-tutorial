@@ -1572,7 +1572,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_posts_created_at     ON posts(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_comments_post_id     ON comments(post_id);
   CREATE INDEX IF NOT EXISTS idx_messages_sender      ON messages(sender_id);
-  CREATE INDEX IF NOT EXISTS idx_messages_receiver    ON messages(receiver_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
   CREATE INDEX IF NOT EXISTS idx_tracks_user_id       ON tracks(user_id);
   CREATE INDEX IF NOT EXISTS idx_tracks_created_at    ON tracks(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_bookings_user_id     ON bookings(user_id);
