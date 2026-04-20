@@ -687,4 +687,114 @@ router.post('/club-applications/:id/review', adminWriteLimiter, adminAuth, (req,
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
 });
 
+// GET /api/admin/clubs/commercial — 俱乐部商业资质审核列表
+router.get('/clubs/commercial', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const clubs = db.prepare(`
+      SELECT id, name, specialty, region, commercial_status, commercial_applied_at,
+             commercial_reviewed_at, commercial_verified, commercial_reject_reason,
+             business_license_url, business_license_no, insurance_cert_url,
+             bank_account_name, bank_account_no, bank_name
+      FROM clubs WHERE commercial_status != 'none'
+      ORDER BY commercial_applied_at DESC LIMIT ? OFFSET ?
+    `).all(parseInt(limit), offset);
+    const total = db.prepare("SELECT COUNT(*) as c FROM clubs WHERE commercial_status != 'none'").get().c;
+    res.json({ clubs, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// POST /api/admin/clubs/:id/commercial-review — 审核俱乐部商业资质
+router.post('/clubs/:id/commercial-review', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    if (action === 'approve') {
+      db.prepare(`UPDATE clubs SET commercial_verified=1, commercial_status='approved',
+        commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=NULL WHERE id=?`)
+        .run(req.params.id);
+      // 通知俱乐部创建者
+      try {
+        db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'commercial_approved', ?, ?)")
+          .run(club.creator_id, `【资质审核通过】您的俱乐部 ${club.name} 商业资质已审核通过，可发布收费活动`, club.id);
+      } catch(e) {}
+    } else if (action === 'reject') {
+      db.prepare(`UPDATE clubs SET commercial_verified=0, commercial_status='rejected',
+        commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=? WHERE id=?`)
+        .run(reason || '资质不符合要求', req.params.id);
+      try {
+        db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'commercial_rejected', ?, ?)")
+          .run(club.creator_id, `【资质审核未通过】您的俱乐部 ${club.name} 商业资质审核未通过：${reason || '资质不符合要求'}`, club.id);
+      } catch(e) {}
+    } else if (action === 'need_info') {
+      db.prepare(`UPDATE clubs SET commercial_status='need_info',
+        commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=? WHERE id=?`)
+        .run(reason || '需补充材料', req.params.id);
+      try {
+        db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'commercial_need_info', ?, ?)")
+          .run(club.creator_id, `【资质补充】您的俱乐部 ${club.name} 商业资质需补充材料：${reason || '请联系管理员'}`, club.id);
+      } catch(e) {}
+    } else {
+      return res.status(400).json({ error: '无效操作，action 应为 approve|reject|need_info' });
+    }
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// GET /api/admin/guides/commercial — 向导商业资质审核列表
+router.get('/guides/commercial', adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const guides = db.prepare(`
+      SELECT id, name, specialty, region, commercial_status, commercial_applied_at,
+             commercial_reviewed_at, commercial_verified, commercial_reject_reason,
+             id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url
+      FROM guides WHERE commercial_status != 'none'
+      ORDER BY commercial_applied_at DESC LIMIT ? OFFSET ?
+    `).all(parseInt(limit), offset);
+    const total = db.prepare("SELECT COUNT(*) as c FROM guides WHERE commercial_status != 'none'").get().c;
+    res.json({ guides, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// POST /api/admin/guides/:id/commercial-review — 审核向导商业资质
+router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.id);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (action === 'approve') {
+      db.prepare(`UPDATE guides SET commercial_verified=1, commercial_status='approved',
+        commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=NULL WHERE id=?`)
+        .run(req.params.id);
+      try {
+        db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'commercial_approved', ?, ?)")
+          .run(guide.user_id, `【资质审核通过】您的向导商业资质已审核通过，可发布收费服务`, guide.id);
+      } catch(e) {}
+    } else if (action === 'reject') {
+      db.prepare(`UPDATE guides SET commercial_verified=0, commercial_status='rejected',
+        commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=? WHERE id=?`)
+        .run(reason || '资质不符合要求', req.params.id);
+      try {
+        db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'commercial_rejected', ?, ?)")
+          .run(guide.user_id, `【资质审核未通过】您的向导商业资质审核未通过：${reason || '资质不符合要求'}`, guide.id);
+      } catch(e) {}
+    } else if (action === 'need_info') {
+      db.prepare(`UPDATE guides SET commercial_status='need_info',
+        commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=? WHERE id=?`)
+        .run(reason || '需补充材料', req.params.id);
+      try {
+        db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'commercial_need_info', ?, ?)")
+          .run(guide.user_id, `【资质补充】您的向导商业资质需补充材料：${reason || '请联系管理员'}`, guide.id);
+      } catch(e) {}
+    } else {
+      return res.status(400).json({ error: '无效操作，action 应为 approve|reject|need_info' });
+    }
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
 module.exports = router;

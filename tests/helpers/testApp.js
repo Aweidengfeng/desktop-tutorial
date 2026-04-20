@@ -46,6 +46,8 @@ function createApp() {
   app.use('/api/search',        require('../../backend/routes/search'));
   app.use('/api/certificates',  require('../../backend/routes/certificates'));
   app.use('/api/messages',      require('../../backend/routes/messages'));
+  app.use('/api/activity-orders',       require('../../backend/routes/activityOrders'));
+  app.use('/api/guide-service-orders',  require('../../backend/routes/guideServiceOrders'));
 
   // AI 助手（仅当 ENABLE_ASSISTANT=true 时挂载）
   if (process.env.ENABLE_ASSISTANT === 'true') {
