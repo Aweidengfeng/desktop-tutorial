@@ -14,7 +14,7 @@ const MOCK_REPLIES = [
   'SummitLink为您提供专业向导服务，您可以在"探索"页面找到认证向导。',
 ];
 
-router.post('/chat', auth, assistantLimiter, async (req, res) => {
+router.post('/chat', assistantLimiter, auth, async (req, res) => {
   try {
     const { messages, context } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {

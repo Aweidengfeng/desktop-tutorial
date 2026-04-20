@@ -31,7 +31,7 @@ router.get('/unread-count', auth, (req, res) => {
 });
 
 // PUT /api/notifications/read-all（全部标为已读，需要JWT）
-router.put('/read-all', auth, notifLimiter, (req, res) => {
+router.put('/read-all', notifLimiter, auth, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_read = 0').run(req.user.id);
     res.json({ success: true });
@@ -41,7 +41,7 @@ router.put('/read-all', auth, notifLimiter, (req, res) => {
 });
 
 // POST /api/notifications/read-all (alias)
-router.post('/read-all', auth, notifLimiter, (req, res) => {
+router.post('/read-all', notifLimiter, auth, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_read = 0').run(req.user.id);
     res.json({ success: true });
@@ -51,7 +51,7 @@ router.post('/read-all', auth, notifLimiter, (req, res) => {
 });
 
 // PUT /api/notifications/:id/read（单条已读，需要JWT）
-router.put('/:id/read', auth, notifLimiter, (req, res) => {
+router.put('/:id/read', notifLimiter, auth, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
     res.json({ success: true });
@@ -61,7 +61,7 @@ router.put('/:id/read', auth, notifLimiter, (req, res) => {
 });
 
 // POST /api/notifications/:id/read (alias)
-router.post('/:id/read', auth, notifLimiter, (req, res) => {
+router.post('/:id/read', notifLimiter, auth, (req, res) => {
   try {
     db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
     res.json({ success: true });

@@ -14,7 +14,7 @@ function generateCertNo() {
 }
 
 // GET /api/certificates/:trackId  (or :trackId.png)
-router.get('/:trackId', auth, certLimiter, (req, res) => {
+router.get('/:trackId', certLimiter, auth, (req, res) => {
   try {
     const trackId = req.params.trackId.replace('.png', '');
     const track = db.prepare('SELECT * FROM tracks WHERE id = ? AND user_id = ?').get(trackId, req.user.id);

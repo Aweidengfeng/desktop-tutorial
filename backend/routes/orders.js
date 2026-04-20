@@ -34,7 +34,7 @@ function createNotification(userId, type, title, body, link) {
 }
 
 // GET /api/orders - 我的订单
-router.get('/', auth, ordersLimiter, (req, res) => {
+router.get('/', ordersLimiter, auth, (req, res) => {
   try {
     const { status } = req.query;
     let sql = 'SELECT * FROM expedition_orders WHERE user_id = ?';
@@ -46,7 +46,7 @@ router.get('/', auth, ordersLimiter, (req, res) => {
 });
 
 // GET /api/orders/:id
-router.get('/:id', auth, ordersLimiter, (req, res) => {
+router.get('/:id', ordersLimiter, auth, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -55,7 +55,7 @@ router.get('/:id', auth, ordersLimiter, (req, res) => {
 });
 
 // POST /api/orders/:id/pay
-router.post('/:id/pay', auth, orderWriteLimiter, (req, res) => {
+router.post('/:id/pay', orderWriteLimiter, auth, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -68,7 +68,7 @@ router.post('/:id/pay', auth, orderWriteLimiter, (req, res) => {
 });
 
 // POST /api/orders/:id/cancel
-router.post('/:id/cancel', auth, orderWriteLimiter, (req, res) => {
+router.post('/:id/cancel', orderWriteLimiter, auth, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -82,7 +82,7 @@ router.post('/:id/cancel', auth, orderWriteLimiter, (req, res) => {
 });
 
 // POST /api/orders/:id/refund-request
-router.post('/:id/refund-request', auth, orderWriteLimiter, (req, res) => {
+router.post('/:id/refund-request', orderWriteLimiter, auth, (req, res) => {
   try {
     const { reason } = req.body;
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
@@ -97,7 +97,7 @@ router.post('/:id/refund-request', auth, orderWriteLimiter, (req, res) => {
 });
 
 // POST /api/orders/admin/:id/transition (admin only)
-router.post('/admin/:id/transition', auth, orderWriteLimiter, (req, res) => {
+router.post('/admin/:id/transition', orderWriteLimiter, auth, (req, res) => {
   try {
     const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
     if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });

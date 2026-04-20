@@ -564,7 +564,7 @@ router.post('/expeditions/:id/reject', adminWriteLimiter, adminAuth, (req, res) 
 // ── A9: 验证码查看器（内测用）────────────────────────────────────
 
 // GET /api/admin/sms-codes — 查看最近50条验证码（仅管理员，内测用）
-router.get('/sms-codes', devOnly, adminAuth, (req, res) => {
+router.get('/sms-codes', adminLoginLimiter, devOnly, adminAuth, (req, res) => {
   try {
     const codes = db.prepare(`
       SELECT id, phone, code, expires_at, used, created_at
