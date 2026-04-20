@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const { validateTrack } = require('../utils/trackValidator');
 
 // 导出限流：每分钟最多30次
 const exportLimiter = rateLimit({
@@ -68,23 +69,26 @@ router.post('/', auth, (req, res) => {
             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points } = req.body;
     const pointsArr = Array.isArray(points) ? points : [];
     const pointsStr = pointsArr.length > 0 ? JSON.stringify(pointsArr) : null;
+    const check = validateTrack(pointsArr);
+    const flagged = check.ok ? 0 : 1;
+    const flagReason = check.ok ? null : check.reason;
     const result = db.prepare(`
       INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-                          max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, flagged, flag_reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(req.user.id, name, peak_name || name || '', date,
            distance || distance_km || 0, distance_km || distance || 0,
            elevation || elevation_gain || 0, elevation_gain || elevation || 0,
            max_elevation || 0, start_elevation || 0,
            duration || '', duration_minutes || 0,
-           weather || '', notes || '', image || '', pointsStr);
+           weather || '', notes || '', image || '', pointsStr, flagged, flagReason);
     const track = db.prepare(`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
       FROM tracks WHERE id = ?
     `).get(result.lastInsertRowid);
     track.points = track.points ? JSON.parse(track.points) : [];
-    res.json(track);
+    res.json({ ...track, flagged, rewardGranted: !flagged, ...(flagReason ? { flagReason } : {}) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

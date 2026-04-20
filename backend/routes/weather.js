@@ -3,6 +3,7 @@ const https = require('https');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
+const weatherCache = require('../utils/weatherCache');
 
 const summitWindowLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
@@ -339,15 +340,29 @@ router.get('/', async (req, res) => {
       return res.json({ location: '', temp: null, wind: null, humidity: null, visibility: null, message: '请提供 location 或 lat/lon 参数' });
     }
 
-    const data = await fetchWeather(resolved.params);
+    const cacheKey = `weather:${JSON.stringify(resolved.params)}`;
+    const cached = weatherCache.get(cacheKey);
+    if (cached && !cached.stale) {
+      return res.json(cached.value);
+    }
 
-    res.json({
-      location: resolved.locationName,
-      temp: Math.round((data.main.temp - 273.15) * 10) / 10,
-      wind: Math.round(data.wind.speed * 3.6 * 10) / 10,
-      humidity: data.main.humidity,
-      visibility: Math.round((data.visibility || 0) / 1000 * 10) / 10,
-    });
+    try {
+      const data = await fetchWeather(resolved.params);
+      const responseData = {
+        location: resolved.locationName,
+        temp: Math.round((data.main.temp - 273.15) * 10) / 10,
+        wind: Math.round(data.wind.speed * 3.6 * 10) / 10,
+        humidity: data.main.humidity,
+        visibility: Math.round((data.visibility || 0) / 1000 * 10) / 10,
+      };
+      weatherCache.set(cacheKey, responseData);
+      return res.json(responseData);
+    } catch (e) {
+      if (cached) {
+        return res.json({ ...cached.value, stale: true, stale_at: cached.stale_at });
+      }
+      throw e;
+    }
   } catch (e) {
     res.status(502).json({ error: e.message || '天气数据获取失败' });
   }
@@ -519,6 +534,8 @@ router.get('/summit-window/:peakId', summitWindowLimiter, (req, res) => {
   const lat = peak.latitude || 27.98;
   const lon = peak.longitude || 86.92;
   const apiKey = process.env.OPENWEATHER_API_KEY;
+  const cacheKey = `summit-window:${req.params.peakId}`;
+  const cached = weatherCache.get(cacheKey);
 
   if (!apiKey) {
     const mockDays = [];
@@ -534,6 +551,10 @@ router.get('/summit-window/:peakId', summitWindowLimiter, (req, res) => {
       });
     }
     return res.json(mockDays);
+  }
+
+  if (cached && !cached.stale) {
+    return res.json(cached.value);
   }
 
   const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&cnt=56`;
@@ -571,12 +592,21 @@ router.get('/summit-window/:peakId', summitWindowLimiter, (req, res) => {
             breakdown: { precipitation: popScore, wind: windScore, cloud: cloudScore, temperature: tempScore, visibility: visScore }
           };
         });
+        weatherCache.set(cacheKey, result);
         res.json(result);
       } catch(e) {
+        if (cached) {
+          return res.json({ ...cached.value, stale: true, stale_at: cached.stale_at });
+        }
         res.status(503).json({ error: 'weather unavailable' });
       }
     });
-  }).on('error', () => res.status(503).json({ error: 'weather unavailable' }));
+  }).on('error', () => {
+    if (cached) {
+      return res.json({ ...cached.value, stale: true, stale_at: cached.stale_at });
+    }
+    res.status(503).json({ error: 'weather unavailable' });
+  });
 });
 
 module.exports = router;

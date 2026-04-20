@@ -1,5 +1,16 @@
 require('dotenv').config();
 
+const pino = require('pino');
+const pinoHttp = require('pino-http');
+const { randomUUID } = require('crypto');
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: process.env.NODE_ENV !== 'production'
+    ? { target: 'pino-pretty', options: { colorize: true } }
+    : undefined,
+});
+
 // ── Sentry 初始化（仅当 SENTRY_DSN 存在时启用，否则无副作用）──────────────
 let Sentry = null;
 if (process.env.SENTRY_DSN) {
@@ -54,6 +65,12 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+app.use(pinoHttp({
+  logger,
+  genReqId: (req) => req.headers['x-request-id'] || randomUUID(),
+  customProps: (req) => ({ userId: req.user?.id }),
+}));
 
 // 从根目录启动(node backend/app.js)，process.cwd() = /app (仓库根目录)
 const rootPath = process.cwd();
@@ -141,7 +158,9 @@ app.use('/api/expeditions', require('./routes/expeditions'));
 app.use('/legal', require('./routes/legal'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/search', require('./routes/search'));
-app.use('/api/assistant', require('./routes/assistant'));
+if (process.env.ENABLE_ASSISTANT === 'true') {
+  app.use('/api/assistant', require('./routes/assistant'));
+}
 app.use('/api/certificates', require('./routes/certificates'));
 
 // Admin 面板（注入 SENTRY_DSN）
@@ -202,6 +221,5 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ SummitLink运行在 http://localhost:' + PORT);
-  console.log('   HTML存在: ' + fs.existsSync(htmlFile));
+  logger.info({ port: PORT, env: process.env.NODE_ENV }, 'SummitLink API started');
 });

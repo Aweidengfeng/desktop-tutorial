@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const moderation = require('../utils/moderation');
 
 const msgRateLimit = rateLimit({
   windowMs: 60 * 1000,
@@ -80,6 +81,12 @@ router.post('/conversations/:id/messages', msgRateLimit, auth, (req, res) => {
     const { content, type, images } = req.body;
     const imagesArr = Array.isArray(images) ? images : [];
     if (!content && imagesArr.length === 0) return res.status(400).json({ error: '消息不能为空' });
+    if (content) {
+      const check = moderation.checkText(content);
+      if (!check.ok) {
+        return res.status(422).json({ error: 'content_blocked', reason: check.reason });
+      }
+    }
     const conv = db.prepare(
       'SELECT * FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)'
     ).get(req.params.id, req.user.id, req.user.id);

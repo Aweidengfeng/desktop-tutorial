@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const moderation = require('../utils/moderation');
 
 // GET /api/posts?type=all
 router.get('/', (req, res) => {
@@ -45,6 +46,15 @@ router.get('/:id', (req, res) => {
 router.post('/', auth, (req, res) => {
   try {
     const { content, image, images, location, tags, emojis } = req.body;
+    if (content) {
+      const check = moderation.checkText(content);
+      if (!check.ok) {
+        try {
+          db.prepare('INSERT INTO moderation_logs (content_type, content_snippet, reason, user_id) VALUES (?, ?, ?, ?)').run('post', content.substring(0, 100), check.reason, req.user.id);
+        } catch(e) {}
+        return res.status(422).json({ error: 'content_blocked', reason: check.reason });
+      }
+    }
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     const tagsStr = tags ? JSON.stringify(tags) : null;
     const emojisStr = emojis ? JSON.stringify(emojis) : null;
