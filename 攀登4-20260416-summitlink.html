@@ -3716,10 +3716,17 @@
             </div>
           </div>
           <!-- Guide action buttons -->
-          <div class="flex gap-3 pb-6">
+          <div class="flex gap-3 pb-2">
             <button @click="showGuideProfileModal=false;openChatWithUser(currentGuideProfile.name,currentGuideProfile.avatar);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">私信向导</button>
             <button @click="openBookingForGuide(currentGuideProfile)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
           </div>
+          <!-- Guide owner: commercial apply -->
+          <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
+            <div class="pb-6 pt-2">
+              <button @click="openGuideCommercialApply(currentGuideProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏅 申请商业资质认证</button>
+            </div>
+          </template>
+          <div x-show="!currentUser || !currentGuideProfile || currentGuideProfile.user_id !== currentUser.id" class="pb-6"></div>
         </div>
       </div>
     </template>
@@ -4120,6 +4127,190 @@
               <p class="text-slate-500 text-xs" x-text="(enroll.created_at||'').slice(0,10)"></p>
             </div>
           </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLUB COMMERCIAL APPLY MODAL ===== -->
+  <div x-show="showClubCommercialApply"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[160] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showClubCommercialApply=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+      <div class="p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-lg">🏢 俱乐部商业资质申请</h3>
+          <button @click="showClubCommercialApply=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <p class="text-slate-400 text-xs mb-4 leading-relaxed">上传营业执照和保险证书以开通商业套餐功能，审核通过后即可发布收费活动。</p>
+        <div class="space-y-4">
+          <!-- 营业执照 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">营业执照（图片）*</label>
+            <div class="flex items-center gap-3">
+              <div x-show="clubCommercialForm.business_license_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="clubCommercialForm.business_license_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="clubCommercialForm.business_license_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('business_license_url', clubCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 营业执照编号 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">营业执照统一社会信用代码</label>
+            <input x-model="clubCommercialForm.business_license_no" type="text" placeholder="如：91110000XXXXXXXXXX" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+          </div>
+          <!-- 保险证书 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">活动保险证书（图片）</label>
+            <div class="flex items-center gap-3">
+              <div x-show="clubCommercialForm.insurance_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="clubCommercialForm.insurance_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="clubCommercialForm.insurance_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('insurance_cert_url', clubCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 银行账户 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">收款账户名称</label>
+            <input x-model="clubCommercialForm.bank_account_name" type="text" placeholder="如：北京高山俱乐部" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">银行账号</label>
+              <input x-model="clubCommercialForm.bank_account_no" type="text" placeholder="收款账号" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">开户行</label>
+              <input x-model="clubCommercialForm.bank_name" type="text" placeholder="如：工商银行" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button @click="showClubCommercialApply=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+          <button @click="submitClubCommercialApply()"
+                  :disabled="!clubCommercialForm.business_license_url || clubCommercialLoading"
+                  :class="(!clubCommercialForm.business_license_url||clubCommercialLoading)?'opacity-50 cursor-not-allowed':''"
+                  class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
+            <span x-text="clubCommercialLoading ? '提交中…' : '提交申请'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GUIDE COMMERCIAL APPLY MODAL ===== -->
+  <div x-show="showGuideCommercialApply"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[160] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showGuideCommercialApply=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+      <div class="p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-lg">🏅 向导商业资质申请</h3>
+          <button @click="showGuideCommercialApply=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <p class="text-slate-400 text-xs mb-4 leading-relaxed">上传相关证件以开通收费服务功能，审核通过后即可发布带队报价。</p>
+        <div class="space-y-4">
+          <!-- 身份证 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">身份证（正面）*</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.id_card_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.id_card_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.id_card_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*" class="hidden" @change="uploadCommercialDoc('id_card_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 攀登资质证书 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">攀登向导资质证书 *</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.climbing_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.climbing_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.climbing_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('climbing_cert_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 保险证书 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">执业保险证书</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.insurance_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.insurance_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.insurance_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('insurance_cert_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 健康证 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">健康证明</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.health_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.health_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.health_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('health_cert_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button @click="showGuideCommercialApply=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+          <button @click="submitGuideCommercialApply()"
+                  :disabled="!guideCommercialForm.id_card_url || !guideCommercialForm.climbing_cert_url || guideCommercialLoading"
+                  :class="(!guideCommercialForm.id_card_url||!guideCommercialForm.climbing_cert_url||guideCommercialLoading)?'opacity-50 cursor-not-allowed':''"
+                  class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
+            <span x-text="guideCommercialLoading ? '提交中…' : '提交申请'"></span>
+          </button>
         </div>
       </div>
     </div>
@@ -5403,7 +5594,13 @@ function alpineLink() {
     showAddGuideService: false,
     newGuideService: { title: '', type: 'guided_climb', mountain: '', region: '', price: '', price_unit: 'per_day', duration_days: 1, max_clients: 8, difficulty: '', description: '' },
     showClubCommercialApply: false,
+    clubCommercialApplyId: null,
     clubCommercialForm: { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' },
+    clubCommercialLoading: false,
+    showGuideCommercialApply: false,
+    guideCommercialApplyId: null,
+    guideCommercialForm: { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' },
+    guideCommercialLoading: false,
     showClubActivityMgmt: false,
     clubActivitiesMgmt: [],
     clubActivitiesMgmtLoading: false,
@@ -6568,7 +6765,70 @@ function alpineLink() {
     },
     openClubCommercialApply(clubId) {
       if (!this.requireAuth()) return;
+      this.clubCommercialApplyId = clubId;
+      this.clubCommercialForm = { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' };
       this.showClubCommercialApply = true;
+    },
+    async uploadCommercialDoc(field, formRef, event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          formRef[field] = data.url;
+          this.showToast('文件上传成功 ✅');
+        } else {
+          this.showToast('文件上传失败', 'error');
+        }
+      } catch(e) { this.showToast('上传失败', 'error'); }
+      event.target.value = '';
+    },
+    async submitClubCommercialApply() {
+      if (!this.clubCommercialApplyId) return;
+      this.clubCommercialLoading = true;
+      try {
+        const res = await fetch(`/api/clubs/${this.clubCommercialApplyId}/commercial-apply`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.clubCommercialForm),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast(data.message || '商业资质申请已提交 ✅');
+          this.showClubCommercialApply = false;
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.clubCommercialLoading = false;
+    },
+    openGuideCommercialApply(guideId) {
+      if (!this.requireAuth()) return;
+      this.guideCommercialApplyId = guideId;
+      this.guideCommercialForm = { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' };
+      this.showGuideCommercialApply = true;
+    },
+    async submitGuideCommercialApply() {
+      if (!this.guideCommercialApplyId) return;
+      this.guideCommercialLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${this.guideCommercialApplyId}/commercial-apply`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.guideCommercialForm),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast(data.message || '商业资质申请已提交 ✅');
+          this.showGuideCommercialApply = false;
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.guideCommercialLoading = false;
     },
     payOrder(order) {
       this.paymentAmount = order.total;

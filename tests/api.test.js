@@ -71,6 +71,9 @@ async function testLogin() {
         name: '测试用户',
         phone: randomPhone,
         password: 'test123',
+        agreedPrivacy: true,
+        agreedTerms: true,
+        policyVersion: '2026-04-20',
       }),
     });
     assert(res.ok, `HTTP ${res.status}`);

@@ -1566,4 +1566,31 @@ CREATE TABLE IF NOT EXISTS guide_service_orders (
 );
 `);
 
+// ── 性能索引（幂等，CREATE INDEX IF NOT EXISTS）────────────────────────────
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_posts_user_id        ON posts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_posts_created_at     ON posts(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_comments_post_id     ON comments(post_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_sender      ON messages(sender_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_receiver    ON messages(receiver_id);
+  CREATE INDEX IF NOT EXISTS idx_tracks_user_id       ON tracks(user_id);
+  CREATE INDEX IF NOT EXISTS idx_tracks_created_at    ON tracks(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_bookings_user_id     ON bookings(user_id);
+  CREATE INDEX IF NOT EXISTS idx_bookings_status      ON bookings(status);
+  CREATE INDEX IF NOT EXISTS idx_expedition_orders_user   ON expedition_orders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_expedition_orders_status ON expedition_orders(status);
+  CREATE INDEX IF NOT EXISTS idx_activity_orders_user     ON activity_orders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_activity_orders_status   ON activity_orders(status);
+  CREATE INDEX IF NOT EXISTS idx_guide_service_orders_user   ON guide_service_orders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_guide_service_orders_status ON guide_service_orders(status);
+  CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+  CREATE INDEX IF NOT EXISTS idx_follows_follower     ON follows(follower_id);
+  CREATE INDEX IF NOT EXISTS idx_follows_following    ON follows(following_id);
+  CREATE INDEX IF NOT EXISTS idx_sms_codes_phone      ON sms_codes(phone);
+  CREATE INDEX IF NOT EXISTS idx_guides_user_id       ON guides(user_id);
+  CREATE INDEX IF NOT EXISTS idx_clubs_creator        ON clubs(creator_id);
+  CREATE INDEX IF NOT EXISTS idx_club_members_club    ON club_members(club_id);
+  CREATE INDEX IF NOT EXISTS idx_club_members_user    ON club_members(user_id);
+`);
+
 module.exports = db;
