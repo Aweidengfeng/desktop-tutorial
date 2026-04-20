@@ -1233,6 +1233,112 @@ if (!existingSmsCodeCols.includes('created_at')) {
   db.exec("ALTER TABLE sms_codes ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
 }
 
+// ── New migrations ────────────────────────────────────────────
+
+// users table: policy consent fields
+const existingUserColsPolicy = db.pragma('table_info(users)').map(c => c.name);
+if (!existingUserColsPolicy.includes('policy_version')) {
+  db.exec('ALTER TABLE users ADD COLUMN policy_version TEXT');
+}
+if (!existingUserColsPolicy.includes('policy_agreed_at')) {
+  db.exec('ALTER TABLE users ADD COLUMN policy_agreed_at DATETIME');
+}
+
+// tracks table: moderation + certificate + GPS points
+const existingTrackColsNew = db.pragma('table_info(tracks)').map(c => c.name);
+if (!existingTrackColsNew.includes('flagged')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN flagged INTEGER DEFAULT 0');
+}
+if (!existingTrackColsNew.includes('flag_reason')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN flag_reason TEXT');
+}
+if (!existingTrackColsNew.includes('certificate_no')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN certificate_no TEXT');
+}
+if (!existingTrackColsNew.includes('gps_points')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN gps_points TEXT');
+}
+
+// guide_applications table: new schema with additional fields
+db.exec(`
+CREATE TABLE IF NOT EXISTS guide_applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT,
+  phone TEXT,
+  cert TEXT,
+  experience TEXT,
+  regions TEXT,
+  status TEXT DEFAULT 'pending',
+  review_note TEXT,
+  reviewed_by INTEGER,
+  reviewed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+const existingGuideAppCols = db.pragma('table_info(guide_applications)').map(c => c.name);
+if (!existingGuideAppCols.includes('phone')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN phone TEXT');
+}
+if (!existingGuideAppCols.includes('experience')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN experience TEXT');
+}
+if (!existingGuideAppCols.includes('regions')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN regions TEXT');
+}
+if (!existingGuideAppCols.includes('review_note')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN review_note TEXT');
+}
+if (!existingGuideAppCols.includes('reviewed_by')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN reviewed_by INTEGER');
+}
+if (!existingGuideAppCols.includes('reviewed_at')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN reviewed_at DATETIME');
+}
+
+// club_applications table: review fields
+const existingClubAppCols = db.pragma('table_info(club_applications)').map(c => c.name);
+if (!existingClubAppCols.includes('review_note')) {
+  db.exec('ALTER TABLE club_applications ADD COLUMN review_note TEXT');
+}
+if (!existingClubAppCols.includes('reviewed_by')) {
+  db.exec('ALTER TABLE club_applications ADD COLUMN reviewed_by INTEGER');
+}
+if (!existingClubAppCols.includes('reviewed_at')) {
+  db.exec('ALTER TABLE club_applications ADD COLUMN reviewed_at DATETIME');
+}
+
+// notifications table: title/body/link/read_at fields
+const existingNotifCols = db.pragma('table_info(notifications)').map(c => c.name);
+if (!existingNotifCols.includes('title')) {
+  db.exec('ALTER TABLE notifications ADD COLUMN title TEXT');
+}
+if (!existingNotifCols.includes('body')) {
+  db.exec('ALTER TABLE notifications ADD COLUMN body TEXT');
+}
+if (!existingNotifCols.includes('link')) {
+  db.exec('ALTER TABLE notifications ADD COLUMN link TEXT');
+}
+if (!existingNotifCols.includes('read_at')) {
+  db.exec('ALTER TABLE notifications ADD COLUMN read_at DATETIME');
+}
+
+// New tables
+db.exec(`
+CREATE TABLE IF NOT EXISTS moderation_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  content_type TEXT,
+  content TEXT,
+  reason TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS expedition_orders_new_fields_marker (
+  id INTEGER PRIMARY KEY
+);
+`);
+
 // ── A7: expeditions 和 expedition_orders 表 ──────────────────
 db.exec(`
 CREATE TABLE IF NOT EXISTS expeditions (
@@ -1294,5 +1400,23 @@ CREATE TABLE IF NOT EXISTS expedition_orders (
   cancelled_at DATETIME
 );
 `);
+
+// expedition_orders table: state machine fields (must run after CREATE TABLE)
+const existingExpOrderCols = db.pragma('table_info(expedition_orders)').map(c => c.name);
+if (!existingExpOrderCols.includes('status')) {
+  db.exec("ALTER TABLE expedition_orders ADD COLUMN status TEXT DEFAULT 'pending_payment'");
+}
+if (!existingExpOrderCols.includes('status_history')) {
+  db.exec('ALTER TABLE expedition_orders ADD COLUMN status_history TEXT');
+}
+if (!existingExpOrderCols.includes('refund_reason')) {
+  db.exec('ALTER TABLE expedition_orders ADD COLUMN refund_reason TEXT');
+}
+if (!existingExpOrderCols.includes('refund_amount')) {
+  db.exec('ALTER TABLE expedition_orders ADD COLUMN refund_amount INTEGER');
+}
+if (!existingExpOrderCols.includes('refunded_at')) {
+  db.exec('ALTER TABLE expedition_orders ADD COLUMN refunded_at DATETIME');
+}
 
 module.exports = db;

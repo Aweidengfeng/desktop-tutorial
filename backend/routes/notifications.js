@@ -7,7 +7,7 @@ const auth = require('../middleware/auth');
 router.get('/', auth, (req, res) => {
   try {
     const notifications = db.prepare(`
-      SELECT id, type, content, related_id, is_read, created_at
+      SELECT id, type, content, title, body, link, related_id, is_read, read_at, created_at
       FROM notifications WHERE user_id = ?
       ORDER BY created_at DESC LIMIT 20
     `).all(req.user.id);
@@ -30,7 +30,17 @@ router.get('/unread-count', auth, (req, res) => {
 // PUT /api/notifications/read-all（全部标为已读，需要JWT）
 router.put('/read-all', auth, (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(req.user.id);
+    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_read = 0').run(req.user.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/notifications/read-all (alias)
+router.post('/read-all', auth, (req, res) => {
+  try {
+    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_read = 0').run(req.user.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -40,7 +50,17 @@ router.put('/read-all', auth, (req, res) => {
 // PUT /api/notifications/:id/read（单条已读，需要JWT）
 router.put('/:id/read', auth, (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/notifications/:id/read (alias)
+router.post('/:id/read', auth, (req, res) => {
+  try {
+    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

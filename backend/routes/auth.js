@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 
+const POLICY_VERSION = '2026-04-20';
+
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
   if (process.env.NODE_ENV === 'production') {
@@ -45,7 +47,10 @@ function safeUser(user) {
 // POST /api/auth/register
 router.post('/register', (req, res) => {
   try {
-    const { name, phone, password } = req.body;
+    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
+    if (!agreedPrivacy || !agreedTerms || !policyVersion) {
+      return res.status(422).json({ error: '请阅读并同意隐私政策和用户协议' });
+    }
     if (!name || !phone || !password) {
       return res.status(400).json({ error: '请填写姓名、手机号和密码' });
     }
@@ -59,10 +64,10 @@ router.post('/register', (req, res) => {
     const avatar = 'https://i.pravatar.cc/150?u=' + phone;
     const hash = bcrypt.hashSync(password, 10);
     const stmt = db.prepare(`
-      INSERT INTO users (name, username, phone, password, avatar)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (name, username, phone, password, avatar, policy_version, policy_agreed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(name, username, phone, hash, avatar);
+    const result = stmt.run(name, username, phone, hash, avatar, policyVersion, new Date().toISOString());
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     res.json({ token: makeToken(user.id), user: safeUser(user) });
   } catch (e) {
