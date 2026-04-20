@@ -1,3 +1,11 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
+
+// SEED_ON_START 开关：默认 false，不跑 seed。Railway 首次部署前设为 true。
+if (process.env.SEED_ON_START !== 'true') {
+  console.log('ℹ️  SEED_ON_START 未设置为 true，跳过数据填充 (skip seeding)');
+  process.exit(0);
+}
+
 const bcrypt = require('bcrypt');
 const db = require('./database');
 
@@ -92,7 +100,7 @@ console.log('📦 开始填充示例数据...');
 // ── 默认用户 ──────────────────────────────────────────────
 const passwordHash = bcrypt.hashSync('123456', 10);
 db.prepare(`
-  INSERT INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following)
+  INSERT OR IGNORE INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `).run(
   '张伟', '@zhangwei_climbs', '13800138000', passwordHash,

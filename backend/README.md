@@ -95,7 +95,38 @@ npm start
 
 ---
 
-## 测试接口（可选）
+## Railway 部署说明
+
+### Volume 挂载（数据持久化）
+
+Railway 容器重启后，容器内的临时文件会丢失。**必须挂载 Volume** 来持久化 SQLite 数据库和上传的图片文件。
+
+**步骤：**
+
+1. 在 Railway 项目中，进入 **Service → Volumes**，新增一个 Volume，挂载路径设为 `/data`。
+2. 在 Railway **Service → Variables** 面板中添加以下环境变量：
+
+```
+NODE_ENV=production
+DATABASE_PATH=/data/summitlink.db
+UPLOADS_DIR=/data/uploads
+JWT_SECRET=<用 openssl rand -hex 32 生成的随机字符串>
+ADMIN_PASSWORD=<改成你的强密码>
+CORS_ORIGINS=https://你的正式域名,https://www.你的正式域名
+SEED_ON_START=false
+```
+
+### 首次部署流程
+
+1. 挂载好 Volume 并填写所有环境变量（包括强密码）。
+2. **仅首次**：将 `SEED_ON_START` 临时设为 `true`，触发一次数据填充。
+3. 部署成功后，立即将 `SEED_ON_START` 改回 `false`，**防止每次重启都重跑 seed**。
+
+> ⚠️ 生产环境启动时会校验 `JWT_SECRET` 和 `ADMIN_PASSWORD`：若仍为默认值，服务将**拒绝启动**并打印错误。请务必修改为强随机值。
+
+---
+
+
 
 安装完成并启动后，可以在浏览器直接访问以下地址测试：
 
@@ -164,7 +195,12 @@ npm start
 | 变量名 | 说明 |
 |--------|------|
 | `PORT` | 监听端口（默认 8080）|
-| `JWT_SECRET` | JWT 签名密钥 |
+| `JWT_SECRET` | JWT 签名密钥（**生产环境必须修改**）|
+| `ADMIN_PASSWORD` | 后台管理员密码（**生产环境必须修改**）|
+| `DATABASE_PATH` | SQLite 数据库文件路径，默认 `backend/db/summitlink.db`。Railway 建议设为 `/data/summitlink.db` |
+| `UPLOADS_DIR` | 上传文件目录，默认 `backend/uploads`。Railway 建议设为 `/data/uploads` |
+| `CORS_ORIGINS` | 生产环境 CORS 白名单（逗号分隔），如 `https://xxx.com,https://www.xxx.com`|
+| `SEED_ON_START` | 设为 `true` 时执行数据填充，默认 `false`（跳过）。**仅首次部署前临时设为 true** |
 | `WECHAT_APPID` | 微信小程序 AppID（留占位）|
 | `WECHAT_SECRET` | 微信小程序 Secret（留占位）|
 | `APPLE_CLIENT_ID` | Apple Sign In Client ID（留占位）|
