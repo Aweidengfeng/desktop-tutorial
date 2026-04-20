@@ -51,10 +51,11 @@ ${FOOTER}
   };
 }
 
-const rootPath = process.cwd();
+// Resolve legal files relative to this file: backend/routes/ -> ../../legal/
+const legalDir = path.resolve(__dirname, '../../legal');
 
-router.get('/privacy', legalLimiter, serveLegalPage(path.join(rootPath, 'legal/PRIVACY_POLICY.md'), '隐私政策'));
-router.get('/terms', legalLimiter, serveLegalPage(path.join(rootPath, 'legal/TERMS_OF_SERVICE.md'), '用户协议'));
-router.get('/data-processing', legalLimiter, serveLegalPage(path.join(rootPath, 'legal/DATA_PROCESSING.md'), '数据处理说明'));
+router.get('/privacy', legalLimiter, serveLegalPage(path.join(legalDir, 'PRIVACY_POLICY.md'), '隐私政策'));
+router.get('/terms', legalLimiter, serveLegalPage(path.join(legalDir, 'TERMS_OF_SERVICE.md'), '用户协议'));
+router.get('/data-processing', legalLimiter, serveLegalPage(path.join(legalDir, 'DATA_PROCESSING.md'), '数据处理说明'));
 
 module.exports = router;
