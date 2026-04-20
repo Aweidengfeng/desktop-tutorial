@@ -34,7 +34,8 @@ async function doLogin(page) {
   const passwordTab = page.locator('button:has-text("密码登录")');
   if (await passwordTab.isVisible().catch(() => false)) {
     await passwordTab.click();
-    await page.waitForTimeout(200);
+    // Wait for the password input to remain visible after tab switch
+    await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
   }
 
   // 填入手机号

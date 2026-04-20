@@ -5,7 +5,7 @@
  */
 
 /**
- * Click a bottom-nav tab by logical name.
+ * Click a bottom-nav tab by logical name and wait for its section to appear.
  * @param {import('@playwright/test').Page} page
  * @param {'home'|'explore'|'chat'|'gear'|'me'} tabName
  */
@@ -19,7 +19,8 @@ async function gotoTab(page, tabName) {
   };
   const label = nameMap[tabName] || tabName;
   await page.locator('nav button').filter({ hasText: label }).first().click();
-  await page.waitForTimeout(300); // allow Alpine.js transition to settle
+  // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
+  await page.locator(`section[x-show*="${tabName}"]`).waitFor({ state: 'visible', timeout: 5000 });
 }
 
 /**
@@ -43,7 +44,8 @@ async function gotoExploreCategory(page, category) {
     const catLabel = categoryMap[category];
     // Category buttons are inside the explore section scroll row
     await page.locator(`button:has-text("${catLabel}")`).first().click();
-    await page.waitForTimeout(300);
+    // Wait for the category content section to become visible
+    await page.locator(`div[x-show*="${category}"]`).waitFor({ state: 'visible', timeout: 5000 });
   }
 }
 
@@ -64,7 +66,8 @@ async function loginAsTestUser(page, { username = '13800138000', password = '123
   const passwordTab = page.locator('button:has-text("密码登录")');
   if (await passwordTab.isVisible().catch(() => false)) {
     await passwordTab.click();
-    await page.waitForTimeout(200);
+    // Wait for the password input to remain visible after the tab switch
+    await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
   }
 
   // Fill credentials
