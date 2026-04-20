@@ -9,6 +9,7 @@
     "seed": "node db/seed.js"
   },
   "dependencies": {
+    "@sentry/node": "^10.49.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",

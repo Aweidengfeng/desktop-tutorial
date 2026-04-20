@@ -15,6 +15,29 @@
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
     [x-cloak] { display: none !important; }
   </style>
+  <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
+  <script>
+  (function(){
+    window.onerror = function(msg, src, line, col, err) {
+      if (!window.__sentryInitialized) console.warn('[SummitLink Admin] 未捕获错误:', msg, src + ':' + line, err);
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      if (!window.__sentryInitialized) console.warn('[SummitLink Admin] 未处理 Promise 拒绝:', e.reason);
+    });
+    if (window.__SENTRY_DSN__) {
+      var s = document.createElement('script');
+      s.src = 'https://browser.sentry-cdn.com/8/bundle.min.js';
+      s.crossOrigin = 'anonymous';
+      s.onload = function() {
+        try {
+          Sentry.init({ dsn: window.__SENTRY_DSN__, tracesSampleRate: 0.1 });
+          window.__sentryInitialized = true;
+        } catch(e) { console.warn('[SummitLink Admin] Sentry 初始化失败:', e); }
+      };
+      document.head.appendChild(s);
+    }
+  })();
+  </script>
 </head>
 <body class="min-h-screen text-white font-sans" x-data="adminApp()" x-cloak>
 

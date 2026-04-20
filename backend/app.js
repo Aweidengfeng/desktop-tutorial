@@ -1,10 +1,34 @@
 require('dotenv').config();
+
+// ── Sentry 初始化（仅当 SENTRY_DSN 存在时启用，否则无副作用）──────────────
+let Sentry = null;
+if (process.env.SENTRY_DSN) {
+  try {
+    Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      tracesSampleRate: 0.1,
+      release: process.env.SENTRY_RELEASE,
+    });
+    console.log('✅ Sentry 已启用');
+  } catch (e) {
+    console.warn('⚠️  Sentry 初始化失败（不影响服务运行）:', e.message);
+    Sentry = null;
+  }
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
+
+// Sentry 请求处理中间件（路由最前，仅当 Sentry 启用时）
+if (Sentry) {
+  app.use(Sentry.Handlers.requestHandler());
+}
 
 // CORS 配置：生产环境只允许 CORS_ORIGINS 白名单，开发环境允许所有来源
 const corsOrigins = process.env.CORS_ORIGINS;
@@ -52,6 +76,10 @@ app.get(['/summitlink', '/summitlink.html'], (req, res) => {
     let result = html
       .replaceAll('YOUR_AMAP_KEY', amapKey)
       .replaceAll('YOUR_AMAP_SECURITY_CODE', amapSecurityCode);
+    // 注入 SENTRY_DSN 到前端
+    const sentryDsn = process.env.SENTRY_DSN || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    result = result.replace('</head>', sentryScript + '\n</head>');
     // 若 Key 或安全密钥未配置，注入提示脚本
     if (!amapKey || !amapSecurityCode) {
       const missingVars = [!amapKey && 'AMAP_KEY', !amapSecurityCode && 'AMAP_SECURITY_CODE'].filter(Boolean).join(' / ');
@@ -102,17 +130,28 @@ app.use('/api/routes', require('./routes/routes'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/expeditions', require('./routes/expeditions'));
 
-// Admin 面板
+// Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');
 app.get('/admin', (req, res) => {
-  res.sendFile(adminHtmlFile);
+  fs.readFile(adminHtmlFile, 'utf8', (err, html) => {
+    if (err) {
+      console.error('❌ 读取 admin.html 失败:', err);
+      return res.status(500).send('Internal Server Error');
+    }
+    const sentryDsn = process.env.SENTRY_DSN || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const result = html.replace('</head>', sentryScript + '\n</head>');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(result);
+  });
 });
 
-// 健康检查
-app.get('/health', (req, res) => {
-  const exists = fs.existsSync(htmlFile);
-  const files = fs.readdirSync(rootPath);
-  res.json({ status: 'ok', rootPath, htmlExists: exists, htmlPath: htmlFile, rootFiles: files });
+// 健康检查（/api/health 为标准路径，/health 保留兼容）
+const pkgVersion = (() => {
+  try { return require('../package.json').version; } catch (e) { return '1.0.0'; }
+})();
+app.get(['/api/health', '/health'], (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), version: pkgVersion });
 });
 
 // 根路径
@@ -121,6 +160,11 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
+
+// Sentry 错误处理中间件（必须在其他错误处理之前）
+if (Sentry) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // ── 启动安全校验 ─────────────────────────────────────────────
 const DEFAULT_JWT_SECRET = 'summitlink_secret_change_this_in_production';
