@@ -980,7 +980,73 @@
         </div>
       </div>
 
+      <!-- 俱乐部商业资质审核 -->
+      <div x-show="page === 'club-commercial'">
+        <h2 class="text-xl font-bold mb-4">🏢 俱乐部商业资质审核</h2>
+        <div x-show="clubCommercialLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!clubCommercialLoading && clubCommercial.length===0" class="text-center py-8 text-slate-400">暂无待审核资质申请</div>
+        <div class="overflow-x-auto" x-show="!clubCommercialLoading && clubCommercial.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">俱乐部名称</th><th class="text-left py-2 pr-4">地区</th><th class="text-left py-2 pr-4">申请时间</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2">操作</th>
+          </tr></thead><tbody>
+            <template x-for="item in clubCommercial" :key="item.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-4 text-slate-300" x-text="item.id"></td>
+                <td class="py-2 pr-4 text-white font-medium" x-text="item.name"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="item.region||'-'"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(item.commercial_applied_at||'').slice(0,10)"></td>
+                <td class="py-2 pr-4"><span :class="{'bg-yellow-500/20 text-yellow-300':item.commercial_status==='pending','bg-emerald-500/20 text-emerald-300':item.commercial_status==='approved','bg-red-500/20 text-red-300':item.commercial_status==='rejected','bg-blue-500/20 text-blue-300':item.commercial_status==='need_info'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved':'已通过','rejected':'已驳回','need_info':'需补充'}[item.commercial_status]||item.commercial_status"></span></td>
+                <td class="py-2"><button @click="commercialReviewDrawer={open:true,type:'club',item,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+      </div>
+
+      <!-- 向导商业资质审核 -->
+      <div x-show="page === 'guide-commercial'">
+        <h2 class="text-xl font-bold mb-4">🔑 向导商业资质审核</h2>
+        <div x-show="guideCommercialLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!guideCommercialLoading && guideCommercial.length===0" class="text-center py-8 text-slate-400">暂无待审核资质申请</div>
+        <div class="overflow-x-auto" x-show="!guideCommercialLoading && guideCommercial.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">向导姓名</th><th class="text-left py-2 pr-4">专长</th><th class="text-left py-2 pr-4">申请时间</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2">操作</th>
+          </tr></thead><tbody>
+            <template x-for="item in guideCommercial" :key="item.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-4 text-slate-300" x-text="item.id"></td>
+                <td class="py-2 pr-4 text-white font-medium" x-text="item.name"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="item.specialty||'-'"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(item.commercial_applied_at||'').slice(0,10)"></td>
+                <td class="py-2 pr-4"><span :class="{'bg-yellow-500/20 text-yellow-300':item.commercial_status==='pending','bg-emerald-500/20 text-emerald-300':item.commercial_status==='approved','bg-red-500/20 text-red-300':item.commercial_status==='rejected','bg-blue-500/20 text-blue-300':item.commercial_status==='need_info'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved':'已通过','rejected':'已驳回','need_info':'需补充'}[item.commercial_status]||item.commercial_status"></span></td>
+                <td class="py-2"><button @click="commercialReviewDrawer={open:true,type:'guide',item,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+      </div>
+
     </main>
+  </div>
+
+  <!-- 商业资质审核抽屉 -->
+  <div x-show="commercialReviewDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="commercialReviewDrawer.open=false">
+    <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
+      <h3 class="font-bold text-lg mb-2">审核商业资质</h3>
+      <p class="text-slate-400 text-sm mb-4" x-text="(commercialReviewDrawer.item?.name||'') + ' — ' + (commercialReviewDrawer.type==='club'?'俱乐部':'向导')"></p>
+      <div class="space-y-3">
+        <div class="flex gap-2">
+          <button @click="commercialReviewDrawer.action='approve'" :class="commercialReviewDrawer.action==='approve'?'bg-emerald-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">✅ 通过</button>
+          <button @click="commercialReviewDrawer.action='reject'" :class="commercialReviewDrawer.action==='reject'?'bg-red-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">❌ 驳回</button>
+          <button @click="commercialReviewDrawer.action='need_info'" :class="commercialReviewDrawer.action==='need_info'?'bg-yellow-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">📋 补充</button>
+        </div>
+        <textarea x-model="commercialReviewDrawer.note" placeholder="审核留言（驳回或需补充时请填写原因）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" rows="3"></textarea>
+        <div class="flex gap-2">
+          <button @click="commercialReviewDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
+          <button @click="reviewCommercial()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">确认提交</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1009,6 +1075,8 @@
           { id: 'applications',    icon: '📋', label: '申请审核' },
           { id: 'suspicious-tracks', icon: '🚩', label: '可疑轨迹' },
           { id: 'moderation-logs', icon: '🛡️', label: '审核日志' },
+          { id: 'club-commercial', icon: '🏢', label: '俱乐部商业资质' },
+          { id: 'guide-commercial', icon: '🔑', label: '向导商业资质' },
         ],
 
         // Stats
@@ -1066,6 +1134,12 @@
 
         // Moderation Logs
         moderationLogs: [], moderationLogsTotal: 0, moderationLogsLoading: false,
+
+        // Club Commercial Review
+        clubCommercial: [], clubCommercialLoading: false, clubCommercialTotal: 0,
+        // Guide Commercial Review
+        guideCommercial: [], guideCommercialLoading: false, guideCommercialTotal: 0,
+        commercialReviewDrawer: { open: false, type: '', item: null, action: '', note: '' },
 
         init() {
           if (this.token) this.loadPage();
@@ -1130,6 +1204,8 @@
           else if (this.page === 'applications') { this.loadGuideApplications(); this.loadClubApplications(); }
           else if (this.page === 'suspicious-tracks') this.loadSuspiciousTracks();
           else if (this.page === 'moderation-logs') this.loadModerationLogs();
+          else if (this.page === 'club-commercial') this.loadClubCommercial();
+          else if (this.page === 'guide-commercial') this.loadGuideCommercial();
         },
 
         async loadStats() {
@@ -1463,6 +1539,30 @@
             const d = await this.api('GET', '/moderation-logs?limit=50');
             this.moderationLogs = d.logs || d; this.moderationLogsTotal = d.total || this.moderationLogs.length;
           } catch(e) {} finally { this.moderationLogsLoading = false; }
+        },
+
+        async loadClubCommercial() {
+          this.clubCommercialLoading = true;
+          try {
+            const d = await this.api('GET', '/clubs/commercial');
+            this.clubCommercial = d.items || d; this.clubCommercialTotal = d.total || this.clubCommercial.length;
+          } catch(e) { this.showToast(e.message,'error'); } finally { this.clubCommercialLoading = false; }
+        },
+        async loadGuideCommercial() {
+          this.guideCommercialLoading = true;
+          try {
+            const d = await this.api('GET', '/guides/commercial');
+            this.guideCommercial = d.items || d; this.guideCommercialTotal = d.total || this.guideCommercial.length;
+          } catch(e) { this.showToast(e.message,'error'); } finally { this.guideCommercialLoading = false; }
+        },
+        async reviewCommercial() {
+          const { type, item, action, note } = this.commercialReviewDrawer;
+          if (!action) { this.showToast('请选择操作','error'); return; }
+          try {
+            await this.api('POST', `/${type === 'club' ? 'clubs' : 'guides'}/${item.id}/commercial-review`, { action, note });
+            this.showToast('审核完成'); this.commercialReviewDrawer.open = false;
+            type === 'club' ? this.loadClubCommercial() : this.loadGuideCommercial();
+          } catch(e) { this.showToast(e.message,'error'); }
         },
       };
     }
