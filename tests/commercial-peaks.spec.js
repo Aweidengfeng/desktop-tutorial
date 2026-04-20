@@ -1,12 +1,12 @@
 const { test, expect } = require('@playwright/test');
+const { gotoExploreCategory, gotoTab } = require('./helpers/navigation');
 
 test.describe('商业向导攀登统计模块', () => {
   test('商业攀登 Tab 应该显示至少25座商业山峰', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
-    // 找到并点击"商业攀登"Tab
-    const tab = page.locator('button').filter({ hasText: '商业攀登' }).first();
-    await tab.click();
+    // PR #43 后商业攀登 Tab 藏在探索页二级分类中
+    await gotoExploreCategory(page, 'commercial');
     await page.waitForTimeout(500);
     // 应该显示商业山峰卡片
     const cards = page.locator('[data-commercial-peak]');
@@ -17,8 +17,8 @@ test.describe('商业向导攀登统计模块', () => {
   test('商业攀登统计应该支持按海拔排序', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
-    const tab = page.locator('button').filter({ hasText: '商业攀登' }).first();
-    await tab.click();
+    // PR #43 后商业攀登 Tab 藏在探索页二级分类中
+    await gotoExploreCategory(page, 'commercial');
     await page.waitForTimeout(500);
     // 选择按海拔排序
     const sortSelect = page.locator('select[x-model*="sortBy"]').first();
@@ -38,12 +38,13 @@ test.describe('营地天气 C2/C3 独立节点', () => {
   test('营地天气应显示独立的 data-camp 属性节点', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
-    // 切换到探索页
-    await page.locator('button').filter({ hasText: '探索' }).first().click().catch(() => {});
-    // 在天气搜索框输入珠穆朗玛峰
+    // 天气搜索框在探索页（PR #43 后藏在非激活 Tab 里）
+    await gotoTab(page, 'explore');
+    // 等待天气搜索框可见后填入
     const input = page.locator('input[placeholder*="搜索全球任意地点天气"]');
+    await input.waitFor({ state: 'visible', timeout: 10000 });
     await input.fill('珠穆朗玛峰');
-    await page.click('button:has-text("搜索")');
+    await page.locator('button:has-text("搜索")').click();
     // 等待营地天气加载
     await page.waitForTimeout(5000);
     // 检查是否有 data-camp 属性的元素
@@ -78,7 +79,10 @@ test.describe('OSM 地名查询', () => {
   test('输入未知地名时搜索应显示友好提示', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
+    // 天气搜索框在探索页（PR #43 后藏在非激活 Tab 里）
+    await gotoTab(page, 'explore');
     const input = page.locator('input[placeholder*="搜索全球任意地点天气"]');
+    await input.waitFor({ state: 'visible', timeout: 10000 });
     await input.fill('xxxxxnonexistentplace99999');
     await page.locator('button:has-text("搜索")').click();
     // 等待结果

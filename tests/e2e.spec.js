@@ -5,6 +5,7 @@
  */
 
 const { test, expect } = require('@playwright/test');
+const { loginAsTestUser } = require('./helpers/navigation');
 
 // 测试账号
 const TEST_PHONE = '13800138000';
@@ -26,16 +27,23 @@ async function doLogin(page) {
   const loginBtn = page.locator('button:has-text("登录")').first();
   await loginBtn.click();
 
-  // 等待登录弹窗中的密码输入框出现
-  await page.waitForSelector('input[type="password"]', { timeout: 8000 });
+  // 等待登录弹窗中的密码输入框可见（PR #43 新增了手机验证码 Tab，默认是密码登录 Tab）
+  await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
+
+  // 确保切到「密码登录」Tab（PR #43 新增了「短信验证码」Tab）
+  const passwordTab = page.locator('button:has-text("密码登录")');
+  if (await passwordTab.isVisible().catch(() => false)) {
+    await passwordTab.click();
+    await page.waitForTimeout(200);
+  }
 
   // 填入手机号
   const phoneInput = page.locator('input[type="tel"], input[placeholder*="手机"], input[placeholder*="phone"]').first();
   await phoneInput.fill(TEST_PHONE);
   // 填入密码
   await page.locator('input[type="password"]').first().fill(TEST_PASSWORD);
-  // 提交登录表单（点击弹窗内的「登录」按钮，仅匹配登录弹窗内的按钮）
-  await page.locator('[x-show="showLogin"] button:has-text("登录")').first().click();
+  // 点击全宽提交按钮（class="w-full"，区别于 flex-1 的 Tab 按钮，避免误点「密码登录」Tab）
+  await page.locator('[x-show="showLogin"] button.w-full').first().click();
 
   // 等待登录 API 响应，确认服务端已处理请求
   return loginResponse;
