@@ -1,7 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'summitlink.db'));
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'summitlink.db');
+const db = new Database(dbPath);
 
 // 开启WAL模式提高性能
 db.pragma('journal_mode = WAL');

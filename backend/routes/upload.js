@@ -16,8 +16,10 @@ const uploadRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-// 确保上传目录存在
-const uploadDir = path.join(process.cwd(), 'backend', 'uploads');
+// 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
+const uploadDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(process.cwd(), 'backend', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

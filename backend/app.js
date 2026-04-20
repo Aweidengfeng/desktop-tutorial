@@ -6,7 +6,20 @@ const fs = require('fs');
 
 const app = express();
 
-app.use(cors());
+// CORS 配置：生产环境只允许 CORS_ORIGINS 白名单，开发环境允许所有来源
+const corsOrigins = process.env.CORS_ORIGINS;
+app.use(cors({
+  origin: (origin, callback) => {
+    // 无 Origin 头（如移动端 / curl）直接放行
+    if (!origin) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production') return callback(null, true);
+    if (!corsOrigins) return callback(new Error('生产环境未配置 CORS_ORIGINS'), false);
+    const whitelist = corsOrigins.split(',').map(o => o.trim());
+    if (whitelist.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'), false);
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // 从根目录启动(node backend/app.js)，process.cwd() = /app (仓库根目录)
@@ -17,8 +30,10 @@ console.log('📁 __dirname:', __dirname);
 // 静态文件服务 - 根目录
 app.use(express.static(rootPath));
 
-// 上传文件静态服务
-const uploadsPath = path.join(__dirname, 'uploads');
+// 上传文件静态服务（支持 UPLOADS_DIR 环境变量覆盖路径）
+const uploadsPath = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
 app.use('/uploads', express.static(uploadsPath));
 
@@ -86,6 +101,28 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
+
+// ── 启动安全校验 ─────────────────────────────────────────────
+const DEFAULT_JWT_SECRET = 'summitlink_secret_change_this_in_production';
+const DEFAULT_ADMIN_PASSWORD = 'change_this_password';
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET) {
+    console.error('❌ 安全错误: JWT_SECRET 未设置或仍为默认值，生产环境拒绝启动');
+    process.exit(1);
+  }
+  if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD) {
+    console.error('❌ 安全错误: ADMIN_PASSWORD 未设置或仍为默认值，生产环境拒绝启动');
+    process.exit(1);
+  }
+} else {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET) {
+    console.warn('⚠️  警告: JWT_SECRET 使用默认值，生产环境请务必修改');
+  }
+  if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD) {
+    console.warn('⚠️  警告: ADMIN_PASSWORD 使用默认值，生产环境请务必修改');
+  }
+}
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('✅ SummitLink运行在 http://localhost:' + PORT);
   console.log('   HTML存在: ' + fs.existsSync(htmlFile));
