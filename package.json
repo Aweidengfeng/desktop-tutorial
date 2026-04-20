@@ -4,7 +4,8 @@
   "scripts": {
     "build": "cd backend && npm install",
     "start": "node backend/db/seed.js && node backend/app.js",
-    "test:api": "node tests/api.test.js",
+    "test:api": "node tests/api.test.js && npx jest tests/api-new-features.test.js --forceExit --no-coverage",
+    "test:api:unit": "npx jest tests/api-new-features.test.js --forceExit --no-coverage",
     "test:e2e": "playwright test",
     "test": "npm run test:api && npm run test:e2e",
     "smoke": "node scripts/smoke.js"
@@ -18,6 +19,13 @@
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1"
+    "@playwright/test": "^1.59.1",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/api-new-features.test.js"],
+    "testTimeout": 15000
   }
 }
