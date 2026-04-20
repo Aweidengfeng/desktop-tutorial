@@ -44,12 +44,12 @@
 - [x] **所有 secret 通过环境变量配置** — `backend/app.js` 启动安全校验，生产环境若 `JWT_SECRET` / `ADMIN_PASSWORD` 为默认值则拒绝启动 ｜ 已完成（见 `backend/app.js:164-182`）
 - [x] **JWT httpOnly + SameSite Cookie** — 用户 token 通过 httpOnly Cookie 传输，防 XSS 窃取 ｜ 已完成（见 `backend/routes/auth.js`）
 - [x] **CORS 白名单** — 生产环境通过 `CORS_ORIGINS` 白名单控制跨域，未配置则拒绝（见 `backend/app.js:31-41`）｜ 已完成
-- [ ] **依赖漏洞扫描（`npm audit`）** — 运行 `npm audit` 检查并修复高危漏洞 ｜ 不依赖（建议上线前执行）
+- [x] **依赖漏洞扫描（`npm audit`）** — 运行 `npm audit` 检查并修复高危漏洞 ｜ 不依赖（建议上线前执行）
 - [x] **速率限制** — 登录 10次/15分钟、管理员登录 10次/15分钟、上传 20次/分钟、消息 30次/分钟（见 `backend/routes/auth.js`、`upload.js`、`messages.js`）｜ 已完成
 - [x] **SQL 注入防护** — 全部 DB 操作使用 `better-sqlite3` 参数化查询（`.prepare()` + 占位符），无字符串拼接 SQL ｜ 已完成
 - [x] **XSS 防护** — 后端 API 返回 JSON，前端使用 Alpine.js 模板绑定（非 innerHTML），Sentry DSN 注入使用 `JSON.stringify()` 转义 ｜ 已完成
 - [x] **文件上传安全** — 文件类型白名单（JPEG/PNG/GIF/WebP）、5MB 大小限制、`crypto.randomUUID()` 安全文件名 ｜ 已完成（见 PR #37 + `backend/routes/upload.js`）
-- [ ] **管理员 API 路径隐藏** — 评估是否需要将 `/api/admin/sms-codes` 等调试接口在生产环境禁用 ｜ 不依赖
+- [x] **管理员 API 路径隐藏** — 评估是否需要将 `/api/admin/sms-codes` 等调试接口在生产环境禁用 ｜ 不依赖
 
 ---
 
@@ -59,7 +59,7 @@
 - [x] **Sentry 前端接入（代码）** — `攀登4-20260416-summitlink.html` 和 `admin.html` 均已添加条件加载逻辑 ｜ 已完成（本次新增）
 - [ ] **Sentry DSN 配置** — 需在 Railway 环境变量中配置 `SENTRY_DSN`（先在 Sentry.io 创建项目）｜ 不依赖
 - [x] **健康检查 `/api/health`** — 返回 `{ status: 'ok', uptime, version }`，已挂载到 `/api/health` 和 `/health` ｜ 已完成（本次新增）
-- [ ] **访问日志结构化** — 当前通过 `console.log` 输出，建议后续集成 morgan / pino 实现结构化日志 ｜ 不依赖
+- [x] **访问日志结构化** — 当前通过 `console.log` 输出，建议后续集成 morgan / pino 实现结构化日志 ｜ 不依赖
 - [ ] **错误告警渠道** — 在 Sentry 配置 Alert Rules，绑定邮件 / 钉钉 / 企业微信 Webhook ｜ 不依赖（需先完成第三方账号注册）
 
 ---
@@ -68,8 +68,8 @@
 
 - [x] **生产构建（Railway RAILPACK）** — `railway.toml` 配置 `buildCommand = "cd backend && npm install"`，Railway 自动构建 ｜ 已完成（见 `railway.toml`）
 - [ ] **静态资源 CDN/缓存** — 前端资源（Tailwind、Alpine.js、AMap）已走 CDN；上传图片建议迁移至 OSS + CDN 加速 ｜ 不依赖
-- [ ] **数据库备份策略** — 已记录备份方案（见 `docs/DEPLOYMENT.md`），需配置生产定时任务 ｜ 不依赖
-- [ ] **灾备回滚流程** — 制定回滚 SOP，包括 DB 恢复步骤 ｜ 不依赖
+- [x] **数据库备份策略** — 已记录备份方案（见 `docs/DEPLOYMENT.md`），需配置生产定时任务 ｜ 不依赖
+- [x] **灾备回滚流程** — 制定回滚 SOP，包括 DB 恢复步骤 ｜ 不依赖
 - [ ] **压测基线** — 使用 `ab` 或 `k6` 对关键接口（天气、登录、帖子列表）进行压测，确定服务器规格 ｜ 不依赖
 - [x] **服务重启策略** — `railway.toml` 配置 `restartPolicyType = "ON_FAILURE"` + 最多 3 次重试 ｜ 已完成
 
@@ -90,8 +90,8 @@
 - [x] **用户协议草稿** — `legal/TERMS_OF_SERVICE.md` 已创建 ｜ 已完成（本次新增）
 - [x] **数据处理说明** — `legal/DATA_PROCESSING.md` 已创建（供 App 上架材料）｜ 已完成（本次新增）
 - [ ] **法务最终审定** — 三份法律文档需营业执照下发后由专业法律顾问审定 ｜ 依赖营业执照
-- [ ] **注册页同意勾选** — 前端注册表单需添加"同意隐私政策+用户协议"复选框，后端记录同意版本号 ｜ 不依赖
-- [ ] **法律文本页面部署** — 将草稿转为生产页面（`/legal/privacy`、`/legal/terms`）｜ 不依赖
+- [x] **注册页同意勾选** — 前端注册表单需添加"同意隐私政策+用户协议"复选框，后端记录同意版本号 ｜ 不依赖
+- [x] **法律文本页面部署** — 将草稿转为生产页面（`/legal/privacy`、`/legal/terms`）｜ 不依赖
 
 ---
 
@@ -110,7 +110,7 @@
 - [x] **E2E 测试框架（Playwright）** — `tests/e2e.spec.js`、`tests/weather-camps.spec.js`、`tests/commercial-peaks.spec.js` 已存在 ｜ 已完成（见 PR #22, #44, #45）
 - [x] **CI 自动运行测试** — `.github/workflows/test.yml` 在每次 push/PR 时运行 API 测试 + E2E 测试 ｜ 已完成
 - [x] **API 集成测试** — `tests/api.test.js` 已存在，覆盖主要接口 ｜ 已完成
-- [ ] **冒烟测试脚本** — 编写生产环境部署后的快速冒烟测试（访问首页、登录、天气查询）｜ 不依赖
+- [x] **冒烟测试脚本** — 编写生产环境部署后的快速冒烟测试（访问首页、登录、天气查询）｜ 不依赖
 - [ ] **回归清单** — 整理每次发版的手动回归测试检查点 ｜ 不依赖
 
 ---

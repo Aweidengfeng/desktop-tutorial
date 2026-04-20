@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const adminAuth = require('../middleware/adminAuth');
+const devOnly = require('../middleware/devOnly');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -563,7 +564,7 @@ router.post('/expeditions/:id/reject', adminWriteLimiter, adminAuth, (req, res) 
 // ── A9: 验证码查看器（内测用）────────────────────────────────────
 
 // GET /api/admin/sms-codes — 查看最近50条验证码（仅管理员，内测用）
-router.get('/sms-codes', adminAuth, (req, res) => {
+router.get('/sms-codes', adminLoginLimiter, devOnly, adminAuth, (req, res) => {
   try {
     const codes = db.prepare(`
       SELECT id, phone, code, expires_at, used, created_at

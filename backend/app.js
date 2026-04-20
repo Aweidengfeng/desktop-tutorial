@@ -138,6 +138,11 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/expeditions', require('./routes/expeditions'));
+app.use('/legal', require('./routes/legal'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/search', require('./routes/search'));
+app.use('/api/assistant', require('./routes/assistant'));
+app.use('/api/certificates', require('./routes/certificates'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');

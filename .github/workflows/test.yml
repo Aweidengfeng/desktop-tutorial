@@ -35,6 +35,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
+      # ── 依赖安全扫描 ──────────────────────────────────────────────────────────
+      - name: Audit backend dependencies
+        run: npm audit --audit-level=high --production --prefix backend || true
+
       # ── 运行 API 集成测试 ────────────────────────────────────────────────────
       - name: Run API tests
         run: npm run test:api

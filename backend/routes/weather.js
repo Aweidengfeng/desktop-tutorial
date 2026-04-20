@@ -1,6 +1,10 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
+const db = require('../db/database');
+
+const summitWindowLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
 // 山峰坐标映射（用坐标查询更准确）
 const peakCoords = {
@@ -505,6 +509,74 @@ router.get('/popular-peaks', async (req, res) => {
   } catch (e) {
     res.json(POPULAR_PEAKS_MOCK);
   }
+});
+
+// GET /api/weather/summit-window/:peakId
+router.get('/summit-window/:peakId', summitWindowLimiter, (req, res) => {
+  const peak = db.prepare('SELECT * FROM peaks WHERE id = ?').get(req.params.peakId);
+  if (!peak) return res.status(404).json({ error: '山峰不存在' });
+
+  const lat = peak.latitude || 27.98;
+  const lon = peak.longitude || 86.92;
+  const apiKey = process.env.OPENWEATHER_API_KEY;
+
+  if (!apiKey) {
+    const mockDays = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      const score = Math.floor(Math.random() * 100);
+      mockDays.push({
+        date: date.toISOString().split('T')[0],
+        score,
+        recommendation: score >= 80 ? 'ideal' : score >= 60 ? 'good' : score >= 40 ? 'marginal' : 'dangerous',
+        breakdown: { precipitation: 35, wind: 30, cloud: 15, temperature: 10, visibility: 10 }
+      });
+    }
+    return res.json(mockDays);
+  }
+
+  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&cnt=56`;
+  https.get(url, (apiRes) => {
+    let data = '';
+    apiRes.on('data', chunk => data += chunk);
+    apiRes.on('end', () => {
+      try {
+        const json = JSON.parse(data);
+        const daily = {};
+        (json.list || []).forEach(item => {
+          const date = item.dt_txt.split(' ')[0];
+          if (!daily[date]) daily[date] = [];
+          daily[date].push(item);
+        });
+
+        const result = Object.entries(daily).slice(0, 7).map(([date, items]) => {
+          const avgPop = items.reduce((s, i) => s + (i.pop || 0), 0) / items.length;
+          const avgWind = items.reduce((s, i) => s + (i.wind?.speed || 0), 0) / items.length * 3.6;
+          const avgCloud = items.reduce((s, i) => s + (i.clouds?.all || 0), 0) / items.length;
+          const avgTemp = items.reduce((s, i) => s + (i.main?.temp || 273), 0) / items.length - 273.15;
+          const avgVis = items.reduce((s, i) => s + (i.visibility || 10000), 0) / items.length;
+
+          const popScore = avgPop < 0.1 ? 100 : avgPop > 0.6 ? 0 : Math.round((1 - avgPop) * 100);
+          const windScore = avgWind < 10 ? 100 : avgWind > 40 ? 0 : Math.round((40 - avgWind) / 30 * 100);
+          const cloudScore = Math.round((100 - avgCloud));
+          const tempScore = avgTemp > -10 && avgTemp < 5 ? 100 : Math.max(0, 100 - Math.abs(avgTemp + 5) * 5);
+          const visScore = Math.min(100, Math.round(avgVis / 100));
+
+          const score = Math.round(popScore * 0.35 + windScore * 0.30 + cloudScore * 0.15 + tempScore * 0.10 + visScore * 0.10);
+          return {
+            date,
+            score,
+            recommendation: score >= 80 ? 'ideal' : score >= 60 ? 'good' : score >= 40 ? 'marginal' : 'dangerous',
+            breakdown: { precipitation: popScore, wind: windScore, cloud: cloudScore, temperature: tempScore, visibility: visScore }
+          };
+        });
+        res.json(result);
+      } catch(e) {
+        res.status(503).json({ error: 'weather unavailable' });
+      }
+    });
+  }).on('error', () => res.status(503).json({ error: 'weather unavailable' }));
 });
 
 module.exports = router;
