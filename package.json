@@ -6,6 +6,7 @@
     "start": "node backend/db/seed.js && node backend/app.js",
     "test:api": "node tests/api.test.js && npx jest tests/api-new-features.test.js --forceExit --no-coverage",
     "test:api:unit": "npx jest tests/api-new-features.test.js --forceExit --no-coverage",
+    "test:api:legacy": "node tests/api.test.js",
     "test:e2e": "playwright test",
     "test": "npm run test:api && npm run test:e2e",
     "smoke": "node scripts/smoke.js"

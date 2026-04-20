@@ -12,9 +12,10 @@
 
 const { test, expect } = require('@playwright/test');
 
-// 测试账号
-const TEST_PHONE    = '13800138000';
-const TEST_PASSWORD = '123456';
+// 测试账号（与 tests/e2e.spec.js 保持一致，对应 backend/db/seed.js 植入的种子数据）
+// 如需覆盖，可通过 PLAYWRIGHT_TEST_PHONE / PLAYWRIGHT_TEST_PASSWORD 环境变量指定
+const TEST_PHONE    = process.env.PLAYWRIGHT_TEST_PHONE    || '13800138000';
+const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_PASSWORD || '123456';
 
 // ─── 帮助函数 ─────────────────────────────────────────────────────────────────
 

@@ -40,7 +40,7 @@ function createApp() {
   app.use('/api/leaderboard',   require('../../backend/routes/leaderboard'));
   app.use('/api/comments',      require('../../backend/routes/comments'));
   app.use('/api/clubs',         require('../../backend/routes/clubs'));
-  app.use('/api/notifications',  require('../../backend/routes/notifications'));
+  app.use('/api/notifications', require('../../backend/routes/notifications'));
   app.use('/api/admin',         require('../../backend/routes/admin'));
   app.use('/api/expeditions',   require('../../backend/routes/expeditions'));
   app.use('/api/search',        require('../../backend/routes/search'));
