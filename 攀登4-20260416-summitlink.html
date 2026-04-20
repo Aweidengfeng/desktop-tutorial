@@ -3684,7 +3684,7 @@
           <div class="mb-4">
             <div class="flex items-center justify-between mb-2">
               <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">服务与价格</p>
-              <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === (currentUser?.id)">
+              <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
                 <button @click="loadMyGuideServices(currentGuideProfile.id);showAddGuideService=true" class="text-xs text-primary-light">+ 发布服务</button>
               </template>
             </div>
@@ -3705,10 +3705,10 @@
                     <span x-show="svc.max_clients" class="text-xs text-slate-400" x-text="'最多 ' + svc.max_clients + ' 人'"></span>
                   </div>
                   <p x-show="svc.description" class="text-slate-500 text-xs mb-2 leading-relaxed" x-text="svc.description"></p>
-                  <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id !== (currentUser?.id)">
+                  <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id !== currentUser.id">
                     <button @click="openGuideServiceEnroll(currentGuideProfile, svc)" class="w-full bg-primary/20 hover:bg-primary/40 text-primary-light py-1.5 rounded-lg text-xs font-semibold transition-colors">立即预约</button>
                   </template>
-                  <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === (currentUser?.id)">
+                  <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
                     <button @click="deleteMyGuideService(currentGuideProfile.id, svc.id)" class="w-full bg-red-900/30 hover:bg-red-900/50 text-red-400 py-1.5 rounded-lg text-xs font-semibold transition-colors">删除服务</button>
                   </template>
                 </div>
@@ -3844,7 +3844,7 @@
             </div>
           </template>
           <!-- Creator/Admin management tools -->
-          <template x-if="currentUser && currentClubProfile && currentClubProfile.creator_id === (currentUser ? currentUser.id : -1)">
+          <template x-if="currentUser && currentClubProfile && currentClubProfile.creator_id === currentUser.id">
             <div class="mb-4 bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-4">
               <p class="text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">🏛️ 俱乐部管理</p>
               <div class="space-y-2">
@@ -6458,7 +6458,7 @@ function alpineLink() {
         } else {
           this.showToast(data.error || '报名失败', 'error');
         }
-      } catch(e) { this.showToast('网络错误', 'error'); } finally { this.enrollLoading = false; }
+      } catch(e) { this.showToast('报名提交失败，请检查网络连接后重试', 'error'); } finally { this.enrollLoading = false; }
     },
     // Guide services
     async loadGuideServices(guideId) {
@@ -6495,7 +6495,7 @@ function alpineLink() {
         } else {
           this.showToast(data.error || '预约失败', 'error');
         }
-      } catch(e) { this.showToast('网络错误', 'error'); } finally { this.guideServiceEnrollLoading = false; }
+      } catch(e) { this.showToast('预约提交失败，请检查网络连接后重试', 'error'); } finally { this.guideServiceEnrollLoading = false; }
     },
     // My guide services management
     async loadMyGuideServices(guideId) {
