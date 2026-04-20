@@ -44,8 +44,10 @@ async function gotoExploreCategory(page, category) {
     const catLabel = categoryMap[category];
     // Category buttons are inside the explore section scroll row
     await page.locator(`button:has-text("${catLabel}")`).first().click();
-    // Wait for the category content section to become visible
-    await page.locator(`div[x-show*="${category}"]`).waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for the category content section to become visible.
+    // Use exact x-show attribute value to avoid strict mode violations
+    // (e.g. 'commercial' appears in many other x-show expressions in the booking modal)
+    await page.locator(`[x-show="activeCategory === '${category}'"]`).waitFor({ state: 'visible', timeout: 5000 });
   }
 }
 
@@ -59,20 +61,24 @@ async function loginAsTestUser(page, { username = '13800138000', password = '123
   // Open the login modal via the nav-bar button
   await page.locator('button:has-text("登录")').first().click();
 
-  // Wait until the password input inside the modal is visible
-  await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
+  // Scope all selectors to the login form container to avoid strict mode violations
+  // caused by the register form having identical input types in the same DOM
+  const loginBox = page.locator('[x-show="showLogin"]');
+
+  // Wait until the password input inside the login modal is visible
+  await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
 
   // Make sure the "密码登录" tab is active (PR #43 added a SMS tab)
-  const passwordTab = page.locator('button:has-text("密码登录")');
+  const passwordTab = loginBox.locator('button:has-text("密码登录")');
   if (await passwordTab.isVisible().catch(() => false)) {
     await passwordTab.click();
     // Wait for the password input to remain visible after the tab switch
-    await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
+    await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
   }
 
   // Fill credentials
-  await page.locator('input[type="tel"]').first().fill(username);
-  await page.locator('input[type="password"]').first().fill(password);
+  await loginBox.locator('input[type="tel"]').first().fill(username);
+  await loginBox.locator('input[type="password"]').first().fill(password);
 
   // Click the full-width primary submit button.
   // The tab buttons use `flex-1`, not `w-full`, so this selector is unique.
