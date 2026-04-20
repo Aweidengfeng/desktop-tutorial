@@ -580,7 +580,7 @@ router.get('/sms-codes', adminLoginLimiter, devOnly, adminAuth, (req, res) => {
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 
 // GET /api/admin/expedition-orders - 全量订单查询
-router.get('/expedition-orders', adminAuth, (req, res) => {
+router.get('/expedition-orders', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { status, limit = 50, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -597,7 +597,7 @@ router.get('/expedition-orders', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/expedition-orders/:id/transition
-router.post('/expedition-orders/:id/transition', adminAuth, (req, res) => {
+router.post('/expedition-orders/:id/transition', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { newStatus } = req.body;
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ?').get(req.params.id);
@@ -614,7 +614,7 @@ router.post('/expedition-orders/:id/transition', adminAuth, (req, res) => {
 });
 
 // GET /api/admin/tracks?flagged=1
-router.get('/tracks', adminAuth, (req, res) => {
+router.get('/tracks', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { flagged, limit = 50, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -629,7 +629,7 @@ router.get('/tracks', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/tracks/:id/unflag - 解除标记并补发积分
-router.post('/tracks/:id/unflag', adminAuth, (req, res) => {
+router.post('/tracks/:id/unflag', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const track = db.prepare('SELECT * FROM tracks WHERE id = ?').get(req.params.id);
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
@@ -642,7 +642,7 @@ router.post('/tracks/:id/unflag', adminAuth, (req, res) => {
 });
 
 // GET /api/admin/moderation-logs
-router.get('/moderation-logs', adminAuth, (req, res) => {
+router.get('/moderation-logs', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { limit = 50, page = 1 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -653,7 +653,7 @@ router.get('/moderation-logs', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/guide-applications/:id/review
-router.post('/guide-applications/:id/review', adminAuth, (req, res) => {
+router.post('/guide-applications/:id/review', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { action, note } = req.body; // action: approve|reject|need_info
     const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
@@ -671,7 +671,7 @@ router.post('/guide-applications/:id/review', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/club-applications/:id/review
-router.post('/club-applications/:id/review', adminAuth, (req, res) => {
+router.post('/club-applications/:id/review', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { action, note } = req.body;
     const clubApp = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(req.params.id);
@@ -680,8 +680,8 @@ router.post('/club-applications/:id/review', adminAuth, (req, res) => {
     const newStatus = statusMap[action];
     if (!newStatus) return res.status(400).json({ error: '无效操作' });
     db.prepare('UPDATE club_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
-    if (newStatus === 'approved') {
-      db.prepare("UPDATE clubs SET verified = 1 WHERE id = ?").run(clubApp.club_id || clubApp.id);
+    if (newStatus === 'approved' && clubApp.club_id) {
+      db.prepare("UPDATE clubs SET verified = 1 WHERE id = ?").run(clubApp.club_id);
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }

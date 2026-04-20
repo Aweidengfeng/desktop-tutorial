@@ -3,6 +3,9 @@ const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
+const rateLimit = require('express-rate-limit');
+
+const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' } });
 
 // GET /api/comments?post_id=X
 router.get('/', (req, res) => {
@@ -23,7 +26,7 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/comments（需要JWT）
-router.post('/', auth, (req, res) => {
+router.post('/', commentWriteLimiter, auth, (req, res) => {
   try {
     const { post_id, content, images, parent_comment_id, reply_to_user_id } = req.body;
     const imagesArr = Array.isArray(images) ? images : [];

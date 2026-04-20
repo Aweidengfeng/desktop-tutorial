@@ -3,6 +3,9 @@ const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
+const rateLimit = require('express-rate-limit');
+
+const postWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: '发布过于频繁，请稍后再试' } });
 
 // GET /api/posts?type=all
 router.get('/', (req, res) => {
@@ -43,7 +46,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/posts（需要JWT）
-router.post('/', auth, (req, res) => {
+router.post('/', postWriteLimiter, auth, (req, res) => {
   try {
     const { content, image, images, location, tags, emojis } = req.body;
     if (content) {
