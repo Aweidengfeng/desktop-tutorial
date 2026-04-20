@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+
+const ordersLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
+const orderWriteLimiter = rateLimit({ windowMs: 60*1000, max: 20 });
 
 const VALID_TRANSITIONS = {
   'pending_payment': ['paid', 'cancelled'],
@@ -16,7 +20,9 @@ const VALID_TRANSITIONS = {
 
 function appendStatusHistory(current, newStatus) {
   let history = [];
-  try { history = JSON.parse(current || '[]'); } catch(e) {}
+  try { history = JSON.parse(current || '[]'); } catch(e) {
+    console.warn('[orders] Corrupted status_history JSON, resetting:', e.message);
+  }
   history.push({ status: newStatus, at: new Date().toISOString() });
   return JSON.stringify(history);
 }
@@ -28,7 +34,7 @@ function createNotification(userId, type, title, body, link) {
 }
 
 // GET /api/orders - 我的订单
-router.get('/', auth, (req, res) => {
+router.get('/', auth, ordersLimiter, (req, res) => {
   try {
     const { status } = req.query;
     let sql = 'SELECT * FROM expedition_orders WHERE user_id = ?';
@@ -40,7 +46,7 @@ router.get('/', auth, (req, res) => {
 });
 
 // GET /api/orders/:id
-router.get('/:id', auth, (req, res) => {
+router.get('/:id', auth, ordersLimiter, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -49,7 +55,7 @@ router.get('/:id', auth, (req, res) => {
 });
 
 // POST /api/orders/:id/pay
-router.post('/:id/pay', auth, (req, res) => {
+router.post('/:id/pay', auth, orderWriteLimiter, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -62,7 +68,7 @@ router.post('/:id/pay', auth, (req, res) => {
 });
 
 // POST /api/orders/:id/cancel
-router.post('/:id/cancel', auth, (req, res) => {
+router.post('/:id/cancel', auth, orderWriteLimiter, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -76,7 +82,7 @@ router.post('/:id/cancel', auth, (req, res) => {
 });
 
 // POST /api/orders/:id/refund-request
-router.post('/:id/refund-request', auth, (req, res) => {
+router.post('/:id/refund-request', auth, orderWriteLimiter, (req, res) => {
   try {
     const { reason } = req.body;
     const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
@@ -91,7 +97,7 @@ router.post('/:id/refund-request', auth, (req, res) => {
 });
 
 // POST /api/orders/admin/:id/transition (admin only)
-router.post('/admin/:id/transition', auth, (req, res) => {
+router.post('/admin/:id/transition', auth, orderWriteLimiter, (req, res) => {
   try {
     const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
     if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });

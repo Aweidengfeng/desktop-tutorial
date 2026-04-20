@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
+
+const searchLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
 
 // Initialize FTS5 search index
 try {
@@ -35,7 +38,7 @@ try {
 }
 
 // GET /api/search?q=xxx&type=all|peak|guide|club|article&limit=20
-router.get('/', (req, res) => {
+router.get('/', searchLimiter, (req, res) => {
   try {
     const { q, type = 'all', limit = 20 } = req.query;
     if (!q || q.trim().length < 1) return res.json([]);

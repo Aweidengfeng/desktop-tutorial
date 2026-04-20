@@ -48,8 +48,8 @@ function safeUser(user) {
 router.post('/register', (req, res) => {
   try {
     const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
-    if (!agreedPrivacy || !agreedTerms || !policyVersion) {
-      return res.status(422).json({ error: '请阅读并同意隐私政策和用户协议' });
+    if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
+      return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
     }
     if (!name || !phone || !password) {
       return res.status(400).json({ error: '请填写姓名、手机号和密码' });

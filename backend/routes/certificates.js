@@ -1,18 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
+
+const certLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
 function generateCertNo() {
   const year = new Date().getFullYear();
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let id = '';
-  for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  const id = crypto.randomBytes(5).toString('hex').toUpperCase().slice(0, 8);
   return `SL-${year}-${id}`;
 }
 
 // GET /api/certificates/:trackId  (or :trackId.png)
-router.get('/:trackId', auth, (req, res) => {
+router.get('/:trackId', auth, certLimiter, (req, res) => {
   try {
     const trackId = req.params.trackId.replace('.png', '');
     const track = db.prepare('SELECT * FROM tracks WHERE id = ? AND user_id = ?').get(trackId, req.user.id);
@@ -34,9 +36,9 @@ router.get('/:trackId', auth, (req, res) => {
     const distance = track.distance_km || track.distance || 0;
     const elevation = track.elevation_gain || track.elevation || 0;
 
-    // Sanitize text values for SVG (prevent injection)
-    const safeName = String(userName).replace(/[<>&"']/g, '');
-    const safePeak = String(peakName).replace(/[<>&"']/g, '');
+    // Escape dangerous characters as HTML entities for SVG safety
+    const safeName = String(userName).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const safePeak = String(peakName).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" viewBox="0 0 800 560">

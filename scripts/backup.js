@@ -28,6 +28,8 @@ const gzip = zlib.createGzip();
 
 readStream.pipe(gzip).pipe(writeStream);
 
+readStream.on('error', e => { console.error('Backup read error:', e.message); process.exit(1); });
+
 writeStream.on('finish', () => {
   console.log(`✅ Backup created: ${destFile}`);
 

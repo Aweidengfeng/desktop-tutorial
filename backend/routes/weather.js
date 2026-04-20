@@ -1,7 +1,10 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
+
+const summitWindowLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
 // 山峰坐标映射（用坐标查询更准确）
 const peakCoords = {
@@ -509,7 +512,7 @@ router.get('/popular-peaks', async (req, res) => {
 });
 
 // GET /api/weather/summit-window/:peakId
-router.get('/summit-window/:peakId', (req, res) => {
+router.get('/summit-window/:peakId', summitWindowLimiter, (req, res) => {
   const peak = db.prepare('SELECT * FROM peaks WHERE id = ?').get(req.params.peakId);
   if (!peak) return res.status(404).json({ error: '山峰不存在' });
 
