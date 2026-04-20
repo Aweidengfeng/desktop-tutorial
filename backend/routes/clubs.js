@@ -35,6 +35,60 @@ router.get('/apply/status', auth, (req, res) => {
   }
 });
 
+// GET /api/clubs/me — 查看自己的俱乐部/申请状态（需要JWT）
+router.get('/me', auth, (req, res) => {
+  try {
+    // 先找已批准的俱乐部
+    const club = db.prepare('SELECT * FROM clubs WHERE creator_id = ?').get(req.user.id);
+    if (club) return res.json(club);
+    // 再找申请记录
+    const app = db.prepare('SELECT * FROM club_applications WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
+    if (!app) return res.json({ status: 'none' });
+    res.json(app);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/clubs/me — 更新俱乐部资料（仅 pending 申请可改）
+router.put('/me', auth, (req, res) => {
+  try {
+    // 已成立俱乐部允许更新基本信息
+    const club = db.prepare('SELECT * FROM clubs WHERE creator_id = ?').get(req.user.id);
+    if (club) {
+      const { description, contact, wechat, website, cover_image, logo } = req.body;
+      db.prepare(`
+        UPDATE clubs SET
+          description = COALESCE(?, description),
+          contact = COALESCE(?, contact),
+          wechat = COALESCE(?, wechat),
+          website = COALESCE(?, website),
+          cover_image = COALESCE(?, cover_image),
+          logo = COALESCE(?, logo)
+        WHERE creator_id = ?
+      `).run(description || null, contact || null, wechat || null, website || null,
+             cover_image || null, logo || null, req.user.id);
+      return res.json(db.prepare('SELECT * FROM clubs WHERE creator_id = ?').get(req.user.id));
+    }
+    // 还在申请中，允许修改申请信息
+    const app = db.prepare("SELECT * FROM club_applications WHERE user_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1").get(req.user.id);
+    if (!app) return res.status(404).json({ error: '没有找到待审核的申请' });
+    const { club_name, description, specialty, region, contact } = req.body;
+    db.prepare(`
+      UPDATE club_applications SET
+        club_name = COALESCE(?, club_name),
+        description = COALESCE(?, description),
+        specialty = COALESCE(?, specialty),
+        region = COALESCE(?, region),
+        contact = COALESCE(?, contact)
+      WHERE id = ?
+    `).run(club_name || null, description || null, specialty || null, region || null, contact || null, app.id);
+    return res.json(db.prepare('SELECT * FROM club_applications WHERE id = ?').get(app.id));
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/clubs/featured — 精选俱乐部（首页展示，最多6个认证且活跃的俱乐部）
 // 注意：此路由必须在 /:id 之前注册
 router.get('/featured', (req, res) => {

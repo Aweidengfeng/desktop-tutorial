@@ -42,13 +42,32 @@ const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
 app.get(['/summitlink', '/summitlink.html'], (req, res) => {
   console.log('📄 请求HTML文件:', htmlFile);
   console.log('📄 文件存在:', fs.existsSync(htmlFile));
-  const amapKey = process.env.AMAP_KEY || 'YOUR_AMAP_KEY';
+  const amapKey = process.env.AMAP_KEY || '';
+  const amapSecurityCode = process.env.AMAP_SECURITY_CODE || '';
   fs.readFile(htmlFile, 'utf8', (err, html) => {
     if (err) {
       console.error('❌ 读取HTML文件失败:', err);
       return res.status(500).send('Internal Server Error');
     }
-    const result = html.replace('YOUR_AMAP_KEY', amapKey);
+    let result = html
+      .replaceAll('YOUR_AMAP_KEY', amapKey)
+      .replaceAll('YOUR_AMAP_SECURITY_CODE', amapSecurityCode);
+    // 若 Key 或安全密钥未配置，注入提示脚本
+    if (!amapKey || !amapSecurityCode) {
+      const missingVars = [!amapKey && 'AMAP_KEY', !amapSecurityCode && 'AMAP_SECURITY_CODE'].filter(Boolean).join(' / ');
+      const warningScript = `<script>
+(function(){
+  var msg = '地图未配置：请在环境变量中设置 ${missingVars}';
+  console.error('[SummitLink]', msg);
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('[id*="map"],[id*="Map"],[class*="map-container"]').forEach(function(el){
+      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f87171;font-size:13px;text-align:center;padding:12px;">' + msg + '</div>';
+    });
+  });
+})();
+</script>`;
+      result = result.replace('</head>', warningScript + '\n</head>');
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(result);
   });
@@ -81,6 +100,7 @@ app.use('/api/banners', require('./routes/banners'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/expeditions', require('./routes/expeditions'));
 
 // Admin 面板
 const adminHtmlFile = path.join(rootPath, 'admin.html');

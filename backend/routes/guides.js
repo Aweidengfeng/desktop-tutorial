@@ -64,6 +64,61 @@ router.put('/my/profile', auth, (req, res) => {
   }
 });
 
+// GET /api/guides/me — 查看自己的申请/向导状态（需要JWT）
+// 注意：此路由必须在 /:id 之前注册，防止 'me' 被当作 id
+router.get('/me', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE user_id = ?').get(req.user.id);
+    if (!guide) {
+      const app = db.prepare('SELECT * FROM guide_applications WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(req.user.id);
+      if (!app) return res.json({ status: 'none' });
+      return res.json(app);
+    }
+    if (guide.peaks_led) {
+      try { guide.peaks_led = JSON.parse(guide.peaks_led); } catch(e) { guide.peaks_led = []; }
+    } else { guide.peaks_led = []; }
+    res.json(guide);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/guides/me — 更新自己的资料（仅 pending 状态可改）
+// 注意：此路由必须在 /:id 之前注册
+router.put('/me', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE user_id = ?').get(req.user.id);
+    if (!guide) return res.status(404).json({ error: '您尚未提交向导申请' });
+    if (guide.status !== 'pending') {
+      return res.status(400).json({ error: '只有待审核状态才能修改资料' });
+    }
+    const { bio, peaks_led, cover_image, wechat, experience_years, real_name, certifications, specialties } = req.body;
+    const peaksLedStr = peaks_led ? JSON.stringify(peaks_led) : guide.peaks_led;
+    const certsStr = certifications ? JSON.stringify(certifications) : guide.certifications;
+    db.prepare(`
+      UPDATE guides SET
+        bio = COALESCE(?, bio),
+        peaks_led = COALESCE(?, peaks_led),
+        cover_image = COALESCE(?, cover_image),
+        wechat = COALESCE(?, wechat),
+        experience_years = COALESCE(?, experience_years),
+        real_name = COALESCE(?, real_name),
+        certifications = COALESCE(?, certifications),
+        specialties = COALESCE(?, specialties)
+      WHERE user_id = ?
+    `).run(bio || null, peaksLedStr, cover_image || null, wechat || null,
+           experience_years || null, real_name || null, certsStr, specialties || null,
+           req.user.id);
+    const updated = db.prepare('SELECT * FROM guides WHERE user_id = ?').get(req.user.id);
+    if (updated.peaks_led) {
+      try { updated.peaks_led = JSON.parse(updated.peaks_led); } catch(e) { updated.peaks_led = []; }
+    } else { updated.peaks_led = []; }
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/guides/:id — 向导详情
 router.get('/:id', (req, res) => {
   try {
@@ -140,16 +195,28 @@ router.post('/:id/review', auth, (req, res) => {
 router.post('/apply', auth, (req, res) => {
   try {
     const { name, cert, specialty, languages, dayRate, region } = req.body;
+    if (!name) return res.status(400).json({ error: '姓名不能为空' });
+    // 检查是否已有申请
+    const existing = db.prepare("SELECT id, status FROM guide_applications WHERE user_id = ?").get(req.user.id);
+    if (existing && existing.status === 'pending') {
+      return res.status(400).json({ error: '您已有待审核的申请，请等待审核结果' });
+    }
     // 插入申请记录
     db.prepare(`
       INSERT INTO guide_applications (user_id, name, cert, specialty, languages, day_rate, region)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(req.user.id, name, cert, specialty, languages, dayRate, region);
-    // 同时插入向导表（待审核）
-    db.prepare(`
-      INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
-    `).run(req.user.id, name, cert, specialty, languages, dayRate, region);
+    // 同时插入或更新向导表（待审核）
+    const existingGuide = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(req.user.id);
+    if (!existingGuide) {
+      db.prepare(`
+        INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+      `).run(req.user.id, name, cert, specialty, languages, dayRate, region);
+    } else {
+      db.prepare("UPDATE guides SET status = 'pending', name=?, cert=?, specialty=?, languages=?, day_rate=?, region=? WHERE user_id=?")
+        .run(name, cert, specialty, languages, dayRate, region, req.user.id);
+    }
     res.json({ success: true, message: '申请已提交，7天内审核完成' });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
