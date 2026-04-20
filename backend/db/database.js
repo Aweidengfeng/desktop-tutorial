@@ -1086,4 +1086,213 @@ if (pricingCount.cnt === 0) {
   }
 }
 
+// ── A2: peaks 表补充分类字段 ───────────────────────────────────
+const existingPeakColsA2 = db.pragma('table_info(peaks)').map(c => c.name);
+if (!existingPeakColsA2.includes('category')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN category TEXT DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('categories')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN categories TEXT DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('cover_image')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN cover_image TEXT DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('gallery')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN gallery TEXT DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('region')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN region TEXT DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('first_ascent_year')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN first_ascent_year INTEGER DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('first_ascent_by')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN first_ascent_by TEXT DEFAULT NULL");
+}
+if (!existingPeakColsA2.includes('technical_notes')) {
+  db.exec("ALTER TABLE peaks ADD COLUMN technical_notes TEXT DEFAULT NULL");
+}
+
+// 将旧 type 字段映射到新 category 字段（幂等迁移）
+db.prepare("UPDATE peaks SET category = 'eight_thousanders' WHERE type = '8000ers' AND category IS NULL").run();
+db.prepare("UPDATE peaks SET category = 'seven_summits'    WHERE type = 'continental' AND category IS NULL").run();
+db.prepare("UPDATE peaks SET category = 'classic'          WHERE type = 'world' AND category IS NULL").run();
+db.prepare("UPDATE peaks SET category = 'technical'        WHERE type = 'alpine' AND category IS NULL").run();
+
+// ── A6: guides 表补充入驻审核字段 ────────────────────────────────
+const existingGuideColsA6 = db.pragma('table_info(guides)').map(c => c.name);
+if (!existingGuideColsA6.includes('real_name')) {
+  db.exec("ALTER TABLE guides ADD COLUMN real_name TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('id_card_no')) {
+  db.exec("ALTER TABLE guides ADD COLUMN id_card_no TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('id_card_front')) {
+  db.exec("ALTER TABLE guides ADD COLUMN id_card_front TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('id_card_back')) {
+  db.exec("ALTER TABLE guides ADD COLUMN id_card_back TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('certifications')) {
+  db.exec("ALTER TABLE guides ADD COLUMN certifications TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('bank_account')) {
+  db.exec("ALTER TABLE guides ADD COLUMN bank_account TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('bank_name')) {
+  db.exec("ALTER TABLE guides ADD COLUMN bank_name TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('emergency_contact')) {
+  db.exec("ALTER TABLE guides ADD COLUMN emergency_contact TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('emergency_phone')) {
+  db.exec("ALTER TABLE guides ADD COLUMN emergency_phone TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('specialties')) {
+  db.exec("ALTER TABLE guides ADD COLUMN specialties TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('years_experience')) {
+  db.exec("ALTER TABLE guides ADD COLUMN years_experience INTEGER DEFAULT 0");
+}
+if (!existingGuideColsA6.includes('listing_fee_paid')) {
+  db.exec("ALTER TABLE guides ADD COLUMN listing_fee_paid INTEGER DEFAULT 0");
+}
+if (!existingGuideColsA6.includes('commission_rate')) {
+  db.exec("ALTER TABLE guides ADD COLUMN commission_rate REAL DEFAULT 0.15");
+}
+if (!existingGuideColsA6.includes('reject_reason')) {
+  db.exec("ALTER TABLE guides ADD COLUMN reject_reason TEXT DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('approved_at')) {
+  db.exec("ALTER TABLE guides ADD COLUMN approved_at DATETIME DEFAULT NULL");
+}
+if (!existingGuideColsA6.includes('approved_by')) {
+  db.exec("ALTER TABLE guides ADD COLUMN approved_by TEXT DEFAULT NULL");
+}
+
+// ── A6: clubs 表补充入驻审核字段 ────────────────────────────────
+const existingClubColsA6 = db.pragma('table_info(clubs)').map(c => c.name);
+if (!existingClubColsA6.includes('business_license')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN business_license TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('business_license_no')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN business_license_no TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('legal_person')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN legal_person TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('legal_id_card_front')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN legal_id_card_front TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('legal_id_card_back')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN legal_id_card_back TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('bank_account_name')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN bank_account_name TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('bank_account_no')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN bank_account_no TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('bank_name')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN bank_name TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('contact_name')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN contact_name TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('contact_phone')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN contact_phone TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('contact_email')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN contact_email TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('address')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN address TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('established_year')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN established_year INTEGER DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('listing_fee_paid')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN listing_fee_paid INTEGER DEFAULT 0");
+}
+if (!existingClubColsA6.includes('commission_rate')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN commission_rate REAL DEFAULT 0.15");
+}
+if (!existingClubColsA6.includes('reject_reason')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN reject_reason TEXT DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('approved_at')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN approved_at DATETIME DEFAULT NULL");
+}
+if (!existingClubColsA6.includes('approved_by')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN approved_by TEXT DEFAULT NULL");
+}
+
+// ── A9: sms_codes 表补充 created_at 字段 ──────────────────────
+const existingSmsCodeCols = db.pragma('table_info(sms_codes)').map(c => c.name);
+if (!existingSmsCodeCols.includes('created_at')) {
+  db.exec("ALTER TABLE sms_codes ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+}
+
+// ── A7: expeditions 和 expedition_orders 表 ──────────────────
+db.exec(`
+CREATE TABLE IF NOT EXISTS expeditions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  publisher_type TEXT NOT NULL,
+  publisher_id INTEGER NOT NULL,
+  peak_id INTEGER,
+  title TEXT NOT NULL,
+  cover_image TEXT,
+  gallery TEXT,
+  route_name TEXT,
+  difficulty TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  total_days INTEGER DEFAULT 0,
+  min_participants INTEGER DEFAULT 1,
+  max_participants INTEGER DEFAULT 10,
+  meeting_point TEXT,
+  itinerary TEXT,
+  included_services TEXT,
+  excluded_services TEXT,
+  base_price REAL DEFAULT 0,
+  currency TEXT DEFAULT 'CNY',
+  addons TEXT,
+  early_bird_price REAL,
+  early_bird_deadline TEXT,
+  group_discount TEXT,
+  payment_stages TEXT,
+  cancel_policy TEXT,
+  commission_rate REAL DEFAULT 0.15,
+  status TEXT DEFAULT 'pending',
+  reject_reason TEXT,
+  approved_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS expedition_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_no TEXT UNIQUE NOT NULL,
+  expedition_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  participants INTEGER DEFAULT 1,
+  selected_addons TEXT,
+  subtotal REAL DEFAULT 0,
+  discount REAL DEFAULT 0,
+  total REAL DEFAULT 0,
+  platform_fee REAL DEFAULT 0,
+  publisher_income REAL DEFAULT 0,
+  status TEXT DEFAULT 'pending_payment',
+  contact_name TEXT,
+  contact_phone TEXT,
+  emergency_contact TEXT,
+  emergency_phone TEXT,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  paid_at DATETIME,
+  confirmed_at DATETIME,
+  cancelled_at DATETIME
+);
+`);
+
 module.exports = db;

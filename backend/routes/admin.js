@@ -14,6 +14,13 @@ const adminLoginLimiter = rateLimit({
   message: { error: '登录尝试次数过多，请15分钟后再试' },
 });
 
+// 管理后台操作限流（写操作）：每分钟最多60次
+const adminWriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: '操作过于频繁，请稍后再试' },
+});
+
 function timingSafeEqual(a, b) {
   const bufA = Buffer.from(String(a));
   const bufB = Buffer.from(String(b));
@@ -403,6 +410,167 @@ router.delete('/reviews/:id', adminAuth, (req, res) => {
     const result = db.prepare('DELETE FROM reviews WHERE id = ?').run(req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: '评价不存在' });
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ── A6: 俱乐部申请审核 ──────────────────────────────────────────
+
+// GET /api/admin/club-applications?status=pending|approved|rejected
+router.get('/club-applications', adminAuth, (req, res) => {
+  try {
+    const { status = '', page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = 'SELECT * FROM club_applications';
+    const params = [];
+    if (status) { sql += ' WHERE status = ?'; params.push(status); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const applications = db.prepare(sql).all(...params);
+    const countSql = status ? 'SELECT COUNT(*) as c FROM club_applications WHERE status = ?' : 'SELECT COUNT(*) as c FROM club_applications';
+    const countParams = status ? [status] : [];
+    const total = db.prepare(countSql).get(...countParams).c;
+    res.json({ applications, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/club-applications/:id/approve — 审核通过俱乐部申请
+router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const app = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: '申请不存在' });
+    const now = new Date().toISOString();
+    db.prepare("UPDATE club_applications SET status = 'approved' WHERE id = ?").run(req.params.id);
+    // 将俱乐部状态更新为 active/verified
+    const existingClub = db.prepare('SELECT id FROM clubs WHERE creator_id = ?').get(app.user_id);
+    if (existingClub) {
+      db.prepare("UPDATE clubs SET status = 'active', verified = 1, approved_at = ?, approved_by = 'admin' WHERE id = ?")
+        .run(now, existingClub.id);
+    } else {
+      db.prepare(`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, creator_id, status, verified, approved_at, approved_by)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, 'admin')`)
+        .run(app.club_name, app.description, app.specialty, app.region, app.type || '综合',
+             app.contact, app.wechat, app.website, app.user_id, now);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/club-applications/:id/reject — 拒绝俱乐部申请
+router.post('/club-applications/:id/reject', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const app = db.prepare('SELECT id FROM club_applications WHERE id = ?').get(req.params.id);
+    if (!app) return res.status(404).json({ error: '申请不存在' });
+    db.prepare("UPDATE club_applications SET status = 'rejected', reject_reason = ? WHERE id = ?")
+      .run(reason, req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/guides/:id/config — 管理员设置向导抽成/入驻费
+router.put('/guides/:id/config', adminAuth, (req, res) => {
+  try {
+    const { commission_rate, listing_fee_paid } = req.body;
+    const guide = db.prepare('SELECT id FROM guides WHERE id = ?').get(req.params.id);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    const updates = [];
+    const params = [];
+    if (commission_rate !== undefined) { updates.push('commission_rate = ?'); params.push(commission_rate); }
+    if (listing_fee_paid !== undefined) { updates.push('listing_fee_paid = ?'); params.push(listing_fee_paid ? 1 : 0); }
+    if (updates.length === 0) return res.status(400).json({ error: '无有效参数' });
+    params.push(req.params.id);
+    db.prepare(`UPDATE guides SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/clubs/:id/config — 管理员设置俱乐部抽成/入驻费
+router.put('/clubs/:id/config', adminAuth, (req, res) => {
+  try {
+    const { commission_rate, listing_fee_paid } = req.body;
+    const club = db.prepare('SELECT id FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const updates = [];
+    const params = [];
+    if (commission_rate !== undefined) { updates.push('commission_rate = ?'); params.push(commission_rate); }
+    if (listing_fee_paid !== undefined) { updates.push('listing_fee_paid = ?'); params.push(listing_fee_paid ? 1 : 0); }
+    if (updates.length === 0) return res.status(400).json({ error: '无有效参数' });
+    params.push(req.params.id);
+    db.prepare(`UPDATE clubs SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ── A7: 商业攀登审核 ────────────────────────────────────────────
+
+// GET /api/admin/expeditions?status=pending
+router.get('/expeditions', adminAuth, (req, res) => {
+  try {
+    const { status = '', page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = 'SELECT * FROM expeditions';
+    const params = [];
+    if (status) { sql += ' WHERE status = ?'; params.push(status); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const expeditions = db.prepare(sql).all(...params);
+    const countSql = status ? 'SELECT COUNT(*) as c FROM expeditions WHERE status = ?' : 'SELECT COUNT(*) as c FROM expeditions';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ expeditions, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/expeditions/:id/approve
+router.post('/expeditions/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const now = new Date().toISOString();
+    const result = db.prepare("UPDATE expeditions SET status = 'published', approved_at = ? WHERE id = ?")
+      .run(now, req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '远征不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/expeditions/:id/reject
+router.post('/expeditions/:id/reject', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const result = db.prepare("UPDATE expeditions SET status = 'rejected', reject_reason = ? WHERE id = ?")
+      .run(reason, req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: '远征不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ── A9: 验证码查看器（内测用）────────────────────────────────────
+
+// GET /api/admin/sms-codes — 查看最近50条验证码（仅管理员，内测用）
+router.get('/sms-codes', adminAuth, (req, res) => {
+  try {
+    const codes = db.prepare(`
+      SELECT id, phone, code, expires_at, used, created_at
+      FROM sms_codes
+      ORDER BY id DESC LIMIT 50
+    `).all();
+    res.json(codes);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

@@ -3,35 +3,45 @@ const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 
-// GET /api/peaks?type=8000ers
+// GET /api/peaks?category=eight_thousanders|seven_summits|classic|technical
+// 同时向后兼容旧的 ?type= 参数
 router.get('/', (req, res) => {
   try {
-    const { type } = req.query;
+    const { type, category } = req.query;
+    const filter = category || type;
     let stmt;
-    if (type) {
+    if (filter) {
+      // 支持 category 精确匹配或 categories JSON 数组中包含该值
       stmt = db.prepare(`
         SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
-               image, type, description, best_season as bestSeason,
+               image, cover_image as coverImage, type, category, categories,
+               description, best_season as bestSeason,
                success_rate as successRate, first_ascent as firstAscent, deaths,
-               latitude, longitude,
+               latitude, longitude, region,
                annual_climbers as annualClimbers, commercial_teams as commercialTeams,
                season_detail as seasonDetail, supplemental_oxygen as supplementalOxygen,
                main_route as mainRoute, operating_company as operatingCompany,
                data_source as dataSource
-        FROM peaks WHERE type = ?
+        FROM peaks
+        WHERE category = ?
+           OR type = ?
+           OR (categories IS NOT NULL AND categories LIKE ?)
+        ORDER BY altitude DESC
       `);
-      return res.json(stmt.all(type));
+      return res.json(stmt.all(filter, filter, `%"${filter}"%`));
     }
     stmt = db.prepare(`
       SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
-             image, type, description, best_season as bestSeason,
+             image, cover_image as coverImage, type, category, categories,
+             description, best_season as bestSeason,
              success_rate as successRate, first_ascent as firstAscent, deaths,
-             latitude, longitude,
+             latitude, longitude, region,
              annual_climbers as annualClimbers, commercial_teams as commercialTeams,
              season_detail as seasonDetail, supplemental_oxygen as supplementalOxygen,
              main_route as mainRoute, operating_company as operatingCompany,
              data_source as dataSource
       FROM peaks
+      ORDER BY altitude DESC
     `);
     res.json(stmt.all());
   } catch (e) {
@@ -59,24 +69,76 @@ router.post('/suggest', auth, (req, res) => {
   }
 });
 
+// GET /api/peaks/:id/weather — 代理返回该山峰的天气
+// 注意：此路由必须在 /:id 之前注册
+router.get('/:id/weather', (req, res) => {
+  try {
+    const peak = db.prepare('SELECT name, latitude, longitude FROM peaks WHERE id = ?').get(req.params.id);
+    if (!peak) return res.status(404).json({ error: '山峰不存在' });
+    const { latitude, longitude } = peak;
+    if (!latitude || !longitude) {
+      return res.status(404).json({ error: '该山峰暂无坐标数据，无法获取天气' });
+    }
+    // 内部代理到 /api/weather
+    const http = require('http');
+    const port = process.env.PORT || 8080;
+    const weatherUrl = `http://localhost:${port}/api/weather?lat=${latitude}&lon=${longitude}`;
+    const request = http.get(weatherUrl, (resp) => {
+      let data = '';
+      resp.on('data', chunk => { data += chunk; });
+      resp.on('end', () => {
+        if (res.headersSent) return;
+        try {
+          const json = JSON.parse(data);
+          res.json(json);
+        } catch (e) {
+          res.status(502).json({ error: '天气数据解析失败' });
+        }
+      });
+    });
+    request.on('error', () => {
+      if (!res.headersSent) res.status(502).json({ error: '天气服务暂时不可用' });
+    });
+    request.setTimeout(8000, () => {
+      request.destroy();
+      if (!res.headersSent) res.status(504).json({ error: '天气服务超时' });
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/peaks/:id
 router.get('/:id', (req, res) => {
   try {
     const peak = db.prepare(`
       SELECT id, name, name_en as nameEn, altitude, country, continent, difficulty,
-             image, type, description, best_season as bestSeason,
+             image, cover_image as coverImage, type, category, categories,
+             description, best_season as bestSeason,
              success_rate as successRate, first_ascent as firstAscent, deaths,
              latitude, longitude, routes, camps, technical_grade as technicalGrade,
              permit_required as permitRequired, permit_fee as permitFee,
              annual_climbers as annualClimbers, commercial_teams as commercialTeams,
              season_detail as seasonDetail, supplemental_oxygen as supplementalOxygen,
              main_route as mainRoute, operating_company as operatingCompany,
-             data_source as dataSource
+             data_source as dataSource, region, first_ascent_year as firstAscentYear,
+             first_ascent_by as firstAscentBy, technical_notes as technicalNotes,
+             gallery
       FROM peaks WHERE id = ?
     `).get(req.params.id);
     if (!peak) return res.status(404).json({ error: '山峰不存在' });
     peak.routes = peak.routes ? JSON.parse(peak.routes) : [];
     peak.camps = peak.camps ? JSON.parse(peak.camps) : [];
+    if (peak.categories) {
+      try { peak.categories = JSON.parse(peak.categories); } catch (e) { peak.categories = []; }
+    } else {
+      peak.categories = [];
+    }
+    if (peak.gallery) {
+      try { peak.gallery = JSON.parse(peak.gallery); } catch (e) { peak.gallery = []; }
+    } else {
+      peak.gallery = [];
+    }
     res.json(peak);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

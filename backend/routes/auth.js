@@ -164,11 +164,23 @@ router.get('/privacy', auth, (req, res) => {
 });
 
 // POST /api/auth/sms/send — 发送短信验证码（mock：打印到控制台）
+const smsProvider = require('../utils/sms');
+// 内存限流：同一手机号 60 秒内只能请求一次
+const smsSendCooldown = new Map(); // phone → lastSentAt(ms)
+// 验证失败计数（失败三次锁定10分钟）
+const smsFailCount = new Map(); // phone → {count, lockedUntil}
+
 router.post('/sms/send', (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
       return res.status(400).json({ error: '手机号格式不正确' });
+    }
+    // 60 秒冷却检查
+    const lastSent = smsSendCooldown.get(phone);
+    if (lastSent && Date.now() - lastSent < 60 * 1000) {
+      const wait = Math.ceil((60 * 1000 - (Date.now() - lastSent)) / 1000);
+      return res.status(429).json({ error: `请等待 ${wait} 秒后再次获取验证码` });
     }
     // 生成6位验证码
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -176,9 +188,11 @@ router.post('/sms/send', (req, res) => {
     // 使旧验证码失效
     db.prepare('UPDATE sms_codes SET used = 1 WHERE phone = ? AND used = 0').run(phone);
     db.prepare('INSERT INTO sms_codes (phone, code, expires_at) VALUES (?, ?, ?)').run(phone, code, expiresAt);
-    // Mock: 打印到控制台（实际接入短信服务商替换此处）
-    console.log(`[SMS MOCK] 手机号: ${phone} 验证码: ${code} (5分钟内有效)`);
-    res.json({ success: true, message: '验证码已发送（开发模式：查看服务器控制台）', _dev_code: code });
+    // 记录发送时间
+    smsSendCooldown.set(phone, Date.now());
+    // 发送（mock：打印到控制台）
+    smsProvider.send(phone, code).catch(e => console.error('[SMS]', e.message));
+    res.json({ success: true, message: '验证码已发送（当前为内测阶段，验证码可在管理员后台查看；正式版将对接阿里云短信）' });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -189,12 +203,32 @@ router.post('/sms/verify', (req, res) => {
   try {
     const { phone, code } = req.body;
     if (!phone || !code) return res.status(400).json({ error: '请填写手机号和验证码' });
+    // 锁定检查（失败三次锁定10分钟）
+    const failInfo = smsFailCount.get(phone);
+    if (failInfo && failInfo.lockedUntil && Date.now() < failInfo.lockedUntil) {
+      const wait = Math.ceil((failInfo.lockedUntil - Date.now()) / 60000);
+      return res.status(429).json({ error: `验证码错误次数过多，请 ${wait} 分钟后再试` });
+    }
     const record = db.prepare(
       'SELECT * FROM sms_codes WHERE phone = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1'
     ).get(phone, code);
-    if (!record) return res.status(401).json({ error: '验证码错误' });
-    if (Date.now() > record.expires_at) return res.status(401).json({ error: '验证码已过期' });
+    if (!record) {
+      // 记录失败次数
+      const current = smsFailCount.get(phone) || { count: 0 };
+      current.count += 1;
+      if (current.count >= 3) {
+        current.lockedUntil = Date.now() + 10 * 60 * 1000;
+        current.count = 0;
+      }
+      smsFailCount.set(phone, current);
+      return res.status(401).json({ error: '验证码错误' });
+    }
+    if (Date.now() > record.expires_at) {
+      return res.status(401).json({ error: '验证码已过期，请重新获取' });
+    }
     db.prepare('UPDATE sms_codes SET used = 1 WHERE id = ?').run(record.id);
+    // 验证成功，清除失败计数
+    smsFailCount.delete(phone);
     // 查找或创建用户
     let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
     if (!user) {

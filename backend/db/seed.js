@@ -110,9 +110,10 @@ db.prepare(`
 
 // ── 山峰：8000米巨峰 ──────────────────────────────────────
 const insertPeak = db.prepare(`
-  INSERT INTO peaks (name, name_en, altitude, country, continent, difficulty, image, type, description, best_season, success_rate, first_ascent, deaths, latitude, longitude,
+  INSERT INTO peaks (name, name_en, altitude, country, continent, difficulty, image, type, category,
+                     description, best_season, success_rate, first_ascent, deaths, latitude, longitude,
                      annual_climbers, commercial_teams, season_detail, supplemental_oxygen, main_route, data_source)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const peaks8000 = [
@@ -176,7 +177,11 @@ const peaks8000 = [
    150, 12, '春季5月；秋季9月底至10月', 0, '北坡/西南壁', '内部参考数据'],
 ];
 
-for (const p of peaks8000) insertPeak.run(...p);
+for (const p of peaks8000) {
+  // Insert with category: after type (index 7), insert 'eight_thousanders'
+  const row = [...p.slice(0, 8), 'eight_thousanders', ...p.slice(8)];
+  insertPeak.run(...row);
+}
 
 // ── 洲最高峰 ────────────────────────────────────────────────
 const continentalPeaks = [
@@ -210,7 +215,10 @@ const continentalPeaks = [
    15000, 800, '夏季6月至8月，南坡有缆车辅助', 0, '南坡标准路线/北坡路线', '内部参考数据'],
 ];
 
-for (const p of continentalPeaks) insertPeak.run(...p);
+for (const p of continentalPeaks) {
+  const row = [...p.slice(0, 8), 'seven_summits', ...p.slice(8)];
+  insertPeak.run(...row);
+}
 
 // ── 世界名峰（世界经典雪山） ────────────────────────────────────────────────
 const worldPeaks = [
@@ -258,7 +266,10 @@ const worldPeaks = [
    15000, 800, '夏季6月至8月，南坡有缆车辅助', 0, '南坡标准路线/北坡路线', '内部参考数据'],
 ];
 
-for (const p of worldPeaks) insertPeak.run(...p);
+for (const p of worldPeaks) {
+  const row = [...p.slice(0, 8), 'classic', ...p.slice(8)];
+  insertPeak.run(...row);
+}
 
 // ── 技术攀登胜地（全球技术热门山峰） ────────────────────────────────────────────
 const alpineSpots = [
@@ -306,7 +317,10 @@ const alpineSpots = [
    20, 2, '春季4月底至5月；秋季9月至10月中旬', 0, '鲨鱼鳍(中间峰)/Merrows Buttress', '内部参考数据'],
 ];
 
-for (const p of alpineSpots) insertPeak.run(...p);
+for (const p of alpineSpots) {
+  const row = [...p.slice(0, 8), 'technical', ...p.slice(8)];
+  insertPeak.run(...row);
+}
 
 // ── 向导数据 ────────────────────────────────────────────────
 const insertGuide = db.prepare(`
