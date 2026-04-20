@@ -828,6 +828,158 @@
         </div>
       </div>
 
+      <!-- 攀登订单管理 -->
+      <div x-show="page === 'expedition-orders'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold">🗂️ 攀登订单管理</h2>
+          <select x-model="expeditionOrdersStatus" @change="loadExpeditionOrders()" class="bg-slate-700 text-white rounded-lg px-3 py-1.5 text-sm">
+            <option value="">全部状态</option>
+            <option value="pending_payment">待支付</option><option value="paid">已支付</option>
+            <option value="departing">出发中</option><option value="completed">已完成</option>
+            <option value="reviewed">已评价</option><option value="refund_requested">退款中</option>
+            <option value="refunded">已退款</option><option value="cancelled">已取消</option>
+          </select>
+        </div>
+        <div x-show="expeditionOrdersLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!expeditionOrdersLoading && expeditionOrders.length === 0" class="text-center py-8 text-slate-400">暂无订单</div>
+        <div class="overflow-x-auto" x-show="!expeditionOrdersLoading && expeditionOrders.length > 0">
+          <table class="w-full text-sm">
+            <thead><tr class="text-slate-400 border-b border-white/10">
+              <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">用户ID</th><th class="text-left py-2 pr-4">金额</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2 pr-4">创建时间</th><th class="text-left py-2">操作</th>
+            </tr></thead>
+            <tbody>
+              <template x-for="order in expeditionOrders" :key="order.id">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="py-2 pr-4 text-slate-300" x-text="'#'+order.id"></td>
+                  <td class="py-2 pr-4 text-slate-300" x-text="order.user_id"></td>
+                  <td class="py-2 pr-4 text-white font-medium" x-text="'¥'+(order.amount||0)"></td>
+                  <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="{'pending_payment':'待支付','paid':'已支付','departing':'出发中','completed':'已完成','reviewed':'已评价','refund_requested':'退款中','refunded':'已退款','cancelled':'已取消'}[order.status]||order.status"></span></td>
+                  <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(order.created_at||'').slice(0,10)"></td>
+                  <td class="py-2">
+                    <div class="flex gap-1 flex-wrap">
+                      <template x-for="ns in ({'pending_payment':['paid','cancelled'],'paid':['departing','refund_requested','cancelled'],'departing':['completed'],'completed':['reviewed'],'refund_requested':['refunded','paid'],'refunded':[],'cancelled':[],'reviewed':[]}[order.status]||[])" :key="ns">
+                        <button @click="transitionExpeditionOrder(order.id, ns)" class="px-2 py-0.5 bg-slate-600 hover:bg-slate-500 rounded text-xs text-white" x-text="ns"></button>
+                      </template>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 申请审核 -->
+      <div x-show="page === 'applications'">
+        <h2 class="text-xl font-bold mb-6">📋 申请审核</h2>
+        <div class="flex gap-3 mb-4">
+          <button @click="applicationsSubTab='guide'" :class="applicationsSubTab==='guide'?'bg-primary text-white':'glass text-slate-300'" class="px-4 py-1.5 rounded-full text-sm font-medium">向导申请</button>
+          <button @click="applicationsSubTab='club'" :class="applicationsSubTab==='club'?'bg-primary text-white':'glass text-slate-300'" class="px-4 py-1.5 rounded-full text-sm font-medium">俱乐部申请</button>
+        </div>
+        <div x-show="applicationsSubTab==='guide'">
+          <div x-show="guideApplicationsLoading" class="text-center py-8 text-slate-400">加载中…</div>
+          <div x-show="!guideApplicationsLoading && guideApplications.length===0" class="text-center py-8 text-slate-400">暂无向导申请</div>
+          <div class="overflow-x-auto" x-show="!guideApplicationsLoading && guideApplications.length>0">
+            <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+              <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">用户ID</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2 pr-4">时间</th><th class="text-left py-2">操作</th>
+            </tr></thead><tbody>
+              <template x-for="app in guideApplications" :key="app.id">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="py-2 pr-4 text-slate-300" x-text="app.id"></td>
+                  <td class="py-2 pr-4 text-white" x-text="app.user_id"></td>
+                  <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="app.status||'pending'"></span></td>
+                  <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
+                  <td class="py-2"><button @click="reviewDrawer={open:true,type:'guide',item:app,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
+                </tr>
+              </template>
+            </tbody></table>
+          </div>
+        </div>
+        <div x-show="applicationsSubTab==='club'">
+          <div x-show="clubApplicationsLoading" class="text-center py-8 text-slate-400">加载中…</div>
+          <div x-show="!clubApplicationsLoading && clubApplications.length===0" class="text-center py-8 text-slate-400">暂无俱乐部申请</div>
+          <div class="overflow-x-auto" x-show="!clubApplicationsLoading && clubApplications.length>0">
+            <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+              <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">名称</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2 pr-4">时间</th><th class="text-left py-2">操作</th>
+            </tr></thead><tbody>
+              <template x-for="app in clubApplications" :key="app.id">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="py-2 pr-4 text-slate-300" x-text="app.id"></td>
+                  <td class="py-2 pr-4 text-white" x-text="app.name||app.club_id"></td>
+                  <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="app.status||'pending'"></span></td>
+                  <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
+                  <td class="py-2"><button @click="reviewDrawer={open:true,type:'club',item:app,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
+                </tr>
+              </template>
+            </tbody></table>
+          </div>
+        </div>
+        <!-- Review Drawer -->
+        <div x-show="reviewDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="reviewDrawer.open=false">
+          <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
+            <h3 class="font-bold text-lg mb-4">审核申请</h3>
+            <div class="space-y-3">
+              <div class="flex gap-2">
+                <button @click="reviewDrawer.action='approve'" :class="reviewDrawer.action==='approve'?'bg-emerald-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">✅ 通过</button>
+                <button @click="reviewDrawer.action='reject'" :class="reviewDrawer.action==='reject'?'bg-red-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">❌ 驳回</button>
+                <button @click="reviewDrawer.action='need_info'" :class="reviewDrawer.action==='need_info'?'bg-yellow-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">📋 补充</button>
+              </div>
+              <textarea x-model="reviewDrawer.note" placeholder="审核留言（可选）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" rows="3"></textarea>
+              <div class="flex gap-2">
+                <button @click="reviewDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
+                <button @click="reviewApplication(reviewDrawer.type, reviewDrawer.item?.id)" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">确认</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 可疑轨迹 -->
+      <div x-show="page === 'suspicious-tracks'">
+        <h2 class="text-xl font-bold mb-6">🚩 可疑轨迹审查</h2>
+        <div x-show="suspiciousTracksLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!suspiciousTracksLoading && suspiciousTracks.length===0" class="text-center py-8 text-slate-400">暂无可疑轨迹</div>
+        <div class="overflow-x-auto" x-show="!suspiciousTracksLoading && suspiciousTracks.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">用户</th><th class="text-left py-2 pr-4">轨迹名</th><th class="text-left py-2 pr-4">标记原因</th><th class="text-left py-2 pr-4">时间</th><th class="text-left py-2">操作</th>
+          </tr></thead><tbody>
+            <template x-for="track in suspiciousTracks" :key="track.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-4 text-slate-300" x-text="track.id"></td>
+                <td class="py-2 pr-4 text-white" x-text="track.user_name||track.user_id"></td>
+                <td class="py-2 pr-4 text-slate-200" x-text="track.name||track.peak_name"></td>
+                <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-red-500/30 text-red-300" x-text="track.flag_reason||'suspicious'"></span></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(track.created_at||'').slice(0,10)"></td>
+                <td class="py-2"><button @click="unflagTrack(track.id)" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-xs text-white">解除标记</button></td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+      </div>
+
+      <!-- 审核日志 -->
+      <div x-show="page === 'moderation-logs'">
+        <h2 class="text-xl font-bold mb-6">🛡️ 内容审核日志</h2>
+        <div x-show="moderationLogsLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!moderationLogsLoading && moderationLogs.length===0" class="text-center py-8 text-slate-400">暂无审核记录</div>
+        <div class="overflow-x-auto" x-show="!moderationLogsLoading && moderationLogs.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">类型</th><th class="text-left py-2 pr-4">内容摘要</th><th class="text-left py-2 pr-4">原因</th><th class="text-left py-2 pr-4">用户</th><th class="text-left py-2">时间</th>
+          </tr></thead><tbody>
+            <template x-for="log in moderationLogs" :key="log.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-4 text-slate-300" x-text="log.id"></td>
+                <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="log.content_type"></span></td>
+                <td class="py-2 pr-4 text-slate-300 max-w-[180px] truncate" x-text="log.content_snippet"></td>
+                <td class="py-2 pr-4 text-red-300 text-xs" x-text="log.reason"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="log.user_id"></td>
+                <td class="py-2 text-slate-400 text-xs" x-text="(log.created_at||'').slice(0,16)"></td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -974,6 +1126,10 @@
           else if (this.page === 'club-activities') this.loadClubActivities(1);
           else if (this.page === 'expeditions') this.loadGuideExpeditions(1);
           else if (this.page === 'reviews') this.loadReviews(1);
+          else if (this.page === 'expedition-orders') this.loadExpeditionOrders();
+          else if (this.page === 'applications') { this.loadGuideApplications(); this.loadClubApplications(); }
+          else if (this.page === 'suspicious-tracks') this.loadSuspiciousTracks();
+          else if (this.page === 'moderation-logs') this.loadModerationLogs();
         },
 
         async loadStats() {
@@ -1250,6 +1406,63 @@
             this.reviews = this.reviews.filter(r => r.id !== rv.id);
             this.showToast('评价已删除');
           } catch (e) { this.showToast(e.message, 'error'); }
+        },
+        async loadExpeditionOrders() {
+          this.expeditionOrdersLoading = true;
+          try {
+            const qs = this.expeditionOrdersStatus ? `?status=${this.expeditionOrdersStatus}&limit=50` : '?limit=50';
+            const d = await this.api('GET', `/expedition-orders${qs}`);
+            this.expeditionOrders = d.orders || d; this.expeditionOrdersTotal = d.total || this.expeditionOrders.length;
+          } catch(e) { this.showToast(e.message,'error'); } finally { this.expeditionOrdersLoading = false; }
+        },
+        async transitionExpeditionOrder(id, newStatus) {
+          try {
+            await this.api('POST', `/expedition-orders/${id}/transition`, { newStatus });
+            this.showToast('状态已更新'); this.loadExpeditionOrders();
+          } catch(e) { this.showToast(e.message,'error'); }
+        },
+        async loadGuideApplications() {
+          this.guideApplicationsLoading = true;
+          try {
+            const d = await this.api('GET', '/guide-applications?limit=50');
+            this.guideApplications = d.applications || d;
+          } catch(e) {} finally { this.guideApplicationsLoading = false; }
+        },
+        async loadClubApplications() {
+          this.clubApplicationsLoading = true;
+          try {
+            const d = await this.api('GET', '/club-applications?limit=50');
+            this.clubApplications = d.applications || d;
+          } catch(e) {} finally { this.clubApplicationsLoading = false; }
+        },
+        async reviewApplication(type, id) {
+          const { action, note } = this.reviewDrawer;
+          if (!action) { this.showToast('请选择操作','error'); return; }
+          try {
+            await this.api('POST', `/${type === 'guide' ? 'guide' : 'club'}-applications/${id}/review`, { action, note });
+            this.showToast('审核完成'); this.reviewDrawer.open = false;
+            type === 'guide' ? this.loadGuideApplications() : this.loadClubApplications();
+          } catch(e) { this.showToast(e.message,'error'); }
+        },
+        async loadSuspiciousTracks() {
+          this.suspiciousTracksLoading = true;
+          try {
+            const d = await this.api('GET', '/tracks?flagged=1&limit=50');
+            this.suspiciousTracks = Array.isArray(d) ? d : (d.tracks || []);
+          } catch(e) {} finally { this.suspiciousTracksLoading = false; }
+        },
+        async unflagTrack(id) {
+          try {
+            await this.api('POST', `/tracks/${id}/unflag`);
+            this.showToast('标记已解除，积分已补发'); this.loadSuspiciousTracks();
+          } catch(e) { this.showToast(e.message,'error'); }
+        },
+        async loadModerationLogs() {
+          this.moderationLogsLoading = true;
+          try {
+            const d = await this.api('GET', '/moderation-logs?limit=50');
+            this.moderationLogs = d.logs || d; this.moderationLogsTotal = d.total || this.moderationLogs.length;
+          } catch(e) {} finally { this.moderationLogsLoading = false; }
         },
       };
     }
