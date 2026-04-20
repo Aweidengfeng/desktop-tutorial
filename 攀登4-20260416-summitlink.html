@@ -3680,11 +3680,53 @@
               </template>
             </div>
           </div>
+          <!-- Services & Prices -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">服务与价格</p>
+              <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
+                <button @click="loadMyGuideServices(currentGuideProfile.id);showAddGuideService=true" class="text-xs text-primary-light">+ 发布服务</button>
+              </template>
+            </div>
+            <div x-show="guideServicesLoading" class="text-center py-4 text-slate-400 text-sm">加载中…</div>
+            <div x-show="!guideServicesLoading && currentGuideServices.length===0" class="text-center py-4 text-slate-500 text-sm">暂无服务信息</div>
+            <div class="space-y-2">
+              <template x-for="svc in currentGuideServices" :key="svc.id">
+                <div class="bg-slate-800 rounded-xl p-3">
+                  <div class="flex items-start justify-between mb-1">
+                    <p class="text-white text-sm font-semibold flex-1 mr-2" x-text="svc.title"></p>
+                    <div class="flex-shrink-0 text-right">
+                      <p class="text-primary-light font-bold text-sm" x-text="svc.price > 0 ? '¥' + svc.price + '/' + ({'per_day':'天','per_person':'人','per_session':'次'}[svc.price_unit]||svc.price_unit) : '免费'"></p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full" x-text="{'training':'培训课程','guided_climb':'带队攀登','expedition':'远征','consult':'咨询服务'}[svc.type]||svc.type"></span>
+                    <span x-show="svc.mountain" class="text-xs text-slate-400" x-text="'📍 ' + svc.mountain"></span>
+                    <span x-show="svc.max_clients" class="text-xs text-slate-400" x-text="'最多 ' + svc.max_clients + ' 人'"></span>
+                  </div>
+                  <p x-show="svc.description" class="text-slate-500 text-xs mb-2 leading-relaxed" x-text="svc.description"></p>
+                  <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id !== currentUser.id">
+                    <button @click="openGuideServiceEnroll(currentGuideProfile, svc)" class="w-full bg-primary/20 hover:bg-primary/40 text-primary-light py-1.5 rounded-lg text-xs font-semibold transition-colors">立即预约</button>
+                  </template>
+                  <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
+                    <button @click="deleteMyGuideService(currentGuideProfile.id, svc.id)" class="w-full bg-red-900/30 hover:bg-red-900/50 text-red-400 py-1.5 rounded-lg text-xs font-semibold transition-colors">删除服务</button>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
           <!-- Guide action buttons -->
-          <div class="flex gap-3 pb-6">
+          <div class="flex gap-3 pb-2">
             <button @click="showGuideProfileModal=false;openChatWithUser(currentGuideProfile.name,currentGuideProfile.avatar);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">私信向导</button>
             <button @click="openBookingForGuide(currentGuideProfile)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
           </div>
+          <!-- Guide owner: commercial apply -->
+          <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
+            <div class="pb-6 pt-2">
+              <button @click="openGuideCommercialApply(currentGuideProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏅 申请商业资质认证</button>
+            </div>
+          </template>
+          <div x-show="!currentUser || !currentGuideProfile || currentGuideProfile.user_id !== currentUser.id" class="pb-6"></div>
         </div>
       </div>
     </template>
@@ -3808,12 +3850,44 @@
               <button @click="submitClubReview()" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">提交评价</button>
             </div>
           </template>
-          <!-- Publish activity (creator only) -->
-          <template x-if="currentUser && currentClubProfile && currentClubProfile.creator_id === (currentUser ? currentUser.id : -1)">
-            <div class="mb-4">
-              <button @click="showPublishActivity=true" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-colors">+ 发布活动/套餐</button>
+          <!-- Creator/Admin management tools -->
+          <template x-if="currentUser && currentClubProfile && currentClubProfile.creator_id === currentUser.id">
+            <div class="mb-4 bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-4">
+              <p class="text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">🏛️ 俱乐部管理</p>
+              <div class="space-y-2">
+                <button @click="showPublishActivity=true" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">+ 发布活动/套餐</button>
+                <button @click="loadClubActivitiesMgmt(currentClubProfile.id)" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">📋 活动列表与报名管理</button>
+                <button @click="openClubCommercialApply(currentClubProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏢 申请商业资质认证</button>
+              </div>
             </div>
           </template>
+
+          <!-- Club Activity Management Panel -->
+          <div x-show="showClubActivityMgmt && currentClubProfile" class="mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">活动管理</p>
+              <button @click="showClubActivityMgmt=false" class="text-xs text-slate-500">收起</button>
+            </div>
+            <div x-show="clubActivitiesMgmtLoading" class="text-center py-4 text-slate-400 text-sm">加载中…</div>
+            <div x-show="!clubActivitiesMgmtLoading && clubActivitiesMgmt.length===0" class="text-center py-4 text-slate-500 text-sm">暂无活动</div>
+            <div class="space-y-2">
+              <template x-for="act in clubActivitiesMgmt" :key="'mgmt'+act.id">
+                <div class="bg-slate-800 rounded-xl p-3">
+                  <div class="flex items-start justify-between mb-2">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-white text-sm font-semibold truncate" x-text="act.title"></p>
+                      <p class="text-slate-400 text-xs" x-text="(act.start_date||'') + ' · 已报 ' + (act.current_members||0) + '/' + (act.max_members||10)"></p>
+                    </div>
+                    <span :class="act.status==='active'?'bg-green-500/20 text-green-400':'bg-slate-600/50 text-slate-400'" class="text-xs px-2 py-0.5 rounded-full ml-2 flex-shrink-0" x-text="act.status==='active'?'上线':'已下线'"></span>
+                  </div>
+                  <div class="flex gap-2">
+                    <button @click="viewActivityEnrollments(currentClubProfile.id, act)" class="flex-1 bg-blue-700/40 hover:bg-blue-700/60 text-blue-300 py-1.5 rounded-lg text-xs font-semibold">查看报名</button>
+                    <button @click="toggleActivityStatus(currentClubProfile.id, act)" :class="act.status==='active'?'bg-red-700/40 hover:bg-red-700/60 text-red-300':'bg-green-700/40 hover:bg-green-700/60 text-green-300'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold" x-text="act.status==='active'?'下架':'上线'"></button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
           <!-- Club Posts (动态) -->
           <div x-show="currentClubProfile.posts && currentClubProfile.posts.length > 0" class="mb-4">
             <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">俱乐部动态</p>
@@ -3910,6 +3984,400 @@
         <div class="flex gap-3 mt-4">
           <button @click="showPublishActivity=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
           <button @click="submitActivity()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">发布</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ACTIVITY ENROLLMENT MODAL ===== -->
+  <div x-show="showActivityEnrollModal"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[130] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showActivityEnrollModal=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[88vh] overflow-y-auto">
+      <template x-if="enrollingActivity && enrollingClub">
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="text-white font-bold text-lg" x-text="enrollingActivity.title"></h3>
+              <p class="text-slate-400 text-sm" x-text="enrollingClub.name + (enrollingActivity.mountain ? ' · ' + enrollingActivity.mountain : '')"></p>
+              <p class="text-slate-400 text-xs mt-1" x-text="enrollingActivity.start_date ? '📅 ' + enrollingActivity.start_date + (enrollingActivity.end_date ? ' ~ ' + enrollingActivity.end_date : '') : ''"></p>
+            </div>
+            <span class="text-primary-light font-bold text-lg" x-text="enrollingActivity.price > 0 ? '¥' + enrollingActivity.price : '免费'"></span>
+          </div>
+          <div class="space-y-3 mb-4">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">紧急联系人姓名 *</label>
+              <input x-model="enrollForm.emergency_contact_name" type="text" placeholder="请输入紧急联系人姓名" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">紧急联系人电话 *</label>
+              <input x-model="enrollForm.emergency_contact_phone" type="tel" placeholder="请输入紧急联系人电话" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+            <div class="bg-slate-800/60 rounded-xl p-3">
+              <p class="text-slate-400 text-xs font-semibold mb-2">⚠️ 免责协议</p>
+              <p class="text-slate-500 text-xs leading-relaxed mb-3">本人已充分了解攀登活动的风险，同意平台免责声明，并同意由俱乐部制定的安全规则。如发生意外，本人自行承担相应风险。</p>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" x-model="enrollForm.agreed_waiver" class="w-4 h-4 accent-primary">
+                <span class="text-white text-sm">我已阅读并同意以上免责协议（v<span x-text="enrollForm.waiver_version"></span>）</span>
+              </label>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <button @click="showActivityEnrollModal=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+            <button @click="submitActivityEnroll()" :disabled="enrollLoading || !enrollForm.agreed_waiver"
+                    :class="(!enrollForm.agreed_waiver||enrollLoading)?'opacity-50 cursor-not-allowed':''"
+                    class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
+              <span x-text="enrollLoading ? '提交中…' : '确认报名'"></span>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ===== GUIDE SERVICE ENROLLMENT MODAL ===== -->
+  <div x-show="showGuideServiceEnrollModal"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[130] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showGuideServiceEnrollModal=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[88vh] overflow-y-auto">
+      <template x-if="enrollingGuideService && enrollingGuideForService">
+        <div class="p-5">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h3 class="text-white font-bold text-lg" x-text="enrollingGuideService.title"></h3>
+              <p class="text-slate-400 text-sm" x-text="enrollingGuideForService.name + (enrollingGuideService.mountain ? ' · ' + enrollingGuideService.mountain : '')"></p>
+              <p class="text-slate-400 text-xs mt-1" x-text="{'training':'培训课程','guided_climb':'带队攀登','expedition':'远征','consult':'咨询服务'}[enrollingGuideService.type] || enrollingGuideService.type"></p>
+            </div>
+            <span class="text-primary-light font-bold text-lg" x-text="enrollingGuideService.price > 0 ? '¥' + enrollingGuideService.price + '/' + ({'per_day':'天','per_person':'人','per_session':'次'}[enrollingGuideService.price_unit]||enrollingGuideService.price_unit) : '免费'"></span>
+          </div>
+          <div class="space-y-3 mb-4">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">紧急联系人姓名 *</label>
+              <input x-model="guideServiceEnrollForm.emergency_contact_name" type="text" placeholder="请输入紧急联系人姓名" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">紧急联系人电话 *</label>
+              <input x-model="guideServiceEnrollForm.emergency_contact_phone" type="tel" placeholder="请输入紧急联系人电话" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">备注（可选）</label>
+              <textarea x-model="guideServiceEnrollForm.notes" rows="2" placeholder="如特殊需求、身体状况等" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none resize-none placeholder-slate-600"></textarea>
+            </div>
+            <div class="bg-slate-800/60 rounded-xl p-3">
+              <p class="text-slate-400 text-xs font-semibold mb-2">⚠️ 免责协议</p>
+              <p class="text-slate-500 text-xs leading-relaxed mb-3">本人已充分了解向导服务及攀登活动的风险，同意平台免责声明。如发生意外，本人自行承担相应风险。</p>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" x-model="guideServiceEnrollForm.agreed_waiver" class="w-4 h-4 accent-primary">
+                <span class="text-white text-sm">我已阅读并同意以上免责协议（v<span x-text="guideServiceEnrollForm.waiver_version"></span>）</span>
+              </label>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <button @click="showGuideServiceEnrollModal=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+            <button @click="submitGuideServiceBook()" :disabled="guideServiceEnrollLoading || !guideServiceEnrollForm.agreed_waiver"
+                    :class="(!guideServiceEnrollForm.agreed_waiver||guideServiceEnrollLoading)?'opacity-50 cursor-not-allowed':''"
+                    class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
+              <span x-text="guideServiceEnrollLoading ? '提交中…' : '确认预约'"></span>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ===== ACTIVITY ENROLLMENTS DRAWER ===== -->
+  <div x-show="showEnrollmentsDrawer"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[140] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showEnrollmentsDrawer=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[75vh] overflow-y-auto">
+      <div class="p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-lg">报名列表</h3>
+          <button @click="showEnrollmentsDrawer=false" class="p-1.5 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-400">close</span></button>
+        </div>
+        <p class="text-slate-400 text-sm mb-4" x-text="selectedActivityForEnrollments?.title || ''"></p>
+        <div x-show="enrollmentsLoading" class="text-center py-6 text-slate-400">加载中…</div>
+        <div x-show="!enrollmentsLoading && selectedActivityEnrollments.length===0" class="text-center py-6 text-slate-500">暂无报名用户</div>
+        <div class="space-y-3">
+          <template x-for="enroll in selectedActivityEnrollments" :key="enroll.id">
+            <div class="bg-slate-800 rounded-xl p-3">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-white text-sm font-semibold" x-text="enroll.user_name||('用户 #'+enroll.user_id)"></p>
+                <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-200" x-text="{'pending_payment':'待支付','paid':'已支付','cancelled':'已取消'}[enroll.status]||enroll.status"></span>
+              </div>
+              <p class="text-slate-400 text-xs" x-text="'紧急联系人：' + (enroll.emergency_contact_name||'-') + ' ' + (enroll.emergency_contact_phone||'')"></p>
+              <p class="text-slate-500 text-xs" x-text="(enroll.created_at||'').slice(0,10)"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLUB COMMERCIAL APPLY MODAL ===== -->
+  <div x-show="showClubCommercialApply"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[160] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showClubCommercialApply=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+      <div class="p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-lg">🏢 俱乐部商业资质申请</h3>
+          <button @click="showClubCommercialApply=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <p class="text-slate-400 text-xs mb-4 leading-relaxed">上传营业执照和保险证书以开通商业套餐功能，审核通过后即可发布收费活动。</p>
+        <div class="space-y-4">
+          <!-- 营业执照 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">营业执照（图片）*</label>
+            <div class="flex items-center gap-3">
+              <div x-show="clubCommercialForm.business_license_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="clubCommercialForm.business_license_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="clubCommercialForm.business_license_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('business_license_url', clubCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 营业执照编号 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">营业执照统一社会信用代码</label>
+            <input x-model="clubCommercialForm.business_license_no" type="text" placeholder="如：91110000XXXXXXXXXX" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+          </div>
+          <!-- 保险证书 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">活动保险证书（图片）</label>
+            <div class="flex items-center gap-3">
+              <div x-show="clubCommercialForm.insurance_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="clubCommercialForm.insurance_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="clubCommercialForm.insurance_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('insurance_cert_url', clubCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 银行账户 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">收款账户名称</label>
+            <input x-model="clubCommercialForm.bank_account_name" type="text" placeholder="如：北京高山俱乐部" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">银行账号</label>
+              <input x-model="clubCommercialForm.bank_account_no" type="text" placeholder="收款账号" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">开户行</label>
+              <input x-model="clubCommercialForm.bank_name" type="text" placeholder="如：工商银行" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button @click="showClubCommercialApply=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+          <button @click="submitClubCommercialApply()"
+                  :disabled="!clubCommercialForm.business_license_url || clubCommercialLoading"
+                  :class="(!clubCommercialForm.business_license_url||clubCommercialLoading)?'opacity-50 cursor-not-allowed':''"
+                  class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
+            <span x-text="clubCommercialLoading ? '提交中…' : '提交申请'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GUIDE COMMERCIAL APPLY MODAL ===== -->
+  <div x-show="showGuideCommercialApply"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[160] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showGuideCommercialApply=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+      <div class="p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-lg">🏅 向导商业资质申请</h3>
+          <button @click="showGuideCommercialApply=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <p class="text-slate-400 text-xs mb-4 leading-relaxed">上传相关证件以开通收费服务功能，审核通过后即可发布带队报价。</p>
+        <div class="space-y-4">
+          <!-- 身份证 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">身份证（正面）*</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.id_card_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.id_card_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.id_card_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*" class="hidden" @change="uploadCommercialDoc('id_card_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 攀登资质证书 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">攀登向导资质证书 *</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.climbing_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.climbing_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.climbing_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('climbing_cert_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 保险证书 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">执业保险证书</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.insurance_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.insurance_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.insurance_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('insurance_cert_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+          <!-- 健康证 -->
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">健康证明</label>
+            <div class="flex items-center gap-3">
+              <div x-show="guideCommercialForm.health_cert_url" class="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-700">
+                <img :src="guideCommercialForm.health_cert_url" class="w-full h-full object-cover">
+              </div>
+              <label class="flex-1 cursor-pointer">
+                <div class="w-full bg-slate-800 border border-dashed border-slate-600 hover:border-primary rounded-xl py-3 text-center transition-colors">
+                  <span class="material-symbols-outlined text-slate-400 text-2xl">upload_file</span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="guideCommercialForm.health_cert_url ? '重新上传' : '点击上传'"></p>
+                </div>
+                <input type="file" accept="image/*,.pdf" class="hidden" @change="uploadCommercialDoc('health_cert_url', guideCommercialForm, $event)">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-5">
+          <button @click="showGuideCommercialApply=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+          <button @click="submitGuideCommercialApply()"
+                  :disabled="!guideCommercialForm.id_card_url || !guideCommercialForm.climbing_cert_url || guideCommercialLoading"
+                  :class="(!guideCommercialForm.id_card_url||!guideCommercialForm.climbing_cert_url||guideCommercialLoading)?'opacity-50 cursor-not-allowed':''"
+                  class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
+            <span x-text="guideCommercialLoading ? '提交中…' : '提交申请'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MY GUIDE SERVICES MODAL ===== -->
+  <div x-show="showAddGuideService"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[130] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+    <div class="absolute inset-0 bg-black/70" @click="showAddGuideService=false"></div>
+    <div class="relative bottom-sheet bg-slate-900 max-h-[90vh] overflow-y-auto">
+      <div class="p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-lg">发布向导服务</h3>
+          <button @click="showAddGuideService=false" class="p-1.5 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-400">close</span></button>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">服务标题 *</label>
+            <input x-model="newGuideService.title" type="text" placeholder="如：珠峰攀登全程陪同" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">服务类型</label>
+              <select x-model="newGuideService.type" class="w-full bg-slate-800 text-white rounded-xl px-3 py-3 text-sm outline-none">
+                <option value="guided_climb">带队攀登</option>
+                <option value="training">培训课程</option>
+                <option value="expedition">远征服务</option>
+                <option value="consult">咨询服务</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">计价方式</label>
+              <select x-model="newGuideService.price_unit" class="w-full bg-slate-800 text-white rounded-xl px-3 py-3 text-sm outline-none">
+                <option value="per_day">按天</option>
+                <option value="per_person">按人</option>
+                <option value="per_session">按次</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">价格（元）</label>
+              <input x-model="newGuideService.price" type="number" min="0" placeholder="0" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">最多客户</label>
+              <input x-model="newGuideService.max_clients" type="number" min="1" max="20" placeholder="8" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+            </div>
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">主要山峰/地区</label>
+            <input x-model="newGuideService.mountain" type="text" placeholder="如：珠穆朗玛峰" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
+          </div>
+          <div>
+            <label class="text-slate-400 text-xs mb-1 block">服务描述</label>
+            <textarea x-model="newGuideService.description" rows="3" placeholder="详细描述服务内容、包含项目等…" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none resize-none placeholder-slate-600"></textarea>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button @click="showAddGuideService=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
+          <button @click="submitGuideService()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">发布</button>
         </div>
       </div>
     </div>
@@ -4442,7 +4910,14 @@
       <button @click="showMyOrders=false" class="p-2 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-300">arrow_back</span></button>
       <h2 class="text-white font-display font-bold text-lg">我的订单</h2>
     </div>
-    <div class="flex gap-2 px-4 py-3 overflow-x-auto scroll-hide flex-shrink-0">
+    <!-- Sub-tabs -->
+    <div class="flex gap-1 px-4 py-2 border-b border-white/10 flex-shrink-0">
+      <button @click="myOrdersSubTab='expedition'" :class="myOrdersSubTab==='expedition'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">攀峰订单</button>
+      <button @click="myOrdersSubTab='activity';if(!activityOrders.length)loadActivityOrders()" :class="myOrdersSubTab==='activity'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">俱乐部活动</button>
+      <button @click="myOrdersSubTab='guide-service';if(!guideServiceOrders.length)loadGuideServiceOrders()" :class="myOrdersSubTab==='guide-service'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">向导服务</button>
+    </div>
+    <!-- Status filters (expedition only) -->
+    <div x-show="myOrdersSubTab==='expedition'" class="flex gap-2 px-4 py-3 overflow-x-auto scroll-hide flex-shrink-0">
       <template x-for="s in ['全部','待支付','已托管','服务中','已完成','退款中']" :key="s">
         <button @click="myOrdersFilter=s"
                 :class="myOrdersFilter===s?'bg-primary text-white':'glass text-slate-300'"
@@ -4450,60 +4925,136 @@
       </template>
     </div>
     <div class="flex-1 overflow-y-auto p-4 space-y-3">
-      <template x-if="getFilteredOrders().length === 0">
-        <div class="flex flex-col items-center justify-center h-48 text-slate-500">
-          <span class="material-symbols-outlined text-4xl mb-2">receipt_long</span>
-          <p class="text-sm">暂无订单</p>
+      <!-- 攀峰订单 -->
+      <div x-show="myOrdersSubTab==='expedition'">
+        <template x-if="getFilteredOrders().length === 0">
+          <div class="flex flex-col items-center justify-center h-48 text-slate-500">
+            <span class="material-symbols-outlined text-4xl mb-2">receipt_long</span>
+            <p class="text-sm">暂无订单</p>
+          </div>
+        </template>
+        <template x-for="order in getFilteredOrders()" :key="order.id">
+          <div class="glass rounded-2xl p-4 mb-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-semibold text-sm truncate" x-text="order.title"></p>
+                <p class="text-slate-400 text-xs mt-0.5" x-text="order.type + ' · ' + order.date"></p>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full font-semibold ml-2 flex-shrink-0"
+                    :class="{
+                      'bg-yellow-500/20 text-yellow-400': order.status==='待支付',
+                      'bg-blue-500/20 text-blue-400': order.status==='已托管',
+                      'bg-primary/20 text-primary-light': order.status==='服务中',
+                      'bg-green-500/20 text-green-400': order.status==='已完成',
+                      'bg-slate-600/50 text-slate-300': order.status==='已结算',
+                      'bg-red-500/20 text-red-400': order.status==='退款中'
+                    }" x-text="order.status"></span>
+            </div>
+            <div class="bg-slate-800/60 rounded-xl p-3 mb-3 text-xs space-y-1">
+              <div class="flex justify-between"><span class="text-slate-400">金额</span><span class="text-white" x-text="'¥' + order.amount.toLocaleString()"></span></div>
+              <div class="flex justify-between"><span class="text-slate-400">平台手续费 (1.5%)</span><span class="text-white" x-text="'¥' + order.fee.toLocaleString()"></span></div>
+              <div class="flex justify-between border-t border-white/10 pt-1 mt-1"><span class="text-white font-bold">总计</span><span class="text-primary-light font-bold" x-text="'¥' + order.total.toLocaleString()"></span></div>
+            </div>
+            <div class="flex gap-2">
+              <template x-if="order.status==='待支付'">
+                <button @click="payOrder(order)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs transition-colors">立即支付</button>
+              </template>
+              <template x-if="order.status==='服务中'">
+                <button @click="confirmOrderComplete(order)" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-xl text-xs transition-colors">确认完成</button>
+              </template>
+              <button @click="showToast('订单详情功能完善中')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition-colors">详情</button>
+            </div>
+          </div>
+        </template>
+        <!-- 向导/俱乐部端：待结算订单 -->
+        <div x-show="myOrders.filter(o=>o.status==='已完成'&&o.isProvider).length > 0" class="mt-4">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">💰 待结算订单（向导/俱乐部端）</p>
+          <template x-for="order in myOrders.filter(o=>o.status==='已完成'&&o.isProvider)" :key="'p'+order.id">
+            <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-4 mb-3">
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-white font-semibold text-sm" x-text="order.title"></p>
+                <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">待结算</span>
+              </div>
+              <p class="text-slate-400 text-xs mb-2" x-text="'客户：' + (order.customer || '用户') + ' · ' + order.date"></p>
+              <div class="flex justify-between text-xs mb-3">
+                <span class="text-slate-400">平台结算金额（扣1.5%手续费）</span>
+                <span class="text-emerald-400 font-bold" x-text="'¥' + Math.round(order.amount * 0.985).toLocaleString()"></span>
+              </div>
+              <button @click="showToast('结算申请已提交，3-5个工作日到账')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition-colors">申请结算</button>
+            </div>
+          </template>
         </div>
-      </template>
-      <template x-for="order in getFilteredOrders()" :key="order.id">
-        <div class="glass rounded-2xl p-4">
-          <div class="flex items-start justify-between mb-2">
-            <div class="flex-1 min-w-0">
-              <p class="text-white font-semibold text-sm truncate" x-text="order.title"></p>
-              <p class="text-slate-400 text-xs mt-0.5" x-text="order.type + ' · ' + order.date"></p>
-            </div>
-            <span class="text-xs px-2 py-0.5 rounded-full font-semibold ml-2 flex-shrink-0"
-                  :class="{
-                    'bg-yellow-500/20 text-yellow-400': order.status==='待支付',
-                    'bg-blue-500/20 text-blue-400': order.status==='已托管',
-                    'bg-primary/20 text-primary-light': order.status==='服务中',
-                    'bg-green-500/20 text-green-400': order.status==='已完成',
-                    'bg-slate-600/50 text-slate-300': order.status==='已结算',
-                    'bg-red-500/20 text-red-400': order.status==='退款中'
-                  }" x-text="order.status"></span>
+      </div>
+
+      <!-- 俱乐部活动订单 -->
+      <div x-show="myOrdersSubTab==='activity'">
+        <div x-show="activityOrdersLoading" class="flex justify-center py-8"><span class="material-symbols-outlined text-slate-400 animate-spin">progress_activity</span></div>
+        <template x-if="!activityOrdersLoading && activityOrders.length===0">
+          <div class="flex flex-col items-center justify-center h-48 text-slate-500">
+            <span class="material-symbols-outlined text-4xl mb-2">event</span>
+            <p class="text-sm">暂无俱乐部活动订单</p>
           </div>
-          <div class="bg-slate-800/60 rounded-xl p-3 mb-3 text-xs space-y-1">
-            <div class="flex justify-between"><span class="text-slate-400">金额</span><span class="text-white" x-text="'¥' + order.amount.toLocaleString()"></span></div>
-            <div class="flex justify-between"><span class="text-slate-400">平台手续费 (1.5%)</span><span class="text-white" x-text="'¥' + order.fee.toLocaleString()"></span></div>
-            <div class="flex justify-between border-t border-white/10 pt-1 mt-1"><span class="text-white font-bold">总计</span><span class="text-primary-light font-bold" x-text="'¥' + order.total.toLocaleString()"></span></div>
-          </div>
-          <div class="flex gap-2">
-            <template x-if="order.status==='待支付'">
-              <button @click="payOrder(order)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs transition-colors">立即支付</button>
-            </template>
-            <template x-if="order.status==='服务中'">
-              <button @click="confirmOrderComplete(order)" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-xl text-xs transition-colors">确认完成</button>
-            </template>
-            <button @click="showToast('订单详情功能完善中')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-xl text-xs transition-colors">详情</button>
-          </div>
-        </div>
-      </template>
-      <!-- 向导/俱乐部端：待结算订单 -->
-      <div x-show="myOrders.filter(o=>o.status==='已完成'&&o.isProvider).length > 0" class="mt-4">
-        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">💰 待结算订单（向导/俱乐部端）</p>
-        <template x-for="order in myOrders.filter(o=>o.status==='已完成'&&o.isProvider)" :key="'p'+order.id">
-          <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-4 mb-3">
-            <div class="flex items-center justify-between mb-2">
-              <p class="text-white font-semibold text-sm" x-text="order.title"></p>
-              <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">待结算</span>
+        </template>
+        <template x-for="order in activityOrders" :key="'ao'+order.id">
+          <div class="glass rounded-2xl p-4 mb-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-semibold text-sm truncate" x-text="order.activity_title"></p>
+                <p class="text-slate-400 text-xs mt-0.5" x-text="(order.club_name||'') + (order.mountain?' · '+order.mountain:'')"></p>
+                <p class="text-slate-500 text-xs" x-text="order.start_date ? '📅 ' + order.start_date : ''"></p>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full font-semibold ml-2 flex-shrink-0 bg-slate-700 text-slate-200" x-text="{'pending_payment':'待支付','paid':'已支付','cancelled':'已取消','refund_requested':'退款中','refunded':'已退款'}[order.status]||order.status"></span>
             </div>
-            <p class="text-slate-400 text-xs mb-2" x-text="'客户：' + (order.customer || '用户') + ' · ' + order.date"></p>
-            <div class="flex justify-between text-xs mb-3">
-              <span class="text-slate-400">平台结算金额（扣1.5%手续费）</span>
-              <span class="text-emerald-400 font-bold" x-text="'¥' + Math.round(order.amount * 0.985).toLocaleString()"></span>
+            <div class="flex justify-between text-xs mb-3 bg-slate-800/60 rounded-xl p-2">
+              <span class="text-slate-400">金额</span><span class="text-primary-light font-bold" x-text="'¥' + (order.amount||0).toLocaleString()"></span>
             </div>
-            <button @click="showToast('结算申请已提交，3-5个工作日到账')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition-colors">申请结算</button>
+            <div class="flex gap-2">
+              <template x-if="order.status==='pending_payment'">
+                <button @click="payActivityOrder(order.id)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs">立即支付</button>
+              </template>
+              <template x-if="order.status==='pending_payment'||order.status==='paid'">
+                <button @click="cancelActivityOrder(order.id)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 rounded-xl text-xs">取消</button>
+              </template>
+              <template x-if="order.status==='paid'">
+                <button @click="refundActivityOrder(order.id)" class="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-xl text-xs">申请退款</button>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- 向导服务订单 -->
+      <div x-show="myOrdersSubTab==='guide-service'">
+        <div x-show="guideServiceOrdersLoading" class="flex justify-center py-8"><span class="material-symbols-outlined text-slate-400 animate-spin">progress_activity</span></div>
+        <template x-if="!guideServiceOrdersLoading && guideServiceOrders.length===0">
+          <div class="flex flex-col items-center justify-center h-48 text-slate-500">
+            <span class="material-symbols-outlined text-4xl mb-2">hiking</span>
+            <p class="text-sm">暂无向导服务订单</p>
+          </div>
+        </template>
+        <template x-for="order in guideServiceOrders" :key="'gso'+order.id">
+          <div class="glass rounded-2xl p-4 mb-3">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-semibold text-sm truncate" x-text="order.service_title"></p>
+                <p class="text-slate-400 text-xs mt-0.5" x-text="(order.guide_name||'向导') + (order.mountain?' · '+order.mountain:'')"></p>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full font-semibold ml-2 flex-shrink-0 bg-slate-700 text-slate-200" x-text="{'pending_payment':'待支付','paid':'已支付','cancelled':'已取消','refund_requested':'退款中','refunded':'已退款'}[order.status]||order.status"></span>
+            </div>
+            <div class="flex justify-between text-xs mb-3 bg-slate-800/60 rounded-xl p-2">
+              <span class="text-slate-400">金额</span><span class="text-primary-light font-bold" x-text="'¥' + (order.amount||0).toLocaleString()"></span>
+            </div>
+            <div class="flex gap-2">
+              <template x-if="order.status==='pending_payment'">
+                <button @click="payGuideServiceOrder(order.id)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs">立即支付</button>
+              </template>
+              <template x-if="order.status==='pending_payment'||order.status==='paid'">
+                <button @click="cancelGuideServiceOrder(order.id)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 rounded-xl text-xs">取消</button>
+              </template>
+              <template x-if="order.status==='paid'">
+                <button @click="refundGuideServiceOrder(order.id)" class="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-xl text-xs">申请退款</button>
+              </template>
+            </div>
           </div>
         </template>
       </div>
@@ -5007,6 +5558,7 @@ function alpineLink() {
     ],
     showMyOrders: false,
     myOrdersFilter: '全部',
+    myOrdersSubTab: 'expedition',
     myLeaderboardRank: { rank: 8, summit_count: 2, max_elevation: 6178, total_distance: 87.3 },
     showLeaderboardInfo: false,
     myOrders: [
@@ -5017,6 +5569,41 @@ function alpineLink() {
     ],
     expeditionOrders: [],
     expeditionOrdersLoading: false,
+    activityOrders: [],
+    activityOrdersLoading: false,
+    guideServiceOrders: [],
+    guideServiceOrdersLoading: false,
+    showActivityEnrollModal: false,
+    enrollingActivity: null,
+    enrollingClub: null,
+    enrollForm: { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0' },
+    enrollLoading: false,
+    currentGuideServices: [],
+    guideServicesLoading: false,
+    showGuideServiceEnrollModal: false,
+    enrollingGuideService: null,
+    enrollingGuideForService: null,
+    guideServiceEnrollForm: { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0', notes: '' },
+    guideServiceEnrollLoading: false,
+    showEnrollmentsDrawer: false,
+    selectedActivityEnrollments: [],
+    enrollmentsLoading: false,
+    selectedActivityForEnrollments: null,
+    myGuideServices: [],
+    myGuideServicesLoading: false,
+    showAddGuideService: false,
+    newGuideService: { title: '', type: 'guided_climb', mountain: '', region: '', price: '', price_unit: 'per_day', duration_days: 1, max_clients: 8, difficulty: '', description: '' },
+    showClubCommercialApply: false,
+    clubCommercialApplyId: null,
+    clubCommercialForm: { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' },
+    clubCommercialLoading: false,
+    showGuideCommercialApply: false,
+    guideCommercialApplyId: null,
+    guideCommercialForm: { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' },
+    guideCommercialLoading: false,
+    showClubActivityMgmt: false,
+    clubActivitiesMgmt: [],
+    clubActivitiesMgmtLoading: false,
     teamDetailTab: 'info',
     teamChatInput: '',
     teamChatMembers: [
@@ -5943,7 +6530,7 @@ function alpineLink() {
       this.showToast('预约已提交，请前往"我的订单"完成支付 ✅');
     },
     // My Orders
-    openMyOrders() { this.showMyOrders = true; this.myOrdersFilter = '全部'; this.loadMyOrders(); },
+    openMyOrders() { this.showMyOrders = true; this.myOrdersFilter = '全部'; this.myOrdersSubTab = 'expedition'; this.loadMyOrders(); },
     async loadMyOrders() {
       if (!this.authToken) return;
       try {
@@ -5980,6 +6567,268 @@ function alpineLink() {
     getFilteredOrders() {
       if (this.myOrdersFilter === '全部') return this.myOrders;
       return this.myOrders.filter(o => o.status === this.myOrdersFilter);
+    },
+    // Activity orders
+    async loadActivityOrders() {
+      if (!this.authToken) return;
+      this.activityOrdersLoading = true;
+      try {
+        const res = await fetch('/api/activity-orders/my', { headers: this.getAuthHeaders() });
+        if (res.ok) this.activityOrders = await res.json();
+      } catch(e) {} finally { this.activityOrdersLoading = false; }
+    },
+    async payActivityOrder(id) {
+      try {
+        const res = await fetch(`/api/activity-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('支付成功'); this.loadActivityOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async cancelActivityOrder(id) {
+      try {
+        const res = await fetch(`/api/activity-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('订单已取消'); this.loadActivityOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async refundActivityOrder(id) {
+      try {
+        const res = await fetch(`/api/activity-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        if (res.ok) { this.showToast('退款申请已提交'); this.loadActivityOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    // Guide service orders
+    async loadGuideServiceOrders() {
+      if (!this.authToken) return;
+      this.guideServiceOrdersLoading = true;
+      try {
+        const res = await fetch('/api/guide-service-orders/my', { headers: this.getAuthHeaders() });
+        if (res.ok) this.guideServiceOrders = await res.json();
+      } catch(e) {} finally { this.guideServiceOrdersLoading = false; }
+    },
+    async payGuideServiceOrder(id) {
+      try {
+        const res = await fetch(`/api/guide-service-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('支付成功'); this.loadGuideServiceOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async cancelGuideServiceOrder(id) {
+      try {
+        const res = await fetch(`/api/guide-service-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('订单已取消'); this.loadGuideServiceOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async refundGuideServiceOrder(id) {
+      try {
+        const res = await fetch(`/api/guide-service-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        if (res.ok) { this.showToast('退款申请已提交'); this.loadGuideServiceOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    // Activity enrollment
+    openActivityEnroll(club, act) {
+      if (!this.requireAuth()) return;
+      this.enrollingClub = club;
+      this.enrollingActivity = act;
+      this.enrollForm = { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0' };
+      this.showActivityEnrollModal = true;
+    },
+    async submitActivityEnroll() {
+      if (!this.enrollForm.emergency_contact_name || !this.enrollForm.emergency_contact_phone) {
+        this.showToast('请填写紧急联系人信息', 'error'); return;
+      }
+      if (!this.enrollForm.agreed_waiver) { this.showToast('请同意免责协议', 'error'); return; }
+      this.enrollLoading = true;
+      try {
+        const res = await fetch(`/api/clubs/${this.enrollingClub.id}/activities/${this.enrollingActivity.id}/enroll`, {
+          method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.enrollForm)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showActivityEnrollModal = false;
+          this.showToast('报名成功！请前往"我的订单→俱乐部活动"完成支付 ✅');
+          this.activityOrders = [];
+        } else {
+          this.showToast(data.error || '报名失败', 'error');
+        }
+      } catch(e) { this.showToast('报名提交失败，请检查网络连接后重试', 'error'); } finally { this.enrollLoading = false; }
+    },
+    // Guide services
+    async loadGuideServices(guideId) {
+      this.guideServicesLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${guideId}/services`);
+        if (res.ok) this.currentGuideServices = await res.json();
+        else this.currentGuideServices = [];
+      } catch(e) { this.currentGuideServices = []; } finally { this.guideServicesLoading = false; }
+    },
+    openGuideServiceEnroll(guide, service) {
+      if (!this.requireAuth()) return;
+      this.enrollingGuideForService = guide;
+      this.enrollingGuideService = service;
+      this.guideServiceEnrollForm = { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0', notes: '' };
+      this.showGuideServiceEnrollModal = true;
+    },
+    async submitGuideServiceBook() {
+      if (!this.guideServiceEnrollForm.emergency_contact_name || !this.guideServiceEnrollForm.emergency_contact_phone) {
+        this.showToast('请填写紧急联系人信息', 'error'); return;
+      }
+      if (!this.guideServiceEnrollForm.agreed_waiver) { this.showToast('请同意免责协议', 'error'); return; }
+      this.guideServiceEnrollLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${this.enrollingGuideForService.id}/services/${this.enrollingGuideService.id}/book`, {
+          method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.guideServiceEnrollForm)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showGuideServiceEnrollModal = false;
+          this.showToast('预约成功！请前往"我的订单→向导服务"完成支付 ✅');
+          this.guideServiceOrders = [];
+        } else {
+          this.showToast(data.error || '预约失败', 'error');
+        }
+      } catch(e) { this.showToast('预约提交失败，请检查网络连接后重试', 'error'); } finally { this.guideServiceEnrollLoading = false; }
+    },
+    // My guide services management
+    async loadMyGuideServices(guideId) {
+      this.myGuideServicesLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${guideId}/services`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.myGuideServices = await res.json();
+      } catch(e) {} finally { this.myGuideServicesLoading = false; }
+    },
+    async submitGuideService() {
+      if (!this.currentGuideProfile) return;
+      const g = this.newGuideService;
+      if (!g.title) { this.showToast('请填写服务标题', 'error'); return; }
+      try {
+        const res = await fetch(`/api/guides/${this.currentGuideProfile.id}/services`, {
+          method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...g, price: Number(g.price)||0, max_clients: Number(g.max_clients)||8, duration_days: Number(g.duration_days)||1 })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showAddGuideService = false;
+          this.showToast('服务已发布 ✅');
+          await this.loadGuideServices(this.currentGuideProfile.id);
+        } else {
+          if (data.error === 'commercial_not_verified') {
+            this.showToast('收费服务需先完成商业资质认证', 'error');
+          } else {
+            this.showToast(data.error || '发布失败', 'error');
+          }
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async deleteMyGuideService(guideId, serviceId) {
+      if (!confirm('确认删除此服务？')) return;
+      try {
+        const res = await fetch(`/api/guides/${guideId}/services/${serviceId}`, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('服务已删除'); await this.loadGuideServices(guideId); }
+        else { const d = await res.json(); this.showToast(d.error||'删除失败','error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    // Club activity management
+    async loadClubActivitiesMgmt(clubId) {
+      this.clubActivitiesMgmtLoading = true;
+      this.showClubActivityMgmt = true;
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/activities`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.clubActivitiesMgmt = await res.json();
+      } catch(e) {} finally { this.clubActivitiesMgmtLoading = false; }
+    },
+    async viewActivityEnrollments(clubId, act) {
+      this.selectedActivityForEnrollments = act;
+      this.enrollmentsLoading = true;
+      this.showEnrollmentsDrawer = true;
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/activities/${act.id}/enrollments`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.selectedActivityEnrollments = await res.json();
+        else this.selectedActivityEnrollments = [];
+      } catch(e) { this.selectedActivityEnrollments = []; } finally { this.enrollmentsLoading = false; }
+    },
+    async toggleActivityStatus(clubId, act) {
+      const newStatus = act.status === 'active' ? 'inactive' : 'active';
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/activity/${act.id}`, {
+          method: 'PUT', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) { act.status = newStatus; this.showToast(newStatus === 'active' ? '活动已上线' : '活动已下架'); }
+        else { const d = await res.json(); this.showToast(d.error||'操作失败','error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    openClubCommercialApply(clubId) {
+      if (!this.requireAuth()) return;
+      this.clubCommercialApplyId = clubId;
+      this.clubCommercialForm = { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' };
+      this.showClubCommercialApply = true;
+    },
+    async uploadCommercialDoc(field, formRef, event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          formRef[field] = data.url;
+          this.showToast('文件上传成功 ✅');
+        } else {
+          this.showToast('文件上传失败', 'error');
+        }
+      } catch(e) { this.showToast('上传失败', 'error'); }
+      event.target.value = '';
+    },
+    async submitClubCommercialApply() {
+      if (!this.clubCommercialApplyId) return;
+      this.clubCommercialLoading = true;
+      try {
+        const res = await fetch(`/api/clubs/${this.clubCommercialApplyId}/commercial-apply`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.clubCommercialForm),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast(data.message || '商业资质申请已提交 ✅');
+          this.showClubCommercialApply = false;
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.clubCommercialLoading = false;
+    },
+    openGuideCommercialApply(guideId) {
+      if (!this.requireAuth()) return;
+      this.guideCommercialApplyId = guideId;
+      this.guideCommercialForm = { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' };
+      this.showGuideCommercialApply = true;
+    },
+    async submitGuideCommercialApply() {
+      if (!this.guideCommercialApplyId) return;
+      this.guideCommercialLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${this.guideCommercialApplyId}/commercial-apply`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.guideCommercialForm),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast(data.message || '商业资质申请已提交 ✅');
+          this.showGuideCommercialApply = false;
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.guideCommercialLoading = false;
     },
     payOrder(order) {
       this.paymentAmount = order.total;
@@ -6673,12 +7522,15 @@ function alpineLink() {
         if (!guideData) { this.showToast('向导信息获取失败', 'error'); return; }
         this.currentGuideProfile = { ...guideData, expeditions: expeditions || [], reviews_list: reviews || [], posts: posts || [], photos: photos || [] };
         this.guideReviewForm = { rating: 5, content: '' };
+        this.currentGuideServices = [];
         this.showGuideProfileModal = true;
+        this.loadGuideServices(guideId);
       } catch(e) {
         if (localGuideData) {
           // Fallback to local data when API is unavailable (e.g., mock guides)
           this.currentGuideProfile = { ...localGuideData, expeditions: [], reviews_list: [], posts: [], photos: [] };
           this.guideReviewForm = { rating: 5, content: '' };
+          this.currentGuideServices = [];
           this.showGuideProfileModal = true;
         } else {
           this.showToast('网络错误', 'error');
@@ -6777,14 +7629,7 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     bookClubActivity(club, act) {
-      if (!this.requireAuth()) return;
-      this.bookingData.mountain = act.mountain || club.name;
-      this.bookingData.club_id = club.id;
-      this.bookingData.club_name = club.name;
-      this.bookingData.guide_id = null;
-      this.bookingData.guide_name = '';
-      this.bookingData.activityTitle = act.title;
-      this.showBooking = true;
+      this.openActivityEnroll(club, act);
     },
 
     // Notification center

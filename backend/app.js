@@ -196,10 +196,27 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 
+// ── 全局错误处理 ────────────────────────────────────────────────
+// JSON parse error
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: '请求体不是合法的 JSON' });
+  }
+  next(err);
+});
+
 // Sentry 错误处理中间件（必须在其他错误处理之前）
 if (Sentry) {
   app.use(Sentry.Handlers.errorHandler());
 }
+
+// 通用错误处理（兜底）
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  logger.error({ err, reqId: req.id }, '未捕获错误');
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: '服务器内部错误' });
+});
 
 // ── 启动安全校验 ─────────────────────────────────────────────
 const DEFAULT_JWT_SECRET = 'summitlink_secret_change_this_in_production';
