@@ -1,7 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+// 导出限流：每分钟最多30次
+const exportLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: '请求过于频繁，请稍后再试' },
+});
 
 // GET /api/tracks — 获取轨迹列表（支持 user_id=me 过滤）
 router.get('/', auth, (req, res) => {
@@ -99,7 +108,7 @@ router.delete('/:id', auth, (req, res) => {
  * 导出轨迹为 GPX 1.1 或 KML 2.2 格式。
  * 公开轨迹（is_public=1）任何人可下载；非公开轨迹仅作者可下载。
  */
-router.get('/:id/export', (req, res) => {
+router.get('/:id/export', exportLimiter, (req, res) => {
   try {
     const track = db.prepare(`
       SELECT id, user_id, name, peak_name, date, points, is_public
@@ -114,7 +123,6 @@ router.get('/:id/export', (req, res) => {
         return res.status(403).json({ error: '该轨迹非公开，请登录后访问' });
       }
       try {
-        const jwt = require('jsonwebtoken');
         const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
         const payload = jwt.verify(authHeader.slice(7), JWT_SECRET);
         if (payload.id !== track.user_id) return res.status(403).json({ error: '无权下载该轨迹' });

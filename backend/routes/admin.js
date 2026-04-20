@@ -14,6 +14,13 @@ const adminLoginLimiter = rateLimit({
   message: { error: '登录尝试次数过多，请15分钟后再试' },
 });
 
+// 管理后台操作限流（写操作）：每分钟最多60次
+const adminWriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: '操作过于频繁，请稍后再试' },
+});
+
 function timingSafeEqual(a, b) {
   const bufA = Buffer.from(String(a));
   const bufB = Buffer.from(String(b));
@@ -431,7 +438,7 @@ router.get('/club-applications', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/club-applications/:id/approve — 审核通过俱乐部申请
-router.post('/club-applications/:id/approve', adminAuth, (req, res) => {
+router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const app = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: '申请不存在' });
@@ -455,7 +462,7 @@ router.post('/club-applications/:id/approve', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/club-applications/:id/reject — 拒绝俱乐部申请
-router.post('/club-applications/:id/reject', adminAuth, (req, res) => {
+router.post('/club-applications/:id/reject', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { reason = '' } = req.body;
     const app = db.prepare('SELECT id FROM club_applications WHERE id = ?').get(req.params.id);
@@ -528,7 +535,7 @@ router.get('/expeditions', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/expeditions/:id/approve
-router.post('/expeditions/:id/approve', adminAuth, (req, res) => {
+router.post('/expeditions/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const now = new Date().toISOString();
     const result = db.prepare("UPDATE expeditions SET status = 'published', approved_at = ? WHERE id = ?")
@@ -541,7 +548,7 @@ router.post('/expeditions/:id/approve', adminAuth, (req, res) => {
 });
 
 // POST /api/admin/expeditions/:id/reject
-router.post('/expeditions/:id/reject', adminAuth, (req, res) => {
+router.post('/expeditions/:id/reject', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { reason = '' } = req.body;
     const result = db.prepare("UPDATE expeditions SET status = 'rejected', reject_reason = ? WHERE id = ?")

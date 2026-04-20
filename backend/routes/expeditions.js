@@ -16,8 +16,16 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+
+// 下单限流：每分钟最多20次，防止刷单
+const orderLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: '操作过于频繁，请稍后再试' },
+});
 
 // ── 工具函数 ────────────────────────────────────────────────────
 
@@ -231,7 +239,7 @@ router.put('/:id', auth, (req, res) => {
 });
 
 // POST /api/expeditions/:id/order — 用户下单
-router.post('/:id/order', auth, (req, res) => {
+router.post('/:id/order', orderLimiter, auth, (req, res) => {
   try {
     const expedition = db.prepare("SELECT * FROM expeditions WHERE id = ? AND status = 'published'")
       .get(req.params.id);

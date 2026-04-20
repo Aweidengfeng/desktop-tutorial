@@ -87,6 +87,7 @@ router.get('/:id/weather', (req, res) => {
       let data = '';
       resp.on('data', chunk => { data += chunk; });
       resp.on('end', () => {
+        if (res.headersSent) return;
         try {
           const json = JSON.parse(data);
           res.json(json);
@@ -95,8 +96,13 @@ router.get('/:id/weather', (req, res) => {
         }
       });
     });
-    request.on('error', () => res.status(502).json({ error: '天气服务暂时不可用' }));
-    request.setTimeout(8000, () => { request.destroy(); res.status(504).json({ error: '天气服务超时' }); });
+    request.on('error', () => {
+      if (!res.headersSent) res.status(502).json({ error: '天气服务暂时不可用' });
+    });
+    request.setTimeout(8000, () => {
+      request.destroy();
+      if (!res.headersSent) res.status(504).json({ error: '天气服务超时' });
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
