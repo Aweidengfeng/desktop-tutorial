@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const moderation = require('../utils/moderation');
+const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
+const crypto = require('crypto');
 
 // POST /api/clubs/apply — 提交俱乐部入驻申请（需要JWT）
 router.post('/apply', auth, (req, res) => {
@@ -224,8 +227,17 @@ router.post('/:id/activity', auth, (req, res) => {
     const isCreator = club.creator_id === req.user.id;
     const isAdmin = member && (member.role === 'admin' || member.role === 'founder');
     if (!isCreator && !isAdmin) return res.status(403).json({ error: '无权发布活动，仅俱乐部创建者或管理员可操作' });
-    const { title, description, cover, type, mountain, region, price, max_members, start_date, end_date, difficulty, includes } = req.body;
+    const { title, description, cover, type, mountain, region, price, max_members, start_date, end_date, difficulty, includes, waiver_version } = req.body;
     if (!title) return res.status(400).json({ error: '请填写活动标题' });
+    // 内容审核
+    const titleCheck = moderation.checkText(title);
+    if (!titleCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: titleCheck.reason });
+    const descCheck = moderation.checkText(description);
+    if (!descCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: descCheck.reason });
+    // 商业资质校验
+    if (price > 0 && !club.commercial_verified) {
+      return res.status(422).json({ error: 'commercial_not_verified' });
+    }
     const includesStr = includes ? JSON.stringify(includes) : null;
     const result = db.prepare(`
       INSERT INTO club_activities (club_id, title, description, cover, type, mountain, region, price, max_members, start_date, end_date, difficulty, includes)
@@ -250,6 +262,20 @@ router.put('/:id/activity/:actId', auth, (req, res) => {
     const { title, description, cover, type, mountain, region, price, max_members, start_date, end_date, difficulty, includes, status } = req.body;
     const act = db.prepare('SELECT * FROM club_activities WHERE id = ? AND club_id = ?').get(req.params.actId, req.params.id);
     if (!act) return res.status(404).json({ error: '活动不存在' });
+    // 内容审核
+    if (title) {
+      const titleCheck = moderation.checkText(title);
+      if (!titleCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: titleCheck.reason });
+    }
+    if (description) {
+      const descCheck = moderation.checkText(description);
+      if (!descCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: descCheck.reason });
+    }
+    // 商业资质校验
+    const newPrice = price !== undefined ? price : act.price;
+    if (newPrice > 0 && !club.commercial_verified) {
+      return res.status(422).json({ error: 'commercial_not_verified' });
+    }
     const includesStr = includes ? JSON.stringify(includes) : act.includes;
     db.prepare(`
       UPDATE club_activities SET title=?, description=?, cover=?, type=?, mountain=?, region=?, price=?, max_members=?, start_date=?, end_date=?, difficulty=?, includes=?, status=?
@@ -258,7 +284,7 @@ router.put('/:id/activity/:actId', auth, (req, res) => {
       title || act.title, description !== undefined ? description : act.description,
       cover !== undefined ? cover : act.cover, type || act.type,
       mountain !== undefined ? mountain : act.mountain, region !== undefined ? region : act.region,
-      price !== undefined ? price : act.price, max_members || act.max_members,
+      newPrice, max_members || act.max_members,
       start_date !== undefined ? start_date : act.start_date, end_date !== undefined ? end_date : act.end_date,
       difficulty !== undefined ? difficulty : act.difficulty, includesStr, status || act.status,
       req.params.actId
@@ -551,6 +577,114 @@ router.post('/', auth, (req, res) => {
            contact || '', wechat || '', website || '', logo || '', req.user.id);
     const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(result.lastInsertRowid);
     res.json(club);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/clubs/:id/commercial-apply — 提交商业资质申请
+router.post('/:id/commercial-apply', auth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const member = db.prepare('SELECT role FROM club_members WHERE club_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const isCreator = club.creator_id === req.user.id;
+    const isAdmin = member && (member.role === 'admin' || member.role === 'founder');
+    if (!isCreator && !isAdmin) return res.status(403).json({ error: '无权操作' });
+    const { business_license_url, business_license_no, insurance_cert_url, bank_account_name, bank_account_no, bank_name } = req.body;
+    db.prepare(`
+      UPDATE clubs SET
+        business_license_url = COALESCE(?, business_license_url),
+        business_license_no = COALESCE(?, business_license_no),
+        insurance_cert_url = COALESCE(?, insurance_cert_url),
+        bank_account_name = COALESCE(?, bank_account_name),
+        bank_account_no = COALESCE(?, bank_account_no),
+        bank_name = COALESCE(?, bank_name),
+        commercial_status = 'pending',
+        commercial_applied_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      business_license_url || null, business_license_no || null,
+      insurance_cert_url || null, bank_account_name || null,
+      bank_account_no || null, bank_name || null,
+      req.params.id
+    );
+    res.json({ success: true, message: '商业资质申请已提交，请等待审核' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/clubs/:clubId/activities/:actId/enroll — 活动报名
+router.post('/:clubId/activities/:actId/enroll', auth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.clubId);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const activity = db.prepare("SELECT * FROM club_activities WHERE id = ? AND club_id = ? AND status = 'active'")
+      .get(req.params.actId, req.params.clubId);
+    if (!activity) return res.status(404).json({ error: '活动不存在或已结束' });
+    // 未结束校验
+    if (activity.end_date && new Date(activity.end_date) < new Date()) {
+      return res.status(400).json({ error: '活动已结束，无法报名' });
+    }
+    // 满员校验
+    if (activity.current_members >= activity.max_members) {
+      return res.status(400).json({ error: '活动已满员' });
+    }
+    // 重复报名校验
+    const existing = db.prepare(
+      "SELECT id FROM activity_orders WHERE activity_id = ? AND user_id = ? AND status NOT IN ('cancelled', 'refunded')"
+    ).get(req.params.actId, req.user.id);
+    if (existing) return res.status(400).json({ error: '您已报名此活动' });
+    // 必填字段校验
+    const { emergency_contact_name, emergency_contact_phone, agreedWaiver, waiverVersion } = req.body;
+    if (!emergency_contact_name || !emergency_contact_phone) {
+      return res.status(400).json({ error: '请填写紧急联系人姓名和电话' });
+    }
+    if (!agreedWaiver) {
+      return res.status(400).json({ error: '请同意免责协议' });
+    }
+    // 创建订单
+    const orderNo = 'ACT' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
+    const statusHistory = appendStatusHistory(null, 'pending_payment');
+    db.prepare(`
+      INSERT INTO activity_orders
+        (order_no, activity_id, club_id, user_id, amount, status, status_history,
+         emergency_contact_name, emergency_contact_phone, agreed_waiver, agreed_waiver_version)
+      VALUES (?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?, ?, ?)
+    `).run(orderNo, activity.id, club.id, req.user.id, activity.price || 0, statusHistory,
+           emergency_contact_name, emergency_contact_phone, 1, waiverVersion || '');
+    // 更新活动当前报名人数
+    db.prepare('UPDATE club_activities SET current_members = current_members + 1 WHERE id = ?').run(activity.id);
+    // 通知俱乐部负责人
+    try {
+      db.prepare(`INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'activity_enroll', ?, ?)`)
+        .run(club.creator_id, `【新报名】${activity.title} 有新用户报名，订单号：${orderNo}`, activity.id);
+    } catch(e) {}
+    const order = db.prepare('SELECT * FROM activity_orders WHERE order_no = ?').get(orderNo);
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/clubs/:clubId/activities/:actId/enrollments — 查看报名用户列表（管理员）
+router.get('/:clubId/activities/:actId/enrollments', auth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT * FROM clubs WHERE id = ?').get(req.params.clubId);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const member = db.prepare('SELECT role FROM club_members WHERE club_id = ? AND user_id = ?').get(req.params.clubId, req.user.id);
+    const isCreator = club.creator_id === req.user.id;
+    const isAdmin = member && (member.role === 'admin' || member.role === 'founder');
+    if (!isCreator && !isAdmin) return res.status(403).json({ error: '无权查看报名列表' });
+    const enrollments = db.prepare(`
+      SELECT ao.*, u.name as user_name, u.avatar as user_avatar, u.phone as user_phone
+      FROM activity_orders ao
+      LEFT JOIN users u ON u.id = ao.user_id
+      WHERE ao.activity_id = ? AND ao.club_id = ?
+      ORDER BY ao.created_at DESC
+    `).all(req.params.actId, req.params.clubId);
+    res.json(enrollments);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

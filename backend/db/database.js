@@ -1437,4 +1437,133 @@ if (!moderationLogCols.includes('content_snippet')) {
   db.exec('ALTER TABLE moderation_logs ADD COLUMN content_snippet TEXT');
 }
 
+// ── 商业化模块迁移 ──────────────────────────────────────────────
+
+// tracks 表：补充 reward_granted 字段（反作弊：0 = 不计入榜单）
+const existingTrackColsCommerce = db.pragma('table_info(tracks)').map(c => c.name);
+if (!existingTrackColsCommerce.includes('reward_granted')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN reward_granted INTEGER DEFAULT 1');
+}
+
+// clubs 表：补充商业资质字段
+const existingClubColsCommerce = db.pragma('table_info(clubs)').map(c => c.name);
+if (!existingClubColsCommerce.includes('business_license_url')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN business_license_url TEXT DEFAULT NULL');
+}
+if (!existingClubColsCommerce.includes('insurance_cert_url')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN insurance_cert_url TEXT DEFAULT NULL');
+}
+if (!existingClubColsCommerce.includes('commercial_verified')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN commercial_verified INTEGER DEFAULT 0');
+}
+if (!existingClubColsCommerce.includes('commercial_status')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN commercial_status TEXT DEFAULT 'none'");
+}
+if (!existingClubColsCommerce.includes('commercial_applied_at')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN commercial_applied_at DATETIME DEFAULT NULL');
+}
+if (!existingClubColsCommerce.includes('commercial_reviewed_at')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN commercial_reviewed_at DATETIME DEFAULT NULL');
+}
+if (!existingClubColsCommerce.includes('commercial_reject_reason')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN commercial_reject_reason TEXT DEFAULT NULL');
+}
+
+// guides 表：补充商业资质字段
+const existingGuideColsCommerce = db.pragma('table_info(guides)').map(c => c.name);
+if (!existingGuideColsCommerce.includes('id_card_url')) {
+  db.exec('ALTER TABLE guides ADD COLUMN id_card_url TEXT DEFAULT NULL');
+}
+if (!existingGuideColsCommerce.includes('climbing_cert_url')) {
+  db.exec('ALTER TABLE guides ADD COLUMN climbing_cert_url TEXT DEFAULT NULL');
+}
+if (!existingGuideColsCommerce.includes('insurance_cert_url')) {
+  db.exec('ALTER TABLE guides ADD COLUMN insurance_cert_url TEXT DEFAULT NULL');
+}
+if (!existingGuideColsCommerce.includes('health_cert_url')) {
+  db.exec('ALTER TABLE guides ADD COLUMN health_cert_url TEXT DEFAULT NULL');
+}
+if (!existingGuideColsCommerce.includes('commercial_verified')) {
+  db.exec('ALTER TABLE guides ADD COLUMN commercial_verified INTEGER DEFAULT 0');
+}
+if (!existingGuideColsCommerce.includes('commercial_status')) {
+  db.exec("ALTER TABLE guides ADD COLUMN commercial_status TEXT DEFAULT 'none'");
+}
+if (!existingGuideColsCommerce.includes('commercial_applied_at')) {
+  db.exec('ALTER TABLE guides ADD COLUMN commercial_applied_at DATETIME DEFAULT NULL');
+}
+if (!existingGuideColsCommerce.includes('commercial_reviewed_at')) {
+  db.exec('ALTER TABLE guides ADD COLUMN commercial_reviewed_at DATETIME DEFAULT NULL');
+}
+if (!existingGuideColsCommerce.includes('commercial_reject_reason')) {
+  db.exec('ALTER TABLE guides ADD COLUMN commercial_reject_reason TEXT DEFAULT NULL');
+}
+
+// 新增表：俱乐部活动报名订单
+db.exec(`
+CREATE TABLE IF NOT EXISTS activity_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_no TEXT UNIQUE NOT NULL,
+  activity_id INTEGER NOT NULL,
+  club_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  amount REAL DEFAULT 0,
+  status TEXT DEFAULT 'pending_payment',
+  status_history TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
+  agreed_waiver INTEGER DEFAULT 0,
+  agreed_waiver_version TEXT,
+  refund_reason TEXT,
+  refund_amount REAL,
+  refunded_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS guide_services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guide_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  cover TEXT,
+  type TEXT DEFAULT 'guided_climb',
+  mountain TEXT,
+  region TEXT,
+  price REAL DEFAULT 0,
+  price_unit TEXT DEFAULT 'per_person',
+  duration_days INTEGER DEFAULT 1,
+  max_clients INTEGER DEFAULT 6,
+  difficulty TEXT,
+  includes TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  status TEXT DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS guide_service_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_no TEXT UNIQUE NOT NULL,
+  service_id INTEGER NOT NULL,
+  guide_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  amount REAL DEFAULT 0,
+  status TEXT DEFAULT 'pending_payment',
+  status_history TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
+  agreed_waiver INTEGER DEFAULT 0,
+  waiver_version TEXT,
+  start_date TEXT,
+  client_notes TEXT,
+  refund_reason TEXT,
+  refund_amount REAL,
+  refunded_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
 module.exports = db;

@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const moderation = require('../utils/moderation');
+const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
+const crypto = require('crypto');
 
 // GET /api/guides
 router.get('/', (req, res) => {
@@ -284,6 +287,206 @@ router.post('/payment', auth, (req, res) => {
       // TODO: 返回支付跳转 URL / 二维码
       pay_url: null,
     });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/:id/commercial-apply — 向导提交商业资质申请
+router.post('/:id/commercial-apply', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.id);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.user_id !== req.user.id) return res.status(403).json({ error: '只能提交自己的资质' });
+    const { id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url } = req.body;
+    db.prepare(`
+      UPDATE guides SET
+        id_card_url = COALESCE(?, id_card_url),
+        climbing_cert_url = COALESCE(?, climbing_cert_url),
+        insurance_cert_url = COALESCE(?, insurance_cert_url),
+        health_cert_url = COALESCE(?, health_cert_url),
+        commercial_status = 'pending',
+        commercial_applied_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      id_card_url || null, climbing_cert_url || null,
+      insurance_cert_url || null, health_cert_url || null,
+      req.params.id
+    );
+    res.json({ success: true, message: '商业资质申请已提交，请等待审核' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guides/:guideId/services — 向导服务列表
+router.get('/:guideId/services', (req, res) => {
+  try {
+    const { type } = req.query;
+    let sql = "SELECT * FROM guide_services WHERE guide_id = ? AND status != 'deleted'";
+    const params = [req.params.guideId];
+    if (type) { sql += ' AND type = ?'; params.push(type); }
+    sql += ' ORDER BY created_at DESC';
+    const services = db.prepare(sql).all(...params);
+    res.json(services);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/:guideId/services — 向导发布服务
+router.post('/:guideId/services', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.guideId);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.user_id !== req.user.id) return res.status(403).json({ error: '只能发布自己的服务' });
+    const { title, description, cover, type, mountain, region, price, price_unit,
+            duration_days, max_clients, difficulty, includes, start_date, end_date } = req.body;
+    if (!title) return res.status(400).json({ error: '请填写服务标题' });
+    // 内容审核
+    const titleCheck = moderation.checkText(title);
+    if (!titleCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: titleCheck.reason });
+    const descCheck = moderation.checkText(description);
+    if (!descCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: descCheck.reason });
+    // 商业资质校验
+    if (price > 0 && !guide.commercial_verified) {
+      return res.status(422).json({ error: 'commercial_not_verified' });
+    }
+    const includesStr = includes ? JSON.stringify(includes) : null;
+    const result = db.prepare(`
+      INSERT INTO guide_services
+        (guide_id, title, description, cover, type, mountain, region, price, price_unit,
+         duration_days, max_clients, difficulty, includes, start_date, end_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(guide.id, title, description || '', cover || '', type || 'guided_climb',
+           mountain || '', region || '', price || 0, price_unit || 'per_person',
+           duration_days || 1, max_clients || 6, difficulty || '', includesStr,
+           start_date || '', end_date || '');
+    const service = db.prepare('SELECT * FROM guide_services WHERE id = ?').get(result.lastInsertRowid);
+    res.json(service);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/guides/:guideId/services/:id — 更新向导服务
+router.put('/:guideId/services/:id', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.guideId);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.user_id !== req.user.id) return res.status(403).json({ error: '无权操作' });
+    const svc = db.prepare('SELECT * FROM guide_services WHERE id = ? AND guide_id = ?').get(req.params.id, req.params.guideId);
+    if (!svc) return res.status(404).json({ error: '服务不存在' });
+    const { title, description, cover, type, mountain, region, price, price_unit,
+            duration_days, max_clients, difficulty, includes, start_date, end_date, status } = req.body;
+    if (title) {
+      const titleCheck = moderation.checkText(title);
+      if (!titleCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: titleCheck.reason });
+    }
+    if (description) {
+      const descCheck = moderation.checkText(description);
+      if (!descCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: descCheck.reason });
+    }
+    const newPrice = price !== undefined ? price : svc.price;
+    if (newPrice > 0 && !guide.commercial_verified) {
+      return res.status(422).json({ error: 'commercial_not_verified' });
+    }
+    const includesStr = includes ? JSON.stringify(includes) : svc.includes;
+    db.prepare(`
+      UPDATE guide_services SET title=?, description=?, cover=?, type=?, mountain=?, region=?,
+        price=?, price_unit=?, duration_days=?, max_clients=?, difficulty=?, includes=?,
+        start_date=?, end_date=?, status=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(
+      title || svc.title, description !== undefined ? description : svc.description,
+      cover !== undefined ? cover : svc.cover, type || svc.type,
+      mountain !== undefined ? mountain : svc.mountain, region !== undefined ? region : svc.region,
+      newPrice, price_unit || svc.price_unit, duration_days || svc.duration_days,
+      max_clients || svc.max_clients, difficulty !== undefined ? difficulty : svc.difficulty,
+      includesStr, start_date !== undefined ? start_date : svc.start_date,
+      end_date !== undefined ? end_date : svc.end_date, status || svc.status,
+      req.params.id
+    );
+    const updated = db.prepare('SELECT * FROM guide_services WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/guides/:guideId/services/:id — 软删向导服务
+router.delete('/:guideId/services/:id', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.guideId);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.user_id !== req.user.id) return res.status(403).json({ error: '无权操作' });
+    const result = db.prepare("UPDATE guide_services SET status='deleted', updated_at=CURRENT_TIMESTAMP WHERE id=? AND guide_id=?")
+      .run(req.params.id, req.params.guideId);
+    if (result.changes === 0) return res.status(404).json({ error: '服务不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/:guideId/services/:id/book — 预约向导服务
+router.post('/:guideId/services/:id/book', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.guideId);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    const service = db.prepare("SELECT * FROM guide_services WHERE id = ? AND guide_id = ? AND status = 'active'")
+      .get(req.params.id, req.params.guideId);
+    if (!service) return res.status(404).json({ error: '服务不存在或已下架' });
+    // 重复预约校验
+    const existing = db.prepare(
+      "SELECT id FROM guide_service_orders WHERE service_id = ? AND user_id = ? AND status NOT IN ('cancelled', 'refunded')"
+    ).get(req.params.id, req.user.id);
+    if (existing) return res.status(400).json({ error: '您已预约此服务' });
+    // 必填字段校验
+    const { emergency_contact_name, emergency_contact_phone, agreedWaiver, waiverVersion, start_date, client_notes } = req.body;
+    if (!emergency_contact_name || !emergency_contact_phone) {
+      return res.status(400).json({ error: '请填写紧急联系人姓名和电话' });
+    }
+    if (!agreedWaiver) {
+      return res.status(400).json({ error: '请同意免责协议' });
+    }
+    const orderNo = 'GSO' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
+    const statusHistory = appendStatusHistory(null, 'pending_payment');
+    db.prepare(`
+      INSERT INTO guide_service_orders
+        (order_no, service_id, guide_id, user_id, amount, status, status_history,
+         emergency_contact_name, emergency_contact_phone, agreed_waiver, waiver_version,
+         start_date, client_notes)
+      VALUES (?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?)
+    `).run(orderNo, service.id, guide.id, req.user.id, service.price || 0, statusHistory,
+           emergency_contact_name, emergency_contact_phone, 1, waiverVersion || '',
+           start_date || '', client_notes || '');
+    // 通知向导
+    try {
+      db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'guide_service_booked', ?, ?)")
+        .run(guide.user_id, `【新预约】${service.title} 有客户预约，订单号：${orderNo}`, service.id);
+    } catch(e) {}
+    const order = db.prepare('SELECT * FROM guide_service_orders WHERE order_no = ?').get(orderNo);
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guides/:guideId/services/:id/bookings — 向导查看预约列表
+router.get('/:guideId/services/:id/bookings', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.guideId);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.user_id !== req.user.id) return res.status(403).json({ error: '无权查看预约列表' });
+    const bookings = db.prepare(`
+      SELECT gso.*, u.name as user_name, u.avatar as user_avatar, u.phone as user_phone
+      FROM guide_service_orders gso
+      LEFT JOIN users u ON u.id = gso.user_id
+      WHERE gso.service_id = ? AND gso.guide_id = ?
+      ORDER BY gso.created_at DESC
+    `).all(req.params.id, req.params.guideId);
+    res.json(bookings);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

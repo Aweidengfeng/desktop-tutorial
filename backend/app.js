@@ -158,6 +158,8 @@ app.use('/api/expeditions', require('./routes/expeditions'));
 app.use('/legal', require('./routes/legal'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/activity-orders', require('./routes/activityOrders'));
+app.use('/api/guide-service-orders', require('./routes/guideServiceOrders'));
 if (process.env.ENABLE_ASSISTANT === 'true') {
   app.use('/api/assistant', require('./routes/assistant'));
 }
