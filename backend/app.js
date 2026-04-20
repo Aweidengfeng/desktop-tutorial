@@ -72,8 +72,8 @@ app.use(pinoHttp({
   customProps: (req) => ({ userId: req.user?.id }),
 }));
 
-// 从根目录启动(node backend/app.js)，process.cwd() = /app (仓库根目录)
-const rootPath = process.cwd();
+// 用 __dirname 计算仓库根目录，比 process.cwd() 更可靠（不受启动目录影响）
+const rootPath = path.join(__dirname, '..');
 console.log('📁 根目录:', rootPath);
 console.log('📁 __dirname:', __dirname);
 
