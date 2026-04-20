@@ -173,6 +173,103 @@ SEED_ON_START=false
 - `POST /api/tracks` — 保存轨迹 `{ name, points: [{lat,lng,ele,ts}...], distance, elevation_gain, duration }`（需 JWT）
 - `GET /api/tracks?user_id=` — 轨迹列表
 - `GET /api/tracks/:id` — 轨迹详情
+- `GET /api/tracks/:id/export?format=gpx|kml` — 导出标准 GPX 1.1 / KML 2.2 文件。公开轨迹任何人可下载；非公开轨迹需作者 JWT。
+
+```bash
+# 示例：下载 GPX
+curl -o track.gpx "https://your-app.railway.app/api/tracks/1/export?format=gpx"
+# 示例：下载 KML
+curl -o track.kml "https://your-app.railway.app/api/tracks/1/export?format=kml"
+```
+
+### 山峰（扩展）
+- `GET /api/peaks?category=eight_thousanders|seven_summits|classic|technical` — 按分类查询山峰列表
+- `GET /api/peaks/:id/weather` — 获取山峰当前天气（代理到 /api/weather）
+
+```bash
+# 示例：获取八千米山峰列表
+curl "https://your-app.railway.app/api/peaks?category=eight_thousanders"
+# 示例：获取珠峰天气
+curl "https://your-app.railway.app/api/peaks/1/weather"
+```
+
+### 向导入驻
+- `POST /api/guides/apply` — 提交向导申请 `{ name, cert, specialty, languages, dayRate, region }`（需 JWT）
+- `GET /api/guides/me` — 查看自己的申请状态（需 JWT）
+- `PUT /api/guides/me` — 更新向导资料（仅 pending 状态）（需 JWT）
+
+```bash
+# 示例：提交向导申请
+curl -X POST "https://your-app.railway.app/api/guides/apply" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"张三","specialty":"高海拔攀登","dayRate":300}'
+```
+
+### 俱乐部入驻
+- `GET /api/clubs/me` — 查看自己的俱乐部/申请状态（需 JWT）
+- `PUT /api/clubs/me` — 更新俱乐部/申请资料（需 JWT）
+
+### 商业攀登（expeditions）
+- `POST /api/expeditions` — 已审核向导/俱乐部发布远征（需 JWT）
+- `GET /api/expeditions?status=published&peak_id=&publisher_type=` — 已发布远征列表
+- `GET /api/expeditions/:id` — 远征详情
+- `PUT /api/expeditions/:id` — 修改远征（仅 pending 状态，发布者需 JWT）
+- `POST /api/expeditions/:id/order` — 用户下单 `{ participants, contact_name, contact_phone }`（需 JWT）
+- `GET /api/expeditions/orders/my` — 我的订单列表（需 JWT）
+- `POST /api/expeditions/orders/:id/mock-pay` — 模拟支付（内测，推进订单到 paid 状态，TODO: B2 阶段替换为真实支付）（需 JWT）
+
+```bash
+# 示例：查看已发布商业攀登
+curl "https://your-app.railway.app/api/expeditions"
+# 示例：下单（需登录）
+curl -X POST "https://your-app.railway.app/api/expeditions/1/order" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"participants":2,"contact_name":"张三","contact_phone":"13800138000"}'
+```
+
+### 短信验证码登录（A9）
+- `POST /api/auth/sms/send { phone }` — 发送验证码（60 秒冷却，mock 模式打印到控制台）
+- `POST /api/auth/sms/verify { phone, code }` — 验证登录（失败 3 次锁定 10 分钟）
+
+```bash
+# 示例：发送验证码
+curl -X POST "https://your-app.railway.app/api/auth/sms/send" \
+  -H "Content-Type: application/json" -d '{"phone":"13800138000"}'
+# 示例：验证并登录
+curl -X POST "https://your-app.railway.app/api/auth/sms/verify" \
+  -H "Content-Type: application/json" -d '{"phone":"13800138000","code":"123456"}'
+```
+
+### 管理后台（扩展）
+- `GET /api/admin/club-applications?status=pending|approved|rejected` — 俱乐部申请列表
+- `POST /api/admin/club-applications/:id/approve` — 审核通过俱乐部申请
+- `POST /api/admin/club-applications/:id/reject { reason }` — 拒绝俱乐部申请
+- `PUT /api/admin/guides/:id/config { commission_rate, listing_fee_paid }` — 设置向导抽成/入驻费
+- `PUT /api/admin/clubs/:id/config { commission_rate, listing_fee_paid }` — 设置俱乐部抽成/入驻费
+- `GET /api/admin/expeditions?status=pending` — 待审核商业攀登列表
+- `POST /api/admin/expeditions/:id/approve` — 审核通过商业攀登
+- `POST /api/admin/expeditions/:id/reject { reason }` — 拒绝商业攀登
+- `GET /api/admin/sms-codes` — 查看最近 50 条验证码（**仅内测用**，正式版移除）
+
+```bash
+# 示例：获取待审核向导申请
+curl "https://your-app.railway.app/api/admin/guides?status=pending" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+# 示例：查看验证码（内测调试）
+curl "https://your-app.railway.app/api/admin/sms-codes" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+---
+
+## 环境变量（新增）
+
+| 变量名 | 说明 |
+|--------|------|
+| `AMAP_SECURITY_CODE` | 高德 Web JS API 2.0 安全密钥（**必须配置，否则地图无法初始化**）|
+| `SMS_PROVIDER` | 短信服务商（不设置默认 mock，设为 `aliyun` 切换阿里云 SDK，B2 阶段实现）|
 
 ### 预约
 - `POST /api/bookings` — 创建预约（探索/商业）`{ type, peak_name, route_id, club_id, guide_id, date, people, price, notes }`（需 JWT）
@@ -197,10 +294,13 @@ SEED_ON_START=false
 | `PORT` | 监听端口（默认 8080）|
 | `JWT_SECRET` | JWT 签名密钥（**生产环境必须修改**）|
 | `ADMIN_PASSWORD` | 后台管理员密码（**生产环境必须修改**）|
+| `AMAP_KEY` | 高德地图 Web JS API Key（在高德开放平台申请）|
+| `AMAP_SECURITY_CODE` | 高德 Web JS API 2.0 安全密钥（**必须配置，否则地图无法加载**）|
 | `DATABASE_PATH` | SQLite 数据库文件路径，默认 `backend/db/summitlink.db`。Railway 建议设为 `/data/summitlink.db` |
 | `UPLOADS_DIR` | 上传文件目录，默认 `backend/uploads`。Railway 建议设为 `/data/uploads` |
 | `CORS_ORIGINS` | 生产环境 CORS 白名单（逗号分隔），如 `https://xxx.com,https://www.xxx.com`|
 | `SEED_ON_START` | 设为 `true` 时执行数据填充，默认 `false`（跳过）。**仅首次部署前临时设为 true** |
+| `SMS_PROVIDER` | 短信服务商（留空=mock 模式；`aliyun`=阿里云短信，B2 阶段实现）|
 | `WECHAT_APPID` | 微信小程序 AppID（留占位）|
 | `WECHAT_SECRET` | 微信小程序 Secret（留占位）|
 | `APPLE_CLIENT_ID` | Apple Sign In Client ID（留占位）|
