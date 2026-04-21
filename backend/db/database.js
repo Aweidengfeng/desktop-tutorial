@@ -1745,4 +1745,52 @@ CREATE TABLE IF NOT EXISTS gear_orders (
   }
 }
 
+// ── 内置用户数据（首次启动时自动填充，用于测试和演示）──────────────────────
+{
+  const userCount = db.prepare('SELECT COUNT(*) as cnt FROM users').get();
+  if (userCount.cnt === 0) {
+    // 预计算的 bcrypt hash（password: 123456, saltRounds: 10）
+    const testPasswordHash = '$2b$10$2HlgzoX/NiELdTS7/WZgSOIFkGS0B/HL27ohJe13NcxmGksfjBZf6';
+    db.prepare(`
+      INSERT OR IGNORE INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      '张伟', '@zhangwei_climbs', '13800138000', testPasswordHash,
+      'https://i.pravatar.cc/150?u=zhangwei',
+      '专业攀登者', 12, 8, 1247, 386
+    );
+    console.log('✅ 内置用户数据填充完成');
+
+    // ── 内置帖子（首次启动时自动填充，须在用户之后）
+    const userId = db.prepare('SELECT id FROM users WHERE phone = ?').get('13800138000').id;
+    const insertBuiltinPost = db.prepare(`
+      INSERT OR IGNORE INTO posts (user_id, author_name, author_avatar, content, location, likes, comments)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '刚刚完成了珠峰大本营徒步，海拔5364米，风景壮丽！明年计划挑战洛子峰 💪', '尼泊尔·珠峰大本营', 128, 24);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '分享一组马卡鲁峰照片，这次远征历时45天，成功登顶！感谢队友们的配合 🏔️', '尼泊尔·马卡鲁峰', 86, 17);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '推荐一条适合初学者的高海拔路线：四姑娘山二峰（5276m），难度适中，风景极佳', '四川·四姑娘山', 214, 42);
+    console.log('✅ 内置帖子数据填充完成');
+
+    // ── 内置队伍（首次启动时自动填充，须在用户之后）
+    const insertBuiltinTeam = db.prepare(`
+      INSERT OR IGNORE INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    insertBuiltinTeam.run('珠峰大本营探险队', '珠穆朗玛峰', '2026-05-15', 4, 6, '中等',
+      '张伟', 'https://i.pravatar.cc/150?u=zhangwei', userId,
+      '招募有高海拔经验的攀登者，目标珠峰大本营（5364m），行程21天，含向导和装备', 'recruiting');
+    insertBuiltinTeam.run('乞力马扎罗登顶计划', '乞力马扎罗山', '2026-06-20', 5, 8, '较易',
+      '张伟', 'https://i.pravatar.cc/150?u=zhangwei', userId,
+      '非洲最高峰，海拔5895米，无技术难度，适合登山爱好者首次高海拔体验，行程7天', 'recruiting');
+    insertBuiltinTeam.run('阿尔卑斯白朗峰技术攀登', '白朗峰', '2026-08-05', 2, 4, '中等',
+      '张伟', 'https://i.pravatar.cc/150?u=zhangwei', userId,
+      '西欧最高峰（4808m），Goûter路线，需要基本冰雪技术，行程5天含适应期', 'recruiting');
+    console.log('✅ 内置队伍数据填充完成');
+  }
+}
+
 module.exports = db;
