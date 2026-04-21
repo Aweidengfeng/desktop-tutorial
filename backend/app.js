@@ -46,6 +46,9 @@ const htmlPageLimiter = rateLimit({
 
 const app = express();
 
+// 信任 Railway / Nginx 等反向代理（修复 express-rate-limit xForwardedFor 报错）
+app.set('trust proxy', 1);
+
 // Sentry 请求处理中间件（路由最前，仅当 Sentry 启用时）
 if (Sentry) {
   app.use(Sentry.Handlers.requestHandler());

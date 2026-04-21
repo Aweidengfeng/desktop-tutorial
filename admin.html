@@ -1026,6 +1026,123 @@
         </div>
       </div>
 
+      <!-- SOS救援记录管理 -->
+      <div x-show="page === 'sos-records'">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">🆘 SOS救援记录</h2>
+          <div class="flex gap-2 items-center">
+            <select x-model="sosRecordsFilter" @change="loadSosRecords(1)" class="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 outline-none">
+              <option value="">全部状态</option>
+              <option value="pending">待处理</option>
+              <option value="processing">处理中</option>
+              <option value="resolved">已解决</option>
+            </select>
+            <button @click="loadSosRecords(1)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm">刷新</button>
+          </div>
+        </div>
+        <div x-show="sosRecordsLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!sosRecordsLoading && sosRecords.length===0" class="text-center py-8 text-slate-400">暂无SOS救援记录</div>
+        <div class="overflow-x-auto" x-show="!sosRecordsLoading && sosRecords.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-3">ID</th>
+            <th class="text-left py-2 pr-3">用户</th>
+            <th class="text-left py-2 pr-3">电话</th>
+            <th class="text-left py-2 pr-3">位置</th>
+            <th class="text-left py-2 pr-3">峰名</th>
+            <th class="text-left py-2 pr-3">消息</th>
+            <th class="text-left py-2 pr-3">时间</th>
+            <th class="text-left py-2 pr-3">状态</th>
+            <th class="text-left py-2">操作</th>
+          </tr></thead><tbody>
+            <template x-for="r in sosRecords" :key="r.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-3 text-slate-300" x-text="r.id"></td>
+                <td class="py-2 pr-3 text-white font-medium" x-text="r.user_name||'未知'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.user_phone||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs max-w-24 truncate" x-text="r.location||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.peak_name||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs max-w-32 truncate" x-text="r.message||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(r.timestamp||'').slice(0,16).replace('T',' ')"></td>
+                <td class="py-2 pr-3">
+                  <span :class="{'bg-red-500/20 text-red-300':r.status==='pending'||!r.status,'bg-yellow-500/20 text-yellow-300':r.status==='processing','bg-emerald-500/20 text-emerald-300':r.status==='resolved'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待处理','processing':'处理中','resolved':'已解决'}[r.status||'pending']"></span>
+                </td>
+                <td class="py-2">
+                  <div class="flex gap-1">
+                    <button x-show="r.status!=='processing'" @click="updateSosStatus(r,'processing')" class="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-xs text-white">处理中</button>
+                    <button x-show="r.status!=='resolved'" @click="updateSosStatus(r,'resolved')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-xs text-white">已解决</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+        <div class="flex gap-2 mt-4 justify-center" x-show="sosRecordsTotal > 20">
+          <button @click="loadSosRecords(sosRecordsPage-1)" :disabled="sosRecordsPage<=1" class="px-3 py-1 glass rounded text-sm disabled:opacity-40">上一页</button>
+          <span class="px-3 py-1 text-slate-400 text-sm" x-text="`第${sosRecordsPage}页，共${Math.ceil(sosRecordsTotal/20)}页`"></span>
+          <button @click="loadSosRecords(sosRecordsPage+1)" :disabled="sosRecordsPage>=Math.ceil(sosRecordsTotal/20)" class="px-3 py-1 glass rounded text-sm disabled:opacity-40">下一页</button>
+        </div>
+      </div>
+
+      <!-- 提现申请管理 -->
+      <div x-show="page === 'withdrawals'">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">💸 提现申请管理</h2>
+          <div class="flex gap-2 items-center">
+            <select x-model="withdrawalsFilter" @change="loadWithdrawals(1)" class="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 outline-none">
+              <option value="">全部状态</option>
+              <option value="pending">待处理</option>
+              <option value="approved">已批准</option>
+              <option value="rejected">已拒绝</option>
+            </select>
+            <button @click="loadWithdrawals(1)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm">刷新</button>
+          </div>
+        </div>
+        <div x-show="withdrawalsLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!withdrawalsLoading && withdrawals.length===0" class="text-center py-8 text-slate-400">暂无提现申请</div>
+        <div class="overflow-x-auto" x-show="!withdrawalsLoading && withdrawals.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-3">ID</th>
+            <th class="text-left py-2 pr-3">类型</th>
+            <th class="text-left py-2 pr-3">商家ID</th>
+            <th class="text-left py-2 pr-3">提现金额</th>
+            <th class="text-left py-2 pr-3">手续费</th>
+            <th class="text-left py-2 pr-3">实付金额</th>
+            <th class="text-left py-2 pr-3">提现方式</th>
+            <th class="text-left py-2 pr-3">申请时间</th>
+            <th class="text-left py-2 pr-3">状态</th>
+            <th class="text-left py-2">操作</th>
+          </tr></thead><tbody>
+            <template x-for="w in withdrawals" :key="w.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-3 text-slate-300" x-text="w.id"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="w.owner_type||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="w.owner_id"></td>
+                <td class="py-2 pr-3 text-white font-medium" x-text="'¥' + (w.amount||0).toFixed(2)"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="'¥' + (w.fee||0).toFixed(2)"></td>
+                <td class="py-2 pr-3 text-emerald-400 font-medium" x-text="'¥' + (w.actual_amount||0).toFixed(2)"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="{'bank':'银行卡','alipay':'支付宝','wechat':'微信'}[w.account_type]||w.account_type||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(w.created_at||'').slice(0,16).replace('T',' ')"></td>
+                <td class="py-2 pr-3">
+                  <span :class="{'bg-yellow-500/20 text-yellow-300':w.status==='pending','bg-emerald-500/20 text-emerald-300':w.status==='approved','bg-red-500/20 text-red-300':w.status==='rejected'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待处理','approved':'已批准','rejected':'已拒绝'}[w.status]||w.status"></span>
+                </td>
+                <td class="py-2">
+                  <div class="flex gap-1" x-show="w.status==='pending'">
+                    <button @click="approveWithdrawal(w)" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-xs text-white">批准</button>
+                    <button @click="rejectWithdrawal(w)" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded text-xs text-white">拒绝</button>
+                  </div>
+                  <span x-show="w.status!=='pending'" class="text-slate-500 text-xs">已处理</span>
+                </td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+        <div class="flex gap-2 mt-4 justify-center" x-show="withdrawalsTotal > 20">
+          <button @click="loadWithdrawals(withdrawalsPage-1)" :disabled="withdrawalsPage<=1" class="px-3 py-1 glass rounded text-sm disabled:opacity-40">上一页</button>
+          <span class="px-3 py-1 text-slate-400 text-sm" x-text="`第${withdrawalsPage}页，共${Math.ceil(withdrawalsTotal/20)}页`"></span>
+          <button @click="loadWithdrawals(withdrawalsPage+1)" :disabled="withdrawalsPage>=Math.ceil(withdrawalsTotal/20)" class="px-3 py-1 glass rounded text-sm disabled:opacity-40">下一页</button>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -1077,6 +1194,8 @@
           { id: 'moderation-logs', icon: '🛡️', label: '审核日志' },
           { id: 'club-commercial', icon: '🏢', label: '俱乐部商业资质' },
           { id: 'guide-commercial', icon: '🔑', label: '向导商业资质' },
+          { id: 'sos-records', icon: '🆘', label: 'SOS救援记录' },
+          { id: 'withdrawals', icon: '💸', label: '提现申请管理' },
         ],
 
         // Stats
@@ -1140,6 +1259,12 @@
         // Guide Commercial Review
         guideCommercial: [], guideCommercialLoading: false, guideCommercialTotal: 0,
         commercialReviewDrawer: { open: false, type: '', item: null, action: '', note: '' },
+
+        // SOS Records
+        sosRecords: [], sosRecordsTotal: 0, sosRecordsPage: 1, sosRecordsLoading: false, sosRecordsFilter: '',
+
+        // Withdrawal Requests
+        withdrawals: [], withdrawalsTotal: 0, withdrawalsPage: 1, withdrawalsLoading: false, withdrawalsFilter: '',
 
         async init() {
           try {
@@ -1221,6 +1346,8 @@
           else if (this.page === 'moderation-logs') this.loadModerationLogs();
           else if (this.page === 'club-commercial') this.loadClubCommercial();
           else if (this.page === 'guide-commercial') this.loadGuideCommercial();
+          else if (this.page === 'sos-records') this.loadSosRecords(1);
+          else if (this.page === 'withdrawals') this.loadWithdrawals(1);
         },
 
         async loadStats() {
@@ -1237,6 +1364,8 @@
               { icon: '⏳', label: '待审核帖子', value: d.pendingPosts },
               { icon: '🧭', label: '待审核向导申请', value: d.pendingGuides },
               { icon: '🔔', label: '待确认预约', value: d.pendingBookings },
+              { icon: '🆘', label: '待处理SOS', value: d.pendingSos ?? 0 },
+              { icon: '💸', label: '待处理提现', value: d.pendingWithdrawals ?? 0 },
             ];
           } catch (e) {
             this.showToast(e.message, 'error');
@@ -1577,6 +1706,46 @@
             await this.api('POST', `/${type === 'club' ? 'clubs' : 'guides'}/${item.id}/commercial-review`, { action, note });
             this.showToast('审核完成'); this.commercialReviewDrawer.open = false;
             type === 'club' ? this.loadClubCommercial() : this.loadGuideCommercial();
+          } catch(e) { this.showToast(e.message,'error'); }
+        },
+
+        async loadSosRecords(p) {
+          this.sosRecordsLoading = true; this.sosRecordsPage = p;
+          try {
+            const qs = this.sosRecordsFilter ? `&status=${this.sosRecordsFilter}` : '';
+            const d = await this.api('GET', `/sos-records?page=${p}&limit=20${qs}`);
+            this.sosRecords = d.records || []; this.sosRecordsTotal = d.total || 0;
+          } catch(e) { this.showToast(e.message,'error'); } finally { this.sosRecordsLoading = false; }
+        },
+        async updateSosStatus(record, status) {
+          try {
+            await this.api('PUT', `/sos-records/${record.id}/status`, { status });
+            record.status = status;
+            this.showToast('SOS状态已更新');
+          } catch(e) { this.showToast(e.message,'error'); }
+        },
+
+        async loadWithdrawals(p) {
+          this.withdrawalsLoading = true; this.withdrawalsPage = p;
+          try {
+            const qs = this.withdrawalsFilter ? `&status=${this.withdrawalsFilter}` : '';
+            const d = await this.api('GET', `/withdrawals?page=${p}&limit=20${qs}`);
+            this.withdrawals = d.requests || []; this.withdrawalsTotal = d.total || 0;
+          } catch(e) { this.showToast(e.message,'error'); } finally { this.withdrawalsLoading = false; }
+        },
+        async approveWithdrawal(w) {
+          try {
+            const d = await this.api('PUT', `/withdrawals/${w.id}/approve`);
+            w.status = 'approved';
+            this.showToast(d.message || '已批准提现');
+          } catch(e) { this.showToast(e.message,'error'); }
+        },
+        async rejectWithdrawal(w) {
+          const reason = prompt('请输入拒绝原因（可选）') || '';
+          try {
+            await this.api('PUT', `/withdrawals/${w.id}/reject`, { reason });
+            w.status = 'rejected';
+            this.showToast('已拒绝提现申请');
           } catch(e) { this.showToast(e.message,'error'); }
         },
       };
