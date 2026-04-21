@@ -317,10 +317,11 @@ describe('6. 天气缓存 GET /api/weather', () => {
     expect(res.body).toBeDefined();
   });
 
-  test('带 location 参数（无 API Key）→ 502', async () => {
-    // 无 OPENWEATHER_API_KEY，fetchWeather 直接 reject，返回 502
+  test('带 location 参数（无 API Key）→ 200 mock 降级数据', async () => {
     const res = await request(app).get('/api/weather?location=珠穆朗玛峰');
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(200);
+    expect(res.body.mock).toBe(true);
+    expect(typeof res.body.temp).toBe('number');
   });
 });
 
