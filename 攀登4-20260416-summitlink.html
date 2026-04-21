@@ -6399,13 +6399,14 @@ function alpineLink() {
           const parser = new DOMParser();
           const doc = parser.parseFromString(text, 'application/xml');
           const trkpts = doc.querySelectorAll('trkpt');
-          trkpts.forEach(pt => {
+          const baseTs = Date.now();
+          trkpts.forEach((pt, idx) => {
             const lat = parseFloat(pt.getAttribute('lat'));
             const lng = parseFloat(pt.getAttribute('lon'));
             const eleEl = pt.querySelector('ele');
             const timeEl = pt.querySelector('time');
             const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
-            const ts = timeEl ? new Date(timeEl.textContent).getTime() : Date.now();
+            const ts = timeEl ? new Date(timeEl.textContent).getTime() : baseTs + idx * 1000;
             if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts });
           });
         } else if (file.name.toLowerCase().endsWith('.kml')) {
@@ -6415,13 +6416,14 @@ function alpineLink() {
           const coordsEl = doc.querySelector('coordinates');
           if (coordsEl) {
             const coordStr = coordsEl.textContent.trim();
-            coordStr.split(/\s+/).forEach(c => {
+            const kmlBaseTs = Date.now();
+            coordStr.split(/\s+/).forEach((c, idx) => {
               const parts = c.split(',');
               if (parts.length >= 2) {
                 const lng = parseFloat(parts[0]);
                 const lat = parseFloat(parts[1]);
                 const ele = parts[2] ? parseFloat(parts[2]) : 0;
-                if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts: Date.now() });
+                if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts: kmlBaseTs + idx * 1000 });
               }
             });
           }
@@ -6461,7 +6463,7 @@ function alpineLink() {
           this.loadTracks();
           event.target.value = '';
         } else { this.showToast(data.error || '导入失败', 'error'); }
-      } catch(e) { this.showToast('文件解析失败：' + e.message, 'error'); }
+      } catch(e) { this.showToast('文件解析失败：' + e.message, 'error'); event.target.value = ''; }
     },
     startTrackRecording() {
       this.initTrackMap();
@@ -7178,7 +7180,7 @@ function alpineLink() {
     openGearPurchase(item) {
       if (!this.requireAuth()) return;
       this.gearPurchaseItem = item;
-      this.gearPurchaseForm = { receiver_name: this.userProfile.name || '', receiver_phone: '', address: '' };
+      this.gearPurchaseForm = { receiver_name: this.userProfile?.name || '', receiver_phone: '', address: '' };
       this.showGearPurchase = true;
     },
     async submitGearPurchase() {

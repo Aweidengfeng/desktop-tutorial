@@ -88,7 +88,8 @@ router.post('/:id/order', gearWriteLimiter, auth, (req, res) => {
     const item = db.prepare('SELECT * FROM gear WHERE id = ?').get(req.params.id);
     if (!item) return res.status(404).json({ error: '商品不存在' });
     const { address, receiver_name, receiver_phone, notes } = req.body;
-    const orderNo = 'GR' + Date.now() + Math.floor(Math.random() * 1000);
+    const { randomUUID } = require('crypto');
+    const orderNo = 'GR' + Date.now() + randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
     const result = db.prepare(`
       INSERT INTO gear_orders (order_no, gear_id, gear_name, buyer_id, seller_id, amount, address, receiver_name, receiver_phone, notes, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid')
