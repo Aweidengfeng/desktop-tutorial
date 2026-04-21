@@ -1617,6 +1617,9 @@ CREATE TABLE IF NOT EXISTS gear_orders (
 );
 `);
 
+// 迁移：将旧的 'available' 状态向导更新为 'approved'（修复内置向导无法被列表接口返回的问题）
+db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").run();
+
 // ── 内置山峰数据（首次启动时自动填充，无需 SEED_ON_START）──────────────────
 {
   const peakSeedCount = db.prepare('SELECT COUNT(*) as cnt FROM peaks').get();
@@ -1707,7 +1710,7 @@ CREATE TABLE IF NOT EXISTS gear_orders (
   if (guideSeed.cnt === 0) {
     const insertBuiltinGuide = db.prepare(`
       INSERT OR IGNORE INTO guides (name, avatar, flag, nationality, rating, reviews, specialty, day_rate, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'available')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved')
     `);
     insertBuiltinGuide.run('扎西旺堆', 'https://i.pravatar.cc/150?u=guide1', '🇨🇳', '中国', 4.9, 87, '珠峰/洛子峰', 3500);
     insertBuiltinGuide.run('Ang Dorji', 'https://i.pravatar.cc/150?u=guide2', '🇳🇵', '尼泊尔', 4.8, 143, 'K2/南迦帕尔巴特', 4200);
