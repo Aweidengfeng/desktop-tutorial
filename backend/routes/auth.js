@@ -25,6 +25,12 @@ const loginLimiter = rateLimit({
   message: { error: '登录尝试次数过多，请15分钟后再试' },
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { error: '注册请求过于频繁，请稍后再试' },
+});
+
 function makeToken(id) {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
 }
@@ -45,7 +51,7 @@ function safeUser(user) {
 }
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', registerLimiter, (req, res) => {
   try {
     const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
     if (!name || !phone || !password) {
