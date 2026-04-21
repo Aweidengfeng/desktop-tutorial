@@ -6,6 +6,8 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 
+const POLICY_VERSION = '2026-04-20';
+
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
   if (process.env.NODE_ENV === 'production') {
@@ -29,6 +31,7 @@ function makeToken(id) {
 
 function safeUser(user) {
   return {
+    id: user.id,
     name: user.name,
     username: user.username,
     avatar: user.avatar,
@@ -44,7 +47,10 @@ function safeUser(user) {
 // POST /api/auth/register
 router.post('/register', (req, res) => {
   try {
-    const { name, phone, password } = req.body;
+    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
+    if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
+      return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
+    }
     if (!name || !phone || !password) {
       return res.status(400).json({ error: '请填写姓名、手机号和密码' });
     }
@@ -54,19 +60,22 @@ router.post('/register', (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
     }
-    const username = '@' + name.toLowerCase().replace(/\s+/g, '');
+    const username = '@' + name.toLowerCase().replace(/\s+/g, '') + '_' + phone.slice(-4);
     const avatar = 'https://i.pravatar.cc/150?u=' + phone;
     const hash = bcrypt.hashSync(password, 10);
     const stmt = db.prepare(`
-      INSERT INTO users (name, username, phone, password, avatar)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (name, username, phone, password, avatar, policy_version, policy_agreed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const result = stmt.run(name, username, phone, hash, avatar);
+    const result = stmt.run(name, username, phone, hash, avatar, policyVersion, new Date().toISOString());
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     res.json({ token: makeToken(user.id), user: safeUser(user) });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) {
-      return res.status(400).json({ error: '手机号已注册' });
+      if (e.message.includes('phone')) {
+        return res.status(400).json({ error: '手机号已注册' });
+      }
+      return res.status(400).json({ error: '注册失败，请稍后重试' });
     }
     res.status(500).json({ error: '服务器错误' });
   }
@@ -108,6 +117,202 @@ router.put('/profile', auth, (req, res) => {
       .run(name || null, avatar || null, req.user.id);
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     res.json(safeUser(user));
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/auth/settings — 保存用户设置（单位、语言等）
+router.put('/settings', auth, (req, res) => {
+  try {
+    const settings = JSON.stringify(req.body || {});
+    db.prepare('UPDATE users SET settings = ? WHERE id = ?').run(settings, req.user.id);
+    res.json({ success: true, settings: req.body });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/auth/privacy — 保存隐私设置
+router.put('/privacy', auth, (req, res) => {
+  try {
+    const privacy = JSON.stringify(req.body || {});
+    db.prepare('UPDATE users SET privacy = ? WHERE id = ?').run(privacy, req.user.id);
+    res.json({ success: true, privacy: req.body });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/auth/settings — 读取用户设置
+router.get('/settings', auth, (req, res) => {
+  try {
+    const user = db.prepare('SELECT settings FROM users WHERE id = ?').get(req.user.id);
+    let settings = {};
+    try { settings = JSON.parse(user.settings || '{}'); } catch(e) {}
+    res.json(settings);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/auth/privacy — 读取隐私设置
+router.get('/privacy', auth, (req, res) => {
+  try {
+    const user = db.prepare('SELECT privacy FROM users WHERE id = ?').get(req.user.id);
+    let privacy = {};
+    try { privacy = JSON.parse(user.privacy || '{}'); } catch(e) {}
+    res.json(privacy);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/sms/send — 发送短信验证码（mock：打印到控制台）
+const smsProvider = require('../utils/sms');
+// 内存限流：同一手机号 60 秒内只能请求一次
+const smsSendCooldown = new Map(); // phone → lastSentAt(ms)
+// 验证失败计数（失败三次锁定10分钟）
+const smsFailCount = new Map(); // phone → {count, lockedUntil}
+
+router.post('/sms/send', (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({ error: '手机号格式不正确' });
+    }
+    // 60 秒冷却检查
+    const lastSent = smsSendCooldown.get(phone);
+    if (lastSent && Date.now() - lastSent < 60 * 1000) {
+      const wait = Math.ceil((60 * 1000 - (Date.now() - lastSent)) / 1000);
+      return res.status(429).json({ error: `请等待 ${wait} 秒后再次获取验证码` });
+    }
+    // 生成6位验证码
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5分钟有效
+    // 使旧验证码失效
+    db.prepare('UPDATE sms_codes SET used = 1 WHERE phone = ? AND used = 0').run(phone);
+    db.prepare('INSERT INTO sms_codes (phone, code, expires_at) VALUES (?, ?, ?)').run(phone, code, expiresAt);
+    // 记录发送时间
+    smsSendCooldown.set(phone, Date.now());
+    // 发送（mock：打印到控制台）
+    smsProvider.send(phone, code).catch(e => console.error('[SMS]', e.message));
+    res.json({ success: true, message: '验证码已发送（当前为内测阶段，验证码可在管理员后台查看；正式版将对接阿里云短信）' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/sms/verify — 验证码登录/注册
+router.post('/sms/verify', (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) return res.status(400).json({ error: '请填写手机号和验证码' });
+    // 锁定检查（失败三次锁定10分钟）
+    const failInfo = smsFailCount.get(phone);
+    if (failInfo && failInfo.lockedUntil && Date.now() < failInfo.lockedUntil) {
+      const wait = Math.ceil((failInfo.lockedUntil - Date.now()) / 60000);
+      return res.status(429).json({ error: `验证码错误次数过多，请 ${wait} 分钟后再试` });
+    }
+    const record = db.prepare(
+      'SELECT * FROM sms_codes WHERE phone = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1'
+    ).get(phone, code);
+    if (!record) {
+      // 记录失败次数
+      const current = smsFailCount.get(phone) || { count: 0 };
+      current.count += 1;
+      if (current.count >= 3) {
+        current.lockedUntil = Date.now() + 10 * 60 * 1000;
+        current.count = 0;
+      }
+      smsFailCount.set(phone, current);
+      return res.status(401).json({ error: '验证码错误' });
+    }
+    if (Date.now() > record.expires_at) {
+      return res.status(401).json({ error: '验证码已过期，请重新获取' });
+    }
+    db.prepare('UPDATE sms_codes SET used = 1 WHERE id = ?').run(record.id);
+    // 验证成功，清除失败计数
+    smsFailCount.delete(phone);
+    // 查找或创建用户
+    let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
+    if (!user) {
+      const name = '攀登者' + phone.slice(-4);
+      const username = '@climber' + phone.slice(-6);
+      const avatar = 'https://i.pravatar.cc/150?u=' + phone;
+      const result = db.prepare(`
+        INSERT INTO users (name, username, phone, avatar) VALUES (?, ?, ?, ?)
+      `).run(name, username, phone, avatar);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    }
+    res.json({ token: makeToken(user.id), user: safeUser(user) });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) {
+      return res.status(400).json({ error: '账号已存在，请直接登录' });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/wechat — 微信登录（mock）
+router.post('/wechat', (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: '缺少 code 参数' });
+    // Mock: 生成假 openid
+    const fakeOpenid = 'wx_mock_' + code + '_' + Date.now();
+    let user = db.prepare('SELECT * FROM users WHERE wechat_openid = ?').get(fakeOpenid);
+    if (!user) {
+      // 新用户
+      const name = '微信用户' + Math.floor(Math.random() * 9999);
+      const username = '@wx' + Date.now().toString(36);
+      const avatar = 'https://i.pravatar.cc/150?u=wx' + fakeOpenid;
+      let result;
+      try {
+        result = db.prepare(`
+          INSERT INTO users (name, username, avatar, wechat_openid) VALUES (?, ?, ?, ?)
+        `).run(name, username, avatar, fakeOpenid);
+      } catch(e) {
+        // username 冲突则随机后缀
+        const username2 = '@wx' + Math.random().toString(36).slice(2);
+        result = db.prepare(`
+          INSERT INTO users (name, username, avatar, wechat_openid) VALUES (?, ?, ?, ?)
+        `).run(name, username2, avatar, fakeOpenid);
+      }
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    }
+    res.json({ token: makeToken(user.id), user: safeUser(user) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/apple — Apple 登录（mock）
+router.post('/apple', (req, res) => {
+  try {
+    const { identityToken } = req.body;
+    if (!identityToken) return res.status(400).json({ error: '缺少 identityToken 参数' });
+    // Mock: 解析假 sub
+    const fakeSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + Date.now();
+    let user = db.prepare('SELECT * FROM users WHERE apple_sub = ?').get(fakeSub);
+    if (!user) {
+      const name = 'Apple用户' + Math.floor(Math.random() * 9999);
+      const username = '@apple' + Date.now().toString(36);
+      const avatar = 'https://i.pravatar.cc/150?u=ap' + fakeSub;
+      let result;
+      try {
+        result = db.prepare(`
+          INSERT INTO users (name, username, avatar, apple_sub) VALUES (?, ?, ?, ?)
+        `).run(name, username, avatar, fakeSub);
+      } catch(e) {
+        const username2 = '@apple' + Math.random().toString(36).slice(2);
+        result = db.prepare(`
+          INSERT INTO users (name, username, avatar, apple_sub) VALUES (?, ?, ?, ?)
+        `).run(name, username2, avatar, fakeSub);
+      }
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    }
+    res.json({ token: makeToken(user.id), user: safeUser(user) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

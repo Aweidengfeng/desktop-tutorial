@@ -13,7 +13,7 @@ jobs:
   test:
     name: API & E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       # ── 检出代码 ────────────────────────────────────────────────────────────
@@ -27,15 +27,23 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # ── 安装依赖（含 Playwright）────────────────────────────────────────────
-      - name: Install dependencies
+      # ── 安装根级依赖（含 jest + supertest + playwright）──────────────────────
+      - name: Install root dependencies
         run: npm install
+
+      # ── 安装后端依赖（pino, express-rate-limit, multer 等）──────────────────
+      - name: Install backend dependencies
+        run: cd backend && npm install
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      # ── 运行 API 集成测试 ────────────────────────────────────────────────────
+      # ── 依赖安全扫描 ──────────────────────────────────────────────────────────
+      - name: Audit backend dependencies
+        run: npm audit --audit-level=high --production --prefix backend || true
+
+      # ── 运行 API 集成测试（旧版 + 新版 jest/supertest）─────────────────────
       - name: Run API tests
         run: npm run test:api
 
@@ -51,6 +59,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+          if-no-files-found: warn
 
       # ── 上传失败截图 ─────────────────────────────────────────────────────────
       - name: Upload test screenshots
@@ -60,3 +69,4 @@ jobs:
           name: test-screenshots
           path: test-results/
           retention-days: 14
+          if-no-files-found: warn

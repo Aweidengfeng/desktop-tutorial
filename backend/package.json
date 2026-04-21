@@ -9,6 +9,7 @@
     "seed": "node db/seed.js"
   },
   "dependencies": {
+    "@sentry/node": "^10.49.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
     "cookie-parser": "^1.4.7",
@@ -16,6 +17,10 @@
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
     "express-rate-limit": "^8.3.2",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
+    "pino-pretty": "^13.1.3"
   }
 }

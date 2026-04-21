@@ -62,8 +62,8 @@ async function testLogin() {
   });
 
   await runTest('POST /api/auth/register - 注册新用户', async () => {
-    // 使用随机手机号避免重复
-    const randomPhone = '1380013' + String(Math.floor(Math.random() * 9000) + 1000);
+    // 使用1亿级别的随机号码（8位随机后缀），避免与历史注册数据冲突及并发冲突
+    const randomPhone = '139' + String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -71,6 +71,9 @@ async function testLogin() {
         name: '测试用户',
         phone: randomPhone,
         password: 'test123',
+        agreedPrivacy: true,
+        agreedTerms: true,
+        policyVersion: '2026-04-20',
       }),
     });
     assert(res.ok, `HTTP ${res.status}`);
@@ -738,6 +741,114 @@ async function testAdmin() {
   });
 }
 
+
+// ─── 新增：精选俱乐部接口测试 ────────────────────────────────────────────────
+
+async function testFeaturedClubs() {
+  console.log('\n🏛️  精选俱乐部接口测试');
+
+  await runTest('GET /api/clubs/featured - 返回精选俱乐部（数组）', async () => {
+    const res = await fetch(`${BASE_URL}/api/clubs/featured`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+    assert(data.length >= 3, `精选俱乐部数量不足: ${data.length}`);
+    const club = data[0];
+    assert(club.name, '俱乐部缺少 name 字段');
+    assert(club.cover !== undefined, '俱乐部缺少 cover 字段');
+  });
+
+  await runTest('GET /api/clubs/:id/posts - 返回俱乐部动态', async () => {
+    const res = await fetch(`${BASE_URL}/api/clubs/1/posts`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+    if (data.length > 0) {
+      assert(data[0].content, '帖子缺少 content 字段');
+    }
+  });
+
+  await runTest('GET /api/clubs/:id/photos - 返回俱乐部相册', async () => {
+    const res = await fetch(`${BASE_URL}/api/clubs/1/photos`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+    if (data.length > 0) {
+      assert(data[0].url, '照片缺少 url 字段');
+    }
+  });
+
+  await runTest('GET /api/clubs/:id/guides - 返回俱乐部向导', async () => {
+    const res = await fetch(`${BASE_URL}/api/clubs/1/guides`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+  });
+
+  await runTest('POST /api/clubs/payment - 未登录返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/clubs/payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ club_application_id: 1, amount: 500 }),
+    });
+    assert(res.status === 401 || res.status === 403, `预期 401/403，实际 ${res.status}`);
+  });
+}
+
+// ─── 新增：向导帖子/照片接口测试 ────────────────────────────────────────────
+
+async function testGuidePosts() {
+  console.log('\n🧗 向导动态/相册接口测试');
+
+  await runTest('GET /api/guides/:id/posts - 返回向导动态', async () => {
+    const res = await fetch(`${BASE_URL}/api/guides/1/posts`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+    if (data.length > 0) {
+      assert(data[0].content, '帖子缺少 content 字段');
+    }
+  });
+
+  await runTest('GET /api/guides/:id/photos - 返回向导相册', async () => {
+    const res = await fetch(`${BASE_URL}/api/guides/1/photos`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+    if (data.length > 0) {
+      assert(data[0].url, '照片缺少 url 字段');
+    }
+  });
+
+  await runTest('POST /api/guides/payment - 未登录返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/guides/payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guide_application_id: 1, amount: 300 }),
+    });
+    assert(res.status === 401 || res.status === 403, `预期 401/403，实际 ${res.status}`);
+  });
+}
+
+// ─── 新增：热门山峰天气接口测试 ──────────────────────────────────────────────
+
+async function testPopularPeaksWeather() {
+  console.log('\n⛅ 热门山峰天气接口测试');
+
+  await runTest('GET /api/weather/popular-peaks - 返回热门山峰天气', async () => {
+    const res = await fetch(`${BASE_URL}/api/weather/popular-peaks`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+    assert(data.length >= 4, `热门山峰数量不足: ${data.length}`);
+    const peak = data[0];
+    assert(peak.name, '山峰缺少 name 字段');
+    assert(peak.temp !== undefined, '山峰缺少 temp 字段');
+    assert(peak.altitude !== undefined, '山峰缺少 altitude 字段');
+  });
+}
+
+
 // ─── 主函数 ──────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -754,6 +865,9 @@ async function main() {
   await testPosts();
   await testLeaderboard();
   await testWeather();
+  await testFeaturedClubs();
+  await testGuidePosts();
+  await testPopularPeaksWeather();
 
   // 新增测试套件
   await testProfile();
