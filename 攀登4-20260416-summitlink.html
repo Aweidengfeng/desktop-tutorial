@@ -1094,7 +1094,7 @@
           <!-- AMap 未加载时显示占位 -->
           <div x-show="!trackMap" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
             <span class="material-symbols-outlined text-4xl mb-2">map</span>
-            <p class="text-xs">地图加载中…</p>
+            <p class="text-xs" x-text="amapAvailable ? '地图加载中…' : '地图未配置（需设置 AMAP_KEY）'"></p>
           </div>
           <div class="absolute top-2 right-2 flex gap-1.5">
             <button @click="locateMe()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
@@ -1118,7 +1118,7 @@
           </div>
         </div>
         <!-- Track Control Buttons -->
-        <div class="flex gap-3 mb-5">
+        <div class="flex gap-3 mb-3">
           <button x-show="trackRecordingState==='idle'" @click="openNewTrack()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
             <span class="material-symbols-outlined text-xl">play_arrow</span>开始记录
           </button>
@@ -1129,6 +1129,10 @@
             <span class="material-symbols-outlined text-xl">save</span>保存
           </button>
         </div>
+        <label x-show="trackRecordingState==='idle'" class="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-2xl transition-colors mb-5 cursor-pointer">
+          <span class="material-symbols-outlined text-base">upload_file</span>导入GPX轨迹
+          <input type="file" accept=".gpx,.kml" class="hidden" @change="importGpxFile($event)">
+        </label>
         <!-- Track History -->
         <h3 class="font-display font-bold text-white mb-3">我的历史轨迹</h3>
         <div class="space-y-3">
@@ -2936,7 +2940,7 @@
               </div>
               <div class="flex gap-3">
                 <button @click="showGearDetail=false;contactSeller(selectedGear);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">联系卖家</button>
-                <button @click="showGearDetail=false;openPayment(selectedGear ? selectedGear.price : 0)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">立即购买</button>
+                <button @click="showGearDetail=false;openGearPurchase(selectedGear)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">立即购买</button>
               </div>
             </div>
           </div>
@@ -3040,6 +3044,56 @@
                 <span class="material-symbols-outlined text-sm">workspace_premium</span>电子护照
               </button>
             </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Gear Purchase Modal -->
+    <div x-show="showGearPurchase"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[110] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showGearPurchase=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display font-bold text-lg text-white">确认购买</h3>
+          <button @click="showGearPurchase=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <template x-if="gearPurchaseItem">
+          <div>
+            <div class="flex items-center gap-3 bg-slate-800 rounded-xl p-3 mb-4">
+              <img :src="gearPurchaseItem.image || 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400'" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-semibold text-sm truncate" x-text="gearPurchaseItem.name"></p>
+                <p class="text-slate-400 text-xs" x-text="gearPurchaseItem.brand"></p>
+                <p class="text-primary-light font-bold" x-text="'¥' + (gearPurchaseItem.price || 0).toLocaleString('zh-CN')"></p>
+              </div>
+            </div>
+            <div class="space-y-3 mb-4">
+              <div>
+                <label class="text-slate-400 text-xs mb-1 block">收货姓名</label>
+                <input x-model="gearPurchaseForm.receiver_name" type="text" placeholder="请输入收货人姓名" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none placeholder-slate-500">
+              </div>
+              <div>
+                <label class="text-slate-400 text-xs mb-1 block">联系电话</label>
+                <input x-model="gearPurchaseForm.receiver_phone" type="tel" placeholder="请输入联系电话" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none placeholder-slate-500">
+              </div>
+              <div>
+                <label class="text-slate-400 text-xs mb-1 block">收货地址</label>
+                <input x-model="gearPurchaseForm.address" type="text" placeholder="请输入详细收货地址" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none placeholder-slate-500">
+              </div>
+            </div>
+            <p class="text-slate-400 text-xs mb-4 text-center">支付方式：微信支付 / 支付宝（演示模式）</p>
+            <button @click="submitGearPurchase()" :disabled="gearPurchaseLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors disabled:opacity-50">
+              <span x-text="gearPurchaseLoading ? '处理中...' : '立即支付 ¥' + (gearPurchaseItem.price || 0).toLocaleString('zh-CN')"></span>
+            </button>
           </div>
         </template>
       </div>
@@ -3723,7 +3777,15 @@
           <!-- Guide owner: commercial apply -->
           <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
             <div class="pb-6 pt-2">
-              <button @click="openGuideCommercialApply(currentGuideProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏅 申请商业资质认证</button>
+              <template x-if="currentGuideProfile.commercial_verified">
+                <div class="w-full flex items-center justify-center gap-2 bg-emerald-900/40 border border-emerald-500/30 text-emerald-400 font-bold py-2.5 rounded-xl text-sm">✅ 商业资质已认证，可发布收费服务</div>
+              </template>
+              <template x-if="!currentGuideProfile.commercial_verified && currentGuideProfile.commercial_status === 'pending'">
+                <div class="w-full flex items-center justify-center gap-2 bg-amber-900/30 border border-amber-500/30 text-amber-400 font-bold py-2.5 rounded-xl text-sm">⏳ 商业资质审核中，请耐心等待</div>
+              </template>
+              <template x-if="!currentGuideProfile.commercial_verified && currentGuideProfile.commercial_status !== 'pending'">
+                <button @click="openGuideCommercialApply(currentGuideProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏅 申请商业资质认证</button>
+              </template>
             </div>
           </template>
           <div x-show="!currentUser || !currentGuideProfile || currentGuideProfile.user_id !== currentUser.id" class="pb-6"></div>
@@ -3857,7 +3919,15 @@
               <div class="space-y-2">
                 <button @click="showPublishActivity=true" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">+ 发布活动/套餐</button>
                 <button @click="loadClubActivitiesMgmt(currentClubProfile.id)" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">📋 活动列表与报名管理</button>
-                <button @click="openClubCommercialApply(currentClubProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏢 申请商业资质认证</button>
+                <template x-if="currentClubProfile.commercial_verified">
+                  <div class="w-full flex items-center justify-center gap-2 bg-emerald-900/40 border border-emerald-500/30 text-emerald-400 font-bold py-2.5 rounded-xl text-sm">✅ 商业资质已认证，可发布收费活动</div>
+                </template>
+                <template x-if="!currentClubProfile.commercial_verified && currentClubProfile.commercial_status === 'pending'">
+                  <div class="w-full flex items-center justify-center gap-2 bg-amber-900/30 border border-amber-500/30 text-amber-400 font-bold py-2.5 rounded-xl text-sm">⏳ 商业资质审核中，请耐心等待</div>
+                </template>
+                <template x-if="!currentClubProfile.commercial_verified && currentClubProfile.commercial_status !== 'pending'">
+                  <button @click="openClubCommercialApply(currentClubProfile.id)" class="w-full bg-blue-700/50 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm">🏢 申请商业资质认证</button>
+                </template>
               </div>
             </div>
           </template>
@@ -4915,6 +4985,7 @@
       <button @click="myOrdersSubTab='expedition'" :class="myOrdersSubTab==='expedition'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">攀峰订单</button>
       <button @click="myOrdersSubTab='activity';if(!activityOrders.length)loadActivityOrders()" :class="myOrdersSubTab==='activity'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">俱乐部活动</button>
       <button @click="myOrdersSubTab='guide-service';if(!guideServiceOrders.length)loadGuideServiceOrders()" :class="myOrdersSubTab==='guide-service'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">向导服务</button>
+      <button @click="myOrdersSubTab='gear';if(!gearOrders.length)loadGearOrders()" :class="myOrdersSubTab==='gear'?'bg-primary text-white':'glass text-slate-300'" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors">装备订单</button>
     </div>
     <!-- Status filters (expedition only) -->
     <div x-show="myOrdersSubTab==='expedition'" class="flex gap-2 px-4 py-3 overflow-x-auto scroll-hide flex-shrink-0">
@@ -5057,6 +5128,43 @@
             </div>
           </div>
         </template>
+      </div>
+      <div x-show="myOrdersSubTab==='gear'">
+        <div x-show="gearOrdersLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!gearOrdersLoading && gearOrders.length===0" class="text-center py-8 text-slate-500">
+          <span class="material-symbols-outlined text-4xl text-slate-600">backpack</span>
+          <p class="mt-2 text-sm">暂无装备订单</p>
+        </div>
+        <div class="space-y-3 px-4 py-3">
+          <template x-for="order in gearOrders" :key="order.id">
+            <div class="glass rounded-2xl p-4">
+              <div class="flex items-start gap-3 mb-3">
+                <img :src="order.gear_image || 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400'" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                  <p class="text-white font-semibold text-sm truncate" x-text="order.gear_name || order.gear_name_db"></p>
+                  <p class="text-slate-400 text-xs mt-0.5" x-text="'订单号：' + order.order_no"></p>
+                  <p class="text-primary-light font-bold text-sm mt-0.5" x-text="'¥' + (order.amount || 0).toLocaleString('zh-CN')"></p>
+                </div>
+                <span class="text-xs px-2 py-1 rounded-full flex-shrink-0"
+                      :class="{
+                        'bg-amber-900/30 text-amber-400': order.shipping_status === 'pending',
+                        'bg-blue-900/30 text-blue-400': order.shipping_status === 'shipped',
+                        'bg-emerald-900/30 text-emerald-400': order.shipping_status === 'delivered' || order.status === 'completed',
+                      }"
+                      x-text="order.shipping_status === 'pending' ? '待发货' : order.shipping_status === 'shipped' ? '已发货' : '已完成'">
+                </span>
+              </div>
+              <!-- 快递信息 -->
+              <div x-show="order.tracking_number" class="bg-slate-800/50 rounded-xl p-3 mb-3">
+                <p class="text-slate-400 text-xs mb-1">快递信息</p>
+                <p class="text-white text-sm font-semibold" x-text="(order.shipping_carrier || '快递') + '：' + order.tracking_number"></p>
+                <p x-show="order.shipped_at" class="text-slate-400 text-xs mt-0.5" x-text="'发货时间：' + (order.shipped_at ? order.shipped_at.slice(0,10) : '')"></p>
+              </div>
+              <!-- 确认收货 -->
+              <button x-show="order.shipping_status === 'shipped'" @click="confirmGearDelivery(order)" class="w-full bg-emerald-700/60 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-semibold transition-colors">确认收货</button>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -5299,10 +5407,17 @@ function alpineLink() {
     lightboxUrl: '',
     showLightbox: false,
     trackMap: null,
+    amapAvailable: typeof AMap !== 'undefined',
     recordingMap: null,
     selectedConversation: null,
     showChatDetail: false,
     showGearPublish: false,
+    showGearPurchase: false,
+    gearPurchaseItem: null,
+    gearPurchaseForm: { receiver_name: '', receiver_phone: '', address: '' },
+    gearPurchaseLoading: false,
+    gearOrders: [],
+    gearOrdersLoading: false,
     newGear: { name: '', brand: '', price: '', condition: 'good', description: '', images: [] },
     showTeamDetail: false,
     selectedTeam: null,
@@ -6272,6 +6387,84 @@ function alpineLink() {
     },
 
     // Track Recording with AMap
+    async importGpxFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!this.requireAuth()) return;
+      try {
+        const text = await file.text();
+        let points = [];
+        if (file.name.toLowerCase().endsWith('.gpx')) {
+          // Parse GPX
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(text, 'application/xml');
+          const trkpts = doc.querySelectorAll('trkpt');
+          const baseTs = Date.now();
+          trkpts.forEach((pt, idx) => {
+            const lat = parseFloat(pt.getAttribute('lat'));
+            const lng = parseFloat(pt.getAttribute('lon'));
+            const eleEl = pt.querySelector('ele');
+            const timeEl = pt.querySelector('time');
+            const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
+            const ts = timeEl ? new Date(timeEl.textContent).getTime() : baseTs + idx * 1000;
+            if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts });
+          });
+        } else if (file.name.toLowerCase().endsWith('.kml')) {
+          // Parse KML coordinates
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(text, 'application/xml');
+          const coordsEl = doc.querySelector('coordinates');
+          if (coordsEl) {
+            const coordStr = coordsEl.textContent.trim();
+            const kmlBaseTs = Date.now();
+            coordStr.split(/\s+/).forEach((c, idx) => {
+              const parts = c.split(',');
+              if (parts.length >= 2) {
+                const lng = parseFloat(parts[0]);
+                const lat = parseFloat(parts[1]);
+                const ele = parts[2] ? parseFloat(parts[2]) : 0;
+                if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts: kmlBaseTs + idx * 1000 });
+              }
+            });
+          }
+        }
+        if (points.length < 2) { this.showToast('轨迹文件需要至少2个有效坐标点，请检查文件格式', 'error'); return; }
+        // Calculate stats
+        let totalDist = 0;
+        let elevGain = 0;
+        let maxEle = points[0].ele || 0;
+        for (let i = 1; i < points.length; i++) {
+          const p1 = points[i-1], p2 = points[i];
+          const R = 6371;
+          const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+          const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+          totalDist += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          if (p2.ele > p1.ele) elevGain += p2.ele - p1.ele;
+          if (p2.ele > maxEle) maxEle = p2.ele;
+        }
+        const trackName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const body = {
+          name: trackName,
+          date: new Date().toISOString().slice(0, 10),
+          distance_km: Math.round(totalDist * 100) / 100,
+          elevation_gain: Math.round(elevGain),
+          max_elevation: Math.round(maxEle),
+          points,
+          is_public: 0,
+        };
+        const res = await fetch('/api/tracks', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('GPX轨迹导入成功！共 ' + points.length + ' 个轨迹点 📍');
+          this.loadTracks();
+          event.target.value = '';
+        } else { this.showToast(data.error || '导入失败', 'error'); }
+      } catch(e) { this.showToast('文件解析失败：' + e.message, 'error'); event.target.value = ''; }
+    },
     startTrackRecording() {
       this.initTrackMap();
       this.trackRecordingState = 'recording';
@@ -6984,6 +7177,56 @@ function alpineLink() {
       return '¥' + price.toLocaleString('zh-CN');
     },
     openPayment(amount) { this.paymentAmount = amount; this.showPayment = true; },
+    openGearPurchase(item) {
+      if (!this.requireAuth()) return;
+      this.gearPurchaseItem = item;
+      this.gearPurchaseForm = { receiver_name: this.userProfile?.name || '', receiver_phone: '', address: '' };
+      this.showGearPurchase = true;
+    },
+    async submitGearPurchase() {
+      if (!this.gearPurchaseItem) return;
+      if (!this.gearPurchaseForm.receiver_name || !this.gearPurchaseForm.receiver_phone || !this.gearPurchaseForm.address) {
+        this.showToast('请填写完整的收货人姓名、电话和地址', 'error'); return;
+      }
+      this.gearPurchaseLoading = true;
+      try {
+        const res = await fetch('/api/gear/' + this.gearPurchaseItem.id + '/order', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.gearPurchaseForm)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showGearPurchase = false;
+          this.showToast('购买成功！订单号：' + data.orderNo + '，等待卖家发货 📦');
+          this.gearOrders = [];
+        } else { this.showToast(data.error || '购买失败', 'error'); }
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      this.gearPurchaseLoading = false;
+    },
+    async loadGearOrders() {
+      if (!this.authToken) return;
+      this.gearOrdersLoading = true;
+      try {
+        const res = await fetch('/api/gear/orders/mine', { headers: this.getAuthHeaders() });
+        if (res.ok) this.gearOrders = await res.json();
+      } catch(e) {}
+      this.gearOrdersLoading = false;
+    },
+    async confirmGearDelivery(order) {
+      try {
+        const res = await fetch('/api/gear/orders/' + order.id + '/confirm', {
+          method: 'POST', headers: this.getAuthHeaders()
+        });
+        if (res.ok) {
+          this.showToast('已确认收货！');
+          order.shipping_status = 'delivered';
+          order.status = 'completed';
+        } else {
+          const d = await res.json();
+          this.showToast(d.error || '操作失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
     async confirmPayment() {
       try {
         const res = await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
@@ -7575,7 +7818,16 @@ function alpineLink() {
           fetch('/api/clubs/' + clubId + '/photos').then(r => r.ok ? r.json() : []),
           fetch('/api/clubs/' + clubId + '/guides').then(r => r.ok ? r.json() : []),
         ]);
-        if (!club) { this.showToast('俱乐部信息获取失败', 'error'); return; }
+        if (!club) {
+          // 尝试从本地 featuredClubs 获取 mock 数据
+          const local = this.featuredClubs.find(c => String(c.id) === String(clubId));
+          if (local) {
+            this.currentClubProfile = { ...local, activities: [], members_list: [], reviews: [], guides_list: [], photos: [], posts: [] };
+            this.showClubProfileModal = true;
+            return;
+          }
+          this.showToast('俱乐部信息获取失败', 'error'); return;
+        }
         this.currentClubProfile = { ...club, activities, members_list: members, reviews_list: reviews, posts, photos, guides_list: guidesList };
         this.clubActivityTab = 'activity';
         this.clubReviewForm = { rating: 5, content: '' };

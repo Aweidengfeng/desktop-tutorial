@@ -144,7 +144,8 @@ router.get('/:id/export', exportLimiter, (req, res) => {
         const lat = p.lat || p[1] || 0;
         const lon = p.lng || p.lon || p[0] || 0;
         const ele = p.alt || p.ele || p[2] || 0;
-        const time = p.time ? `<time>${new Date(p.time).toISOString()}</time>` : '';
+        const timeVal = p.ts || p.time;
+        const time = timeVal ? `<time>${new Date(timeVal).toISOString()}</time>` : '';
         return `    <trkpt lat="${lat}" lon="${lon}"><ele>${ele}</ele>${time}</trkpt>`;
       }).join('\n');
       const gpx = `<?xml version="1.0" encoding="UTF-8"?>
