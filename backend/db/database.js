@@ -1796,4 +1796,7 @@ db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").r
   }
 }
 
+// ── 数据修正：将内置向导的 'available' 状态修正为 'approved' ──────────────
+db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").run();
+
 module.exports = db;
