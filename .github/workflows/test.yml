@@ -65,6 +65,8 @@ jobs:
       # ── 运行 Playwright E2E 测试 ─────────────────────────────────────────────
       - name: Run Playwright E2E tests
         run: npm run test:e2e
+        env:
+          BASE_URL: http://localhost:8080
 
       # ── 上传测试报告（无论成功失败都保留）──────────────────────────────────
       - name: Upload Playwright report

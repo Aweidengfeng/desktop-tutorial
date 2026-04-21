@@ -332,7 +332,7 @@ function resolveParams(location, lat, lon) {
 // GET /api/weather?location=珠峰大本营
 // GET /api/weather?lat=28.0&lon=86.85
 // GET /api/weather (no params) → returns default empty weather info (200)
-router.get('/', async (req, res) => {
+router.get('/', summitWindowLimiter, async (req, res) => {
   try {
     const { location, lat, lon } = req.query;
     const resolved = resolveParams(location, lat, lon);

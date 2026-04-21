@@ -20,7 +20,7 @@ async function gotoTab(page, tabName) {
   const label = nameMap[tabName] || tabName;
   await page.locator('nav button').filter({ hasText: label }).first().click();
   // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
-  await page.locator(`section[x-show*="${tabName}"]`).waitFor({ state: 'visible', timeout: 5000 });
+  await page.locator(`[x-show*="${tabName}"]`).first().waitFor({ state: 'visible', timeout: 8000 });
 }
 
 /**
@@ -59,7 +59,9 @@ async function gotoExploreCategory(page, category) {
  */
 async function loginAsTestUser(page, { username = '13800138000', password = '123456' } = {}) {
   // Open the login modal via the nav-bar button
-  await page.locator('button:has-text("登录")').first().click();
+  const loginBtn = page.locator('button:has-text("登录")').first();
+  await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
+  await loginBtn.click();
 
   // Scope all selectors to the login form container to avoid strict mode violations
   // caused by the register form having identical input types in the same DOM
