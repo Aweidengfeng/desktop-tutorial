@@ -57,6 +57,10 @@ router.post('/register', (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
     }
+    const existingUser = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+    if (existingUser) {
+      return res.status(400).json({ error: '手机号已注册' });
+    }
     if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
       return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
     }
