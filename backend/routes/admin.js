@@ -817,7 +817,7 @@ router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, (req,
 });
 
 // GET /api/admin/sos-records — 查看所有SOS救援记录
-router.get('/sos-records', adminAuth, (req, res) => {
+router.get('/sos-records', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { page = 1, limit = 20, status = '' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -858,7 +858,7 @@ router.put('/sos-records/:id/status', adminWriteLimiter, adminAuth, (req, res) =
 });
 
 // GET /api/admin/withdrawals — 提现申请管理
-router.get('/withdrawals', adminAuth, (req, res) => {
+router.get('/withdrawals', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const { status = '', page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);

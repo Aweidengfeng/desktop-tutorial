@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
+
+const payLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '操作过于频繁，请稍后再试' },
+});
 
 // POST /api/pay/create
 router.post('/create', (req, res) => {
@@ -43,7 +52,7 @@ router.get('/status/:orderNo', (req, res) => {
 });
 
 // POST /api/pay/escrow — 资金托管（用户付款后资金进入平台托管）
-router.post('/escrow', (req, res) => {
+router.post('/escrow', payLimiter, (req, res) => {
   try {
     const { order_type, order_id, order_no, total_amount, owner_type, owner_id, commission_rate = 0.15 } = req.body;
     if (!order_type || !order_id || !total_amount) {
@@ -78,7 +87,7 @@ router.post('/escrow', (req, res) => {
 });
 
 // POST /api/pay/settle — 平台结算（确认完成后释放资金给商家/向导）
-router.post('/settle', (req, res) => {
+router.post('/settle', payLimiter, (req, res) => {
   try {
     const { transaction_id } = req.body;
     if (!transaction_id) return res.status(400).json({ error: '缺少 transaction_id' });
@@ -102,7 +111,7 @@ router.post('/settle', (req, res) => {
 });
 
 // POST /api/pay/withdraw — 发起提现申请
-router.post('/withdraw', (req, res) => {
+router.post('/withdraw', payLimiter, (req, res) => {
   try {
     const { owner_type, owner_id, amount, account_type = 'bank', account_info } = req.body;
     if (!owner_type || !owner_id || !amount) return res.status(400).json({ error: '缺少必要参数' });
@@ -131,7 +140,7 @@ router.post('/withdraw', (req, res) => {
 });
 
 // GET /api/pay/transactions — 查询资金流水
-router.get('/transactions', (req, res) => {
+router.get('/transactions', payLimiter, (req, res) => {
   try {
     const { owner_type, owner_id, status } = req.query;
     if (!owner_type || !owner_id) return res.status(400).json({ error: '缺少 owner_type 和 owner_id' });
