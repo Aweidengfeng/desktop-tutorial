@@ -33,7 +33,7 @@ module.exports = defineConfig({
 
   use: {
     // 基础 URL（所有测试的 baseURL）
-    baseURL: 'https://precious-miracle-production.up.railway.app',
+    baseURL: process.env.BASE_URL || (process.env.CI ? 'http://localhost:8080' : 'https://precious-miracle-production.up.railway.app'),
 
     // 浏览器视口大小
     viewport: { width: 1280, height: 720 },

@@ -25,6 +25,7 @@ async function doLogin(page) {
 
   // 找到并点击导航栏登录按钮
   const loginBtn = page.locator('button:has-text("登录")').first();
+  await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
   await loginBtn.click();
 
   // 将所有输入框选择器 scope 到登录表单容器，避免与注册表单的同类型输入框冲突
