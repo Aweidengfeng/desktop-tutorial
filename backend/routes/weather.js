@@ -344,10 +344,10 @@ router.get('/', async (req, res) => {
     if (!apiKey) {
       return res.json({
         location: resolved.locationName,
-        temp: null,
-        wind: null,
-        humidity: null,
-        visibility: null,
+        temp: -10,
+        wind: 25,
+        humidity: 40,
+        visibility: 5.0,
         message: '天气服务暂不可用（未配置 API Key），请稍后再试',
         mock: true,
       });
