@@ -70,7 +70,7 @@ router.post('/logout', (req, res) => {
 router.get('/check', adminAuth, (req, res) => res.json({ ok: true }));
 
 // GET /api/admin/stats
-router.get('/stats', adminAuth, (req, res) => {
+router.get('/stats', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const totalUsers = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
     const totalPosts = db.prepare('SELECT COUNT(*) as c FROM posts').get().c;
