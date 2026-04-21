@@ -1,16 +1,33 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 const { GUIDE_CERT_LEVELS, CLUB_CERT_LEVELS } = require('../utils/certLevels');
 
+const certReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const certWriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: '提交过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // GET /api/certification/levels — 公开接口，返回所有认证等级和年费信息
-router.get('/levels', (req, res) => {
+router.get('/levels', certReadLimiter, (req, res) => {
   res.json({ guide: GUIDE_CERT_LEVELS, club: CLUB_CERT_LEVELS });
 });
 
 // GET /api/certification/guide/status — 查询当前用户向导认证状态（需 auth）
-router.get('/guide/status', auth, (req, res) => {
+router.get('/guide/status', certReadLimiter, auth, (req, res) => {
   try {
     const guide = db.prepare(`
       SELECT id, name, cert_level, cert_expires_at, cert_year_fee, listing_fee_paid,
@@ -39,7 +56,7 @@ router.get('/guide/status', auth, (req, res) => {
 });
 
 // GET /api/certification/club/status — 查询当前用户俱乐部认证状态（需 auth）
-router.get('/club/status', auth, (req, res) => {
+router.get('/club/status', certReadLimiter, auth, (req, res) => {
   try {
     const club = db.prepare(`
       SELECT id, name, cert_level, cert_expires_at, cert_year_fee, listing_fee_paid,
@@ -68,7 +85,7 @@ router.get('/club/status', auth, (req, res) => {
 });
 
 // POST /api/certification/guide/apply — 提交向导认证申请
-router.post('/guide/apply', auth, (req, res) => {
+router.post('/guide/apply', certWriteLimiter, auth, (req, res) => {
   try {
     const { certLevel = 'basic', name, cert, specialty, languages, dayRate, region } = req.body;
     if (!name) return res.status(400).json({ error: '姓名不能为空' });
@@ -105,7 +122,7 @@ router.post('/guide/apply', auth, (req, res) => {
 });
 
 // POST /api/certification/club/apply — 提交俱乐部认证申请
-router.post('/club/apply', auth, (req, res) => {
+router.post('/club/apply', certWriteLimiter, auth, (req, res) => {
   try {
     const { certLevel = 'standard', name, region, specialty, type, contact, wechat, website, certUrl, description } = req.body;
     if (!name) return res.status(400).json({ error: '俱乐部名称不能为空' });
