@@ -48,9 +48,6 @@ function safeUser(user) {
 router.post('/register', (req, res) => {
   try {
     const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
-    if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
-      return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
-    }
     if (!name || !phone || !password) {
       return res.status(400).json({ error: '请填写姓名、手机号和密码' });
     }
@@ -59,6 +56,9 @@ router.post('/register', (req, res) => {
     }
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
+    }
+    if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
+      return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
     }
     const username = '@' + name.toLowerCase().replace(/\s+/g, '') + '_' + phone.slice(-4);
     const avatar = 'https://i.pravatar.cc/150?u=' + phone;
