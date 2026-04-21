@@ -48,11 +48,26 @@ router.post('/login', adminLoginLimiter, (req, res) => {
       return res.status(401).json({ error: '用户名或密码错误' });
     }
     const token = jwt.sign({ isAdmin: true, username }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token });
+    res.cookie('adminToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
+
+// POST /api/admin/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('adminToken');
+  res.json({ success: true });
+});
+
+// GET /api/admin/check
+router.get('/check', adminAuth, (req, res) => res.json({ ok: true }));
 
 // GET /api/admin/stats
 router.get('/stats', adminAuth, (req, res) => {

@@ -278,6 +278,470 @@ async function testWeather() {
   });
 }
 
+// ─── 用户资料接口测试 ────────────────────────────────────────────────────────
+
+async function testProfile() {
+  console.log('\n👤 用户资料接口测试');
+
+  await runTest('PUT /api/auth/profile - 更新用户资料（需登录）', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/auth/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ name: '测试用户' }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.name, '响应中缺少 name 字段');
+  });
+
+  await runTest('GET /api/auth/me - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/me`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/auth/me - 无效 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { Authorization: 'Bearer invalid_token_xyz' },
+    });
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/auth/register - 重复手机号返回 400', async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '重复用户', phone: '13800138000', password: '123456' }),
+    });
+    assert(res.status === 400, `预期 400，实际 ${res.status}`);
+    const data = await res.json();
+    assert(data.error, '响应中缺少 error 字段');
+  });
+
+  await runTest('POST /api/auth/register - 无效手机号格式返回 400', async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '测试用户', phone: '12345', password: '123456' }),
+    });
+    assert(res.status === 400, `预期 400，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/auth/register - 密码太短返回 400', async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '测试用户', phone: '13912345678', password: '123' }),
+    });
+    assert(res.status === 400, `预期 400，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/auth/login - 无效手机号格式返回 400', async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '12345', password: '123456' }),
+    });
+    assert(res.status === 400, `预期 400，实际 ${res.status}`);
+  });
+}
+
+// ─── 山峰详情接口测试 ────────────────────────────────────────────────────────
+
+async function testPeakDetail() {
+  console.log('\n🏔️  山峰详情接口测试');
+
+  await runTest('GET /api/peaks/:id - 返回山峰详情', async () => {
+    const res = await fetch(`${BASE_URL}/api/peaks/1`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.id, '山峰缺少 id 字段');
+    assert(data.name, '山峰缺少 name 字段');
+    assert(data.altitude, '山峰缺少 altitude 字段');
+  });
+
+  await runTest('GET /api/peaks/:id - 不存在的山峰返回 404', async () => {
+    const res = await fetch(`${BASE_URL}/api/peaks/999999`);
+    assert(res.status === 404, `预期 404，实际 ${res.status}`);
+    const data = await res.json();
+    assert(data.error, '响应中缺少 error 字段');
+  });
+
+  await runTest('GET /api/peaks?type=commercial - 过滤商业攀登山峰', async () => {
+    const res = await fetch(`${BASE_URL}/api/peaks?type=commercial`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+  });
+}
+
+// ─── 向导申请测试 ────────────────────────────────────────────────────────────
+
+async function testGuideApply() {
+  console.log('\n🧑‍🦯 向导申请接口测试');
+
+  await runTest('POST /api/guides/apply - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/guides/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '测试向导', specialty: '高山攀登' }),
+    });
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/guides/apply - 提交向导申请（需登录）', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/guides/apply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        name: '测试向导',
+        cert: 'IFMGA-0001',
+        specialty: '高山攀登',
+        languages: '中文,英文',
+        dayRate: 800,
+        region: '西藏',
+      }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.success === true, '申请响应 success 不为 true');
+  });
+}
+
+// ─── 队伍创建测试 ────────────────────────────────────────────────────────────
+
+async function testTeamCreate() {
+  console.log('\n👥 队伍创建接口测试');
+
+  await runTest('POST /api/teams - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/teams`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '测试队伍', peak: '珠穆朗玛峰', date: '2025-05-01' }),
+    });
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/teams - 创建队伍（需登录）', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/teams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        name: `E2E测试队伍 ${Date.now()}`,
+        peak: '珠穆朗玛峰',
+        date: '2025-05-01',
+        totalSpots: 6,
+        level: '高级',
+        description: '自动化测试创建',
+      }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.id, '队伍缺少 id 字段');
+    assert(data.name, '队伍缺少 name 字段');
+  });
+
+  await runTest('POST /api/teams/:id/join - 加入不存在的队伍返回 404', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/teams/999999/join`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    assert(res.status === 404, `预期 404，实际 ${res.status}`);
+  });
+}
+
+// ─── 装备发布测试 ────────────────────────────────────────────────────────────
+
+async function testGearCreate() {
+  console.log('\n🎒 装备发布接口测试');
+
+  await runTest('POST /api/gear - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/gear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '测试装备', price: 100 }),
+    });
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/gear - 发布装备（需登录）', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/gear`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        name: `测试装备 ${Date.now()}`,
+        brand: 'TestBrand',
+        price: 299,
+        condition: '9成新',
+        description: '自动化测试装备',
+        mode: 'buy',
+        category: '登山靴',
+      }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.id, '装备缺少 id 字段');
+    assert(data.name, '装备缺少 name 字段');
+  });
+
+  await runTest('GET /api/gear?category=登山靴 - 按分类过滤', async () => {
+    const res = await fetch(`${BASE_URL}/api/gear?category=${encodeURIComponent('登山靴')}`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+  });
+}
+
+// ─── 帖子错误用例测试 ────────────────────────────────────────────────────────
+
+async function testPostsErrors() {
+  console.log('\n📝 帖子错误用例测试');
+
+  await runTest('POST /api/posts - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '未授权发帖' }),
+    });
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/posts/:id/like - 点赞不存在帖子返回 404', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/posts/999999/like`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    assert(res.status === 404, `预期 404，实际 ${res.status}`);
+  });
+}
+
+// ─── 轨迹接口测试（完全未测试）────────────────────────────────────────────────
+
+async function testTracks() {
+  console.log('\n🗺️  轨迹接口测试');
+
+  await runTest('GET /api/tracks/my - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/tracks/my`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/tracks/my - 返回当前用户轨迹列表（需登录）', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/tracks/my`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(Array.isArray(data), '响应不是数组');
+  });
+
+  await runTest('POST /api/tracks - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/tracks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '未授权轨迹' }),
+    });
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/tracks - 上传轨迹（需登录）', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/tracks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        name: `测试轨迹 ${Date.now()}`,
+        date: '2025-04-01',
+        distance: 12.5,
+        elevation: 800,
+        duration: 360,
+      }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.id, '轨迹缺少 id 字段');
+    assert(data.name, '轨迹缺少 name 字段');
+  });
+}
+
+// ─── 支付接口测试（完全未测试）──────────────────────────────────────────────
+
+let testOrderNo = null;
+
+async function testPay() {
+  console.log('\n💳 支付接口测试');
+
+  await runTest('POST /api/pay/create - 创建订单', async () => {
+    const res = await fetch(`${BASE_URL}/api/pay/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: 9800, method: 'alipay' }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.success === true, '订单创建响应 success 不为 true');
+    assert(data.orderNo, '响应中缺少 orderNo 字段');
+    assert(typeof data.orderNo === 'string', 'orderNo 不是字符串');
+    testOrderNo = data.orderNo;
+  });
+
+  await runTest('GET /api/pay/status/:orderNo - 查询订单状态', async () => {
+    assert(testOrderNo, '需要先创建订单');
+    const res = await fetch(`${BASE_URL}/api/pay/status/${testOrderNo}`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.orderNo === testOrderNo, 'orderNo 不匹配');
+    assert(typeof data.amount === 'number', '响应中缺少 amount 字段');
+    assert(data.status, '响应中缺少 status 字段');
+  });
+
+  await runTest('POST /api/pay/create - wechat 支付方式', async () => {
+    const res = await fetch(`${BASE_URL}/api/pay/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: 4500, method: 'wechat' }),
+    });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.success === true, '订单创建响应 success 不为 true');
+    assert(data.orderNo, '响应中缺少 orderNo 字段');
+  });
+
+  await runTest('GET /api/pay/status/:orderNo - 不存在的订单返回 404', async () => {
+    const res = await fetch(`${BASE_URL}/api/pay/status/SL_NOT_EXISTS_000000`);
+    assert(res.status === 404, `预期 404，实际 ${res.status}`);
+    const data = await res.json();
+    assert(data.error, '响应中缺少 error 字段');
+  });
+}
+
+// ─── 天气详细测试 ────────────────────────────────────────────────────────────
+
+async function testWeatherDetail() {
+  console.log('\n🌤️  天气详细接口测试');
+
+  await runTest('GET /api/weather?location=珠峰大本营 - 返回已知营地天气', async () => {
+    const res = await fetch(`${BASE_URL}/api/weather?location=${encodeURIComponent('珠峰大本营')}`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.location === '珠峰大本营', `location 不匹配，实际: ${data.location}`);
+    assert(typeof data.temp === 'number', '响应中缺少 temp 字段');
+    assert(typeof data.wind === 'number', '响应中缺少 wind 字段');
+    assert(typeof data.humidity === 'number', '响应中缺少 humidity 字段');
+    assert(typeof data.visibility === 'number', '响应中缺少 visibility 字段');
+  });
+
+  await runTest('GET /api/weather?location=K2大本营 - 返回已知营地天气', async () => {
+    const res = await fetch(`${BASE_URL}/api/weather?location=${encodeURIComponent('K2大本营')}`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.location === 'K2大本营', `location 不匹配，实际: ${data.location}`);
+    assert(typeof data.temp === 'number', '响应中缺少 temp 字段');
+  });
+
+  await runTest('GET /api/weather?location=未知山峰 - 返回默认天气数据', async () => {
+    const res = await fetch(`${BASE_URL}/api/weather?location=${encodeURIComponent('未知山峰')}`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data !== null && data !== undefined, '天气数据为空');
+    assert(typeof data.temp === 'number', '默认天气数据缺少 temp 字段');
+    assert(typeof data.wind === 'number', '默认天气数据缺少 wind 字段');
+  });
+
+  await runTest('GET /api/weather - 无 location 参数返回默认数据', async () => {
+    const res = await fetch(`${BASE_URL}/api/weather`);
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data !== null && data !== undefined, '天气数据为空');
+  });
+}
+
+// ─── 管理后台接口测试 ────────────────────────────────────────────────────────
+
+async function testAdmin() {
+  console.log('\n🔐 管理后台接口测试');
+
+  await runTest('POST /api/admin/login - 错误凭据返回 401 或 500', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: 'wrong_password_xyz' }),
+    });
+    // 若 ADMIN_PASSWORD 未配置则返回 500，否则凭据错误返回 401
+    assert(
+      res.status === 401 || res.status === 500,
+      `预期 401 或 500，实际 ${res.status}`
+    );
+  });
+
+  await runTest('GET /api/admin/check - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/check`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/admin/stats - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/stats`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/admin/users - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/users`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/admin/posts - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/posts`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/admin/guides - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/guides`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('GET /api/admin/orders - 无 Token 返回 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/orders`);
+    assert(res.status === 401, `预期 401，实际 ${res.status}`);
+  });
+
+  await runTest('POST /api/admin/logout - 注销成功', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/logout`, { method: 'POST' });
+    assert(res.ok, `HTTP ${res.status}`);
+    const data = await res.json();
+    assert(data.success === true, '注销响应 success 不为 true');
+  });
+
+  await runTest('GET /api/admin/check - 使用普通用户 Token 返回 403', async () => {
+    assert(authToken, '需要先登录获取 token');
+    const res = await fetch(`${BASE_URL}/api/admin/check`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    // 普通用户 token 不含 isAdmin，应返回 403
+    assert(res.status === 403, `预期 403，实际 ${res.status}`);
+  });
+}
+
+
 // ─── 新增：精选俱乐部接口测试 ────────────────────────────────────────────────
 
 async function testFeaturedClubs() {
@@ -384,6 +848,7 @@ async function testPopularPeaksWeather() {
   });
 }
 
+
 // ─── 主函数 ──────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -403,6 +868,18 @@ async function main() {
   await testFeaturedClubs();
   await testGuidePosts();
   await testPopularPeaksWeather();
+
+  // 新增测试套件
+  await testProfile();
+  await testPeakDetail();
+  await testGuideApply();
+  await testTeamCreate();
+  await testGearCreate();
+  await testPostsErrors();
+  await testTracks();
+  await testPay();
+  await testWeatherDetail();
+  await testAdmin();
 
   // 输出汇总
   console.log('\n' + '═'.repeat(50));
