@@ -1707,7 +1707,7 @@ CREATE TABLE IF NOT EXISTS gear_orders (
   if (guideSeed.cnt === 0) {
     const insertBuiltinGuide = db.prepare(`
       INSERT OR IGNORE INTO guides (name, avatar, flag, nationality, rating, reviews, specialty, day_rate, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'available')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved')
     `);
     insertBuiltinGuide.run('扎西旺堆', 'https://i.pravatar.cc/150?u=guide1', '🇨🇳', '中国', 4.9, 87, '珠峰/洛子峰', 3500);
     insertBuiltinGuide.run('Ang Dorji', 'https://i.pravatar.cc/150?u=guide2', '🇳🇵', '尼泊尔', 4.8, 143, 'K2/南迦帕尔巴特', 4200);
@@ -1792,5 +1792,8 @@ CREATE TABLE IF NOT EXISTS gear_orders (
     console.log('✅ 内置队伍数据填充完成');
   }
 }
+
+// ── 数据修正：将内置向导的 'available' 状态修正为 'approved' ──────────────
+db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").run();
 
 module.exports = db;
