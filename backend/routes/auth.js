@@ -25,6 +25,12 @@ const loginLimiter = rateLimit({
   message: { error: '登录尝试次数过多，请15分钟后再试' },
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { error: '注册请求过于频繁，请稍后再试' },
+});
+
 function makeToken(id) {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
 }
@@ -45,7 +51,7 @@ function safeUser(user) {
 }
 
 // POST /api/auth/register
-router.post('/register', (req, res) => {
+router.post('/register', registerLimiter, (req, res) => {
   try {
     const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
     if (!name || !phone || !password) {
@@ -56,6 +62,10 @@ router.post('/register', (req, res) => {
     }
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
+    }
+    const existingUser = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+    if (existingUser) {
+      return res.status(400).json({ error: '手机号已注册' });
     }
     if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
       return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
