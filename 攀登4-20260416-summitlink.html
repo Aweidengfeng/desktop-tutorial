@@ -6426,7 +6426,7 @@ function alpineLink() {
             });
           }
         }
-        if (points.length < 2) { this.showToast('无法解析轨迹文件，请检查格式', 'error'); return; }
+        if (points.length < 2) { this.showToast('轨迹文件需要至少2个有效坐标点，请检查文件格式', 'error'); return; }
         // Calculate stats
         let totalDist = 0;
         let elevGain = 0;
@@ -6441,7 +6441,7 @@ function alpineLink() {
           if (p2.ele > p1.ele) elevGain += p2.ele - p1.ele;
           if (p2.ele > maxEle) maxEle = p2.ele;
         }
-        const trackName = file.name.replace(/\.(gpx|kml)$/i, '');
+        const trackName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         const body = {
           name: trackName,
           date: new Date().toISOString().slice(0, 10),
@@ -7184,7 +7184,7 @@ function alpineLink() {
     async submitGearPurchase() {
       if (!this.gearPurchaseItem) return;
       if (!this.gearPurchaseForm.receiver_name || !this.gearPurchaseForm.receiver_phone || !this.gearPurchaseForm.address) {
-        this.showToast('请填写收货信息', 'error'); return;
+        this.showToast('请填写完整的收货人姓名、电话和地址', 'error'); return;
       }
       this.gearPurchaseLoading = true;
       try {
