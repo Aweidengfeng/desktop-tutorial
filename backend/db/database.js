@@ -1799,4 +1799,60 @@ db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").r
 // ── 数据修正：将内置向导的 'available' 状态修正为 'approved' ──────────────
 db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").run();
 
+// 迁移：sos_records 表补充 status 字段
+const existingSosCols = db.pragma('table_info(sos_records)').map(c => c.name);
+if (!existingSosCols.includes('status')) {
+  db.exec("ALTER TABLE sos_records ADD COLUMN status TEXT DEFAULT 'pending'");
+}
+
+// 新增表：结算账户、提现申请、平台资金流水
+db.exec(`
+CREATE TABLE IF NOT EXISTS settlement_accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_type TEXT NOT NULL,
+  owner_id INTEGER NOT NULL,
+  bank_name TEXT,
+  bank_account TEXT,
+  bank_account_name TEXT,
+  alipay TEXT,
+  wechat_pay TEXT,
+  is_verified INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(owner_type, owner_id)
+);
+
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_type TEXT NOT NULL,
+  owner_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  fee REAL DEFAULT 0,
+  actual_amount REAL NOT NULL,
+  account_type TEXT DEFAULT 'bank',
+  account_info TEXT,
+  status TEXT DEFAULT 'pending',
+  reject_reason TEXT,
+  processed_at DATETIME,
+  processed_by TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS platform_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_type TEXT NOT NULL,
+  order_id INTEGER NOT NULL,
+  order_no TEXT,
+  user_id INTEGER,
+  owner_type TEXT,
+  owner_id INTEGER,
+  total_amount REAL NOT NULL,
+  platform_fee REAL DEFAULT 0,
+  owner_income REAL DEFAULT 0,
+  commission_rate REAL DEFAULT 0.15,
+  status TEXT DEFAULT 'held',
+  settled_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
 module.exports = db;

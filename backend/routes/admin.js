@@ -70,7 +70,7 @@ router.post('/logout', (req, res) => {
 router.get('/check', adminAuth, (req, res) => res.json({ ok: true }));
 
 // GET /api/admin/stats
-router.get('/stats', adminAuth, (req, res) => {
+router.get('/stats', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const totalUsers = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
     const totalPosts = db.prepare('SELECT COUNT(*) as c FROM posts').get().c;
@@ -90,7 +90,11 @@ router.get('/stats', adminAuth, (req, res) => {
     const pendingBookings = db.prepare(
       "SELECT COUNT(*) as c FROM bookings WHERE status = 'pending'"
     ).get().c;
-    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings });
+    let pendingSos = 0;
+    let pendingWithdrawals = 0;
+    try { pendingSos = db.prepare("SELECT COUNT(*) as c FROM sos_records WHERE status = 'pending'").get().c; } catch(e) {}
+    try { pendingWithdrawals = db.prepare("SELECT COUNT(*) as c FROM withdrawal_requests WHERE status = 'pending'").get().c; } catch(e) {}
+    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings, pendingSos, pendingWithdrawals });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -810,6 +814,97 @@ router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, (req,
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// GET /api/admin/sos-records — 查看所有SOS救援记录
+router.get('/sos-records', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `
+      SELECT s.id, s.user_id, u.name as user_name, u.phone as user_phone,
+             s.location, s.peak_name, s.message, s.status, s.timestamp
+      FROM sos_records s
+      LEFT JOIN users u ON u.id = s.user_id
+    `;
+    const params = [];
+    if (status) { sql += ' WHERE s.status = ?'; params.push(status); }
+    sql += ' ORDER BY s.timestamp DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const records = db.prepare(sql).all(...params);
+    const countSql = status
+      ? 'SELECT COUNT(*) as c FROM sos_records WHERE status = ?'
+      : 'SELECT COUNT(*) as c FROM sos_records';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ records, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/sos-records/:id/status — 更新SOS处理状态
+router.put('/sos-records/:id/status', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['pending', 'processing', 'resolved'].includes(status)) {
+      return res.status(400).json({ error: '无效状态，有效值: pending|processing|resolved' });
+    }
+    const result = db.prepare('UPDATE sos_records SET status = ? WHERE id = ?').run(status, req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: 'SOS记录不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/withdrawals — 提现申请管理
+router.get('/withdrawals', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { status = '', page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = 'SELECT * FROM withdrawal_requests';
+    const params = [];
+    if (status) { sql += ' WHERE status = ?'; params.push(status); }
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const requests = db.prepare(sql).all(...params);
+    const countSql = status ? 'SELECT COUNT(*) as c FROM withdrawal_requests WHERE status = ?' : 'SELECT COUNT(*) as c FROM withdrawal_requests';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ requests, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/withdrawals/:id/approve — 批准提现
+router.put('/withdrawals/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const request = db.prepare('SELECT * FROM withdrawal_requests WHERE id = ?').get(req.params.id);
+    if (!request) return res.status(404).json({ error: '提现申请不存在' });
+    if (request.status !== 'pending') return res.status(400).json({ error: '该申请已处理' });
+    const now = new Date().toISOString();
+    db.prepare('UPDATE withdrawal_requests SET status = ?, processed_at = ?, processed_by = ? WHERE id = ?')
+      .run('approved', now, 'admin', req.params.id);
+    res.json({ success: true, message: `已批准提现 ${request.actual_amount} 元` });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/withdrawals/:id/reject — 拒绝提现
+router.put('/withdrawals/:id/reject', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const request = db.prepare('SELECT * FROM withdrawal_requests WHERE id = ?').get(req.params.id);
+    if (!request) return res.status(404).json({ error: '提现申请不存在' });
+    if (request.status !== 'pending') return res.status(400).json({ error: '该申请已处理' });
+    const now = new Date().toISOString();
+    db.prepare('UPDATE withdrawal_requests SET status = ?, processed_at = ?, processed_by = ?, reject_reason = ? WHERE id = ?')
+      .run('rejected', now, 'admin', reason, req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 module.exports = router;
