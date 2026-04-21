@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const adminAuth = require('../middleware/adminAuth');
 const devOnly = require('../middleware/devOnly');
+const { GUIDE_CERT_LEVELS, CLUB_CERT_LEVELS } = require('../utils/certLevels');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -682,7 +683,14 @@ router.post('/guide-applications/:id/review', adminWriteLimiter, adminAuth, (req
     if (!newStatus) return res.status(400).json({ error: '无效操作' });
     db.prepare('UPDATE guide_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
     if (newStatus === 'approved') {
-      db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ?").run(app.user_id);
+      const certLevel = app.cert_level || 'basic';
+      const levelInfo = GUIDE_CERT_LEVELS[certLevel] || GUIDE_CERT_LEVELS.basic;
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      db.prepare(`
+        UPDATE guides SET status = 'approved', cert_level = ?, cert_expires_at = ?, cert_year_fee = ?
+        WHERE user_id = ?
+      `).run(certLevel, expiresAt.toISOString(), levelInfo.yearFee, app.user_id);
     }
     try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(app.user_id, 'guide_review', '向导申请审核结果', `您的向导申请已${newStatus === 'approved' ? '通过' : newStatus === 'rejected' ? '驳回' : '需要补充材料'}`, '/profile'); } catch(e) {}
     res.json({ success: true });
@@ -700,7 +708,14 @@ router.post('/club-applications/:id/review', adminWriteLimiter, adminAuth, (req,
     if (!newStatus) return res.status(400).json({ error: '无效操作' });
     db.prepare('UPDATE club_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
     if (newStatus === 'approved' && clubApp.club_id) {
-      db.prepare("UPDATE clubs SET verified = 1 WHERE id = ?").run(clubApp.club_id);
+      const certLevel = clubApp.cert_level || 'standard';
+      const levelInfo = CLUB_CERT_LEVELS[certLevel] || CLUB_CERT_LEVELS.standard;
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      db.prepare(`
+        UPDATE clubs SET verified = 1, cert_level = ?, cert_expires_at = ?, cert_year_fee = ?
+        WHERE id = ?
+      `).run(certLevel, expiresAt.toISOString(), levelInfo.yearFee, clubApp.club_id);
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }

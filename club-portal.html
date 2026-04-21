@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>俱乐部工作台 · SummitLink</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body { background: #0f172a; }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+    .glass-dark { background: rgba(0,0,0,0.3); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    [x-cloak] { display: none !important; }
+  </style>
+  <script>
+  (function(){
+    window.onerror = function(msg, src, line, col, err) {
+      if (!window.__sentryInitialized) console.warn('[SummitLink Club Portal] 未捕获错误:', msg, src + ':' + line, err);
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      if (!window.__sentryInitialized) console.warn('[SummitLink Club Portal] 未处理 Promise 拒绝:', e.reason);
+    });
+    if (window.__SENTRY_DSN__) {
+      var s = document.createElement('script');
+      s.src = 'https://browser.sentry-cdn.com/8/bundle.min.js';
+      s.crossOrigin = 'anonymous';
+      s.onload = function() {
+        try {
+          Sentry.init({ dsn: window.__SENTRY_DSN__, tracesSampleRate: 0.1 });
+          window.__sentryInitialized = true;
+        } catch(e) { console.warn('[SummitLink] Sentry 初始化失败:', e); }
+      };
+      document.head.appendChild(s);
+    }
+  })();
+  </script>
+</head>
+<body class="min-h-screen text-white font-sans" x-data="clubPortalApp()" x-cloak x-init="init()">
+
+  <!-- Toast 通知 -->
+  <div class="fixed top-6 right-6 z-50 space-y-2" style="min-width:260px">
+    <template x-for="(t, i) in toasts" :key="i">
+      <div class="glass px-4 py-3 rounded-xl flex items-center gap-3 shadow-lg transition-all"
+           :class="t.type === 'error' ? 'border-red-500/50 bg-red-900/30' : 'border-green-500/50 bg-green-900/30'">
+        <span x-text="t.type === 'error' ? '❌' : '✅'"></span>
+        <span class="text-sm" x-text="t.msg"></span>
+      </div>
+    </template>
+  </div>
+
+  <!-- 冷启动优惠 Banner -->
+  <div x-show="showPromoBanner" class="relative bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-3 text-center text-sm">
+    <span>🎉 <strong>平台冷启动限时优惠</strong>：首批认证俱乐部享受 <strong>6折年费</strong>，且前3个月 <strong>零抽成</strong>。名额有限，先到先得！</span>
+    <button @click="showPromoBanner=false" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">✕</button>
+  </div>
+
+  <!-- 顶部导航 -->
+  <nav class="glass border-b border-white/10 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <a href="/summitlink" class="text-slate-400 hover:text-white transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      </a>
+      <div class="text-xl">🏛️</div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">俱乐部工作台</h1>
+        <p class="text-xs text-slate-400">Club Portal</p>
+      </div>
+    </div>
+    <div x-show="currentUser" class="flex items-center gap-2">
+      <img :src="currentUser?.avatar || 'https://i.pravatar.cc/150?u=club'" class="w-8 h-8 rounded-xl object-cover">
+      <span class="text-sm text-slate-300" x-text="currentUser?.name || ''"></span>
+    </div>
+  </nav>
+
+  <!-- 未登录提示 -->
+  <div x-show="!loading && !currentUser" class="flex items-center justify-center min-h-[60vh] p-8">
+    <div class="glass rounded-2xl p-8 max-w-sm w-full text-center">
+      <div class="text-5xl mb-4">🔐</div>
+      <h2 class="text-xl font-bold mb-2">请先登录</h2>
+      <p class="text-slate-400 text-sm mb-6">访问俱乐部工作台需要登录账户</p>
+      <a href="/summitlink" class="block w-full bg-blue-600 hover:bg-blue-500 rounded-xl py-2.5 font-semibold transition text-center">前往登录</a>
+    </div>
+  </div>
+
+  <!-- 加载中 -->
+  <div x-show="loading" class="flex items-center justify-center min-h-[60vh]">
+    <div class="text-slate-400 text-sm">加载中…</div>
+  </div>
+
+  <!-- 主内容 -->
+  <div x-show="!loading && currentUser" class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- 认证状态卡片 -->
+    <div class="glass rounded-2xl p-6">
+      <div class="flex items-start justify-between mb-4">
+        <h2 class="text-lg font-bold">认证状态</h2>
+        <template x-if="certStatus.certified">
+          <span class="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-semibold">认证有效</span>
+        </template>
+        <template x-if="!certStatus.certified && certStatus.club">
+          <span class="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full font-semibold">审核中</span>
+        </template>
+        <template x-if="!certStatus.certified && !certStatus.club">
+          <span class="text-xs bg-slate-500/20 text-slate-400 px-3 py-1 rounded-full font-semibold">未认证</span>
+        </template>
+      </div>
+
+      <!-- 已认证展示 -->
+      <template x-if="certStatus.certified && certStatus.club">
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl" x-text="certStatus.levelInfo?.badge || '🏛️'"></span>
+            <div>
+              <p class="font-bold text-lg" x-text="certStatus.club.name || '认证俱乐部'"></p>
+              <p class="text-slate-400 text-sm" x-text="certStatus.levelInfo?.label || '标准俱乐部'"></p>
+              <p class="text-slate-400 text-xs" x-text="'到期时间：' + (certStatus.club.cert_expires_at ? new Date(certStatus.club.cert_expires_at).toLocaleDateString('zh-CN') : '永久')"></p>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-4">
+            <div class="glass-dark rounded-xl p-3 text-center">
+              <p class="text-xl font-bold text-green-400" x-text="((1 - (certStatus.levelInfo?.commissionRate || 0.15)) * 100).toFixed(0) + '%'"></p>
+              <p class="text-xs text-slate-400 mt-1">到手比例</p>
+            </div>
+            <div class="glass-dark rounded-xl p-3 text-center">
+              <p class="text-xl font-bold text-blue-400" x-text="'¥' + (certStatus.club.cert_year_fee || 999)"></p>
+              <p class="text-xs text-slate-400 mt-1">年费</p>
+            </div>
+            <div class="glass-dark rounded-xl p-3 text-center">
+              <p class="text-xl font-bold text-orange-400" x-text="certStatus.club.rating || '5.0'"></p>
+              <p class="text-xs text-slate-400 mt-1">评分</p>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 审核中展示 -->
+      <template x-if="!certStatus.certified && certStatus.application && certStatus.application.status === 'pending'">
+        <div class="text-slate-300 text-sm py-2">
+          <p>您的认证申请（<span class="text-yellow-400" x-text="certStatus.application.cert_level"></span> 等级）正在审核中，预计7天内完成。</p>
+        </div>
+      </template>
+
+      <!-- 未认证展示 -->
+      <template x-if="!certStatus.certified && (!certStatus.application || certStatus.application.status === 'rejected')">
+        <div class="text-slate-400 text-sm py-2">
+          <p>您尚未完成俱乐部认证，请选择认证等级并提交申请。</p>
+          <button @click="page='apply'" class="mt-3 text-blue-400 hover:text-blue-300 font-semibold transition-colors">立即申请认证 →</button>
+        </div>
+      </template>
+    </div>
+
+    <!-- 导航标签 -->
+    <div x-show="certStatus.certified" class="flex gap-2 overflow-x-auto pb-1">
+      <template x-for="tab in tabs" :key="tab.id">
+        <button @click="page=tab.id"
+                :class="page===tab.id ? 'bg-blue-600 text-white' : 'glass text-slate-300 hover:bg-white/10'"
+                class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">
+          <span x-text="tab.icon + ' ' + tab.label"></span>
+        </button>
+      </template>
+    </div>
+
+    <!-- 活动发布页 -->
+    <div x-show="page === 'publish' && certStatus.certified">
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-bold mb-5">发布俱乐部活动</h2>
+        <form @submit.prevent="publishActivity()" class="space-y-4">
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">活动标题 *</label>
+            <input x-model="newActivity.title" type="text" placeholder="如：2026珠峰南坡商业攀登" required
+                   class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">山峰</label>
+              <input x-model="newActivity.mountain" type="text" placeholder="如：珠穆朗玛峰"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">难度</label>
+              <select x-model="newActivity.difficulty" class="w-full bg-slate-800 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-400">
+                <option value="">请选择</option>
+                <option>初级</option><option>中级</option><option>高级</option><option>极难</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">人数上限</label>
+              <input x-model.number="newActivity.maxMembers" type="number" min="1" max="100" placeholder="10"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">出发日期</label>
+              <input x-model="newActivity.startDate" type="date"
+                     class="w-full bg-slate-800 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-400">
+            </div>
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">价格（元/人）</label>
+            <input x-model.number="newActivity.price" type="number" min="0" placeholder="0"
+                   class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">活动描述</label>
+            <textarea x-model="newActivity.description" rows="4" placeholder="描述活动内容、包含项目、注意事项等"
+                      class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+          </div>
+          <button type="submit" :disabled="publishLoading"
+                  class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl py-3 font-semibold transition">
+            <span x-text="publishLoading ? '发布中…' : '发布活动'"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 已发布活动列表 -->
+    <div x-show="page === 'activities' && certStatus.certified">
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-bold">已发布活动</h2>
+          <button @click="page='publish'" class="text-sm text-blue-400 hover:text-blue-300 font-semibold transition-colors">+ 发布新活动</button>
+        </div>
+        <div x-show="activitiesLoading" class="text-center py-8 text-slate-400 text-sm">加载中…</div>
+        <div x-show="!activitiesLoading && activities.length === 0" class="text-center py-8 text-slate-400 text-sm">
+          暂无发布的活动，<button @click="page='publish'" class="text-blue-400 hover:text-blue-300">立即发布</button>
+        </div>
+        <div class="space-y-3">
+          <template x-for="act in activities" :key="act.id">
+            <div class="glass-dark rounded-xl p-4">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <p class="font-semibold text-white" x-text="act.title"></p>
+                  <p class="text-slate-400 text-xs mt-1" x-text="[act.mountain, act.difficulty].filter(Boolean).join(' · ')"></p>
+                  <p class="text-slate-400 text-xs" x-text="act.start_date ? '出发：' + act.start_date : ''"></p>
+                </div>
+                <div class="text-right ml-4">
+                  <p class="text-green-400 font-bold" x-text="act.price ? '¥' + act.price : '免费'"></p>
+                  <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block"
+                        :class="act.status==='active'?'bg-green-500/20 text-green-400':act.status==='pending'?'bg-yellow-500/20 text-yellow-400':'bg-slate-500/20 text-slate-400'"
+                        x-text="act.status==='active'?'上架中':act.status==='pending'?'审核中':'已结束'"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- 订单管理 -->
+    <div x-show="page === 'orders' && certStatus.certified">
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-bold mb-5">报名管理</h2>
+        <div x-show="ordersLoading" class="text-center py-8 text-slate-400 text-sm">加载中…</div>
+        <div x-show="!ordersLoading && orders.length === 0" class="text-center py-8 text-slate-400 text-sm">暂无报名记录</div>
+        <div class="space-y-3">
+          <template x-for="order in orders" :key="order.id">
+            <div class="glass-dark rounded-xl p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-semibold text-white text-sm" x-text="order.user_name || '用户'"></p>
+                  <p class="text-slate-400 text-xs" x-text="order.activity_title || ''"></p>
+                </div>
+                <div class="text-right">
+                  <p class="text-green-400 font-bold text-sm" x-text="'¥' + (order.amount || 0)"></p>
+                  <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block"
+                        :class="order.status==='paid'?'bg-green-500/20 text-green-400':order.status==='pending'?'bg-yellow-500/20 text-yellow-400':'bg-red-500/20 text-red-400'"
+                        x-text="order.status==='paid'?'已付款':order.status==='pending'?'待付款':'已取消'"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- 认证申请页 -->
+    <div x-show="page === 'apply'">
+      <div class="glass rounded-2xl p-6 mb-6">
+        <h2 class="text-lg font-bold mb-2">选择认证等级</h2>
+        <p class="text-slate-400 text-sm mb-5">根据您的机构规模选择合适的认证等级</p>
+
+        <!-- 认证等级卡片 -->
+        <div class="grid gap-4 mb-6">
+          <template x-for="(info, key) in certLevels.club" :key="key">
+            <div @click="applyForm.certLevel = key"
+                 :class="applyForm.certLevel === key ? 'border-blue-500 bg-blue-500/10' : 'border-white/10'"
+                 class="glass rounded-xl p-4 cursor-pointer border-2 transition-all">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl" x-text="info.badge"></span>
+                  <div>
+                    <p class="font-bold" x-text="info.label"></p>
+                    <p class="text-xs text-slate-400" x-text="'年费：¥' + info.yearFee + ' / 抽成：' + (info.commissionRate * 100) + '%'"></p>
+                  </div>
+                </div>
+                <div :class="applyForm.certLevel === key ? 'bg-blue-500' : 'bg-slate-700'" class="w-5 h-5 rounded-full flex items-center justify-center transition-colors">
+                  <svg x-show="applyForm.certLevel === key" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+              </div>
+              <div class="space-y-1" x-show="key === 'standard'">
+                <p class="text-xs text-slate-300">🏛️ 机构认证标识</p>
+                <p class="text-xs text-slate-300">🏛️ 独立俱乐部主页</p>
+                <p class="text-xs text-slate-300">🏛️ 批量发布活动</p>
+                <p class="text-xs text-slate-300">🏛️ 基础团队保险支持</p>
+              </div>
+              <div class="space-y-1" x-show="key === 'advanced'">
+                <p class="text-xs text-slate-300">⭐ 高级认证标识 + 流量倾斜</p>
+                <p class="text-xs text-slate-300">⭐ 大额团队责任险</p>
+                <p class="text-xs text-slate-300">⭐ 更低抽成 + 快速审核通道</p>
+                <p class="text-xs text-slate-300">⭐ 运营数据看板</p>
+              </div>
+              <div class="space-y-1" x-show="key === 'flagship'">
+                <p class="text-xs text-slate-300">🚀 品牌专区展示 + 顶级认证</p>
+                <p class="text-xs text-slate-300">🚀 超低抽成 + 定制合作</p>
+                <p class="text-xs text-slate-300">🚀 联合营销与联名推广</p>
+                <p class="text-xs text-slate-300">🚀 专属客户经理一对一服务</p>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- 申请表单 -->
+        <form @submit.prevent="submitApplication()" class="space-y-4">
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">俱乐部名称 *</label>
+            <input x-model="applyForm.name" type="text" placeholder="请填写俱乐部正式名称" required
+                   class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">机构简介</label>
+            <textarea x-model="applyForm.description" rows="3" placeholder="简介俱乐部背景、主营业务"
+                      class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">主营区域</label>
+              <input x-model="applyForm.region" type="text" placeholder="如：西藏、尼泊尔"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">专长方向</label>
+              <input x-model="applyForm.specialty" type="text" placeholder="如：高海拔攀登"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">联系电话</label>
+              <input x-model="applyForm.contact" type="text" placeholder="联系方式"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">微信号</label>
+              <input x-model="applyForm.wechat" type="text" placeholder="微信联系"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+          </div>
+          <div class="glass-dark rounded-xl p-4 text-sm text-slate-300">
+            <p class="font-semibold text-yellow-400 mb-1">🎉 冷启动优惠</p>
+            <p>首批认证俱乐部享受 <strong class="text-white">6折年费</strong>，前3个月 <strong class="text-white">零抽成</strong>。名额有限！</p>
+            <p class="mt-1 text-slate-400">选择的等级年费：
+              <strong class="text-green-400" x-text="'¥' + (certLevels.club[applyForm.certLevel]?.yearFee || 999)"></strong>
+            </p>
+          </div>
+          <button type="submit" :disabled="applyLoading"
+                  class="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 disabled:opacity-50 rounded-xl py-3 font-semibold transition">
+            <span x-text="applyLoading ? '提交中…' : '提交认证申请'"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+  function clubPortalApp() {
+    return {
+      loading: true,
+      currentUser: null,
+      certStatus: { certified: false, club: null, levelInfo: null, application: null },
+      certLevels: { guide: {}, club: {} },
+      page: 'activities',
+      tabs: [
+        { id: 'activities', icon: '📋', label: '已发布活动' },
+        { id: 'publish',    icon: '➕', label: '发布活动' },
+        { id: 'orders',     icon: '📦', label: '报名管理' },
+      ],
+      activities: [],
+      activitiesLoading: false,
+      orders: [],
+      ordersLoading: false,
+      newActivity: { title: '', mountain: '', difficulty: '', maxMembers: 10, startDate: '', price: 0, description: '' },
+      publishLoading: false,
+      applyForm: { certLevel: 'standard', name: '', description: '', region: '', specialty: '', contact: '', wechat: '', website: '' },
+      applyLoading: false,
+      showPromoBanner: true,
+      toasts: [],
+
+      async init() {
+        await this.loadLevels();
+        await this.checkAuth();
+        this.loading = false;
+      },
+
+      async loadLevels() {
+        try {
+          const r = await fetch('/api/certification/levels');
+          if (r.ok) this.certLevels = await r.json();
+        } catch(e) {}
+      },
+
+      async checkAuth() {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) return;
+        try {
+          const r = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            this.currentUser = await r.json();
+            await this.loadCertStatus(token);
+            if (this.certStatus.certified) {
+              this.loadActivities(token);
+              this.loadOrders(token);
+            } else if (!this.certStatus.application) {
+              this.page = 'apply';
+            }
+          }
+        } catch(e) {}
+      },
+
+      async loadCertStatus(token) {
+        try {
+          const r = await fetch('/api/certification/club/status', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) this.certStatus = await r.json();
+        } catch(e) {}
+      },
+
+      async loadActivities(token) {
+        this.activitiesLoading = true;
+        try {
+          const club = this.certStatus.club;
+          if (!club) return;
+          const r = await fetch(`/api/club-activities?club_id=${club.id}`, { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            const data = await r.json();
+            this.activities = Array.isArray(data) ? data : (data.activities || []);
+          }
+        } catch(e) {}
+        this.activitiesLoading = false;
+      },
+
+      async loadOrders(token) {
+        this.ordersLoading = true;
+        try {
+          const club = this.certStatus.club;
+          if (!club) return;
+          const r = await fetch(`/api/activity-orders?club_id=${club.id}`, { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            const data = await r.json();
+            this.orders = Array.isArray(data) ? data : (data.orders || []);
+          }
+        } catch(e) {}
+        this.ordersLoading = false;
+      },
+
+      async publishActivity() {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) return;
+        this.publishLoading = true;
+        try {
+          const club = this.certStatus.club;
+          const body = {
+            club_id: club?.id,
+            title: this.newActivity.title,
+            mountain: this.newActivity.mountain,
+            difficulty: this.newActivity.difficulty,
+            max_members: this.newActivity.maxMembers,
+            start_date: this.newActivity.startDate,
+            price: this.newActivity.price,
+            description: this.newActivity.description,
+            type: 'activity',
+          };
+          const r = await fetch('/api/club-activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(body),
+          });
+          if (r.ok) {
+            this.toast('活动发布成功！');
+            this.newActivity = { title: '', mountain: '', difficulty: '', maxMembers: 10, startDate: '', price: 0, description: '' };
+            this.page = 'activities';
+            this.loadActivities(token);
+          } else {
+            const d = await r.json();
+            this.toast(d.error || '发布失败', 'error');
+          }
+        } catch(e) {
+          this.toast('网络错误，请重试', 'error');
+        }
+        this.publishLoading = false;
+      },
+
+      async submitApplication() {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) return;
+        this.applyLoading = true;
+        try {
+          const r = await fetch('/api/certification/club/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(this.applyForm),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast('申请提交成功！等待审核');
+            await this.loadCertStatus(token);
+            this.page = 'activities';
+          } else {
+            this.toast(d.error || '提交失败', 'error');
+          }
+        } catch(e) {
+          this.toast('网络错误，请重试', 'error');
+        }
+        this.applyLoading = false;
+      },
+
+      toast(msg, type = 'success') {
+        this.toasts.push({ msg, type });
+        setTimeout(() => this.toasts.shift(), 3500);
+      },
+    };
+  }
+  </script>
+</body>
+</html>
