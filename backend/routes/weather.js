@@ -340,6 +340,19 @@ router.get('/', async (req, res) => {
       return res.json({ location: '', temp: null, wind: null, humidity: null, visibility: null, message: '请提供 location 或 lat/lon 参数' });
     }
 
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) {
+      return res.json({
+        location: resolved.locationName,
+        temp: null,
+        wind: null,
+        humidity: null,
+        visibility: null,
+        message: '天气服务暂不可用（未配置 API Key），请稍后再试',
+        mock: true,
+      });
+    }
+
     const cacheKey = `weather:${JSON.stringify(resolved.params)}`;
     const cached = weatherCache.get(cacheKey);
     if (cached && !cached.stale) {
@@ -375,6 +388,16 @@ router.get('/forecast', async (req, res) => {
     const { location, lat, lon } = req.query;
     const resolved = resolveParams(location, lat, lon);
     if (!resolved) return res.status(400).json({ error: '请提供 location 或 lat/lon 参数' });
+
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) {
+      return res.json({
+        location: resolved.locationName,
+        forecast: [],
+        message: '天气服务暂不可用（未配置 API Key），请稍后再试',
+        mock: true,
+      });
+    }
 
     const data = await fetchForecast(resolved.params);
 
