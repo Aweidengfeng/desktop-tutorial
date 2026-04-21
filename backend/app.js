@@ -176,13 +176,47 @@ if (process.env.ENABLE_ASSISTANT === 'true') {
   app.use('/api/assistant', require('./routes/assistant'));
 }
 app.use('/api/certificates', require('./routes/certificates'));
+app.use('/api/certification', require('./routes/certification'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');
+console.log('📄 admin.html 路径:', adminHtmlFile, '存在:', fs.existsSync(adminHtmlFile));
 app.get('/admin', htmlPageLimiter, (req, res) => {
   fs.readFile(adminHtmlFile, 'utf8', (err, html) => {
     if (err) {
       console.error('❌ 读取 admin.html 失败:', err);
+      return res.status(500).send('Internal Server Error');
+    }
+    const sentryDsn = process.env.SENTRY_DSN || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const result = html.replace('</head>', sentryScript + '\n</head>');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(result);
+  });
+});
+
+// 向导工作台
+const guidePortalFile = path.join(rootPath, 'guide-portal.html');
+app.get('/guide-portal', htmlPageLimiter, (req, res) => {
+  fs.readFile(guidePortalFile, 'utf8', (err, html) => {
+    if (err) {
+      console.error('❌ 读取 guide-portal.html 失败:', err);
+      return res.status(500).send('Internal Server Error');
+    }
+    const sentryDsn = process.env.SENTRY_DSN || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const result = html.replace('</head>', sentryScript + '\n</head>');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(result);
+  });
+});
+
+// 俱乐部工作台
+const clubPortalFile = path.join(rootPath, 'club-portal.html');
+app.get('/club-portal', htmlPageLimiter, (req, res) => {
+  fs.readFile(clubPortalFile, 'utf8', (err, html) => {
+    if (err) {
+      console.error('❌ 读取 club-portal.html 失败:', err);
       return res.status(500).send('Internal Server Error');
     }
     const sentryDsn = process.env.SENTRY_DSN || '';

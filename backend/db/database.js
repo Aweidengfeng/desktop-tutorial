@@ -1805,6 +1805,48 @@ if (!existingSosCols.includes('status')) {
   db.exec("ALTER TABLE sos_records ADD COLUMN status TEXT DEFAULT 'pending'");
 }
 
+// 迁移：guides 表补充认证年费字段
+const existingGuideCols3 = db.pragma('table_info(guides)').map(c => c.name);
+if (!existingGuideCols3.includes('cert_level')) {
+  db.exec("ALTER TABLE guides ADD COLUMN cert_level TEXT DEFAULT 'basic'");
+}
+if (!existingGuideCols3.includes('cert_expires_at')) {
+  db.exec('ALTER TABLE guides ADD COLUMN cert_expires_at TEXT');
+}
+if (!existingGuideCols3.includes('cert_year_fee')) {
+  db.exec('ALTER TABLE guides ADD COLUMN cert_year_fee INTEGER DEFAULT 299');
+}
+if (!existingGuideCols3.includes('listing_fee_paid')) {
+  db.exec('ALTER TABLE guides ADD COLUMN listing_fee_paid INTEGER DEFAULT 0');
+}
+
+// 迁移：clubs 表补充认证年费字段
+const existingClubCols3 = db.pragma('table_info(clubs)').map(c => c.name);
+if (!existingClubCols3.includes('cert_level')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN cert_level TEXT DEFAULT 'standard'");
+}
+if (!existingClubCols3.includes('cert_expires_at')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN cert_expires_at TEXT');
+}
+if (!existingClubCols3.includes('cert_year_fee')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN cert_year_fee INTEGER DEFAULT 999');
+}
+if (!existingClubCols3.includes('listing_fee_paid')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN listing_fee_paid INTEGER DEFAULT 0');
+}
+
+// 迁移：guide_applications 表补充 cert_level 字段
+const existingGuideAppColsCert = db.pragma('table_info(guide_applications)').map(c => c.name);
+if (!existingGuideAppColsCert.includes('cert_level')) {
+  db.exec("ALTER TABLE guide_applications ADD COLUMN cert_level TEXT DEFAULT 'basic'");
+}
+
+// 迁移：club_applications 表补充 cert_level 字段
+const existingClubAppColsCert = db.pragma('table_info(club_applications)').map(c => c.name);
+if (!existingClubAppColsCert.includes('cert_level')) {
+  db.exec("ALTER TABLE club_applications ADD COLUMN cert_level TEXT DEFAULT 'standard'");
+}
+
 // 新增表：结算账户、提现申请、平台资金流水
 db.exec(`
 CREATE TABLE IF NOT EXISTS settlement_accounts (
