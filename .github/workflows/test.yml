@@ -43,9 +43,24 @@ jobs:
       - name: Audit backend dependencies
         run: npm audit --audit-level=high --production --prefix backend || true
 
+      # ── 启动后端服务器（本地测试用）──────────────────────────────────────────
+      - name: Start backend server
+        run: cd backend && node db/seed.js && node app.js &
+        env:
+          NODE_ENV: test
+          PORT: 8080
+          JWT_SECRET: ci_test_secret_not_for_production
+          ADMIN_PASSWORD: ci_test_admin_password
+
+      # ── 等待服务器就绪 ────────────────────────────────────────────────────
+      - name: Wait for backend to be ready
+        run: npx wait-on http://localhost:8080/api/health --timeout 30000
+
       # ── 运行 API 集成测试（旧版 + 新版 jest/supertest）─────────────────────
       - name: Run API tests
         run: npm run test:api
+        env:
+          BASE_URL: http://localhost:8080
 
       # ── 运行 Playwright E2E 测试 ─────────────────────────────────────────────
       - name: Run Playwright E2E tests

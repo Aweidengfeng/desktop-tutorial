@@ -4,7 +4,7 @@
  * 使用 Node.js 18+ 内置 fetch，无需额外依赖
  */
 
-const BASE_URL = 'https://precious-miracle-production.up.railway.app';
+const BASE_URL = process.env.BASE_URL || 'https://precious-miracle-production.up.railway.app';
 
 // 测试结果统计
 let passed = 0;
