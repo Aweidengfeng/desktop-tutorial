@@ -6,6 +6,8 @@ const moderation = require('../utils/moderation');
 const rateLimit = require('express-rate-limit');
 
 const postWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: '发布过于频繁，请稍后再试' } });
+const feedLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '请求太频繁' } });
+const saveLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '操作太频繁' } });
 
 // GET /api/posts?type=all
 router.get('/', (req, res) => {
@@ -28,7 +30,7 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/posts/feed - 3 modes: following, recommended, nearby
-router.get('/feed', (req, res) => {
+router.get('/feed', feedLimiter, (req, res) => {
   try {
     const { mode = 'recommended', cursor, limit = 20 } = req.query;
     const lim = Math.min(parseInt(limit, 10) || 20, 50);
@@ -95,7 +97,7 @@ router.get('/feed', (req, res) => {
 });
 
 // GET /api/posts/:id/saves
-router.get('/:id/saves', (req, res) => {
+router.get('/:id/saves', feedLimiter, (req, res) => {
   try {
     const count = db.prepare('SELECT COUNT(*) as cnt FROM post_saves WHERE post_id = ?').get(req.params.id).cnt;
     res.json({ count });
@@ -105,7 +107,7 @@ router.get('/:id/saves', (req, res) => {
 });
 
 // POST /api/posts/:id/save
-router.post('/:id/save', auth, (req, res) => {
+router.post('/:id/save', saveLimiter, auth, (req, res) => {
   try {
     const post = db.prepare('SELECT id FROM posts WHERE id = ?').get(req.params.id);
     if (!post) return res.status(404).json({ error: '帖子不存在' });
@@ -118,7 +120,7 @@ router.post('/:id/save', auth, (req, res) => {
 });
 
 // DELETE /api/posts/:id/save
-router.delete('/:id/save', auth, (req, res) => {
+router.delete('/:id/save', saveLimiter, auth, (req, res) => {
   try {
     db.prepare('DELETE FROM post_saves WHERE user_id = ? AND post_id = ?').run(req.user.id, req.params.id);
     const count = db.prepare('SELECT COUNT(*) as cnt FROM post_saves WHERE post_id = ?').get(req.params.id).cnt;

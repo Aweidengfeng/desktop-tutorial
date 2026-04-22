@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const readLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '请求太频繁' } });
+const checkLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: '操作太频繁' } });
 
 // GET /api/badges
-router.get('/', (req, res) => {
+router.get('/', readLimiter, (req, res) => {
   try {
     const badges = db.prepare('SELECT * FROM badges ORDER BY category, condition_value').all();
     res.json(badges);
@@ -14,7 +18,7 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/badges/my
-router.get('/my', auth, (req, res) => {
+router.get('/my', readLimiter, auth, (req, res) => {
   try {
     const badges = db.prepare(`
       SELECT b.*, ub.unlocked_at, ub.progress
@@ -29,7 +33,7 @@ router.get('/my', auth, (req, res) => {
 });
 
 // POST /api/badges/check
-router.post('/check', auth, (req, res) => {
+router.post('/check', checkLimiter, auth, (req, res) => {
   try {
     const uid = req.user.id;
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(uid);

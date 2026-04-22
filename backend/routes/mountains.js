@@ -4,10 +4,11 @@ const db = require('../db/database');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
-const writeLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '操作太频繁' } });
+const readLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '请求太频繁' } });
+const writeLimiter = rateLimit({ windowMs: 60 * 1000, max: 15, message: { error: '操作太频繁' } });
 
 // GET /api/mountains/categories
-router.get('/categories', (req, res) => {
+router.get('/categories', readLimiter, (req, res) => {
   try {
     const categories = [
       {
@@ -50,7 +51,7 @@ router.get('/categories', (req, res) => {
 });
 
 // GET /api/mountains/:id/detail
-router.get('/:id/detail', (req, res) => {
+router.get('/:id/detail', readLimiter, (req, res) => {
   try {
     const peak = db.prepare('SELECT * FROM peaks WHERE id = ?').get(req.params.id);
     if (!peak) return res.status(404).json({ error: '山峰不存在' });
@@ -82,7 +83,7 @@ router.post('/:id/wishlist', writeLimiter, auth, (req, res) => {
 });
 
 // DELETE /api/mountains/:id/wishlist
-router.delete('/:id/wishlist', auth, (req, res) => {
+router.delete('/:id/wishlist', writeLimiter, auth, (req, res) => {
   try {
     db.prepare('DELETE FROM mountain_wishlists WHERE user_id = ? AND peak_id = ?').run(req.user.id, req.params.id);
     res.json({ success: true });
@@ -108,7 +109,7 @@ router.post('/:id/footprint', writeLimiter, auth, (req, res) => {
 });
 
 // GET /api/mountains/:id/footprints
-router.get('/:id/footprints', (req, res) => {
+router.get('/:id/footprints', readLimiter, (req, res) => {
   try {
     const footprints = db.prepare(`
       SELECT mf.*, u.name as user_name, u.avatar as user_avatar
