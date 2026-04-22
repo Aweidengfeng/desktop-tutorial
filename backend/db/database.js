@@ -1821,6 +1821,14 @@ if (!existingTeamColsChat.includes('group_chat_id')) {
       ['钦博拉索山','Chimborazo',6263,'厄瓜多尔','南美洲','较难','https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800','world','classic','厄瓜多尔最高峰，从地球中心算起是离地球最远的点。','11月-2月、6月-9月','60%','1880年',0,-1.47,-78.82,500,30,'旱季11月至2月及6月至9月',0,'标准路线(Whymper路线)','内部参考数据'],
       ['阿空加瓜峰','Aconcagua',6961,'阿根廷','南美洲','中等','https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800','world','classic','南美洲最高峰，西半球最高峰，七大洲最高峰之一。','12月-2月','35%','1897年',0,-32.65,-70.01,3000,120,'南半球夏季12月至2月',0,'标准路线(普通路线)/波兰冰川','内部参考数据'],
       ['厄尔布鲁士山','Elbrus',5642,'俄罗斯','欧洲','中等','https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800','world','classic','欧洲最高峰，高加索山脉的皇冠，每年吸引数万名攀登者。','6月-8月','70%','1874年',0,43.35,42.44,15000,800,'夏季6月至8月，南坡有缆车辅助',0,'南坡标准路线/北坡路线','内部参考数据'],
+      ['马特洪峰','Matterhorn',4478,'瑞士/意大利','欧洲','难','https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800','world','classic','阿尔卑斯山脉最具标志性山峰，造型如棱锥，每年吸引数千名攀登者。','7月-9月','50%','1865年7月14日',0,45.98,7.66,3000,200,'夏季7月至9月',0,'霍恩利山脊(标准)/北壁','内部参考数据'],
+      ['富士山','Mount Fuji',3776,'日本','亚洲','较易','https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=800','world','classic','日本最高峰，活火山，每年吸引约30万名攀登者，是世界上攀登人数最多的山峰之一。','7月-8月','95%','遥远历史',0,35.36,138.73,300000,0,'夏季7月至8月，开山期7月1日至9月14日',0,'吉田口(标准)/须走口/御殿场口/富士宫口','内部参考数据'],
+      ['玉山','Jade Mountain (Yushan)',3952,'中国台湾','亚洲','中等','https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=800','world','classic','台湾最高峰，东北亚最高峰，巍峨壮丽，生态多样，全年均可攀登。','3月-5月、10月-11月','80%','1896年',0,23.47,120.96,50000,0,'全年均可，春秋最佳，需申请入山证',0,'塔塔加路线(标准)/南二段','内部参考数据'],
+      ['艾格峰','Eiger',3967,'瑞士','欧洲','极难','https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=800','world','classic','阿尔卑斯三北壁之一，以其凶险的北壁闻名于世，是极限登山者的圣地。','7月-8月','30%','1938年',0,46.58,8.00,200,15,'夏季7月至8月',0,'北壁(Heckmair路线)/西山脊','内部参考数据'],
+      ['格朗帕拉迪索峰','Gran Paradiso',4061,'意大利','欧洲','较易','https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800','world','classic','完全位于意大利境内的最高峰，是攀登4000米阿尔卑斯峰的经典入门山峰。','6月-9月','85%','1860年',0,45.52,7.27,5000,5,'夏季6月至9月',0,'标准路线/北壁','内部参考数据'],
+      ['皮兰卡比峰','Pico de Orizaba',5636,'墨西哥','北美洲','中等','https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=800','world','classic','北美洲第三高峰，墨西哥最高峰，火山地形，是攀登6000米级山峰的理想阶梯。','11月-3月','70%','1848年',0,19.03,-97.27,3000,5,'旱季11月至3月最佳',0,'标准路线/北坡冰川','内部参考数据'],
+      ['卡兹别克山','Mount Kazbek',5047,'格鲁吉亚/俄罗斯','欧洲','中等','https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800','world','classic','高加索山脉第三高峰，地形多变，融合冰雪技术与高海拔挑战。','6月-8月','65%','1868年',0,42.70,44.52,2000,10,'夏季6月至8月',0,'Meteo站路线(标准)','内部参考数据'],
+      ['慕士塔格峰','Muztagh Ata',7546,'中国','亚洲','中等','https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800','world','classic','帕米尔高原最高峰之一，被称为"冰山之父"，是中国高海拔攀登的热门训练峰。','6月-8月','70%','1956年',0,38.27,75.11,600,5,'夏季6月至8月',0,'北坡标准路线','内部参考数据'],
     ];
     // 技术攀登胜地
     const builtinAlpine = [
@@ -1832,6 +1840,8 @@ if (!existingTeamColsChat.includes('group_chat_id')) {
       ['詹努峰','Jannu',7711,'尼泊尔','亚洲','极难','https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800','alpine','technical','尼泊尔东部的技术山峰，其北壁被誉为喜马拉雅最雄伟的岩壁之一。','4月-5月','20%','1962年',0,27.68,88.05,15,1,'春季4月底至5月中旬窗口期',0,'西南山脊/北壁','内部参考数据'],
       ['拉托克I峰','Latok I',7145,'巴基斯坦','亚洲','极难','https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800','alpine','technical','喀喇昆仑山脉著名技术山峰，北山脊路线是登山史上最具挑战性的项目之一。','6月-8月','10%','2018年',0,35.81,76.39,10,1,'夏季7月至8月为最佳窗口',0,'北山脊/南山脊','内部参考数据'],
       ['梅鲁峰','Meru Peak',6476,'印度','亚洲','极难','https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=800','alpine','technical','喜马拉雅山脉中技术难度最高的山峰之一，"鲨鱼鳍"路线是最大挑战。','4月-5月、9月-10月','15%','2011年',0,30.88,79.10,20,2,'春季4月底至5月；秋季9月至10月中旬',0,'鲨鱼鳍(中间峰)/Merrows Buttress','内部参考数据'],
+      ['幺妹峰','Siguniang Ermo',5355,'中国','亚洲','极难','https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800','alpine','technical','四川省四姑娘山脉最高峰，以垂直岩壁和多变天气闻名，有"东方阿尔卑斯"之称。','5月-6月、9月-10月','25%','1981年',0,30.91,102.58,120,8,'春季5月至6月；秋季9月至10月',0,'东南山脊/西北壁','内部参考数据'],
+      ['库拉冈日峰','Kulha Gangri',7554,'不丹/中国','亚洲','极难','https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=800','alpine','technical','喜马拉雅东段高峰，不丹境内最高峰之一，极少有队伍尝试。','4月-5月','20%','1986年',0,28.23,90.36,5,0,'春季4月至5月',0,'东北山脊','内部参考数据'],
     ];
     for (const p of [...builtinPeaks8000, ...builtinContinental, ...builtinWorld, ...builtinAlpine]) {
       insertBuiltinPeak.run(...p);
@@ -1854,6 +1864,9 @@ if (!existingTeamColsChat.includes('group_chat_id')) {
     insertBuiltinClub.run('喜马拉雅探险队', '专业的喜马拉雅远征组织，曾多次带队登顶8000米峰', 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', '喜马拉雅', '尼泊尔/中国', '专业', '+977-1-4001234', 890, 28);
     insertBuiltinClub.run('北京户外探险队', '以休闲户外和中低海拔攀登为主，适合初学者', 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', '中低海拔', '北京', '休闲', '010-66661234', 1280, 120);
     insertBuiltinClub.run('成都山地俱乐部', '专注于川西高原和横断山脉攀登的本地俱乐部', 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', '川西高原', '四川', '区域', '028-66662345', 450, 35);
+    insertBuiltinClub.run('西藏高山探险协会', '专注于西藏高原攀登活动，持有西藏自治区探险资质，专业本地向导团队', 'https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=400', '西藏高原', '西藏', '专业', '0891-6321456', 210, 15);
+    insertBuiltinClub.run('云南雪山俱乐部', '专注于云南滇西北雪山攀登，梅里雪山、哈巴雪山等区域深度资源', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', '云南雪山', '云南', '区域', '0872-2345678', 380, 52);
+    insertBuiltinClub.run('丝路登山协会', '西北地区攀登爱好者的聚集地，专注昆仑山、天山攀登及慕士塔格远征', 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', '昆仑/天山', '新疆', '区域', '0991-2356789', 290, 22);
     console.log('✅ 内置俱乐部数据填充完成');
   }
 }
@@ -1872,6 +1885,11 @@ if (!existingTeamColsChat.includes('group_chat_id')) {
     insertBuiltinGuide.run('Ibrahim Dağ', 'https://i.pravatar.cc/150?u=guide4', '🇹🇷', '土耳其', 4.6, 38, '安纳托利亚/高加索', 2200);
     insertBuiltinGuide.run('索南仁增', 'https://i.pravatar.cc/150?u=guide5', '🇨🇳', '中国', 4.9, 115, '西藏8000米峰', 3800);
     insertBuiltinGuide.run('Pemba Sherpa', 'https://i.pravatar.cc/150?u=guide6', '🇳🇵', '尼泊尔', 5.0, 201, '全喜马拉雅', 5000);
+    insertBuiltinGuide.run('Carlos Moya', 'https://i.pravatar.cc/150?u=guide7', '🇪🇸', '西班牙', 4.7, 55, '巴塔哥尼亚技术攀登', 3200);
+    insertBuiltinGuide.run('Dorje Khatri', 'https://i.pravatar.cc/150?u=guide8', '🇳🇵', '尼泊尔', 4.8, 178, '干城章嘉/马卡鲁', 4500);
+    insertBuiltinGuide.run('李明辉', 'https://i.pravatar.cc/150?u=guide9', '🇨🇳', '中国', 4.6, 43, '四川技术攀登/幺妹峰', 2600);
+    insertBuiltinGuide.run('Valentina Rossi', 'https://i.pravatar.cc/150?u=guide10', '🇮🇹', '意大利', 4.8, 89, '多洛米蒂/马特洪峰', 3100);
+    insertBuiltinGuide.run('Nasim Akhtar', 'https://i.pravatar.cc/150?u=guide11', '🇵🇰', '巴基斯坦', 4.9, 134, 'K2/南迦帕尔巴特/喀喇昆仑', 5200);
     console.log('✅ 内置向导数据填充完成');
   }
 }
@@ -1930,6 +1948,50 @@ if (!existingTeamColsChat.includes('group_chat_id')) {
       '分享一组马卡鲁峰照片，这次远征历时45天，成功登顶！感谢队友们的配合 🏔️', '尼泊尔·马卡鲁峰', 86, 17);
     insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
       '推荐一条适合初学者的高海拔路线：四姑娘山二峰（5276m），难度适中，风景极佳', '四川·四姑娘山', 214, 42);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '高海拔攀登小技巧：每天海拔上升不超过300m，到营地后先喝热饮再休息。今天在5500m营地感觉状态不错 💪', '西藏·希夏邦马', 93, 11);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '装备测评：La Sportiva G2 SM高山靴实测报告。在-30°C环境下穿了18小时，双脚保暖性优秀，就是重量偏重。', '北京·测评室', 176, 38);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '2025年K2攀登回顾：我们团队7月22日从Abruzzi山脊出发，历经21小时成功登顶，视野无与伦比！', '巴基斯坦·K2', 312, 67);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '推荐《攀登者》训练计划：12周备战慕士塔格方案，每周3次力量训练+2次有氧，感兴趣的朋友评论区见', '成都·健身房', 145, 29);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '俱乐部公告：2026年乞力马扎罗Machame路线队伍招募中，7天行程，名额5人，6月出发，价格含接送', '非洲·乞力马扎罗', 88, 15);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '今日训练：背负20kg爬34层楼梯4组，腿已经不是自己的了。高海拔远征的基础功课还是要做扎实 🏋️', '成都', 67, 8);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '感谢向导Pemba Sherpa！这次洛子峰远征全程专业支持，安全绳架设一流，强烈推荐！⭐⭐⭐⭐⭐', '尼泊尔·洛子峰', 224, 41);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '技术分享：冰壁自我制动要领。当滑坠发生的瞬间，冰镐头向外、向下，全身重量压住镐柄——练一千遍才能成肌肉记忆', '新西兰·冰雪训练', 201, 55);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '首次独攀！完成马特洪峰霍恩利山脊，从山下到峰顶9小时，下山6小时。孤独而自由的感觉无以言表。', '瑞士·泽马特', 389, 84);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '好物推荐：Petzl SARKEN冰爪实测。轻量化设计没有牺牲稳定性，与B型靴的兼容非常好，山脊线上超级省力', '装备测评', 156, 23);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '雪山天气规律总结：喜马拉雅春季窗口平均宽度仅72小时，要把精力放在等待上，不要放在赶行程上。', '攀登经验分享', 278, 62);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '慕士塔格7546m登顶成功！中国高海拔的入门之山，坡度平缓但海拔感明显。从大本营到顶峰用时14小时', '中国·帕米尔高原', 267, 49);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '新手问答：高原反应的症状识别与处理。①头痛+乏力=正常适应，②恶心呕吐=下撤信号，③意识模糊=立即下撤+吸氧', '科普', 334, 78);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '菲茨罗伊峰尝试：4次出发4次被逼回，这就是巴塔哥尼亚的日常。第5次终于看到了窗口期，向上！', '阿根廷·巴塔哥尼亚', 445, 97);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '商业远征vs阿尔派风格：各有利弊。商业路线安全有保障，阿尔派风格更纯粹。没有高下之分，适合自己最重要', '攀登哲学', 189, 44);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '俱乐部周末活动：四川峨眉山雪线徒步，适合家庭亲子，难度较低，报名截止本周五，名额仅剩3个', '四川·峨眉山', 72, 9);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '阿玛达布拉姆西南山脊：每一个技术段都是享受，这座山绝对是喜马拉雅区域最美技术峰，没有之一！', '尼泊尔·阿玛达布拉姆', 298, 53);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '绳队管理经验：4人以上队伍如何分配绳距、调配节奏、处理跟不上的队员。详细攻略见主页链接', '经验分享', 167, 37);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '卓奥友八月登顶！作为第一次8000米峰，选择卓奥友是正确决定。技术难度相对低，积累高海拔经验最佳选择', '中国·卓奥友', 356, 79);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '个人装备清单：珠峰南坡完整装备列表（含重量/价格），总重47.3kg，其中高山靴4.8kg是最重单件', '装备资讯', 412, 91);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '下周开始2026年珠峰远征准备！飞机票已订，装备检查完毕，感谢SummitLink平台帮我找到了完美的向导团队', '出发前准备', 523, 118);
+    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+      '夜间攀登技巧：头灯选择、黑暗中辨别路线、疲劳管理。大多数珠峰登顶都在凌晨1-3点出发，必须学会', '技术分享', 234, 47);
     console.log('✅ 内置帖子数据填充完成');
 
     // ── 内置队伍（首次启动时自动填充，须在用户之后）
