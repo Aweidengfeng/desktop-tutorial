@@ -35,16 +35,79 @@
   </script>
   <style>
     .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-    /* 浅色模式 */
-    body.light-mode { background: #f8fafc !important; color: #1e293b !important; }
-    body.light-mode .app-container { background: #f8fafc !important; }
-    body.light-mode .glass { background: rgba(255,255,255,0.8) !important; backdrop-filter: blur(10px); border: 1px solid rgba(0,0,0,0.08) !important; }
-    body.light-mode .bg-slate-900, body.light-mode .bg-slate-800, body.light-mode .bg-slate-700 { background: #ffffff !important; }
+    /* ── 浅色模式（Design Token 全覆盖） ─────────────────────────── */
+    body.light-mode { background: #f1f5f9 !important; color: #1e293b !important; }
+    body.light-mode .app-container { background: #f1f5f9 !important; }
+    body.light-mode .glass {
+      background: rgba(255,255,255,0.85) !important;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0,0,0,0.08) !important;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    /* 背景色覆盖 */
+    body.light-mode .bg-slate-900 { background: #ffffff !important; }
+    body.light-mode .bg-slate-800 { background: #f8fafc !important; }
+    body.light-mode .bg-slate-800\/80 { background: rgba(248,250,252,0.9) !important; }
+    body.light-mode .bg-slate-800\/60 { background: rgba(248,250,252,0.7) !important; }
+    body.light-mode .bg-slate-700 { background: #e2e8f0 !important; }
+    body.light-mode .bg-slate-700\/60 { background: rgba(226,232,240,0.7) !important; }
+    body.light-mode .bg-slate-600 { background: #cbd5e1 !important; }
+    body.light-mode .bg-black\/70, body.light-mode .bg-black\/85 { background: rgba(0,0,0,0.5) !important; }
+    /* 文字色覆盖 */
     body.light-mode .text-white { color: #1e293b !important; }
-    body.light-mode .text-slate-300, body.light-mode .text-slate-400, body.light-mode .text-slate-500 { color: #64748b !important; }
+    body.light-mode .text-slate-100 { color: #334155 !important; }
+    body.light-mode .text-slate-200 { color: #475569 !important; }
+    body.light-mode .text-slate-300 { color: #475569 !important; }
+    body.light-mode .text-slate-400 { color: #64748b !important; }
+    body.light-mode .text-slate-500 { color: #94a3b8 !important; }
+    body.light-mode .text-slate-600 { color: #94a3b8 !important; }
+    /* 边框覆盖 */
     body.light-mode .border-white\/10 { border-color: rgba(0,0,0,0.08) !important; }
-    body.light-mode header { background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.08) !important; }
+    body.light-mode .border-white\/5  { border-color: rgba(0,0,0,0.05) !important; }
+    body.light-mode .border-slate-700 { border-color: #cbd5e1 !important; }
+    body.light-mode .border-slate-600 { border-color: #94a3b8 !important; }
+    /* 导航栏 */
+    body.light-mode header {
+      background: rgba(255,255,255,0.95) !important;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+    }
+    /* 底部导航栏 */
+    body.light-mode nav.fixed {
+      background: rgba(255,255,255,0.95) !important;
+      border-top: 1px solid rgba(0,0,0,0.08) !important;
+    }
+    /* 输入框 */
+    body.light-mode input[type="text"],
+    body.light-mode input[type="tel"],
+    body.light-mode input[type="password"],
+    body.light-mode textarea,
+    body.light-mode select {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-mode input::placeholder, body.light-mode textarea::placeholder { color: #94a3b8 !important; }
+    /* 卡片与面板 */
+    body.light-mode .bottom-sheet { background: #ffffff !important; }
+    body.light-mode .rounded-2xl.bg-slate-800,
+    body.light-mode .rounded-2xl.bg-slate-900 { background: #ffffff !important; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    /* 骨架屏 */
     body.light-mode .skeleton { background: #e2e8f0; }
+    /* hover 状态 */
+    body.light-mode .hover\:bg-white\/10:hover { background: rgba(0,0,0,0.04) !important; }
+    body.light-mode .hover\:bg-slate-700:hover { background: #e2e8f0 !important; }
+    /* 按钮 accent 保持不变，primary 颜色在浅色模式下更鲜明 */
+    body.light-mode .bg-primary\/20 { background: rgba(43,101,121,0.12) !important; }
+    body.light-mode .bg-primary\/10 { background: rgba(43,101,121,0.07) !important; }
+    /* 商业攀登筛选器下拉面板（浅色） */
+    body.light-mode .commercial-filter-dropdown {
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+    }
+    body.light-mode .commercial-filter-dropdown button { color: #334155 !important; }
+    body.light-mode .commercial-filter-dropdown button:hover { background: #f1f5f9 !important; }
     [x-cloak] { display: none !important; }
     .app-container { max-width: 430px; margin: 0 auto; }
     body { background: #0f172a; }
@@ -753,18 +816,24 @@
             <h3 class="font-display font-bold text-white mb-1 text-base">🏔️ 全球热门商业向导带队攀登雪山</h3>
             <p class="text-slate-400 text-xs mb-3">浏览热门雪山商业攀登路线，选择山峰后可在线预约</p>
           </div>
-          <!-- 筛选控件 - 自定义 pill 样式 -->
-          <div class="flex gap-2 mb-3 overflow-x-auto scroll-hide pb-1">
+          <!-- 筛选控件 - pill 样式（下拉面板使用 fixed 定位，逃出 overflow-hidden 裁切） -->
+          <div class="flex gap-2 mb-3 flex-wrap">
             <!-- 地区筛选 -->
-            <div class="relative flex-shrink-0" x-data="{ openRegion: false }">
-              <button @click="openRegion=!openRegion"
+            <div class="relative flex-shrink-0"
+                 x-data="{ openRegion: false, rTop: 0, rLeft: 0 }">
+              <button @click="
+                  const r=$el.getBoundingClientRect();
+                  rTop=r.bottom+4; rLeft=r.left;
+                  openRegion=!openRegion;"
                       class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all"
                       :class="commercialFilter.region ? 'border-primary-light text-primary-light' : ''">
                 <span x-text="commercialFilter.region || '全部地区'"></span>
                 <span class="material-symbols-outlined text-xs" style="font-size:14px">expand_more</span>
               </button>
+              <!-- fixed 定位面板：不受任何 overflow-hidden 裁切 -->
               <div x-show="openRegion" @click.away="openRegion=false"
-                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
+                   :style="`position:fixed;top:${rTop}px;left:${rLeft}px;`"
+                   class="commercial-filter-dropdown z-[500] bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
                 <button @click="commercialFilter.region=''; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="!commercialFilter.region ? 'text-primary-light font-semibold' : ''">全部地区</button>
                 <button @click="commercialFilter.region='喜马拉雅'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='喜马拉雅' ? 'text-primary-light' : ''">喜马拉雅</button>
                 <button @click="commercialFilter.region='喀喇昆仑'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='喀喇昆仑' ? 'text-primary-light' : ''">喀喇昆仑</button>
@@ -776,15 +845,20 @@
               </div>
             </div>
             <!-- 难度筛选 -->
-            <div class="relative flex-shrink-0" x-data="{ openDiff: false }">
-              <button @click="openDiff=!openDiff"
+            <div class="relative flex-shrink-0"
+                 x-data="{ openDiff: false, dTop: 0, dLeft: 0 }">
+              <button @click="
+                  const r=$el.getBoundingClientRect();
+                  dTop=r.bottom+4; dLeft=r.left;
+                  openDiff=!openDiff;"
                       class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all"
                       :class="commercialFilter.difficulty ? 'border-primary-light text-primary-light' : ''">
                 <span x-text="commercialFilter.difficulty || '全部难度'"></span>
                 <span class="material-symbols-outlined text-xs" style="font-size:14px">expand_more</span>
               </button>
               <div x-show="openDiff" @click.away="openDiff=false"
-                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
+                   :style="`position:fixed;top:${dTop}px;left:${dLeft}px;`"
+                   class="commercial-filter-dropdown z-[500] bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
                 <button @click="commercialFilter.difficulty=''; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="!commercialFilter.difficulty ? 'text-primary-light font-semibold' : ''">全部难度</button>
                 <button @click="commercialFilter.difficulty='入门6000m'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='入门6000m' ? 'text-primary-light' : ''">入门6000m</button>
                 <button @click="commercialFilter.difficulty='进阶7000m'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='进阶7000m' ? 'text-primary-light' : ''">进阶7000m</button>
@@ -793,14 +867,19 @@
               </div>
             </div>
             <!-- 排序筛选 -->
-            <div class="relative flex-shrink-0" x-data="{ openSort: false }">
-              <button @click="openSort=!openSort"
+            <div class="relative flex-shrink-0"
+                 x-data="{ openSort: false, sTop: 0, sLeft: 0 }">
+              <button @click="
+                  const r=$el.getBoundingClientRect();
+                  sTop=r.bottom+4; sLeft=r.left;
+                  openSort=!openSort;"
                       class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all">
                 <span x-text="commercialFilter.sortBy === 'altitude' ? '按海拔' : commercialFilter.sortBy === 'annualClimbers' ? '按年攀登量' : '按难度'"></span>
                 <span class="material-symbols-outlined text-xs" style="font-size:14px">swap_vert</span>
               </button>
               <div x-show="openSort" @click.away="openSort=false"
-                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[130px]">
+                   :style="`position:fixed;top:${sTop}px;left:${sLeft}px;`"
+                   class="commercial-filter-dropdown z-[500] bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[130px]">
                 <button @click="commercialFilter.sortBy='altitude'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="commercialFilter.sortBy==='altitude' ? 'text-primary-light font-semibold' : ''">按海拔</button>
                 <button @click="commercialFilter.sortBy='annualClimbers'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.sortBy==='annualClimbers' ? 'text-primary-light font-semibold' : ''">按年攀登量</button>
                 <button @click="commercialFilter.sortBy='difficulty'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.sortBy==='difficulty' ? 'text-primary-light font-semibold' : ''">按难度</button>
@@ -4341,8 +4420,25 @@
             <span class="text-primary-light font-bold text-lg" x-text="enrollingActivity.price > 0 ? '¥' + enrollingActivity.price : '免费'"></span>
           </div>
           <div class="space-y-3 mb-4">
+            <!-- 快速填入已保存的紧急联系人 -->
+            <template x-if="userEmergencyContacts && userEmergencyContacts.length > 0">
+              <div class="bg-primary/10 border border-primary/30 rounded-xl px-3 py-2 flex items-center justify-between">
+                <span class="text-primary-light text-xs font-semibold">📋 从已保存联系人快速填入</span>
+                <div class="flex gap-1 flex-wrap">
+                  <template x-for="ec in userEmergencyContacts.slice(0,3)" :key="ec.id">
+                    <button @click="enrollForm.emergency_contact_name=ec.name||ec.contact_name; enrollForm.emergency_contact_phone=ec.phone;"
+                            class="px-2 py-1 bg-primary/20 text-primary-light rounded-lg text-xs hover:bg-primary/30 transition-colors"
+                            x-text="ec.name||ec.contact_name"></button>
+                  </template>
+                </div>
+              </div>
+            </template>
             <div>
-              <label class="text-slate-400 text-xs mb-1 block">紧急联系人姓名 *</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-slate-400 text-xs">紧急联系人姓名 *</label>
+                <button @click="showActivityEnrollModal=false; currentPage='me'; meSection='emergency'; $nextTick(()=>loadEmergencyContacts())"
+                        class="text-primary-light text-xs underline hover:opacity-80 transition-opacity">管理联系人 →</button>
+              </div>
               <input x-model="enrollForm.emergency_contact_name" type="text" placeholder="请输入紧急联系人姓名" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
             </div>
             <div>
@@ -4393,8 +4489,25 @@
             <span class="text-primary-light font-bold text-lg" x-text="enrollingGuideService.price > 0 ? '¥' + enrollingGuideService.price + '/' + ({'per_day':'天','per_person':'人','per_session':'次'}[enrollingGuideService.price_unit]||enrollingGuideService.price_unit) : '免费'"></span>
           </div>
           <div class="space-y-3 mb-4">
+            <!-- 快速填入已保存的紧急联系人 -->
+            <template x-if="userEmergencyContacts && userEmergencyContacts.length > 0">
+              <div class="bg-primary/10 border border-primary/30 rounded-xl px-3 py-2 flex items-center justify-between">
+                <span class="text-primary-light text-xs font-semibold">📋 快速填入</span>
+                <div class="flex gap-1 flex-wrap">
+                  <template x-for="ec in userEmergencyContacts.slice(0,3)" :key="ec.id">
+                    <button @click="guideServiceEnrollForm.emergency_contact_name=ec.name||ec.contact_name; guideServiceEnrollForm.emergency_contact_phone=ec.phone;"
+                            class="px-2 py-1 bg-primary/20 text-primary-light rounded-lg text-xs hover:bg-primary/30 transition-colors"
+                            x-text="ec.name||ec.contact_name"></button>
+                  </template>
+                </div>
+              </div>
+            </template>
             <div>
-              <label class="text-slate-400 text-xs mb-1 block">紧急联系人姓名 *</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-slate-400 text-xs">紧急联系人姓名 *</label>
+                <button @click="showGuideServiceEnrollModal=false; currentPage='me'; meSection='emergency'; $nextTick(()=>loadEmergencyContacts())"
+                        class="text-primary-light text-xs underline hover:opacity-80 transition-opacity">管理联系人 →</button>
+              </div>
               <input x-model="guideServiceEnrollForm.emergency_contact_name" type="text" placeholder="请输入紧急联系人姓名" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-600">
             </div>
             <div>
@@ -6086,9 +6199,9 @@ function alpineLink() {
       try {
         let url;
         if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
-          url = `/api/weather?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
+          url = `${API_BASE}/api/weather?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
         } else {
-          url = `/api/weather?location=${encodeURIComponent(peak.name)}`;
+          url = `${API_BASE}/api/weather?location=${encodeURIComponent(peak.name)}`;
         }
         const res = await fetch(url);
         if (res.ok) this.peakWeather = await res.json();
@@ -6096,9 +6209,9 @@ function alpineLink() {
       try {
         let furl;
         if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
-          furl = `/api/weather/forecast?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
+          furl = `${API_BASE}/api/weather/forecast?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
         } else {
-          furl = `/api/weather/forecast?location=${encodeURIComponent(peak.name)}`;
+          furl = `${API_BASE}/api/weather/forecast?location=${encodeURIComponent(peak.name)}`;
         }
         const fres = await fetch(furl);
         if (fres.ok) {
@@ -6113,7 +6226,7 @@ function alpineLink() {
       this.peakCampWeathersLoading = true;
       this.peakCampWeathers = [];
       try {
-        const res = await fetch(`/api/weather/camps?peak=${encodeURIComponent(peak.name)}`);
+        const res = await fetch(`${API_BASE}/api/weather/camps?peak=${encodeURIComponent(peak.name)}`);
         if (res.ok) {
           const data = await res.json();
           if (data.camps && data.camps.length > 0) {
@@ -6240,8 +6353,8 @@ function alpineLink() {
       this.showWeatherSearchResult = true;
       try {
         const [wres, fres] = await Promise.all([
-          fetch(`/api/weather?lat=${lat}&lon=${lon}&location=${encodeURIComponent(displayName)}`),
-          fetch(`/api/weather/forecast?lat=${lat}&lon=${lon}`)
+          fetch(`${API_BASE}/api/weather?lat=${lat}&lon=${lon}&location=${encodeURIComponent(displayName)}`),
+          fetch(`${API_BASE}/api/weather/forecast?lat=${lat}&lon=${lon}`)
         ]);
         if (wres.ok) {
           this.weatherSearchResult = await wres.json();
@@ -6268,14 +6381,14 @@ function alpineLink() {
       const locEnc = encodeURIComponent(loc);
       try {
         // 先尝试获取营地分层天气（山峰名称匹配）
-        const campsRes = await fetch(`/api/weather/camps?peak=${locEnc}`);
+        const campsRes = await fetch(`${API_BASE}/api/weather/camps?peak=${locEnc}`);
         if (campsRes.ok) {
           const campsData = await campsRes.json();
           if (campsData.camps && campsData.camps.length > 0) {
             this.weatherSearchCamps = this.markSameCampWeathers(campsData.camps);
             // 同时获取普通天气作为 header 显示
             try {
-              const wres = await fetch(`/api/weather?location=${locEnc}`);
+              const wres = await fetch(`${API_BASE}/api/weather?location=${locEnc}`);
               if (wres.ok) this.weatherSearchResult = await wres.json();
               else this.weatherSearchResult = { location: loc, temp: '-', wind: '-', humidity: '-', visibility: '-' };
             } catch(e) {
@@ -6289,8 +6402,8 @@ function alpineLink() {
       // 普通地点天气查询
       try {
         const [wres, fres] = await Promise.all([
-          fetch(`/api/weather?location=${locEnc}`),
-          fetch(`/api/weather/forecast?location=${locEnc}`)
+          fetch(`${API_BASE}/api/weather?location=${locEnc}`),
+          fetch(`${API_BASE}/api/weather/forecast?location=${locEnc}`)
         ]);
         if (wres.ok) {
           this.weatherSearchResult = await wres.json();
@@ -6311,8 +6424,8 @@ function alpineLink() {
         if (geo) {
           try {
             const [wres2, fres2] = await Promise.all([
-              fetch(`/api/weather?lat=${geo.lat}&lon=${geo.lon}&location=${encodeURIComponent(geo.displayName)}`),
-              fetch(`/api/weather/forecast?lat=${geo.lat}&lon=${geo.lon}`)
+              fetch(`${API_BASE}/api/weather?lat=${geo.lat}&lon=${geo.lon}&location=${encodeURIComponent(geo.displayName)}`),
+              fetch(`${API_BASE}/api/weather/forecast?lat=${geo.lat}&lon=${geo.lon}`)
             ]);
             if (wres2.ok) this.weatherSearchResult = await wres2.json();
             if (fres2.ok) { const fd2 = await fres2.json(); this.weatherSearchForecast = fd2.forecast || []; }
@@ -7135,21 +7248,21 @@ function alpineLink() {
     },
     async payExpeditionOrder(orderId) {
       try {
-        const res = await fetch(`/api/orders/${orderId}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('支付成功'); this.loadMyOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async cancelExpeditionOrder(orderId) {
       try {
-        const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('订单已取消'); this.loadMyOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async refundExpeditionOrder(orderId) {
       try {
-        const res = await fetch(`/api/orders/${orderId}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        const res = await fetch(`${API_BASE}/api/orders/${orderId}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
         if (res.ok) { this.showToast('退款申请已提交'); this.loadMyOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
@@ -7169,21 +7282,21 @@ function alpineLink() {
     },
     async payActivityOrder(id) {
       try {
-        const res = await fetch(`/api/activity-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/activity-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('支付成功'); this.loadActivityOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async cancelActivityOrder(id) {
       try {
-        const res = await fetch(`/api/activity-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/activity-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('订单已取消'); this.loadActivityOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async refundActivityOrder(id) {
       try {
-        const res = await fetch(`/api/activity-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        const res = await fetch(`${API_BASE}/api/activity-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
         if (res.ok) { this.showToast('退款申请已提交'); this.loadActivityOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
@@ -7199,21 +7312,21 @@ function alpineLink() {
     },
     async payGuideServiceOrder(id) {
       try {
-        const res = await fetch(`/api/guide-service-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/guide-service-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('支付成功'); this.loadGuideServiceOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async cancelGuideServiceOrder(id) {
       try {
-        const res = await fetch(`/api/guide-service-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/guide-service-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('订单已取消'); this.loadGuideServiceOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async refundGuideServiceOrder(id) {
       try {
-        const res = await fetch(`/api/guide-service-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        const res = await fetch(`${API_BASE}/api/guide-service-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
         if (res.ok) { this.showToast('退款申请已提交'); this.loadGuideServiceOrders(); }
         else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
@@ -7225,6 +7338,8 @@ function alpineLink() {
       this.enrollingActivity = act;
       this.enrollForm = { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0' };
       this.showActivityEnrollModal = true;
+      // 自动加载已保存的紧急联系人供快速填入
+      this.loadEmergencyContacts();
     },
     async submitActivityEnroll() {
       if (!this.enrollForm.emergency_contact_name || !this.enrollForm.emergency_contact_phone) {
@@ -7233,7 +7348,7 @@ function alpineLink() {
       if (!this.enrollForm.agreed_waiver) { this.showToast('请同意免责协议', 'error'); return; }
       this.enrollLoading = true;
       try {
-        const res = await fetch(`/api/clubs/${this.enrollingClub.id}/activities/${this.enrollingActivity.id}/enroll`, {
+        const res = await fetch(`${API_BASE}/api/clubs/${this.enrollingClub.id}/activities/${this.enrollingActivity.id}/enroll`, {
           method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify(this.enrollForm)
         });
@@ -7251,7 +7366,7 @@ function alpineLink() {
     async loadGuideServices(guideId) {
       this.guideServicesLoading = true;
       try {
-        const res = await fetch(`/api/guides/${guideId}/services`);
+        const res = await fetch(`${API_BASE}/api/guides/${guideId}/services`);
         if (res.ok) this.currentGuideServices = await res.json();
         else this.currentGuideServices = [];
       } catch(e) { this.currentGuideServices = []; } finally { this.guideServicesLoading = false; }
@@ -7262,6 +7377,8 @@ function alpineLink() {
       this.enrollingGuideService = service;
       this.guideServiceEnrollForm = { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0', notes: '' };
       this.showGuideServiceEnrollModal = true;
+      // 自动加载已保存的紧急联系人供快速填入
+      this.loadEmergencyContacts();
     },
     async submitGuideServiceBook() {
       if (!this.guideServiceEnrollForm.emergency_contact_name || !this.guideServiceEnrollForm.emergency_contact_phone) {
@@ -7270,7 +7387,7 @@ function alpineLink() {
       if (!this.guideServiceEnrollForm.agreed_waiver) { this.showToast('请同意免责协议', 'error'); return; }
       this.guideServiceEnrollLoading = true;
       try {
-        const res = await fetch(`/api/guides/${this.enrollingGuideForService.id}/services/${this.enrollingGuideService.id}/book`, {
+        const res = await fetch(`${API_BASE}/api/guides/${this.enrollingGuideForService.id}/services/${this.enrollingGuideService.id}/book`, {
           method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify(this.guideServiceEnrollForm)
         });
@@ -7288,7 +7405,7 @@ function alpineLink() {
     async loadMyGuideServices(guideId) {
       this.myGuideServicesLoading = true;
       try {
-        const res = await fetch(`/api/guides/${guideId}/services`, { headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/guides/${guideId}/services`, { headers: this.getAuthHeaders() });
         if (res.ok) this.myGuideServices = await res.json();
       } catch(e) {} finally { this.myGuideServicesLoading = false; }
     },
@@ -7297,7 +7414,7 @@ function alpineLink() {
       const g = this.newGuideService;
       if (!g.title) { this.showToast('请填写服务标题', 'error'); return; }
       try {
-        const res = await fetch(`/api/guides/${this.currentGuideProfile.id}/services`, {
+        const res = await fetch(`${API_BASE}/api/guides/${this.currentGuideProfile.id}/services`, {
           method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...g, price: Number(g.price)||0, max_clients: Number(g.max_clients)||8, duration_days: Number(g.duration_days)||1 })
         });
@@ -7318,7 +7435,7 @@ function alpineLink() {
     async deleteMyGuideService(guideId, serviceId) {
       if (!confirm('确认删除此服务？')) return;
       try {
-        const res = await fetch(`/api/guides/${guideId}/services/${serviceId}`, { method: 'DELETE', headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/guides/${guideId}/services/${serviceId}`, { method: 'DELETE', headers: this.getAuthHeaders() });
         if (res.ok) { this.showToast('服务已删除'); await this.loadGuideServices(guideId); }
         else { const d = await res.json(); this.showToast(d.error||'删除失败','error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
@@ -7328,7 +7445,7 @@ function alpineLink() {
       this.clubActivitiesMgmtLoading = true;
       this.showClubActivityMgmt = true;
       try {
-        const res = await fetch(`/api/clubs/${clubId}/activities`, { headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/clubs/${clubId}/activities`, { headers: this.getAuthHeaders() });
         if (res.ok) this.clubActivitiesMgmt = await res.json();
       } catch(e) {} finally { this.clubActivitiesMgmtLoading = false; }
     },
@@ -7337,7 +7454,7 @@ function alpineLink() {
       this.enrollmentsLoading = true;
       this.showEnrollmentsDrawer = true;
       try {
-        const res = await fetch(`/api/clubs/${clubId}/activities/${act.id}/enrollments`, { headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/clubs/${clubId}/activities/${act.id}/enrollments`, { headers: this.getAuthHeaders() });
         if (res.ok) this.selectedActivityEnrollments = await res.json();
         else this.selectedActivityEnrollments = [];
       } catch(e) { this.selectedActivityEnrollments = []; } finally { this.enrollmentsLoading = false; }
@@ -7345,7 +7462,7 @@ function alpineLink() {
     async toggleActivityStatus(clubId, act) {
       const newStatus = act.status === 'active' ? 'inactive' : 'active';
       try {
-        const res = await fetch(`/api/clubs/${clubId}/activity/${act.id}`, {
+        const res = await fetch(`${API_BASE}/api/clubs/${clubId}/activity/${act.id}`, {
           method: 'PUT', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus })
         });
@@ -7380,7 +7497,7 @@ function alpineLink() {
       if (!this.clubCommercialApplyId) return;
       this.clubCommercialLoading = true;
       try {
-        const res = await fetch(`/api/clubs/${this.clubCommercialApplyId}/commercial-apply`, {
+        const res = await fetch(`${API_BASE}/api/clubs/${this.clubCommercialApplyId}/commercial-apply`, {
           method: 'POST',
           headers: this.getAuthHeaders(),
           body: JSON.stringify(this.clubCommercialForm),
@@ -7405,7 +7522,7 @@ function alpineLink() {
       if (!this.guideCommercialApplyId) return;
       this.guideCommercialLoading = true;
       try {
-        const res = await fetch(`/api/guides/${this.guideCommercialApplyId}/commercial-apply`, {
+        const res = await fetch(`${API_BASE}/api/guides/${this.guideCommercialApplyId}/commercial-apply`, {
           method: 'POST',
           headers: this.getAuthHeaders(),
           body: JSON.stringify(this.guideCommercialForm),
@@ -7575,7 +7692,7 @@ function alpineLink() {
         return;
       }
       try {
-        const res = await fetch(`/api/tracks/${track.id}/claim-points`, {
+        const res = await fetch(`${API_BASE}/api/tracks/${track.id}/claim-points`, {
           method: 'POST',
           headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ points: pts }),
@@ -7746,7 +7863,7 @@ function alpineLink() {
       this.showAchievementsModal = true;
       this.achievementsLoading = true;
       try {
-        const res = await fetch(`/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
         if (res.ok) this.achievementsList = await res.json();
       } catch(e) {}
       this.achievementsLoading = false;
@@ -7756,7 +7873,7 @@ function alpineLink() {
       this.showMembershipModal = true;
       this.membershipLoading = true;
       try {
-        const res = await fetch(`/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
+        const res = await fetch(`${API_BASE}/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
         if (res.ok) this.membershipData = await res.json();
       } catch(e) {}
       this.membershipLoading = false;
@@ -7792,11 +7909,31 @@ function alpineLink() {
       if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       this.loginLoading = true;
       try {
-        const res = await fetch(API_BASE + '/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
-        const data = await res.json();
-        if (!res.ok) { this.showToast(data.error || '登录失败', 'error'); return; }
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch(API_BASE + '/api/auth/login', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.loginForm), signal: controller.signal
+        });
+        clearTimeout(timer);
+        let data = {};
+        try { data = await res.json(); } catch(jsonErr) { console.debug('[SummitLink] 登录响应非JSON:', jsonErr); }
+        if (!res.ok) {
+          if (res.status === 401) { this.showToast('手机号或密码错误，请重试', 'error'); }
+          else if (res.status === 404) { this.showToast('接口不存在(404)，请联系开发者', 'error'); }
+          else if (res.status >= 500) { this.showToast('服务器错误(' + res.status + ')，请稍后重试', 'error'); }
+          else { this.showToast(data.error || '登录失败(' + res.status + ')', 'error'); }
+          return;
+        }
         this._handleLoginSuccess(data);
-      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      } catch(e) {
+        if (e && e.name === 'AbortError') {
+          this.showToast('请求超时，请检查网络后重试', 'error');
+        } else {
+          this.showToast('网络连接失败，请检查网络设置后重试', 'error');
+          console.error('[SummitLink] 登录网络错误:', e);
+        }
+      }
       finally { this.loginLoading = false; }
     },
     async doRegister() {
@@ -7815,7 +7952,10 @@ function alpineLink() {
         this.agreedPrivacy = false;
         this.agreedTerms = false;
         this.showToast('注册成功，欢迎加入 ' + data.user.name + '！');
-      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      } catch(e) {
+        if (e && e.name === 'AbortError') { this.showToast('请求超时，请检查网络', 'error'); }
+        else { this.showToast('网络连接失败，请检查网络设置', 'error'); console.error('[SummitLink] 注册错误:', e); }
+      }
     },
     doLogout() {
       this.authToken = null;
@@ -7961,7 +8101,7 @@ function alpineLink() {
       try {
         const m = mode || this.gearMode;
         const c = category !== undefined ? category : this.gearCategory;
-        let url = '/api/gear?mode=' + m;
+        let url = API_BASE + '/api/gear?mode=' + m;
         if (c && c !== '全部') url += '&category=' + encodeURIComponent(c);
         const res = await fetch(url);
         if (!res.ok) return;
@@ -8289,7 +8429,7 @@ function alpineLink() {
       this.summitWindowExpanded = -1;
       if (!peakId) return;
       try {
-        const res = await fetch(`/api/weather/summit-window/${encodeURIComponent(peakId)}`);
+        const res = await fetch(`${API_BASE}/api/weather/summit-window/${encodeURIComponent(peakId)}`);
         if (res.ok) {
           const data = await res.json();
           this.summitWindow = Array.isArray(data) ? data : (data.days || []);
@@ -8548,7 +8688,7 @@ function alpineLink() {
     async loadArticles() {
       this.articlesLoading = true;
       try {
-        let url = '/api/articles';
+        let url = API_BASE + '/api/articles';
         if (this.articleCategory && this.articleCategory !== 'all') url += '?category=' + this.articleCategory;
         const res = await fetch(url);
         if (res.ok) this.articles = await res.json();
