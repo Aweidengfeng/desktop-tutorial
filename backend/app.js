@@ -56,10 +56,14 @@ if (Sentry) {
 
 // CORS 配置：生产环境只允许 CORS_ORIGINS 白名单，开发环境允许所有来源
 const corsOrigins = process.env.CORS_ORIGINS;
+// Capacitor App 使用的固定 origin（移动端 WebView）
+const CAPACITOR_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'http://localhost'];
 app.use(cors({
   origin: (origin, callback) => {
     // 无 Origin 头（如移动端 / curl）直接放行
     if (!origin) return callback(null, true);
+    // Capacitor/Ionic App 的 WebView origin 始终放行
+    if (CAPACITOR_ORIGINS.includes(origin)) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
     if (!corsOrigins) return callback(new Error('生产环境未配置 CORS_ORIGINS'), false);
     const whitelist = corsOrigins.split(',').map(o => o.trim());
