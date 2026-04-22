@@ -35,6 +35,16 @@
   </script>
   <style>
     .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    /* 浅色模式 */
+    body.light-mode { background: #f8fafc !important; color: #1e293b !important; }
+    body.light-mode .app-container { background: #f8fafc !important; }
+    body.light-mode .glass { background: rgba(255,255,255,0.8) !important; backdrop-filter: blur(10px); border: 1px solid rgba(0,0,0,0.08) !important; }
+    body.light-mode .bg-slate-900, body.light-mode .bg-slate-800, body.light-mode .bg-slate-700 { background: #ffffff !important; }
+    body.light-mode .text-white { color: #1e293b !important; }
+    body.light-mode .text-slate-300, body.light-mode .text-slate-400, body.light-mode .text-slate-500 { color: #64748b !important; }
+    body.light-mode .border-white\/10 { border-color: rgba(0,0,0,0.08) !important; }
+    body.light-mode header { background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.08) !important; }
+    body.light-mode .skeleton { background: #e2e8f0; }
     [x-cloak] { display: none !important; }
     .app-container { max-width: 430px; margin: 0 auto; }
     body { background: #0f172a; }
@@ -81,7 +91,7 @@
   </script>
 </head>
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
-<div class="app-container relative min-h-screen bg-slate-900 overflow-hidden">
+<div class="app-container relative min-h-screen overflow-hidden" :class="darkMode ? 'bg-slate-900' : 'bg-slate-50'">
 
   <!-- Toast Notifications -->
   <div class="fixed top-4 right-4 z-[200] flex flex-col gap-2" style="max-width: 300px;">
@@ -118,10 +128,10 @@
     <div class="flex items-center justify-between px-4 py-3">
       <div class="flex items-center gap-2">
         <span class="text-primary-light text-xl">&#9968;&#65039;</span>
-        <span class="font-display font-bold text-lg text-white" x-text="t('app_name')"></span>
+        <span class="font-display font-bold text-lg text-white">巅峰探索</span>
       </div>
       <div class="flex items-center gap-1">
-        <button @click="showLangPicker=true" class="px-2 py-1 rounded-full text-xs font-bold glass text-slate-300 hover:text-white transition-colors uppercase" x-text="currentLang.toUpperCase()"></button>
+        <button @click="toggleDarkMode()" class="p-2 rounded-full hover:bg-white/10 transition-colors" :title="darkMode ? '切换至浅色模式' : '切换至深色模式'"><span x-text="darkMode ? '☀️' : '🌙'" class="text-lg leading-none"></span></button>
         <button @click="showSearch = !showSearch" class="p-2 rounded-full hover:bg-white/10 transition-colors">
           <span class="material-symbols-outlined text-slate-300 text-xl">search</span>
         </button>
@@ -152,14 +162,33 @@
          class="px-4 pb-3">
       <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
         <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
-        <input x-model="searchQuery" type="text" :placeholder="t('search')" class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
+        <input x-model="searchQuery" @input.debounce.300ms="globalSearch(searchQuery)" type="text" placeholder="搜索山峰、向导、俱乐部、动态..." class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
         <button @click="showSearch=false;searchQuery=''" class="text-slate-400 hover:text-white">
           <span class="material-symbols-outlined text-lg">close</span>
         </button>
       </div>
-      <div class="flex gap-2 mt-2 overflow-x-auto scroll-hide pb-1">
+      <!-- 搜索历史 -->
+      <div x-show="!globalSearchResults.length" class="flex gap-2 mt-2 overflow-x-auto scroll-hide pb-1">
         <template x-for="h in searchHistory" :key="h">
-          <button @click="searchQuery = h" class="flex-shrink-0 px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition-colors" x-text="h"></button>
+          <button @click="searchQuery = h; globalSearch(h)" class="flex-shrink-0 px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition-colors" x-text="h"></button>
+        </template>
+      </div>
+      <!-- 全局搜索结果 -->
+      <div x-show="globalSearchResults.length > 0" class="mt-2 space-y-2 max-h-72 overflow-y-auto">
+        <template x-for="group in globalSearchResults" :key="group.type">
+          <div>
+            <p class="text-xs text-slate-400 font-semibold px-1 mb-1" x-text="group.label"></p>
+            <template x-for="item in group.items" :key="item.id || item.name">
+              <button @click="handleGlobalSearchClick(item); showSearch=false; globalSearchResults=[];" class="w-full text-left px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors mb-1 flex items-center gap-2">
+                <span class="text-base" x-text="group.icon"></span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-xs font-semibold truncate" x-text="item.name || item.title || item.content"></p>
+                  <p class="text-slate-400 text-[10px] truncate" x-text="item.country || item.specialty || item.type || ''"></p>
+                </div>
+              </button>
+            </template>
+            <button x-show="group.total > 3" @click="handleGlobalSearchViewAll(group); showSearch=false;" class="w-full text-center text-xs text-primary-light py-1">查看全部 <span x-text="group.type"></span> 结果</button>
+          </div>
         </template>
       </div>
     </div>
@@ -292,7 +321,10 @@
               </div>
             </div>
           </template>
-          <div x-show="featuredClubs.length === 0" class="flex-shrink-0 w-full text-center py-4 text-slate-500 text-xs">加载中...</div>
+          <div x-show="featuredClubs.length === 0" class="flex-shrink-0 w-full text-center py-8">
+            <p class="text-2xl mb-2">🏛️</p>
+            <p class="text-slate-400 text-sm font-medium">暂无认证俱乐部，敬请期待</p>
+          </div>
         </div>
       </div>
 
@@ -325,11 +357,12 @@
               <p class="text-primary-light text-xs font-bold" x-text="'$' + g.dayRate + '/天'"></p>
             </div>
           </template>
+          <div x-show="nearbyGuides.length === 0" class="w-full text-center py-8">
+            <p class="text-2xl mb-2">🧗</p>
+            <p class="text-slate-400 text-sm font-medium">暂无认证向导，敬请期待</p>
+          </div>
         </div>
       </div>
-
-
-      <!-- Eight Thousanders -->
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-3">
           <h3 class="font-display font-bold text-white">八千米巨峰</h3>
@@ -2112,44 +2145,6 @@
   </div>
 </div>
 
-<!-- Language Picker Modal -->
-<div x-show="showLangPicker"
-     x-transition:enter="transition ease-out duration-200"
-     x-transition:enter-start="opacity-0"
-     x-transition:enter-end="opacity-100"
-     x-transition:leave="transition ease-in duration-150"
-     x-transition:leave-start="opacity-100"
-     x-transition:leave-end="opacity-0"
-     class="fixed inset-0 z-[300] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
-  <div class="absolute inset-0 bg-black/70" @click="showLangPicker=false"></div>
-  <div class="relative bottom-sheet bg-slate-900 max-h-[80vh] overflow-y-auto">
-    <div class="p-5">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="font-display font-bold text-xl text-white" x-text="t('language')"></h3>
-        <button @click="showLangPicker=false" class="p-1.5 rounded-full hover:bg-white/10">
-          <span class="material-symbols-outlined text-slate-400">close</span>
-        </button>
-      </div>
-      <div class="space-y-2">
-        <template x-for="lang in availableLangs" :key="lang.code">
-          <button @click="currentLang=lang.code; showLangPicker=false"
-                  :class="currentLang===lang.code ? 'ring-2 ring-primary bg-primary/10' : 'hover:bg-white/5'"
-                  class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3 transition-all">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl" x-text="lang.flag"></span>
-              <div class="text-left">
-                <p class="text-white font-semibold" x-text="lang.native"></p>
-                <p class="text-slate-400 text-xs" x-text="lang.code"></p>
-              </div>
-            </div>
-            <span x-show="currentLang===lang.code" class="material-symbols-outlined text-primary-light">check_circle</span>
-          </button>
-        </template>
-      </div>
-    </div>
-  </div>
-</div>
-
     <!-- MODALS -->
 
     <!-- Peak Detail Modal -->
@@ -2469,12 +2464,33 @@
           </div>
           <div x-show="sosStep === 0">
             <div class="bg-slate-800 rounded-2xl p-4 mb-4">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span class="text-green-400 text-xs font-semibold">GPS 定位已获取</span>
+              <!-- GPS获取中 -->
+              <div x-show="!sosGps" class="flex items-center gap-2">
+                <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span class="text-yellow-400 text-xs font-semibold">正在获取GPS位置...</span>
               </div>
-              <p class="text-slate-300 text-sm">📍 27.9881° N, 86.9250° E</p>
-              <p class="text-slate-500 text-xs mt-1">珠穆朗玛峰大本营附近，海拔 5,364m</p>
+              <!-- GPS获取成功 -->
+              <div x-show="sosGps && !sosGps.error">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span class="text-green-400 text-xs font-semibold">GPS 定位已获取</span>
+                </div>
+                <p class="text-slate-300 text-sm" x-text="sosGps ? ('📍 ' + Math.abs(sosGps.lat) + '° ' + (sosGps.lat >= 0 ? 'N' : 'S') + ', ' + Math.abs(sosGps.lng) + '° ' + (sosGps.lng >= 0 ? 'E' : 'W')) : ''"></p>
+                <!-- 地图容器 -->
+                <div id="sos-map" style="height:200px;border-radius:12px;margin-top:10px;background:#1e293b;"></div>
+              </div>
+              <!-- GPS获取失败 -->
+              <div x-show="sosGps && sosGps.error">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                  <span class="text-red-400 text-xs font-semibold">无法获取位置</span>
+                </div>
+                <p class="text-slate-400 text-xs mb-2">请手动输入坐标：</p>
+                <div class="flex gap-2">
+                  <input x-model="sosManualLat" type="number" step="0.000001" min="-90" max="90" placeholder="纬度 (-90~90)" class="flex-1 bg-slate-700 text-white text-sm rounded-xl px-3 py-2 outline-none placeholder-slate-500">
+                  <input x-model="sosManualLng" type="number" step="0.000001" min="-180" max="180" placeholder="经度 (-180~180)" class="flex-1 bg-slate-700 text-white text-sm rounded-xl px-3 py-2 outline-none placeholder-slate-500">
+                </div>
+              </div>
             </div>
             <!-- Emergency contacts preview (always shown) -->
             <div class="mb-4">
@@ -2653,15 +2669,20 @@
             </button>
           </div>
           <div x-show="settingsType==='language'" class="space-y-3">
-            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">选择语言</h4>
-            <button @click="currentLang='zh'" :class="currentLang==='zh' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
-              <div class="flex items-center gap-3"><span class="text-2xl">🇨🇳</span><div class="text-left"><p class="text-white font-semibold">中文</p><p class="text-slate-400 text-xs">简体中文</p></div></div>
-              <span x-show="currentLang==='zh'" class="material-symbols-outlined text-primary-light">check_circle</span>
-            </button>
-            <button @click="currentLang='en'" :class="currentLang==='en' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
-              <div class="flex items-center gap-3"><span class="text-2xl">🇬🇧</span><div class="text-left"><p class="text-white font-semibold">English</p><p class="text-slate-400 text-xs">English (US)</p></div></div>
-              <span x-show="currentLang==='en'" class="material-symbols-outlined text-primary-light">check_circle</span>
-            </button>
+            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">外观设置</h4>
+            <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl" x-text="darkMode ? '🌙' : '☀️'"></span>
+                <div class="text-left">
+                  <p class="text-white font-semibold" x-text="darkMode ? '深色模式' : '浅色模式'"></p>
+                  <p class="text-slate-400 text-xs">跟随系统或手动切换</p>
+                </div>
+              </div>
+              <button @click="toggleDarkMode()" :class="darkMode ? 'bg-primary' : 'bg-slate-600'" class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
+                <span :class="darkMode ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+              </button>
+            </div>
+            <p class="text-slate-500 text-xs px-1">SummitLink 统一使用中文界面</p>
           </div>
           <div x-show="settingsType==='units'" class="space-y-4">
             <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">单位设置</h4>
@@ -3028,7 +3049,8 @@
             <!-- Tab Bar -->
             <div class="flex gap-1 bg-slate-800 mx-5 my-3 rounded-xl p-1 flex-shrink-0">
               <button @click="teamDetailTab='info'" :class="teamDetailTab==='info'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">队伍信息</button>
-              <button @click="teamDetailTab='chat';initTeamChat(selectedTeam && selectedTeam.groupChatId)" :class="teamDetailTab==='chat'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">💬 队伍聊天</button>
+              <button @click="teamDetailTab='members'" :class="teamDetailTab==='members'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">👥 成员</button>
+              <button @click="teamDetailTab='chat';initTeamChat(selectedTeam && selectedTeam.groupChatId)" :class="teamDetailTab==='chat'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">💬 聊天</button>
             </div>
             <!-- Info Tab -->
             <div x-show="teamDetailTab==='info'" class="overflow-y-auto flex-1 px-5 pb-5">
@@ -3045,6 +3067,40 @@
               <div class="flex gap-3">
                 <button @click="showTeamDetail=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">关闭</button>
                 <button @click="joinTeam(selectedTeam)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">申请加入</button>
+              </div>
+              <!-- 解散/退出队伍 -->
+              <div class="flex gap-3 mt-2">
+                <button x-show="selectedTeam && currentUser && selectedTeam.leader_id === currentUser.id"
+                        @click="dissolveTeam(selectedTeam)"
+                        class="flex-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 font-semibold py-2.5 rounded-xl transition-colors text-sm border border-red-500/30">
+                  🗑️ 解散队伍
+                </button>
+                <button x-show="selectedTeam && currentUser && selectedTeam.leader_id !== currentUser.id"
+                        @click="leaveTeam(selectedTeam)"
+                        class="flex-1 bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 font-semibold py-2.5 rounded-xl transition-colors text-sm border border-orange-500/30">
+                  🚪 退出队伍
+                </button>
+              </div>
+            </div>
+            <!-- Members Tab -->
+            <div x-show="teamDetailTab==='members'" class="overflow-y-auto flex-1 px-5 pb-5">
+              <div class="space-y-3">
+                <template x-for="member in (selectedTeam && selectedTeam.members || teamChatMembers)" :key="member.id || member.name">
+                  <div class="bg-slate-800 rounded-2xl p-3 flex items-center gap-3">
+                    <img :src="member.avatar || 'https://i.pravatar.cc/150?u=' + (member.name || 'user')" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-white text-sm font-semibold truncate" x-text="member.name"></p>
+                      <p class="text-slate-400 text-xs" x-text="member.role || (member.online ? '在线' : '离线')"></p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <div class="w-2 h-2 rounded-full" :class="member.online ? 'bg-green-400' : 'bg-slate-500'"></div>
+                      <button x-show="selectedTeam && currentUser && selectedTeam.leader_id === currentUser.id && member.id !== currentUser.id"
+                              @click="removeTeamMember(selectedTeam, member)"
+                              class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-lg bg-red-500/10 transition-colors">移除</button>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="!((selectedTeam && selectedTeam.members ? selectedTeam.members : teamChatMembers).length)" class="text-center py-8 text-slate-500 text-sm">暂无成员数据</div>
               </div>
             </div>
             <!-- Chat Tab -->
@@ -3063,6 +3119,12 @@
                     </div>
                   </template>
                 </div>
+              </div>
+              <!-- 聊天操作按钮 -->
+              <div class="px-5 py-1.5 border-b border-white/5 flex-shrink-0 flex justify-end gap-2">
+                <button @click="teamChatMessages=[];showToast('聊天记录已清空')" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800 transition-colors">🗑️ 清空记录</button>
+                <button @click="teamDetailTab='members'" class="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-800 transition-colors">👥 查看成员</button>
+                <button @click="leaveTeam(selectedTeam);showTeamDetail=false" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-lg bg-red-500/10 transition-colors">退出队伍</button>
               </div>
               <!-- Messages -->
               <div class="flex-1 overflow-y-auto px-5 py-3 space-y-3" id="teamChatMessages">
@@ -5504,8 +5566,11 @@ function alpineLink() {
     gearMode: 'buy',
     gearCategory: '全部',
     activeChatType: 'all',
-    currentLang: 'zh',
-    showLangPicker: false,
+    darkMode: localStorage.getItem('darkMode') !== null ? localStorage.getItem('darkMode') === 'true' : (window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : true),
+    sosGps: null,
+    sosManualLat: '',
+    sosManualLng: '',
+    globalSearchResults: [],
     showSearch: false,
     searchQuery: '',
     searchResults: [],
@@ -5639,14 +5704,7 @@ function alpineLink() {
     paymentMethod: 'alipay',
     showTrackDetail: false,
     selectedTrackDetail: null,
-    featuredClubs: [
-      { id: 'm1', name: '中国高山协会', description: '专注于中国高山探险和技术攀登的专业协会', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', specialty: '8000米峰', members: 1280, expeditions: 45, verified: true, type: '专业' },
-      { id: 'm2', name: '阿尔派探险俱乐部', description: '综合性俱乐部，提供从初级到专业的培训和远征服务', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', specialty: '技术攀登', members: 560, expeditions: 28, verified: true, type: '综合' },
-      { id: 'm3', name: '北京户外探险队', description: '以休闲户外和中低海拔攀登为主，适合初学者', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', specialty: '中低海拔', members: 890, expeditions: 120, verified: true, type: '休闲' },
-      { id: 'm4', name: '喜马拉雅探险队', description: '专业的喜马拉雅远征组织，曾多次带队登顶8000米峰', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', specialty: '喜马拉雅', members: 320, expeditions: 18, verified: true, type: '专业' },
-      { id: 'm5', name: '成都山地俱乐部', description: '专注于川西高原和横断山脉攀登的本地俱乐部', cover: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', specialty: '川西高原', members: 450, expeditions: 67, verified: false, type: '区域' },
-      { id: 'm6', name: '丝路登山协会', description: '西北地区攀登爱好者的聚集地，专注昆仑山、天山攀登', cover: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', specialty: '昆仑/天山', members: 230, expeditions: 35, verified: false, type: '区域' },
-    ],
+    featuredClubs: [],
     popularPeaksWeather: [
       { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️' },
       { name: 'K2', nameEn: 'K2', altitude: 8611, temp: -35, wind: 62, humidity: 25, condition: '多云', conditionIcon: '⛅' },
@@ -5736,34 +5794,7 @@ function alpineLink() {
     newComment: '',
     selectedPostComments: [],
     commentsLoading: false,
-    availableLangs: [
-      { code: 'zh', native: '简体中文', flag: '🇨🇳' },
-      { code: 'en', native: 'English', flag: '🇬🇧' },
-      { code: 'zh-TW', native: '繁體中文', flag: '🇹🇼' },
-      { code: 'ja', native: '日本語', flag: '🇯🇵' },
-      { code: 'ne', native: 'नेपाली', flag: '🇳🇵' },
-      { code: 'hi', native: 'हिन्दी', flag: '🇮🇳' },
-      { code: 'fr', native: 'Français', flag: '🇫🇷' },
-      { code: 'it', native: 'Italiano', flag: '🇮🇹' },
-      { code: 'es', native: 'Español', flag: '🇪🇸' },
-    ],
-    translations: {
-      zh: { app_name: '巅峰探索', summit: '峰顶', search: '搜索', language: '语言', home: '首页', explore: '探索', community: '社区', track: '轨迹', gear: '装备', me: '我的', booking: '预约', submit: '提交', cancel: '取消', close: '关闭', save: '保存', confirm: '确认', back: '返回', edit: '编辑', delete: '删除', share: '分享', like: '点赞', comment: '评论', follow: '关注', login: '登录', logout: '退出', settings: '设置', sos: 'SOS 紧急救援', loading: '加载中...', success: '成功', error: '错误', weather: '天气', altitude: '海拔', difficulty: '难度', country: '国家', price: '价格', date: '日期', guide: '向导', members: '成员', notes: '备注', send_sos: '发送 SOS', book_now: '立即预约', peak_detail: '山峰详情', booking_title: '预约攀登' },
-      en: { app_name: 'SummitLink', summit: 'Summit', search: 'Search', language: 'Language', home: 'Home', explore: 'Explore', community: 'Community', track: 'Track', gear: 'Gear', me: 'Me', booking: 'Booking', submit: 'Submit', cancel: 'Cancel', close: 'Close', save: 'Save', confirm: 'Confirm', back: 'Back', edit: 'Edit', delete: 'Delete', share: 'Share', like: 'Like', comment: 'Comment', follow: 'Follow', login: 'Login', logout: 'Logout', settings: 'Settings', sos: 'SOS Emergency', loading: 'Loading...', success: 'Success', error: 'Error', weather: 'Weather', altitude: 'Altitude', difficulty: 'Difficulty', country: 'Country', price: 'Price', date: 'Date', guide: 'Guide', members: 'Members', notes: 'Notes', send_sos: 'Send SOS', book_now: 'Book Now', peak_detail: 'Peak Detail', booking_title: 'Book Climbing' },
-      'zh-TW': { app_name: '巔峰探索', summit: '峰頂', search: '搜尋', language: '語言', home: '首頁', explore: '探索', community: '社群', track: '軌跡', gear: '裝備', me: '我的', booking: '預約', submit: '提交', cancel: '取消', close: '關閉', save: '儲存', confirm: '確認', back: '返回', edit: '編輯', delete: '刪除', share: '分享', like: '按讚', comment: '評論', follow: '追蹤', login: '登入', logout: '登出', settings: '設定', sos: 'SOS 緊急救援', loading: '載入中...', success: '成功', error: '錯誤', weather: '天氣', altitude: '海拔', difficulty: '難度', country: '國家', price: '價格', date: '日期', guide: '嚮導', members: '成員', notes: '備註', send_sos: '發送 SOS', book_now: '立即預約', peak_detail: '山峰詳情', booking_title: '預約攀登' },
-      ja: { app_name: 'サミットリンク', summit: '山頂', search: '検索', language: '言語', home: 'ホーム', explore: '探索', community: 'コミュニティ', track: 'トラック', gear: 'ギア', me: '自分', booking: '予約', submit: '送信', cancel: 'キャンセル', close: '閉じる', save: '保存', confirm: '確認', back: '戻る', edit: '編集', delete: '削除', share: '共有', like: 'いいね', comment: 'コメント', follow: 'フォロー', login: 'ログイン', logout: 'ログアウト', settings: '設定', sos: 'SOS 緊急救助', loading: '読み込み中...', success: '成功', error: 'エラー', weather: '天気', altitude: '高度', difficulty: '難易度', country: '国', price: '価格', date: '日付', guide: 'ガイド', members: 'メンバー', notes: 'メモ', send_sos: 'SOS送信', book_now: '今すぐ予約', peak_detail: '山の詳細', booking_title: 'クライミング予約' },
-      ne: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोज्नुहोस्', language: 'भाषा', home: 'गृह', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्र्याक', gear: 'गियर', me: 'म', booking: 'बुकिङ', submit: 'पेश गर्नुहोस्', cancel: 'रद्द गर्नुहोस्', close: 'बन्द गर्नुहोस्', save: 'सुरक्षित', confirm: 'पुष्टि गर्नुहोस्', back: 'पछाडि', edit: 'सम्पादन', delete: 'मेटाउनुहोस्', share: 'साझा गर्नुहोस्', like: 'मन पर्छ', comment: 'टिप्पणी', follow: 'अनुसरण', login: 'लगिन', logout: 'लगआउट', settings: 'सेटिङ', sos: 'SOS आपतकालीन', loading: 'लोड हुँदैछ...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'उचाइ', difficulty: 'कठिनाइ', country: 'देश', price: 'मूल्य', date: 'मिति', guide: 'गाइड', members: 'सदस्यहरू', notes: 'नोट', send_sos: 'SOS पठाउनुहोस्', book_now: 'अहिले बुक गर्नुहोस्', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिङ' },
-      hi: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोजें', language: 'भाषा', home: 'होम', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्रैक', gear: 'गियर', me: 'मैं', booking: 'बुकिंग', submit: 'जमा करें', cancel: 'रद्द करें', close: 'बंद करें', save: 'सहेजें', confirm: 'पुष्टि करें', back: 'वापस', edit: 'संपादित करें', delete: 'हटाएं', share: 'साझा करें', like: 'पसंद', comment: 'टिप्पणी', follow: 'अनुसरण करें', login: 'लॉगिन', logout: 'लॉगआउट', settings: 'सेटिंग', sos: 'SOS आपातकालीन', loading: 'लोड हो रहा है...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'ऊंचाई', difficulty: 'कठिनाई', country: 'देश', price: 'कीमत', date: 'तारीख', guide: 'गाइड', members: 'सदस्य', notes: 'नोट', send_sos: 'SOS भेजें', book_now: 'अभी बुक करें', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिंग' },
-      fr: { app_name: 'SommetsLink', summit: 'Sommet', search: 'Rechercher', language: 'Langue', home: 'Accueil', explore: 'Explorer', community: 'Communauté', track: 'Piste', gear: 'Équipement', me: 'Moi', booking: 'Réservation', submit: 'Soumettre', cancel: 'Annuler', close: 'Fermer', save: 'Enregistrer', confirm: 'Confirmer', back: 'Retour', edit: 'Modifier', delete: 'Supprimer', share: 'Partager', like: "J'aime", comment: 'Commenter', follow: 'Suivre', login: 'Connexion', logout: 'Déconnexion', settings: 'Paramètres', sos: 'SOS Urgence', loading: 'Chargement...', success: 'Succès', error: 'Erreur', weather: 'Météo', altitude: 'Altitude', difficulty: 'Difficulté', country: 'Pays', price: 'Prix', date: 'Date', guide: 'Guide', members: 'Membres', notes: 'Notes', send_sos: 'Envoyer SOS', book_now: 'Réserver maintenant', peak_detail: 'Détail du sommet', booking_title: "Réserver l'escalade" },
-      it: { app_name: 'SummitLink', summit: 'Vetta', search: 'Cerca', language: 'Lingua', home: 'Home', explore: 'Esplora', community: 'Comunità', track: 'Percorso', gear: 'Attrezzatura', me: 'Io', booking: 'Prenotazione', submit: 'Invia', cancel: 'Annulla', close: 'Chiudi', save: 'Salva', confirm: 'Conferma', back: 'Indietro', edit: 'Modifica', delete: 'Elimina', share: 'Condividi', like: 'Mi piace', comment: 'Commenta', follow: 'Segui', login: 'Accedi', logout: 'Esci', settings: 'Impostazioni', sos: 'SOS Emergenza', loading: 'Caricamento...', success: 'Successo', error: 'Errore', weather: 'Meteo', altitude: 'Altitudine', difficulty: 'Difficoltà', country: 'Paese', price: 'Prezzo', date: 'Data', guide: 'Guida', members: 'Membri', notes: 'Note', send_sos: 'Invia SOS', book_now: 'Prenota ora', peak_detail: 'Dettaglio cima', booking_title: 'Prenota scalata' },
-      es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
-    },
-    t(key) { const lang = this.translations[this.currentLang] || this.translations['zh']; return lang[key] || this.translations['zh'][key] || key; },
-    nearbyGuides: [
-      { id: 101, name: '扎西旺堆', flag: '🇨🇳', nationality: '中国', avatar: 'https://i.pravatar.cc/150?u=guide1', specialty: '珠峰/K2/南极洲', languages: ['中文','English'], rating: 4.9, reviews: 127, dayRate: 350, tag: '🏅 认证精英' },
-      { id: 102, name: 'Ang Dorji', flag: '🇳🇵', nationality: '尼泊尔', avatar: 'https://i.pravatar.cc/150?u=guide2', specialty: '喜马拉雅全系列', languages: ['English','Nepali'], rating: 4.8, reviews: 98, dayRate: 280, tag: '⭐ 本周最热' },
-      { id: 103, name: 'Marc Dubois', flag: '🇫🇷', nationality: '法国', avatar: 'https://i.pravatar.cc/150?u=guide3', specialty: '阿尔卑斯/安第斯', languages: ['Français','English'], rating: 4.7, reviews: 64, dayRate: 420, tag: '🌐 多语言' },
-    ],
+    nearbyGuides: [],
     summitLeaderboard: [
       { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
       { id: 2, name: 'Pemba Sherpa', flag: '🇳🇵', avatar: 'https://i.pravatar.cc/150?u=lb2', peak: 'K2 8611m', date: '4月10日' },
@@ -5950,18 +5981,82 @@ function alpineLink() {
       setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
     },
 
-    // Search
+    // 深色/浅色模式切换
+    toggleDarkMode() {
+      this.darkMode = !this.darkMode;
+      document.body.classList.toggle('light-mode', !this.darkMode);
+      localStorage.setItem('darkMode', this.darkMode);
+    },
+
+    // 全局搜索（搜索所有模块）
+    globalSearch(query) {
+      if (!query || !query.trim()) { this.globalSearchResults = []; return; }
+      const q = query.trim().toLowerCase();
+      const results = [];
+      // 搜索山峰（记录总数后再截取）
+      const allPeaks = [...this.eightThousanders, ...this.continentalPeaks, ...this.worldPeaks].filter(p =>
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.nameEn && p.nameEn.toLowerCase().includes(q)) ||
+        (p.country && p.country.toLowerCase().includes(q))
+      );
+      if (allPeaks.length) results.push({ type: '山峰', label: '🏔️ 山峰', icon: '🏔️', items: allPeaks.slice(0, 3), total: allPeaks.length });
+      // 搜索向导
+      const allGuides = [...(this.nearbyGuides || []), ...(this.guides || [])].filter((g, i, arr) => arr.findIndex(x => x.id === g.id) === i).filter(g =>
+        (g.name && g.name.toLowerCase().includes(q)) ||
+        (g.specialty && g.specialty.toLowerCase().includes(q))
+      );
+      if (allGuides.length) results.push({ type: '向导', label: '🧗 向导', icon: '🧗', items: allGuides.slice(0, 3), total: allGuides.length });
+      // 搜索俱乐部
+      const allClubs = (this.featuredClubs || []).filter(c =>
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.specialty && c.specialty.toLowerCase().includes(q))
+      );
+      if (allClubs.length) results.push({ type: '俱乐部', label: '🏛️ 俱乐部', icon: '🏛️', items: allClubs.slice(0, 3), total: allClubs.length });
+      // 搜索动态
+      const allPosts = (this.communityPosts || []).filter(p =>
+        (p.content && p.content.toLowerCase().includes(q)) ||
+        (p.author && p.author.toLowerCase().includes(q))
+      );
+      if (allPosts.length) results.push({ type: '动态', label: '💬 动态', icon: '💬', items: allPosts.slice(0, 3).map(p => ({ ...p, name: p.content ? p.content.slice(0, 40) : '' })), total: allPosts.length });
+      // 搜索队伍
+      const allTeams = (this.teams || []).filter(t =>
+        (t.name && t.name.toLowerCase().includes(q)) ||
+        (t.peak && t.peak.toLowerCase().includes(q))
+      );
+      if (allTeams.length) results.push({ type: '队伍', label: '👥 队伍', icon: '👥', items: allTeams.slice(0, 3), total: allTeams.length });
+      // 搜索轨迹
+      const allTracks = (this.tracks || []).filter(t =>
+        t.name && t.name.toLowerCase().includes(q)
+      );
+      if (allTracks.length) results.push({ type: '轨迹', label: '📍 轨迹', icon: '📍', items: allTracks.slice(0, 3), total: allTracks.length });
+      this.globalSearchResults = results;
+      // 同时保存搜索历史
+      if (query.trim() && !this.searchHistory.includes(query.trim())) {
+        this.searchHistory.unshift(query.trim());
+        if (this.searchHistory.length > 10) this.searchHistory.pop();
+      }
+    },
+    handleGlobalSearchClick(item) {
+      if (item._type === 'guide' || item.dayRate !== undefined || item.rating !== undefined) {
+        this.currentPage = 'explore'; this.activeCategory = 'guides';
+      } else if (item.altitude !== undefined) {
+        this.openPeakDetail(item);
+      } else if (item.content !== undefined) {
+        this.currentPage = 'community';
+      } else if (item.peak !== undefined && item.leader !== undefined) {
+        this.selectedTeam = item; this.showTeamDetail = true;
+      } else if (item.distance !== undefined || item.distance_km !== undefined) {
+        this.currentPage = 'track';
+      }
+    },
+    handleGlobalSearchViewAll(group) {
+      const typeMap = { '山峰': () => { this.currentPage = 'explore'; this.activeCategory = '8000ers'; }, '向导': () => { this.currentPage = 'explore'; this.activeCategory = 'guides'; }, '俱乐部': () => { this.currentPage = 'community'; this.activeChatType = 'clubs'; }, '动态': () => { this.currentPage = 'community'; }, '队伍': () => { this.currentPage = 'community'; this.activeChatType = 'teams'; }, '轨迹': () => { this.currentPage = 'track'; } };
+      if (typeMap[group.type]) typeMap[group.type]();
+    },
+    // Search (legacy - kept for compatibility)
     async performSearch() {
       if (!this.searchQuery.trim()) { this.searchResults = []; return; }
-      try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(this.searchQuery)}&type=all&limit=20`, { headers: this.getAuthHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          this.searchResults = Array.isArray(data) ? data : (data.results || []);
-        }
-      } catch(e) {
-        this.searchResults = [];
-      }
+      this.globalSearch(this.searchQuery);
     },
     selectSearchResult(result) {
       if (result.type === 'peak') this.openPeakDetail(result);
@@ -6399,8 +6494,44 @@ function alpineLink() {
     isGuideDateAvailable(date) { return true; },
 
     // SOS
-    openSOS() { this.showSOS = true; this.sosStep = 0; },
-    sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
+    openSOS() {
+      this.showSOS = true;
+      this.sosStep = 0;
+      this.sosGps = null;
+      this.sosManualLat = '';
+      this.sosManualLng = '';
+      // 获取真实GPS坐标
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            this.sosGps = {
+              lat: pos.coords.latitude.toFixed(6),
+              lng: pos.coords.longitude.toFixed(6),
+              accuracy: Math.round(pos.coords.accuracy)
+            };
+            // 初始化高德地图
+            this.$nextTick(() => {
+              if (typeof AMap !== 'undefined' && this.sosGps && !this.sosGps.error) {
+                try {
+                  const lat = parseFloat(this.sosGps.lat);
+                  const lng = parseFloat(this.sosGps.lng);
+                  const sosMap = new AMap.Map('sos-map', { center: [lng, lat], zoom: 12 });
+                  new AMap.Marker({ position: [lng, lat], map: sosMap });
+                } catch(e) {}
+              }
+            });
+          },
+          err => {
+            const errMsgs = { 1: '定位权限被拒绝，请在浏览器设置中允许位置访问', 2: '无法获取位置信息，请检查GPS是否开启', 3: '获取位置超时，请重试' };
+            this.sosGps = { error: errMsgs[err.code] || ('无法获取位置：' + (err.message || '未知错误')) };
+          },
+          { timeout: 10000, enableHighAccuracy: true }
+        );
+      } else {
+        this.sosGps = { error: '浏览器不支持定位功能' };
+      }
+    },
+    sendSOS_legacy() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
     cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
     refreshLocation() { this.showToast('位置已刷新'); },
     shareLocation() { this.showToast('位置已分享'); },
@@ -6526,6 +6657,46 @@ function alpineLink() {
     },
     openTeamDetail(team) { this.selectedTeam = team; this.showTeamDetail = true; },
     closeTeamDetail() { this.showTeamDetail = false; },
+    async dissolveTeam(team) {
+      if (!confirm('确定要解散队伍"' + team.name + '"吗？此操作不可撤销。')) return;
+      try {
+        const res = await fetch(API_BASE + '/api/teams/' + team.id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.teams = this.teams.filter(t => t.id !== team.id);
+          this.showTeamDetail = false;
+          this.showToast('队伍已解散');
+        } else {
+          const d = await res.json();
+          this.showToast(d.error || '解散失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async leaveTeam(team) {
+      if (!team) return;
+      if (!confirm('确定要退出队伍"' + team.name + '"吗？')) return;
+      try {
+        const res = await fetch(API_BASE + '/api/teams/' + team.id + '/members/me', { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.showTeamDetail = false;
+          this.showToast('已退出队伍');
+        } else {
+          const d = await res.json();
+          this.showToast(d.error || '退出失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async removeTeamMember(team, member) {
+      if (!confirm('确定要移除成员"' + member.name + '"吗？')) return;
+      try {
+        const res = await fetch(API_BASE + '/api/teams/' + team.id + '/members/' + member.id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          if (team.members) team.members = team.members.filter(m => m.id !== member.id);
+          this.showToast('成员已移除');
+        } else {
+          this.showToast('移除失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
     openCreateTeam() { this.showCreateTeam = true; },
     closeCreateTeam() { this.showCreateTeam = false; },
     async createTeam() {
@@ -7729,18 +7900,46 @@ function alpineLink() {
     },
 
     // Data loading methods
+    // 14座八千米巨峰兜底数据（API失败或返回不完整时使用）
+    get fallbackEightThousanders() {
+      return [
+        { id: 'e1', name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, country: '中国/尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=600' },
+        { id: 'e2', name: '乔戈里峰', nameEn: 'K2', altitude: 8611, country: '巴基斯坦/中国', difficulty: '极难', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600' },
+        { id: 'e3', name: '干城章嘉峰', nameEn: 'Kangchenjunga', altitude: 8586, country: '印度/尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600' },
+        { id: 'e4', name: '洛子峰', nameEn: 'Lhotse', altitude: 8516, country: '中国/尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600' },
+        { id: 'e5', name: '马卡鲁峰', nameEn: 'Makalu', altitude: 8485, country: '中国/尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600' },
+        { id: 'e6', name: '卓奥友峰', nameEn: 'Cho Oyu', altitude: 8201, country: '中国/尼泊尔', difficulty: '高难', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=600' },
+        { id: 'e7', name: '道拉吉里峰', nameEn: 'Dhaulagiri I', altitude: 8167, country: '尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=600' },
+        { id: 'e8', name: '马纳斯鲁峰', nameEn: 'Manaslu', altitude: 8163, country: '尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&fit=crop&w=600&h=400' },
+        { id: 'e9', name: '南迦帕尔巴特峰', nameEn: 'Nanga Parbat', altitude: 8126, country: '巴基斯坦', difficulty: '极难', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&fit=crop&w=600&h=400&q=80' },
+        { id: 'e10', name: '安纳普尔纳峰', nameEn: 'Annapurna I', altitude: 8091, country: '尼泊尔', difficulty: '极难', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=600&fit=crop&w=600&h=400&q=80' },
+        { id: 'e11', name: '加舒尔布鲁木I峰', nameEn: 'Gasherbrum I', altitude: 8080, country: '巴基斯坦/中国', difficulty: '极难', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&fit=crop&w=600&h=400&q=80' },
+        { id: 'e12', name: '布洛阿特峰', nameEn: 'Broad Peak', altitude: 8051, country: '巴基斯坦/中国', difficulty: '高难', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=600&fit=crop&w=600&h=400&q=80' },
+        { id: 'e13', name: '加舒尔布鲁木II峰', nameEn: 'Gasherbrum II', altitude: 8034, country: '巴基斯坦/中国', difficulty: '高难', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&fit=crop&w=600&h=400&q=80' },
+        { id: 'e14', name: '希夏邦马峰', nameEn: 'Shishapangma', altitude: 8027, country: '中国', difficulty: '高难', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=600&fit=crop&w=600&h=400&q=80' },
+      ].map(p => ({ ...p, countryFlag: '', icon: '🏔️' }));
+    },
     async loadPeaks(type) {
       try {
         const t = type || this.activeCategory;
         const res = await fetch(API_BASE + '/api/peaks?type=' + t);
-        if (!res.ok) return;
+        if (!res.ok) {
+          // API失败时使用兜底数据
+          if (t === '8000ers') this.eightThousanders = this.fallbackEightThousanders;
+          return;
+        }
         const data = await res.json();
         const mapped = data.map(p => ({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
-        if (t === '8000ers') this.eightThousanders = mapped;
+        if (t === '8000ers') {
+          // 确保至少显示14座巨峰
+          this.eightThousanders = mapped.length >= 14 ? mapped : this.fallbackEightThousanders;
+        }
         else if (t === 'continental') this.continentalPeaks = mapped;
         else if (t === 'world') this.worldPeaks = mapped;
         else if (t === 'alpine') this.climbingSpots = mapped;
-      } catch(e) {}
+      } catch(e) {
+        if (type === '8000ers' || this.activeCategory === '8000ers') this.eightThousanders = this.fallbackEightThousanders;
+      }
     },
     async loadGuides() {
       try {
@@ -8395,12 +8594,31 @@ function alpineLink() {
     async sendSOS() {
       this.sosStep = 1;
       this.showToast('SOS 已发送！救援正在响应', 'warning');
+      // 确定使用的坐标（GPS或手动输入）
+      let lat = (this.sosGps && !this.sosGps.error) ? this.sosGps.lat : (this.sosManualLat || null);
+      let lng = (this.sosGps && !this.sosGps.error) ? this.sosGps.lng : (this.sosManualLng || null);
+      // 验证坐标有效性
+      if (lat !== null && lng !== null) {
+        const latNum = parseFloat(lat), lngNum = parseFloat(lng);
+        if (isNaN(latNum) || latNum < -90 || latNum > 90 || isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+          lat = null; lng = null;
+        }
+      }
+      const locationStr = (lat && lng) ? (lat + '° N, ' + lng + '° E') : '位置未知';
+      try {
+        await fetch(API_BASE + '/api/sos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(this.authToken ? { 'Authorization': 'Bearer ' + this.authToken } : {}) },
+          body: JSON.stringify({ lat, lng, location: locationStr, message: 'SOS紧急救援请求', accuracy: this.sosGps?.accuracy })
+        });
+      } catch(e) {}
+      // 同时尝试旧接口
       if (this.authToken) {
         try {
           await fetch(API_BASE + '/api/rescue/sos', {
             method: 'POST',
             headers: this.getAuthHeaders(),
-            body: JSON.stringify({ location: '27.9881° N, 86.9250° E', peak_name: '珠穆朗玛峰大本营', message: 'SOS求救' })
+            body: JSON.stringify({ lat, lng, location: locationStr, message: 'SOS求救' })
           });
         } catch(e) {}
       }
@@ -8537,16 +8755,15 @@ function alpineLink() {
     // ─── Featured Clubs (Problem 1) ─────────────────────────────────────────
     async loadFeaturedClubs() {
       try {
-        const res = await fetch(API_BASE + '/api/clubs/featured');
+        const res = await fetch(API_BASE + '/api/clubs');
         if (res.ok) {
           const data = await res.json();
-          if (data.length > 0) {
-            this.featuredClubs = data.map(c => ({
-              ...c,
-              cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
-              verified: !!c.verified,
-            }));
-          }
+          const clubs = data.clubs || data || [];
+          this.featuredClubs = clubs.map(c => ({
+            ...c,
+            cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+            verified: !!c.verified,
+          }));
         }
       } catch(e) {}
     },
@@ -8644,6 +8861,18 @@ function alpineLink() {
       setInterval(() => {
         this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
       }, 5000);
+      // 初始化深色/浅色模式
+      document.body.classList.toggle('light-mode', !this.darkMode);
+      // 监听系统主题变化
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+          // 仅在用户未手动设置时跟随系统
+          if (localStorage.getItem('darkMode') === null) {
+            this.darkMode = e.matches;
+            document.body.classList.toggle('light-mode', !this.darkMode);
+          }
+        });
+      }
       // Initialize public tracks
       this.filteredPublicTracks = this.publicTracks;
       // Verify token and load initial data
