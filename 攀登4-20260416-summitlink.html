@@ -1452,13 +1452,13 @@
         <!-- Profile Card -->
         <div class="glass rounded-3xl p-5 mb-4">
           <div class="flex items-center gap-4 mb-4">
-            <div class="relative cursor-pointer" @click="triggerAvatarUpload()">
+            <div class="relative cursor-pointer" @click="triggerAvatarUpload()" tabindex="0" @keydown.enter="triggerAvatarUpload()" role="button" aria-label="更换头像">
               <img :src="userProfile.avatar" class="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary-light">
               <div class="absolute -bottom-1 -right-1 bg-primary rounded-full p-1 shadow-lg">
                 <span class="material-symbols-outlined text-white text-xs" style="font-size:14px">photo_camera</span>
               </div>
             </div>
-            <input type="file" id="avatarInput" accept="image/*" class="hidden" @change="uploadAvatar($event)">
+            <input type="file" x-ref="avatarInput" accept="image/*" class="hidden" aria-label="上传头像图片" @change="uploadAvatar($event)">
             <div class="flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-display font-bold text-xl text-white" x-text="userProfile.name"></h3>
@@ -6378,8 +6378,7 @@ function alpineLink() {
       event.target.value = '';
     },
     triggerAvatarUpload() {
-      const input = document.getElementById('avatarInput');
-      if (input) input.click();
+      if (this.$refs.avatarInput) this.$refs.avatarInput.click();
     },
     async submitGear() {
       if (!this.requireAuth()) return;

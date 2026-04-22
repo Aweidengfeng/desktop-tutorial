@@ -51,8 +51,10 @@ async function doLogin(page) {
 
   // 等待登录 API 响应，确认服务端已处理请求
   const resp = await loginResponse;
-  // 等待登录弹窗关闭（Alpine.js transition 动画需要时间）
-  await loginBox.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+  // 等待登录弹窗关闭（Alpine.js transition 动画需要时间，超时可接受因为后续操作会等待元素可见）
+  await loginBox.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {
+    // Timeout is acceptable: if the modal is still visible, subsequent element waits will catch it
+  });
   return resp;
 }
 
