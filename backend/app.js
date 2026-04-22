@@ -234,6 +234,26 @@ app.get('/club-portal', htmlPageLimiter, (req, res) => {
   });
 });
 
+app.use('/api/offline-expeditions', require('./routes/offlineExpeditions'));
+app.use('/api/climbing-log', require('./routes/climbingLog'));
+app.use('/api/guide-console', require('./routes/guideConsole'));
+app.use('/api/club-console', require('./routes/clubConsole'));
+app.use('/api/ai-coach', require('./routes/aiCoach'));
+app.use('/api/investor', require('./routes/investor'));
+
+// 投资者看板
+const investorHtmlFile = path.join(rootPath, 'investor.html');
+app.get('/investor', htmlPageLimiter, (req, res) => {
+  if (!fs.existsSync(investorHtmlFile)) {
+    return res.status(404).send('Investor dashboard not found');
+  }
+  fs.readFile(investorHtmlFile, 'utf8', (err, html) => {
+    if (err) return res.status(500).send('Internal Server Error');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  });
+});
+
 // 健康检查（/api/health 为标准路径，/health 保留兼容）
 const pkgVersion = (() => {
   try { return require('../package.json').version; } catch (e) { return '1.0.0'; }

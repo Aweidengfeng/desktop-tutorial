@@ -2,6 +2,22 @@
 
 All notable changes to SummitLink are documented in this file.
 
+## [2026.2.0] - 2026-05-01
+
+### Added (Offline Expedition, Climbing Log, AI Coach, Investor Dashboard)
+- **New DB tables**: `user_expeditions_log`, `expedition_moments`, `expedition_subscribers`, `smart_gear_lists`, `coach_assessments`
+- **DB migrations**: `commission_rate` added to `guides` and `clubs` tables
+- **`/api/offline-expeditions`** — CRUD for offline expeditions with idempotent upsert, batch moment upload, finalize, subscribe
+- **`/api/climbing-log`** — Climbing log, stats, smart gear checklist generation/update
+- **`/api/ai-coach`** — Assessment, roadmap, terminology glossary, Q&A
+- **`/api/guide-console`** — Guide dashboard, order management, earnings, withdrawal
+- **`/api/club-console`** — Club admin dashboard, members, activities, finance
+- **`/api/investor`** — Investor metrics: DAU/WAU/MAU, GMV, funnel, top guides/peaks, regional
+- **Weather routes**: `/api/weather/camps/:peakId`, `/api/weather/summit-window/:peakId`, `/api/weather/avalanche-risk/:peakId`
+- **`investor.html`** — Investor dashboard (Alpine.js + Tailwind)
+- **`/www/sw.js`** — Service worker for offline-first PWA
+- **30 new API tests** in `tests/api-offline-expedition.test.js`
+
 ## [2026.1.0] - 2026-04-22
 
 ### Added (Module A - Real-time Chat)

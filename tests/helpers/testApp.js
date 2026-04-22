@@ -52,6 +52,13 @@ function createApp() {
   app.use('/api/activity-orders',       require('../../backend/routes/activityOrders'));
   app.use('/api/guide-service-orders',  require('../../backend/routes/guideServiceOrders'));
 
+  app.use('/api/offline-expeditions', require('../../backend/routes/offlineExpeditions'));
+  app.use('/api/climbing-log',        require('../../backend/routes/climbingLog'));
+  app.use('/api/guide-console',       require('../../backend/routes/guideConsole'));
+  app.use('/api/club-console',        require('../../backend/routes/clubConsole'));
+  app.use('/api/ai-coach',            require('../../backend/routes/aiCoach'));
+  app.use('/api/investor',            require('../../backend/routes/investor'));
+
   // AI 助手（仅当 ENABLE_ASSISTANT=true 时挂载）
   if (process.env.ENABLE_ASSISTANT === 'true') {
     app.use('/api/assistant', require('../../backend/routes/assistant'));
