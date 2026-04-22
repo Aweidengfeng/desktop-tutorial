@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SummitLink 投资者看板</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen" x-data="investorDash()">
+  <div class="max-w-5xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-yellow-400 mb-2">🏔️ SummitLink 投资者看板</h1>
+    <p class="text-gray-400 mb-6 text-sm">实时运营数据 · 仅授权访问</p>
+
+    <!-- Token Input -->
+    <div class="bg-gray-900 rounded-xl p-4 mb-6 flex gap-3 items-end" x-show="!authenticated">
+      <div class="flex-1">
+        <label class="block text-sm text-gray-400 mb-1">访问令牌</label>
+        <input type="password" x-model="tokenInput" @keyup.enter="authenticate()"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-yellow-400"
+          placeholder="请输入 INVESTOR_TOKEN" />
+      </div>
+      <button @click="authenticate()" class="bg-yellow-400 text-gray-900 font-bold px-6 py-2 rounded-lg hover:bg-yellow-300 transition">
+        登录
+      </button>
+    </div>
+    <div x-show="error" class="bg-red-900/50 text-red-300 rounded-lg px-4 py-2 mb-4 text-sm" x-text="error"></div>
+
+    <div x-show="authenticated">
+      <div class="flex justify-between items-center mb-6">
+        <span class="text-green-400 text-sm">✅ 已授权访问</span>
+        <button @click="loadAll()" class="text-xs text-gray-400 hover:text-yellow-400 transition">🔄 刷新数据</button>
+      </div>
+
+      <!-- Key Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">DAU</div>
+          <div class="text-2xl font-bold text-white" x-text="metrics.dau ?? '—'"></div>
+          <div class="text-xs text-gray-500 mt-1">日活跃用户</div>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">WAU</div>
+          <div class="text-2xl font-bold text-white" x-text="metrics.wau ?? '—'"></div>
+          <div class="text-xs text-gray-500 mt-1">周活跃用户</div>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">MAU</div>
+          <div class="text-2xl font-bold text-white" x-text="metrics.mau ?? '—'"></div>
+          <div class="text-xs text-gray-500 mt-1">月活跃用户</div>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-yellow-900/40">
+          <div class="text-xs text-yellow-600 mb-1">GMV</div>
+          <div class="text-2xl font-bold text-yellow-400" x-text="metrics.gmv != null ? '¥' + Number(metrics.gmv).toLocaleString() : '—'"></div>
+          <div class="text-xs text-gray-500 mt-1">总交易额</div>
+        </div>
+      </div>
+
+      <!-- Secondary Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">注册用户</div>
+          <div class="text-xl font-bold" x-text="metrics.total_users ?? '—'"></div>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">订单完成率</div>
+          <div class="text-xl font-bold text-green-400" x-text="metrics.order_completion_rate ?? '—'"></div>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">SOS响应</div>
+          <div class="text-xl font-bold text-red-400" x-text="metrics.sos_response_count ?? '—'"></div>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <div class="text-xs text-gray-500 mb-1">登顶转化</div>
+          <div class="text-xl font-bold text-blue-400" x-text="metrics.summit_conversions ?? '—'"></div>
+        </div>
+      </div>
+
+      <!-- Funnel -->
+      <div class="bg-gray-900 rounded-xl p-5 border border-gray-800 mb-8">
+        <h2 class="font-bold text-lg mb-4">用户转化漏斗</h2>
+        <div class="space-y-2" x-show="funnel.registered != null">
+          <template x-for="(item, i) in funnelItems" :key="i">
+            <div class="flex items-center gap-3">
+              <div class="text-sm text-gray-400 w-28" x-text="item.label"></div>
+              <div class="flex-1 bg-gray-800 rounded-full h-4 overflow-hidden">
+                <div class="h-4 rounded-full transition-all duration-700"
+                  :class="['bg-yellow-400','bg-blue-400','bg-green-400','bg-purple-400'][i]"
+                  :style="`width:${funnel.registered > 0 ? Math.round(item.value/funnel.registered*100) : 0}%`"></div>
+              </div>
+              <div class="text-sm font-bold w-12 text-right" x-text="item.value"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Top Guides -->
+      <div class="bg-gray-900 rounded-xl p-5 border border-gray-800 mb-8">
+        <h2 class="font-bold text-lg mb-4">Top 10 向导（GMV）</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-800">
+                <th class="text-left py-2 pr-4">#</th>
+                <th class="text-left py-2 pr-4">向导</th>
+                <th class="text-right py-2 pr-4">评分</th>
+                <th class="text-right py-2 pr-4">订单数</th>
+                <th class="text-right py-2">GMV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(g, i) in topGuides" :key="g.id">
+                <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+                  <td class="py-2 pr-4 text-gray-500" x-text="i+1"></td>
+                  <td class="py-2 pr-4 font-medium" x-text="g.name || '—'"></td>
+                  <td class="py-2 pr-4 text-right text-yellow-400" x-text="g.rating ? Number(g.rating).toFixed(1) : '—'"></td>
+                  <td class="py-2 pr-4 text-right" x-text="g.order_count ?? 0"></td>
+                  <td class="py-2 text-right text-green-400" x-text="g.gmv != null ? '¥'+Number(g.gmv).toLocaleString() : '¥0'"></td>
+                </tr>
+              </template>
+              <tr x-show="topGuides.length === 0">
+                <td colspan="5" class="py-4 text-center text-gray-600">暂无数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="text-xs text-gray-600 text-center mt-4" x-text="'数据生成时间：' + (metrics.generated_at || '—')"></div>
+    </div>
+  </div>
+
+  <script>
+    function investorDash() {
+      const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = params.get('token') || '';
+      return {
+        tokenInput: tokenFromUrl,
+        token: tokenFromUrl,
+        authenticated: false,
+        error: '',
+        metrics: {},
+        funnel: {},
+        topGuides: [],
+        get funnelItems() {
+          return [
+            { label: '注册用户', value: this.funnel.registered || 0 },
+            { label: '完善资料', value: this.funnel.profile_completed || 0 },
+            { label: '首次下单', value: this.funnel.ordered_once || 0 },
+            { label: '首次付款', value: this.funnel.paid_once || 0 },
+          ];
+        },
+        async authenticate() {
+          this.error = '';
+          this.token = this.tokenInput;
+          const res = await fetch('/api/investor/metrics', { headers: { 'x-investor-token': this.token } });
+          if (res.status === 401) { this.error = '令牌无效，请重试'; return; }
+          this.authenticated = true;
+          const data = await res.json();
+          this.metrics = data;
+          await this.loadAll();
+        },
+        async loadAll() {
+          const h = { 'x-investor-token': this.token };
+          const [mRes, fRes, gRes] = await Promise.all([
+            fetch('/api/investor/metrics', { headers: h }),
+            fetch('/api/investor/funnel', { headers: h }),
+            fetch('/api/investor/top-guides', { headers: h }),
+          ]);
+          if (mRes.ok) this.metrics = await mRes.json();
+          if (fRes.ok) this.funnel = await fRes.json();
+          if (gRes.ok) this.topGuides = await gRes.json();
+        },
+        init() {
+          if (this.tokenFromUrl) this.authenticate();
+        },
+      };
+    }
+  </script>
+</body>
+</html>

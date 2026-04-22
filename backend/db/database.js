@@ -393,6 +393,85 @@ CREATE TABLE IF NOT EXISTS sos_records (
 );
 `);
 
+// 新模块：离线远征、攀登日志、装备清单、AI教练
+db.exec(`
+CREATE TABLE IF NOT EXISTS user_expeditions_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_uuid TEXT UNIQUE NOT NULL,
+  user_id INTEGER NOT NULL,
+  peak_id INTEGER,
+  peak_name TEXT,
+  status TEXT DEFAULT 'ongoing',
+  started_at DATETIME NOT NULL,
+  ended_at DATETIME,
+  summited INTEGER DEFAULT 0,
+  max_altitude REAL DEFAULT 0,
+  total_gain REAL DEFAULT 0,
+  duration_sec INTEGER DEFAULT 0,
+  cover_media_url TEXT,
+  poster_url TEXT,
+  total_moments INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS expedition_moments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_uuid TEXT UNIQUE NOT NULL,
+  expedition_id INTEGER NOT NULL,
+  recorded_at DATETIME NOT NULL,
+  altitude REAL DEFAULT 0,
+  lat REAL,
+  lng REAL,
+  type TEXT DEFAULT 'text',
+  media_url TEXT,
+  content TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS expedition_subscribers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  expedition_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(expedition_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS smart_gear_lists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  peak_id INTEGER,
+  peak_name TEXT NOT NULL,
+  altitude_tier TEXT,
+  season TEXT,
+  difficulty TEXT,
+  items TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS coach_assessments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER UNIQUE NOT NULL,
+  max_altitude INTEGER DEFAULT 0,
+  gear_skill TEXT DEFAULT 'beginner',
+  fitness TEXT DEFAULT 'moderate',
+  technical_skill TEXT DEFAULT 'beginner',
+  goal_peak TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// 迁移：guides 表 commission_rate
+if (!existingGuideCols.includes('commission_rate')) {
+  db.exec('ALTER TABLE guides ADD COLUMN commission_rate REAL DEFAULT 0.15');
+}
+
+// 迁移：clubs 表 commission_rate
+if (!existingClubCols.includes('commission_rate')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN commission_rate REAL DEFAULT 0.15');
+}
+
 // 种子数据：救援联系方式（仅插入一次）
 const rescueCount = db.prepare('SELECT COUNT(*) as cnt FROM rescue_contacts').get();
 if (rescueCount.cnt === 0) {
