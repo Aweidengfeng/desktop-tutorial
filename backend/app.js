@@ -241,6 +241,13 @@ app.use('/api/club-console', require('./routes/clubConsole'));
 app.use('/api/ai-coach', require('./routes/aiCoach'));
 app.use('/api/investor', require('./routes/investor'));
 
+// 电子护照（PDF 下载）
+app.use('/api/passport', require('./routes/passport'));
+app.use('/api/user', require('./routes/passport')); // /api/user/:id/passport.pdf
+
+// 海拔查询
+app.use('/api/altitude', require('./routes/altitude'));
+
 // 投资者看板
 const investorHtmlFile = path.join(rootPath, 'investor.html');
 app.get('/investor', htmlPageLimiter, (req, res) => {

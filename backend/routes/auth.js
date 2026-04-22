@@ -36,6 +36,16 @@ function makeToken(id) {
 }
 
 function safeUser(user) {
+  // Check if user is an approved guide or club admin
+  let isGuide = false;
+  let isClubAdmin = false;
+  try {
+    const guide = db.prepare("SELECT id FROM guides WHERE user_id = ? AND status = 'approved'").get(user.id);
+    if (guide) isGuide = true;
+    const club = db.prepare("SELECT id FROM club_members WHERE user_id = ? AND role IN ('founder','admin')").get(user.id);
+    if (club) isClubAdmin = true;
+  } catch(e) {}
+
   return {
     id: user.id,
     name: user.name,
@@ -47,6 +57,9 @@ function safeUser(user) {
     followers: user.followers,
     following: user.following,
     phone: user.phone,
+    is_admin: user.is_admin || 0,
+    is_guide: isGuide ? 1 : 0,
+    is_club_admin: isClubAdmin ? 1 : 0,
   };
 }
 
@@ -173,6 +186,69 @@ router.get('/privacy', auth, (req, res) => {
     let privacy = {};
     try { privacy = JSON.parse(user.privacy || '{}'); } catch(e) {}
     res.json(privacy);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/auth/change-password — 修改密码（需登录 + 旧密码验证）
+router.put('/change-password', auth, (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: '请填写旧密码和新密码' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '新密码至少6位' });
+    }
+    const user = db.prepare('SELECT password FROM users WHERE id = ?').get(req.user.id);
+    if (!user || !user.password) return res.status(400).json({ error: '此账号未设置密码（请使用短信验证码登录后设置）' });
+    const ok = bcrypt.compareSync(oldPassword, user.password);
+    if (!ok) return res.status(401).json({ error: '旧密码不正确' });
+    const hash = bcrypt.hashSync(newPassword, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, req.user.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/auth/change-phone — 更换手机号（需登录 + 新手机短信验证码）
+router.put('/change-phone', auth, (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) return res.status(400).json({ error: '请填写新手机号和验证码' });
+    if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ error: '手机号格式不正确' });
+    const existing = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+    if (existing && existing.id !== req.user.id) return res.status(400).json({ error: '该手机号已被其他账号使用' });
+    const record = db.prepare(
+      'SELECT * FROM sms_codes WHERE phone = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1'
+    ).get(phone, code);
+    if (!record || Date.now() > record.expires_at) return res.status(401).json({ error: '验证码无效或已过期' });
+    db.prepare('UPDATE sms_codes SET used = 1 WHERE id = ?').run(record.id);
+    db.prepare('UPDATE users SET phone = ? WHERE id = ?').run(phone, req.user.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/request-deletion — 申请注销账号（24小时冷静期）
+router.post('/request-deletion', auth, (req, res) => {
+  try {
+    const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    db.prepare('UPDATE users SET deleted_at = ? WHERE id = ?').run(scheduledAt, req.user.id);
+    res.json({ success: true, deletedAt: scheduledAt, message: '注销申请已提交，账号将在24小时后删除。在此期间您可以登录取消注销。' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/cancel-deletion — 取消注销申请
+router.post('/cancel-deletion', auth, (req, res) => {
+  try {
+    db.prepare('UPDATE users SET deleted_at = NULL WHERE id = ?').run(req.user.id);
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
