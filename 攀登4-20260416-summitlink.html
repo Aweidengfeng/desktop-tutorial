@@ -1290,7 +1290,8 @@
     </section>
 
     <!-- GEAR PAGE -->
-    <section x-show="currentPage === 'gear'"
+    <!-- 装备页面已在种子期隐藏，保留代码供后续启用 -->
+    <section x-show="false" style="display:none"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
@@ -5759,9 +5760,8 @@ function alpineLink() {
     ],
     navTabs: [
       { id: 'home', icon: 'home', name: '首页' },
-      { id: 'explore', icon: 'explore', name: '探索' },
+      { id: 'explore', icon: 'group', name: '找队友' },
       { id: 'chat', icon: 'chat', name: '聊天' },
-      { id: 'gear', icon: 'backpack', name: '装备' },
       { id: 'me', icon: 'person', name: '我的' },
     ],
     weather: { location: '珠穆朗玛峰大本营', condition: 'partly_cloudy', temp: -8, wind: 25, humidity: 45, visibility: 12 },

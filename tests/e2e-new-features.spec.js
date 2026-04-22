@@ -163,8 +163,8 @@ test.describe('4. 全局搜索', () => {
     if (await searchBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await expect(searchBtn).toBeVisible();
     } else {
-      // 搜索功能可能在探索页
-      const exploreTab = page.locator('button[data-tab="explore"], nav button:has-text("探索")').first();
+      // 搜索功能可能在找队友页
+      const exploreTab = page.locator('button[data-tab="explore"], nav button:has-text("找队友")').first();
       if (await exploreTab.isVisible().catch(() => false)) {
         await exploreTab.click();
         await page.waitForTimeout(1000);
