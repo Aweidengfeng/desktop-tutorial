@@ -23,12 +23,32 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: '登录尝试次数过多，请15分钟后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: { error: '注册请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authWriteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: '请求过于频繁' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 function makeToken(id) {
@@ -192,7 +212,7 @@ router.get('/privacy', auth, (req, res) => {
 });
 
 // PUT /api/auth/change-password — 修改密码（需登录 + 旧密码验证）
-router.put('/change-password', auth, (req, res) => {
+router.put('/change-password', authWriteLimiter, auth, (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
     if (!oldPassword || !newPassword) {
@@ -214,7 +234,7 @@ router.put('/change-password', auth, (req, res) => {
 });
 
 // PUT /api/auth/change-phone — 更换手机号（需登录 + 新手机短信验证码）
-router.put('/change-phone', auth, (req, res) => {
+router.put('/change-phone', authWriteLimiter, auth, (req, res) => {
   try {
     const { phone, code } = req.body;
     if (!phone || !code) return res.status(400).json({ error: '请填写新手机号和验证码' });
@@ -234,7 +254,7 @@ router.put('/change-phone', auth, (req, res) => {
 });
 
 // POST /api/auth/request-deletion — 申请注销账号（24小时冷静期）
-router.post('/request-deletion', auth, (req, res) => {
+router.post('/request-deletion', authWriteLimiter, auth, (req, res) => {
   try {
     const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     db.prepare('UPDATE users SET deleted_at = ? WHERE id = ?').run(scheduledAt, req.user.id);
@@ -245,7 +265,7 @@ router.post('/request-deletion', auth, (req, res) => {
 });
 
 // POST /api/auth/cancel-deletion — 取消注销申请
-router.post('/cancel-deletion', auth, (req, res) => {
+router.post('/cancel-deletion', authWriteLimiter, auth, (req, res) => {
   try {
     db.prepare('UPDATE users SET deleted_at = NULL WHERE id = ?').run(req.user.id);
     res.json({ success: true });

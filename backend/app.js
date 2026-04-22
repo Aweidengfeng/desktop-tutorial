@@ -163,6 +163,7 @@ app.use('/api/badges', require('./routes/badges'));
 app.use('/api/group-chats', require('./routes/groupChats'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/articles', require('./routes/articles'));
 app.use('/api/profile', require('./routes/profile'));

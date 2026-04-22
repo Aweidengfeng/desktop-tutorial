@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const usersReadLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 60,
+  message: { error: '请求过于频繁' }, standardHeaders: true, legacyHeaders: false,
+});
 
 // GET /api/users/:id/achievements — 用户成就
 router.get('/:id/achievements', (req, res) => {
@@ -182,6 +188,48 @@ router.delete('/follow', auth, (req, res) => {
     db.prepare('UPDATE users SET following = (SELECT COUNT(*) FROM follows WHERE follower_id = ?) WHERE id = ?').run(req.user.id, req.user.id);
     db.prepare('UPDATE users SET followers = (SELECT COUNT(*) FROM follows WHERE following_id = ?) WHERE id = ?').run(followee_id, followee_id);
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/users/:id — 获取用户基本资料（公开）
+router.get('/:id', usersReadLimiter, (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const user = db.prepare(
+      'SELECT id, name, username, avatar, bio, level, summits, expeditions, followers, following, created_at FROM users WHERE id = ?'
+    ).get(userId);
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+    // is_following check (if authed)
+    let is_following = false;
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const token = authHeader.split(' ')[1];
+        const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
+        const followRow = db.prepare('SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?').get(payload.id, userId);
+        is_following = !!followRow;
+      } catch(e) {}
+    }
+    res.json({ ...user, is_following });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/users/:id/posts — 获取用户发布的动态
+router.get('/:id/posts', usersReadLimiter, (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const offset = (page - 1) * limit;
+    const posts = db.prepare(
+      'SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    ).all(userId, limit, offset);
+    res.json(posts);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
