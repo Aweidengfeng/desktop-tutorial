@@ -1020,6 +1020,12 @@
                 </button>
               </div>
               <p class="text-slate-300 text-sm mb-3" x-text="post.content"></p>
+              <!-- 视频 -->
+              <template x-if="post.videoUrl">
+                <div class="mb-3">
+                  <video :src="post.videoUrl" controls class="w-full rounded-xl max-h-64 object-contain bg-black" preload="metadata"></video>
+                </div>
+              </template>
               <!-- 单图 -->
               <img x-show="post.image && (!post.images || post.images.length === 0)" :src="post.image" @click="lightboxUrl=post.image;showLightbox=true" class="w-full h-40 object-cover rounded-xl mb-3 cursor-pointer hover:opacity-90 transition-opacity">
               <!-- 多图九宫格 -->
@@ -1208,10 +1214,13 @@
             <span class="material-symbols-outlined text-xl">save</span>保存
           </button>
         </div>
-        <label x-show="trackRecordingState==='idle'" class="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-2xl transition-colors mb-5 cursor-pointer">
+        <label x-show="trackRecordingState==='idle'" class="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-2xl transition-colors mb-2 cursor-pointer">
           <span class="material-symbols-outlined text-base">upload_file</span>导入GPX轨迹
           <input type="file" accept=".gpx,.kml" class="hidden" @change="importGpxFile($event)">
         </label>
+        <button x-show="trackRecordingState==='idle'" @click="showManualSummitModal=true" class="w-full flex items-center justify-center gap-2 bg-amber-600/80 hover:bg-amber-500 text-white font-semibold py-3 rounded-2xl transition-colors mb-5">
+          <span class="material-symbols-outlined text-base">emoji_events</span>手动记录登顶（无轨迹）
+        </button>
         <!-- Track History -->
         <h3 class="font-display font-bold text-white mb-3">我的历史轨迹</h3>
         <div class="space-y-3">
@@ -2847,19 +2856,19 @@
             </button>
           </div>
           <div class="grid grid-cols-4 gap-4 mb-5">
-            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity" @click="copyText(selectedPostForShare ? (window.location.origin+'/summitlink') : window.location.href); showShare=false">
               <div class="w-14 h-14 bg-green-500/20 rounded-2xl flex items-center justify-center text-2xl">💬</div>
-              <span class="text-slate-400 text-xs">微信</span>
+              <span class="text-slate-400 text-xs">微信（复制链接）</span>
             </button>
-            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
-              <div class="w-14 h-14 bg-green-600/20 rounded-2xl flex items-center justify-center text-2xl">🌐</div>
-              <span class="text-slate-400 text-xs">朋友圈</span>
-            </button>
-            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity" @click="shareToWeibo()">
               <div class="w-14 h-14 bg-red-500/20 rounded-2xl flex items-center justify-center text-xl font-bold text-red-400">W</div>
               <span class="text-slate-400 text-xs">微博</span>
             </button>
-            <button @click="showShare=false" class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+            <button class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity" @click="shareToQQ()">
+              <div class="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center text-xl font-bold text-blue-400">Q</div>
+              <span class="text-slate-400 text-xs">QQ空间</span>
+            </button>
+            <button @click="copyShareLink(); showShare=false" class="flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
               <div class="w-14 h-14 bg-slate-600/50 rounded-2xl flex items-center justify-center">
                 <span class="material-symbols-outlined text-slate-300 text-xl">link</span>
               </div>
@@ -2905,6 +2914,13 @@
               </div>
             </template>
           </div>
+          <!-- 已选视频预览 -->
+          <div x-show="newPost.videoPreview" class="mb-3 relative">
+            <video :src="newPost.videoPreview" controls class="w-full rounded-xl max-h-40 object-contain bg-black"></video>
+            <button @click="newPost.videoPreview=''; newPost.videoFile=null" class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+              <span class="material-symbols-outlined text-white text-xs">close</span>
+            </button>
+          </div>
           <div class="bg-slate-800/50 rounded-xl px-3 py-2 flex items-center gap-2 mb-4">
             <span class="material-symbols-outlined text-slate-400 text-base">location_on</span>
             <input x-model="newPost.location" type="text" placeholder="添加位置..." class="bg-transparent text-slate-300 text-sm flex-1 outline-none placeholder-slate-600">
@@ -2914,6 +2930,10 @@
               <span class="material-symbols-outlined text-base">photo_camera</span><span>照片</span>
               <input type="file" accept="image/*" multiple class="hidden" @change="handlePostImageSelect($event)">
             </label>
+            <label class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm cursor-pointer">
+              <span class="material-symbols-outlined text-base">videocam</span><span>视频</span>
+              <input type="file" accept="video/mp4,video/quicktime,.mp4,.mov" class="hidden" @change="handlePostVideoSelect($event)">
+            </label>
             <button class="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm">
               <span class="material-symbols-outlined text-base">emoji_emotions</span><span>表情</span>
             </button>
@@ -2921,6 +2941,66 @@
               <span class="material-symbols-outlined text-base">tag</span><span>标签</span>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual Summit Record Modal -->
+    <div x-show="showManualSummitModal"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-10"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
+      <div class="absolute inset-0 bg-black/70" @click="showManualSummitModal=false"></div>
+      <div class="relative bottom-sheet bg-slate-900 max-h-[80vh] overflow-y-auto">
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display font-bold text-white">🏔️ 手动记录登顶</h3>
+            <button @click="showManualSummitModal=false" class="p-1.5 rounded-full hover:bg-white/10">
+              <span class="material-symbols-outlined text-slate-400">close</span>
+            </button>
+          </div>
+          <p class="text-slate-400 text-xs mb-4">适用于真实攀登但无GPS轨迹记录的情况。请上传峰顶照片作为证明。</p>
+          <div class="space-y-3">
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">山峰名称 *</label>
+              <input x-model="manualSummit.peak_name" type="text" placeholder="如：珠穆朗玛峰" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">攀登日期 *</label>
+              <input x-model="manualSummit.date" type="date" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">海拔高度（米）</label>
+              <input x-model="manualSummit.altitude" type="number" placeholder="如：8849" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary">
+            </div>
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">备注</label>
+              <textarea x-model="manualSummit.notes" rows="2" placeholder="攀登路线、团队、天气等..." class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary resize-none"></textarea>
+            </div>
+            <!-- 证明照片上传 -->
+            <div>
+              <label class="text-slate-400 text-xs mb-1 block">证明照片 * (至少1张)</label>
+              <div class="flex flex-wrap gap-2 mb-2">
+                <template x-for="(url, i) in manualSummit.proof_images" :key="i">
+                  <div class="relative">
+                    <img :src="url" class="w-16 h-16 rounded-xl object-cover">
+                    <button @click="manualSummit.proof_images.splice(i,1)" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                      <span class="material-symbols-outlined text-white" style="font-size:12px">close</span>
+                    </button>
+                  </div>
+                </template>
+              </div>
+              <label class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm cursor-pointer">
+                <span class="material-symbols-outlined text-base">add_photo_alternate</span><span>添加照片</span>
+                <input type="file" accept="image/*" multiple class="hidden" @change="handleManualSummitImageSelect($event)">
+              </label>
+            </div>
+          </div>
+          <button @click="submitManualSummit()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition-colors mt-5">提交登顶记录</button>
         </div>
       </div>
     </div>
@@ -2948,7 +3028,7 @@
             <!-- Tab Bar -->
             <div class="flex gap-1 bg-slate-800 mx-5 my-3 rounded-xl p-1 flex-shrink-0">
               <button @click="teamDetailTab='info'" :class="teamDetailTab==='info'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">队伍信息</button>
-              <button @click="teamDetailTab='chat';initTeamChat()" :class="teamDetailTab==='chat'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">💬 队伍聊天</button>
+              <button @click="teamDetailTab='chat';initTeamChat(selectedTeam && selectedTeam.groupChatId)" :class="teamDetailTab==='chat'?'bg-primary text-white':'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">💬 队伍聊天</button>
             </div>
             <!-- Info Tab -->
             <div x-show="teamDetailTab==='info'" class="overflow-y-auto flex-1 px-5 pb-5">
@@ -5517,7 +5597,7 @@ function alpineLink() {
     showShare: false,
     selectedPostForShare: null,
     showPostEditor: false,
-    newPost: { content: '', location: '', images: [] },
+    newPost: { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '' },
     showPostEmojiPicker: false,
     showChat: false,
     activeChatConv: null,
@@ -5543,6 +5623,8 @@ function alpineLink() {
     selectedTeam: null,
     showCreateTeam: false,
     newTeam: { name: '', peak: '', date: '', level: '', spots: 4, description: '' },
+    showManualSummitModal: false,
+    manualSummit: { peak_name: '', date: '', altitude: '', notes: '', proof_images: [] },
     showInsurance: false,
     insuranceRegion: '喜马拉雅',
     insurancePlans: [],
@@ -5841,17 +5923,14 @@ function alpineLink() {
     clubActivitiesMgmtLoading: false,
     teamDetailTab: 'info',
     teamChatInput: '',
+    teamChatGroupId: null,
     teamChatMembers: [
       { name: '张磊 (领队)', avatar: 'https://i.pravatar.cc/150?u=zhang', online: true },
       { name: 'Ang Dorji', avatar: 'https://i.pravatar.cc/150?u=guide2', online: true },
       { name: '李明', avatar: 'https://i.pravatar.cc/150?u=li', online: false },
       { name: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', online: true },
     ],
-    teamChatMessages: [
-      { id: 1, sender: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', text: '大家好！出发前最后确认一下装备清单', time: '10:23', self: false },
-      { id: 2, sender: 'Ang Dorji', avatar: 'https://i.pravatar.cc/150?u=guide2', text: '我已经检查完毕，绳索和冰镐都已准备好', time: '10:24', self: false },
-      { id: 3, sender: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', text: '高山靴和抓绒都带了，明天见！', time: '10:28', self: false },
-    ],
+    teamChatMessages: [],
     navTabs: [
       { id: 'home', icon: 'home', name: '首页' },
       { id: 'explore', icon: 'group', name: '找队友' },
@@ -6229,13 +6308,38 @@ function alpineLink() {
     sharePost(post) { this.selectedPostForShare = post; this.showShare = true; },
     closeShareModal() { this.showShare = false; },
     doShare(platform) { this.showToast('已分享到 ' + platform); this.closeShareModal(); },
+    copyShareLink() {
+      const url = window.location.origin + '/summitlink';
+      const text = this.selectedPostForShare ? this.selectedPostForShare.content : '来自巅峰探索 SummitLink';
+      navigator.clipboard?.writeText(url).then(() => this.showToast('链接已复制')).catch(() => this.showToast('复制失败', 'error'));
+    },
+    shareToWeibo() {
+      const url = encodeURIComponent(window.location.origin + '/summitlink');
+      const text = encodeURIComponent((this.selectedPostForShare ? this.selectedPostForShare.content : '来自巅峰探索 SummitLink') + ' ' + window.location.origin + '/summitlink');
+      window.open('https://service.weibo.com/share/share.php?url=' + url + '&title=' + text, '_blank');
+      this.showShare = false;
+    },
+    shareToQQ() {
+      const url = encodeURIComponent(window.location.origin + '/summitlink');
+      const title = encodeURIComponent(this.selectedPostForShare ? this.selectedPostForShare.content.slice(0, 100) : '巅峰探索 SummitLink');
+      window.open('https://connect.qq.com/widget/shareqq/index.html?url=' + url + '&title=' + title, '_blank');
+      this.showShare = false;
+    },
 
     // Post editor
     openPostEditor() { if (!this.requireAuth()) return; this.showPostEditor = true; },
     async submitPost() {
       if (!this.requireAuth()) return;
-      if (!this.newPost.content.trim()) return;
+      if (!this.newPost.content.trim() && this.newPost.images.length === 0 && !this.newPost.videoFile) return;
       try {
+        // 上传视频（若有）
+        let videoUrl = this.newPost.videoUrl || null;
+        if (this.newPost.videoFile && !videoUrl) {
+          const fd = new FormData();
+          fd.append('file', this.newPost.videoFile);
+          const vr = await fetch('/api/upload/video', { method: 'POST', headers: { Authorization: 'Bearer ' + this.authToken }, body: fd });
+          if (vr.ok) { const vd = await vr.json(); videoUrl = vd.url; }
+        }
         // 上传图片（blob URLs → 服务器 URLs）
         let imageUrls = this.newPost.images;
         const blobImages = imageUrls.filter(u => u.startsWith('blob:'));
@@ -6245,7 +6349,7 @@ function alpineLink() {
         }
         const res = await fetch('/api/posts', {
           method: 'POST', headers: this.getAuthHeaders(),
-          body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null })
+          body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl })
         });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
@@ -6254,7 +6358,7 @@ function alpineLink() {
         const imageUrls = this.newPost.images;
         this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: imageUrls[0] || null, images: imageUrls, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
       }
-      this.newPost = { content: '', location: '', images: [] };
+      this.newPost = { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '' };
       this.showPostEditor = false;
       this.showToast('发布成功！');
     },
@@ -6573,9 +6677,8 @@ function alpineLink() {
           elevation_gain: Math.round(elevGain),
           max_elevation: Math.round(maxEle),
           points,
-          is_public: 0,
         };
-        const res = await fetch('/api/tracks', {
+        const res = await fetch('/api/tracks/import-gpx', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify(body)
         });
@@ -7177,35 +7280,85 @@ function alpineLink() {
       this.showToast('定位已分享给所有紧急联系人 📍');
     },
     // Team Chat
-    initTeamChat() {
-      // WebSocket placeholder - backend endpoint: ws://api/teams/{id}/chat
-      // On connect: subscribe to room, receive message history
-      // Messages are real-time via WebSocket, fallback to polling every 10s
-      // For now use mock data already in teamChatMessages
+    initTeamChat(groupChatId) {
+      this.teamChatGroupId = groupChatId || null;
+      this.teamChatMessages = [];
+      if (groupChatId && this.authToken) {
+        this.loadGroupChatMessages(groupChatId);
+        // Poll for new messages every 5 seconds
+        if (this._teamChatPollTimer) clearInterval(this._teamChatPollTimer);
+        this._teamChatPollTimer = setInterval(() => {
+          if (this.showTeamDetail && this.teamChatGroupId) {
+            this.pollGroupChatMessages(this.teamChatGroupId);
+          }
+        }, 5000);
+      }
     },
-    sendTeamChat() {
+    async loadGroupChatMessages(chatId) {
+      try {
+        const res = await fetch('/api/group-chats/' + chatId + '/messages', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const msgs = await res.json();
+          const myId = this.currentUser ? this.currentUser.id : null;
+          this.teamChatMessages = msgs.map(m => ({
+            id: m.id, sender: m.senderName, avatar: m.senderAvatar,
+            text: m.content, images: m.images || [],
+            time: new Date(m.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            self: m.senderId === myId,
+          }));
+          this._teamChatLastId = msgs.length > 0 ? msgs[msgs.length - 1].id : 0;
+        }
+      } catch(e) {}
+    },
+    async pollGroupChatMessages(chatId) {
+      try {
+        const after = this._teamChatLastId || 0;
+        const res = await fetch('/api/group-chats/' + chatId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const msgs = await res.json();
+          if (msgs.length > 0) {
+            const myId = this.currentUser ? this.currentUser.id : null;
+            const newMsgs = msgs.map(m => ({
+              id: m.id, sender: m.senderName, avatar: m.senderAvatar,
+              text: m.content, images: m.images || [],
+              time: new Date(m.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+              self: m.senderId === myId,
+            }));
+            this.teamChatMessages.push(...newMsgs);
+            this._teamChatLastId = msgs[msgs.length - 1].id;
+          }
+        }
+      } catch(e) {}
+    },
+    async sendTeamChat() {
       const text = this.teamChatInput.trim();
       if (!text) return;
-      this.teamChatMessages.push({
+      this.teamChatInput = '';
+      // Optimistic update
+      const tempMsg = {
         id: Date.now(), sender: this.userProfile.name,
         avatar: this.userProfile.avatar, text,
-        time: new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }),
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
         self: true,
-      });
-      this.teamChatInput = '';
-      // Simulate a reply after 1-2s (replace with WebSocket send in production)
-      setTimeout(() => {
-        const replies = ['收到！', '好的 👍', '明白了', '没问题！', '我也准备好了'];
-        const m = this.teamChatMembers.find(m => m.online && m.name !== this.userProfile.name);
-        if (m) {
-          this.teamChatMessages.push({
-            id: Date.now(), sender: m.name.split(' ')[0],
-            avatar: m.avatar, text: replies[Math.floor(Math.random() * replies.length)],
-            time: new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }),
-            self: false,
+      };
+      this.teamChatMessages.push(tempMsg);
+      if (this.teamChatGroupId && this.authToken) {
+        try {
+          const res = await fetch('/api/group-chats/' + this.teamChatGroupId + '/messages', {
+            method: 'POST', headers: this.getAuthHeaders(),
+            body: JSON.stringify({ content: text }),
           });
-        }
-      }, 1200 + Math.random() * 800);
+          if (res.ok) {
+            const data = await res.json();
+            // Replace temp message with real one
+            const idx = this.teamChatMessages.findIndex(m => m.id === tempMsg.id);
+            if (idx >= 0) {
+              this.teamChatMessages[idx].id = data.id;
+              this._teamChatLastId = data.id;
+            }
+          }
+        } catch(e) {}
+      }
     },
     async openTrackDetail(track) {
       this.selectedTrackDetail = track;
@@ -7734,6 +7887,7 @@ function alpineLink() {
     async openChatSession(session) {
       this.activeChatSession = session;
       this.showChatWindow = true;
+      this._chatLastMsgId = 0;
       if (this.authToken && session.conversationId) {
         try {
           const res = await fetch('/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
@@ -7741,15 +7895,51 @@ function alpineLink() {
             const msgs = await res.json();
             const myId = this.currentUser ? this.currentUser.id : null;
             this.activeChatSession.messages = msgs.map(m => ({
+              id: m.id,
               from: m.sender_id === myId ? 'me' : 'them',
               text: m.content || null,
               images: m.images || [],
               time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
             }));
+            this._chatLastMsgId = msgs.length > 0 ? msgs[msgs.length - 1].id : 0;
             this.activeChatSession.unread = 0;
           }
         } catch(e) {}
       }
+      // Start polling for new messages every 5 seconds
+      if (this._chatPollTimer) clearInterval(this._chatPollTimer);
+      this._chatPollTimer = setInterval(() => {
+        if (this.showChatWindow && this.activeChatSession && this.activeChatSession.conversationId && this.authToken) {
+          this.pollChatMessages(this.activeChatSession.conversationId);
+        } else {
+          clearInterval(this._chatPollTimer);
+        }
+      }, 5000);
+    },
+    async pollChatMessages(conversationId) {
+      try {
+        const after = this._chatLastMsgId || 0;
+        const res = await fetch('/api/messages/conversations/' + conversationId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const msgs = await res.json();
+          if (msgs.length > 0 && this.activeChatSession) {
+            const myId = this.currentUser ? this.currentUser.id : null;
+            const newMsgs = msgs.map(m => ({
+              id: m.id,
+              from: m.sender_id === myId ? 'me' : 'them',
+              text: m.content || null,
+              images: m.images || [],
+              time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            }));
+            this.activeChatSession.messages.push(...newMsgs);
+            this._chatLastMsgId = msgs[msgs.length - 1].id;
+            this.$nextTick(() => {
+              const el = document.getElementById('chat-messages-container');
+              if (el) el.scrollTop = el.scrollHeight;
+            });
+          }
+        }
+      } catch(e) {}
     },
     async sendChatMessage() {
       if (!this.chatInput.trim() && this.chatImagePreviews.length === 0) return;
@@ -7827,6 +8017,59 @@ function alpineLink() {
         }
       });
       event.target.value = '';
+    },
+
+    // 发帖选视频
+    handlePostVideoSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 200 * 1024 * 1024) { this.showToast('视频大小不能超过200MB', 'error'); return; }
+      this.newPost.videoPreview = URL.createObjectURL(file);
+      this.newPost.videoFile = file;
+      event.target.value = '';
+    },
+
+    // 手动登顶证明照片选择
+    handleManualSummitImageSelect(event) {
+      const files = Array.from(event.target.files || []);
+      files.forEach(f => {
+        if (f.type.startsWith('image/')) this.manualSummit.proof_images.push(URL.createObjectURL(f));
+      });
+      event.target.value = '';
+    },
+
+    // 提交手动登顶记录
+    async submitManualSummit() {
+      if (!this.requireAuth()) return;
+      if (!this.manualSummit.peak_name) { this.showToast('请输入山峰名称', 'error'); return; }
+      if (!this.manualSummit.date) { this.showToast('请选择攀登日期', 'error'); return; }
+      if (this.manualSummit.proof_images.length === 0) { this.showToast('请至少上传一张证明照片', 'error'); return; }
+      try {
+        // 上传证明照片
+        const blobImages = this.manualSummit.proof_images.filter(u => u.startsWith('blob:'));
+        let uploadedUrls = [];
+        if (blobImages.length > 0) uploadedUrls = await this.uploadImages(blobImages);
+        const serverUrls = [...this.manualSummit.proof_images.filter(u => !u.startsWith('blob:')), ...uploadedUrls];
+        const res = await fetch('/api/tracks/manual', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({
+            peak_name: this.manualSummit.peak_name,
+            date: this.manualSummit.date,
+            altitude: this.manualSummit.altitude ? parseInt(this.manualSummit.altitude) : null,
+            notes: this.manualSummit.notes,
+            proof_images: serverUrls,
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('登顶记录已提交 🏔️');
+          this.showManualSummitModal = false;
+          this.manualSummit = { peak_name: '', date: '', altitude: '', notes: '', proof_images: [] };
+          this.loadTracks();
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
     },
 
     // 评论选图

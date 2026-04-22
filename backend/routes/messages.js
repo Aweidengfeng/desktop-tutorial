@@ -105,4 +105,27 @@ router.post('/conversations/:id/messages', msgRateLimit, auth, (req, res) => {
   }
 });
 
+// GET /api/messages/conversations/:id/messages/poll?after=<lastMsgId> — 轮询新消息
+router.get('/conversations/:id/messages/poll', auth, (req, res) => {
+  try {
+    const conv = db.prepare(
+      'SELECT * FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)'
+    ).get(req.params.id, req.user.id, req.user.id);
+    if (!conv) return res.status(403).json({ error: '无权访问此会话' });
+    const after = parseInt(req.query.after) || 0;
+    const msgs = db.prepare(
+      'SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE conversation_id = ? AND id > ? ORDER BY created_at ASC LIMIT 50'
+    ).all(req.params.id, after);
+    // Mark as read
+    if (msgs.length > 0) {
+      db.prepare('UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND sender_id != ? AND id > ?')
+        .run(req.params.id, req.user.id, after);
+    }
+    const parsed = msgs.map(m => ({ ...m, images: m.images ? JSON.parse(m.images) : [] }));
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;
