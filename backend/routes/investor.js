@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
+
+const investorLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '请求过于频繁，请稍后再试' },
+});
 
 function investorAuth(req, res, next) {
   const token = req.headers['x-investor-token'] || req.query.token;
@@ -12,7 +21,7 @@ function investorAuth(req, res, next) {
 }
 
 // GET /api/investor/metrics - DAU/WAU/MAU/GMV etc
-router.get('/metrics', investorAuth, (req, res) => {
+router.get('/metrics', investorLimiter, investorAuth, (req, res) => {
   try {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
@@ -50,7 +59,7 @@ router.get('/metrics', investorAuth, (req, res) => {
 });
 
 // GET /api/investor/funnel - user funnel stats
-router.get('/funnel', investorAuth, (req, res) => {
+router.get('/funnel', investorLimiter, investorAuth, (req, res) => {
   try {
     const registered = db.prepare("SELECT COUNT(*) as c FROM users").get();
     const profileCompleted = db.prepare("SELECT COUNT(*) as c FROM users WHERE avatar IS NOT NULL").get();
@@ -72,7 +81,7 @@ router.get('/funnel', investorAuth, (req, res) => {
 });
 
 // GET /api/investor/top-guides - top 10 guides by GMV
-router.get('/top-guides', investorAuth, (req, res) => {
+router.get('/top-guides', investorLimiter, investorAuth, (req, res) => {
   try {
     let guides = [];
     try {
@@ -95,7 +104,7 @@ router.get('/top-guides', investorAuth, (req, res) => {
 });
 
 // GET /api/investor/top-peaks - top 10 peaks by orders
-router.get('/top-peaks', investorAuth, (req, res) => {
+router.get('/top-peaks', investorLimiter, investorAuth, (req, res) => {
   try {
     let peaks = [];
     try {
@@ -117,7 +126,7 @@ router.get('/top-peaks', investorAuth, (req, res) => {
 });
 
 // GET /api/investor/badges-stats - badge distribution stats
-router.get('/badges-stats', investorAuth, (req, res) => {
+router.get('/badges-stats', investorLimiter, investorAuth, (req, res) => {
   try {
     let stats = [];
     try {
@@ -132,7 +141,7 @@ router.get('/badges-stats', investorAuth, (req, res) => {
 });
 
 // GET /api/investor/regional - regional user distribution
-router.get('/regional', investorAuth, (req, res) => {
+router.get('/regional', investorLimiter, investorAuth, (req, res) => {
   try {
     const total = db.prepare("SELECT COUNT(*) as c FROM users").get();
     res.json({

@@ -172,7 +172,7 @@
           if (gRes.ok) this.topGuides = await gRes.json();
         },
         init() {
-          if (this.tokenFromUrl) this.authenticate();
+          if (this.token) this.authenticate();
         },
       };
     }
