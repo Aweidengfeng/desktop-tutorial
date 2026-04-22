@@ -46,4 +46,18 @@ router.get('/status/:target_id', auth, (req, res) => {
   }
 });
 
+// GET /api/follows/my-following — 获取当前用户关注的人列表
+router.get('/my-following', auth, (req, res) => {
+  try {
+    const following = db.prepare(`
+      SELECT u.id, u.name, u.avatar, u.level
+      FROM follows f JOIN users u ON u.id = f.following_id
+      WHERE f.follower_id = ? ORDER BY f.created_at DESC LIMIT 50
+    `).all(req.user.id);
+    res.json(following);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;

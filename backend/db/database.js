@@ -1322,6 +1322,12 @@ if (!existingUserColsPolicy.includes('policy_version')) {
 if (!existingUserColsPolicy.includes('policy_agreed_at')) {
   db.exec('ALTER TABLE users ADD COLUMN policy_agreed_at DATETIME');
 }
+if (!existingUserColsPolicy.includes('passport_uuid')) {
+  db.exec('ALTER TABLE users ADD COLUMN passport_uuid TEXT DEFAULT NULL');
+}
+if (!existingUserColsPolicy.includes('deleted_at')) {
+  db.exec('ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL');
+}
 
 // tracks table: moderation + certificate + GPS points
 const existingTrackColsNew = db.pragma('table_info(tracks)').map(c => c.name);
@@ -2253,6 +2259,79 @@ if (badgeCount.cnt === 0) {
   insertBadge.run('百赞达人', '100 Likes', '累计获得100个赞', '❤️', 'social', 'likes_count', 100, 'silver');
   insertBadge.run('千粉达人', '1000 Followers', '获得1000位粉丝', '⭐', 'social', 'followers_count', 1000, 'gold');
   console.log('✅ 徽章种子数据填充完成');
+}
+
+// ── Seed test accounts (5 accounts required for testing) ──────────────────────
+{
+  const bcryptSync = require('bcrypt').hashSync;
+  const testHash = (pwd) => bcryptSync(pwd, 10);
+
+  const ensureUser = (phone, name, username, avatar, level, summits, expeditions, followers, following) => {
+    const existing = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+    if (!existing) {
+      db.prepare(`INSERT INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        name, username, phone, testHash('test1234'),
+        avatar, level, summits, expeditions, followers, following
+      );
+      console.log('✅ 测试账号已创建:', phone, name);
+    }
+    return db.prepare('SELECT id FROM users WHERE phone = ?').get(phone).id;
+  };
+
+  // 普通用户 A
+  const uidA = ensureUser('13800000001', '阿尔卑斯', '@alpine_climber', 'https://i.pravatar.cc/150?u=13800000001', '登山爱好者', 3, 2, 45, 30);
+  // 普通用户 B
+  const uidB = ensureUser('13800000002', '喜马拉雅', '@himalaya_walker', 'https://i.pravatar.cc/150?u=13800000002', '中级攀登者', 5, 3, 62, 55);
+  // 向导
+  const uidGuide = ensureUser('13800000003', '老张向导', '@guide_zhang', 'https://i.pravatar.cc/150?u=13800000003', '专业向导', 22, 15, 320, 150);
+  // 俱乐部管理员
+  const uidClub = ensureUser('13800000004', '川藏俱乐部', '@chuanzang_club', 'https://i.pravatar.cc/150?u=13800000004', '俱乐部管理员', 8, 6, 210, 180);
+  // 平台管理员 (admin hash uses different password)
+  const adminExisting = db.prepare('SELECT id FROM users WHERE phone = ?').get('13800000099');
+  if (!adminExisting) {
+    db.prepare(`INSERT INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following, is_admin)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`).run(
+      '平台管理员', '@admin', '13800000099', testHash('admin1234'),
+      'https://i.pravatar.cc/150?u=admin', '管理员', 0, 0, 0, 0
+    );
+    console.log('✅ 管理员账号已创建: 13800000099');
+  }
+
+  // Make guide user an approved guide if not already
+  if (uidGuide) {
+    const guideRec = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(uidGuide);
+    if (!guideRec) {
+      db.prepare(`INSERT OR IGNORE INTO guides (user_id, name, nationality, specialty, experience_years, day_rate, rating, reviews, status, languages, cert, bio)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        uidGuide, '老张向导', '中国', '高海拔向导', 15, 800, 4.9, 89, 'approved',
+        '普通话,英语', 'IFMGA', '15年高海拔攀登经验，成功带队登顶珠峰5次，K2 2次'
+      );
+      console.log('✅ 向导记录已创建');
+    } else {
+      db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ?").run(uidGuide);
+    }
+  }
+
+  // Make club admin user the founder of a test club
+  if (uidClub) {
+    const clubRec = db.prepare("SELECT id FROM club_members WHERE user_id = ? AND role IN ('founder','admin')").get(uidClub);
+    if (!clubRec) {
+      // Find or create a test club
+      let testClub = db.prepare('SELECT id FROM clubs WHERE name LIKE ?').get('%川藏%');
+      if (!testClub) {
+        const ins = db.prepare(`INSERT OR IGNORE INTO clubs (name, description, members_count, region, status)
+          VALUES (?, ?, ?, ?, ?)`).run(
+          '川藏高山俱乐部', '专注于川藏地区高海拔攀登活动', 50, '四川', 'active'
+        );
+        testClub = { id: ins.lastInsertRowid };
+      }
+      if (testClub && testClub.id) {
+        db.prepare('INSERT OR IGNORE INTO club_members (club_id, user_id, role) VALUES (?, ?, ?)').run(testClub.id, uidClub, 'founder');
+        console.log('✅ 俱乐部管理员记录已创建');
+      }
+    }
+  }
 }
 
 module.exports = db;

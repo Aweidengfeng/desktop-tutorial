@@ -6,6 +6,8 @@
   <title>巅峰探索 / SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <!-- Socket.IO client for real-time chat and notifications -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1023,7 +1025,14 @@
              x-transition:enter-end="opacity-100">
       <div class="px-4 pt-2">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="font-display font-bold text-xl text-white">社区</h2>
+          <div class="flex items-center gap-2">
+            <h2 class="font-display font-bold text-xl text-white">社区</h2>
+            <!-- New feed items counter -->
+            <button x-show="newFeedCount > 0" @click="newFeedCount=0;loadPosts()" class="flex items-center gap-1 bg-primary/20 border border-primary/30 text-primary-light text-xs px-2.5 py-1 rounded-full animate-pulse hover:bg-primary/30 transition-colors">
+              <span class="material-symbols-outlined text-xs">arrow_upward</span>
+              <span x-text="newFeedCount + ' 条新动态'"></span>
+            </button>
+          </div>
           <button @click="showPostEditor=true" class="flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-primary-light transition-colors">
             <span class="material-symbols-outlined text-base">add</span>发布
           </button>
@@ -1120,9 +1129,13 @@
           <template x-for="post in (communitySearchQuery ? filteredCommunityPosts : communityPosts)" :key="post.id">
             <div class="glass rounded-2xl p-4 mb-3">
               <div class="flex items-center gap-3 mb-3">
-                <img :src="post.authorAvatar || post.author_avatar || 'https://i.pravatar.cc/150?u='+post.id" class="w-9 h-9 rounded-full object-cover">
+                <img :src="post.authorAvatar || post.author_avatar || 'https://i.pravatar.cc/150?u='+post.id" 
+                     @click.stop="openUserProfile(post.authorId || post.author_id, post.author || post.authorName)"
+                     class="w-9 h-9 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity">
                 <div class="flex-1">
-                  <p class="text-white text-sm font-semibold" x-text="post.author || post.authorName"></p>
+                  <p @click.stop="openUserProfile(post.authorId || post.author_id, post.author || post.authorName)"
+                     class="text-white text-sm font-semibold cursor-pointer hover:text-primary-light transition-colors" 
+                     x-text="post.author || post.authorName"></p>
                   <p class="text-slate-500 text-xs" x-text="(post.timeAgo || '最近') + (post.location ? ' · ' + post.location : '')"></p>
                 </div>
                 <button x-show="currentUser && (post.authorId || post.author_id) && (post.authorId || post.author_id) !== currentUser.id"
@@ -1680,53 +1693,94 @@
 
         <!-- Settings Menu -->
         <div class="glass rounded-2xl overflow-hidden mb-4">
-          <template x-for="item in [{icon:'language',name:'语言设置',type:'language'},{icon:'straighten',name:'单位设置',type:'units'},{icon:'notifications',name:'消息通知',type:'notifications'},{icon:'lock',name:'隐私设置',type:'privacy'},{icon:'help',name:'帮助与反馈',type:'help'}]" :key="item.name">
+          <template x-for="item in [
+              {icon:'manage_accounts', name:'账号与安全', type:'account'},
+              {icon:'straighten', name:'单位设置', type:'units'},
+              {icon:'notifications', name:'消息通知', type:'notifications'},
+              {icon:'lock', name:'隐私设置', type:'privacy'},
+              {icon:'palette', name:'外观', type:'appearance'},
+              {icon:'translate', name:'语言', type:'language'},
+              {icon:'info', name:'关于', type:'about'},
+              {icon:'delete_forever', name:'注销账号', type:'danger'}
+            ]" :key="item.name">
             <button @click="showSettings=true;settingsType=item.type" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
               <div class="w-9 h-9 bg-slate-700/50 rounded-xl flex items-center justify-center">
-                <span class="material-symbols-outlined text-slate-400 text-lg" x-text="item.icon"></span>
+                <span class="material-symbols-outlined text-lg" :class="item.type==='danger' ? 'text-red-400' : 'text-slate-400'" x-text="item.icon"></span>
               </div>
               <div class="flex-1 text-left">
-                <p class="text-white text-sm font-medium" x-text="item.name"></p>
+                <p class="text-sm font-medium" :class="item.type==='danger' ? 'text-red-400' : 'text-white'" x-text="item.name"></p>
               </div>
               <span class="material-symbols-outlined text-slate-600">chevron_right</span>
             </button>
           </template>
         </div>
 
-        <!-- Guide Apply Banner -->
-        <div @click="showGuideApply=true" class="rounded-2xl p-4 mb-4 cursor-pointer hover:opacity-90 transition-opacity" style="background: linear-gradient(135deg,#e57c23,#c0392b);">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-white font-bold text-sm">🧗 成为认证向导</p>
-              <p class="text-orange-100 text-xs mt-0.5">开始赚取收入 · 审核7天内完成</p>
-            </div>
-            <span class="material-symbols-outlined text-white">arrow_forward</span>
-          </div>
-        </div>
-
         <!-- 专业入口区块 -->
         <div class="glass rounded-2xl overflow-hidden mb-4">
           <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-2">专业入口</p>
-          <a href="/guide-portal" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
-            <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
-              <span class="text-lg">🧭</span>
+          <!-- 向导工作台 — 仅已认证向导显示 -->
+          <template x-if="currentUser && currentUser.is_guide">
+            <a href="/guide-console" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
+              <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-lg">🧭</span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium">向导工作台</p>
+                <p class="text-slate-500 text-xs">发布服务 · 管理订单 · 查看收入</p>
+              </div>
+              <span class="material-symbols-outlined text-orange-400">arrow_forward</span>
+            </a>
+          </template>
+          <!-- 俱乐部工作台 — 仅俱乐部管理员显示 -->
+          <template x-if="currentUser && currentUser.is_club_admin">
+            <a href="/club-console" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
+              <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-lg">🏛️</span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium">俱乐部工作台</p>
+                <p class="text-slate-500 text-xs">发布活动 · 报名管理 · 俱乐部运营</p>
+              </div>
+              <span class="material-symbols-outlined text-purple-400">arrow_forward</span>
+            </a>
+          </template>
+          <!-- 平台管理 — 仅管理员显示 -->
+          <template x-if="currentUser && currentUser.is_admin">
+            <a href="/admin" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors block">
+              <div class="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-lg">🛡️</span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium">平台管理后台</p>
+                <p class="text-slate-500 text-xs">用户/内容/审核管理</p>
+              </div>
+              <span class="material-symbols-outlined text-red-400">arrow_forward</span>
+            </a>
+          </template>
+          <!-- 申请向导认证 — 未认证用户显示 -->
+          <template x-if="!currentUser || !currentUser.is_guide">
+            <button @click="showGuideApply=true" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5">
+              <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-lg">🧗</span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium">申请成为认证向导</p>
+                <p class="text-slate-500 text-xs">开始赚取收入 · 审核7天内完成</p>
+              </div>
+              <span class="material-symbols-outlined text-slate-600">chevron_right</span>
+            </button>
+          </template>
+          <!-- 电子护照 -->
+          <button @click="downloadPassport()" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors">
+            <div class="w-9 h-9 bg-amber-500/20 rounded-xl flex items-center justify-center">
+              <span class="text-lg">🪪</span>
             </div>
             <div class="flex-1 text-left">
-              <p class="text-white text-sm font-medium">向导工作台</p>
-              <p class="text-slate-500 text-xs">发布服务 · 管理订单 · 认证申请</p>
+              <p class="text-white text-sm font-medium">我的电子护照</p>
+              <p class="text-slate-500 text-xs">下载 PDF 护照 · 完成1次攀登后可用</p>
             </div>
-            <span class="material-symbols-outlined text-slate-600">chevron_right</span>
-          </a>
-          <a href="/club-portal" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors block">
-            <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
-              <span class="text-lg">🏛️</span>
-            </div>
-            <div class="flex-1 text-left">
-              <p class="text-white text-sm font-medium">俱乐部工作台</p>
-              <p class="text-slate-500 text-xs">发布活动 · 报名管理 · 认证申请</p>
-            </div>
-            <span class="material-symbols-outlined text-slate-600">chevron_right</span>
-          </a>
+            <span class="material-symbols-outlined text-amber-400">download</span>
+          </button>
         </div>
 
         <!-- Emergency SOS text button -->
@@ -2555,7 +2609,8 @@
                   <span class="text-green-400 text-xs font-semibold">GPS 定位已获取</span>
                 </div>
                 <p class="text-slate-300 text-sm" x-text="sosGps ? ('📍 ' + Math.abs(sosGps.lat) + '° ' + (sosGps.lat >= 0 ? 'N' : 'S') + ', ' + Math.abs(sosGps.lng) + '° ' + (sosGps.lng >= 0 ? 'E' : 'W')) : ''"></p>
-                <!-- 地图容器 -->
+                <p class="text-slate-400 text-xs mt-1" x-text="sosGps && sosGps.altitude != null ? ('⛰️ 当前海拔：' + sosGps.altitude + 'm') : '⛰️ 正在查询海拔...'"></p>
+                <!-- 地图容器 (map center = GPS coords above) -->
                 <div id="sos-map" style="height:200px;border-radius:12px;margin-top:10px;background:#1e293b;"></div>
               </div>
               <!-- GPS获取失败 -->
@@ -2856,11 +2911,111 @@
               </button>
             </div>
           </div>
-          <div x-show="!['language','units','profile','privacy'].includes(settingsType)" class="text-center py-8">
-            <span class="material-symbols-outlined text-slate-600 text-5xl">settings</span>
-            <p class="text-slate-400 mt-3">设置即将推出</p>
+          <div x-show="!['language','units','profile','privacy'].includes(settingsType)" class="space-y-4">
+            <!-- 账号安全 -->
+            <template x-if="settingsType === 'account'">
+              <div class="space-y-3">
+                <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">账号安全</h4>
+                <div class="bg-slate-800 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div><p class="text-white text-sm">手机号</p><p class="text-slate-400 text-xs" x-text="currentUser ? currentUser.phone : '未绑定'"></p></div>
+                  <button @click="settingsType='change-phone'" class="text-primary-light text-xs">修改</button>
+                </div>
+                <div class="bg-slate-800 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div><p class="text-white text-sm">登录密码</p><p class="text-slate-400 text-xs">已设置</p></div>
+                  <button @click="settingsType='change-password'" class="text-primary-light text-xs">修改</button>
+                </div>
+              </div>
+            </template>
+            <!-- 修改密码 -->
+            <template x-if="settingsType === 'change-password'">
+              <div class="space-y-3">
+                <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">修改密码</h4>
+                <input x-model="changePwdForm.old" type="password" placeholder="当前密码" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+                <input x-model="changePwdForm.new1" type="password" placeholder="新密码（至少6位）" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+                <input x-model="changePwdForm.new2" type="password" placeholder="再次输入新密码" class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary">
+                <button @click="doChangePassword()" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-sm">确认修改</button>
+                <button @click="settingsType='account'" class="w-full text-slate-400 text-sm py-2">返回</button>
+              </div>
+            </template>
+            <!-- 通知设置 -->
+            <template x-if="settingsType === 'notifications'">
+              <div class="space-y-3">
+                <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">推送通知</h4>
+                <template x-for="item in [
+                  {key:'new_message', label:'新消息通知', sub:'收到私信时提醒'},
+                  {key:'new_follower', label:'新粉丝通知', sub:'有人关注我时提醒'},
+                  {key:'order_status', label:'订单状态通知', sub:'订单状态变更时提醒'},
+                  {key:'post_comment', label:'评论/点赞通知', sub:'有人评论或点赞我的动态'},
+                ]" :key="item.key">
+                  <div class="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+                    <div><p class="text-white text-sm" x-text="item.label"></p><p class="text-slate-500 text-xs" x-text="item.sub"></p></div>
+                    <button @click="notifSettings[item.key] = !notifSettings[item.key]"
+                            :class="notifSettings[item.key] !== false ? 'bg-primary' : 'bg-slate-600'"
+                            class="w-12 h-6 rounded-full transition-colors relative flex-shrink-0">
+                      <span :class="notifSettings[item.key] !== false ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <!-- 外观 -->
+            <template x-if="settingsType === 'appearance'">
+              <div class="space-y-3">
+                <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">外观</h4>
+                <template x-for="item in [{label:'深色模式',val:true},{label:'浅色模式',val:false}]" :key="item.label">
+                  <button @click="darkMode=item.val;document.body.classList.toggle('light-mode',!item.val);localStorage.setItem('darkMode',item.val)"
+                          :class="darkMode===item.val ? 'ring-2 ring-primary' : ''"
+                          class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+                    <p class="text-white text-sm" x-text="item.label"></p>
+                    <span x-show="darkMode===item.val" class="material-symbols-outlined text-primary text-lg">check_circle</span>
+                  </button>
+                </template>
+              </div>
+            </template>
+            <!-- 语言 -->
+            <template x-if="settingsType === 'language'">
+              <div class="space-y-3">
+                <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">语言设置</h4>
+                <template x-for="item in [{label:'简体中文',val:'zh-CN'},{label:'繁體中文',val:'zh-TW'},{label:'English',val:'en'}]" :key="item.val">
+                  <button @click="appLanguage=item.val;saveSettings()"
+                          :class="appLanguage===item.val ? 'ring-2 ring-primary' : ''"
+                          class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+                    <p class="text-white text-sm" x-text="item.label"></p>
+                    <span x-show="appLanguage===item.val" class="material-symbols-outlined text-primary text-lg">check_circle</span>
+                  </button>
+                </template>
+              </div>
+            </template>
+            <!-- 关于 -->
+            <template x-if="settingsType === 'about'">
+              <div class="space-y-3">
+                <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">关于</h4>
+                <div class="bg-slate-800 rounded-xl p-4 space-y-2 text-sm">
+                  <div class="flex justify-between"><span class="text-slate-400">版本</span><span class="text-white">v1.0.0</span></div>
+                  <div class="flex justify-between"><span class="text-slate-400">环境</span><span class="text-white">生产</span></div>
+                </div>
+                <a href="/service-terms" target="_blank" class="block bg-slate-800 rounded-xl px-4 py-3 text-white text-sm">服务条款</a>
+                <a href="/privacy-policy" target="_blank" class="block bg-slate-800 rounded-xl px-4 py-3 text-white text-sm">隐私政策</a>
+                <a href="mailto:support@summitlink.app" class="block bg-slate-800 rounded-xl px-4 py-3 text-white text-sm">联系客服</a>
+              </div>
+            </template>
+            <!-- 危险区 -->
+            <template x-if="settingsType === 'danger'">
+              <div class="space-y-3">
+                <h4 class="text-red-400 text-sm font-semibold uppercase tracking-wider">危险区</h4>
+                <p class="text-slate-400 text-xs">注销账号后，您的所有数据将在24小时后永久删除，且无法恢复。</p>
+                <button @click="requestAccountDeletion()" class="w-full bg-red-600/20 border border-red-500/30 text-red-400 py-3 rounded-xl font-semibold text-sm hover:bg-red-600/30 transition-colors">申请注销账号</button>
+              </div>
+            </template>
+            <!-- 默认：未知类型 -->
+            <template x-if="!['language','units','profile','privacy','account','change-password','notifications','appearance','about','danger'].includes(settingsType)">
+              <div class="text-center py-8">
+                <span class="material-symbols-outlined text-slate-600 text-5xl">settings</span>
+                <p class="text-slate-400 mt-3">设置页面加载中...</p>
+              </div>
+            </template>
           </div>
-          <button @click="saveSettings()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5">保存</button>
+          <button @click="saveSettings()" x-show="['profile','units','privacy','notifications','account'].includes(settingsType)" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5">保存</button>
         </div>
       </div>
     </div>
@@ -2938,6 +3093,142 @@
     </div>
 
     <!-- Share Modal -->
+<!-- User Profile Modal -->
+    <div x-show="showUserProfileModal"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4"
+         class="fixed inset-0 z-[120] flex flex-col bg-slate-950"
+         style="display:none">
+      <div class="absolute inset-0 bg-black/60" @click="showUserProfileModal=false"></div>
+      <div class="relative z-10 flex flex-col h-full max-h-screen overflow-y-auto bg-slate-900">
+        <!-- Header -->
+        <div class="flex items-center gap-3 px-4 py-4 bg-slate-900/80 backdrop-blur sticky top-0 z-20">
+          <button @click="showUserProfileModal=false" class="p-2 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-white">arrow_back</span>
+          </button>
+          <p class="text-white font-semibold flex-1" x-text="viewedUserProfile ? viewedUserProfile.name : '用户主页'"></p>
+        </div>
+        <!-- Loading -->
+        <div x-show="!viewedUserProfile" class="flex-1 flex items-center justify-center">
+          <span class="text-slate-400">加载中...</span>
+        </div>
+        <!-- Profile Content -->
+        <template x-if="viewedUserProfile">
+          <div class="pb-8">
+            <!-- Banner -->
+            <div class="relative h-36" style="background:linear-gradient(135deg,#1e3a5f,#0c2340)">
+              <div class="absolute inset-0 flex items-center justify-center opacity-10">
+                <span class="material-symbols-outlined text-white" style="font-size:96px">terrain</span>
+              </div>
+            </div>
+            <!-- Avatar + info -->
+            <div class="px-5 -mt-12 flex items-end gap-4 mb-4">
+              <img :src="viewedUserProfile.avatar || 'https://i.pravatar.cc/150?u=user'" class="w-20 h-20 rounded-2xl object-cover ring-4 ring-slate-900 flex-shrink-0">
+              <div class="flex-1 pb-1">
+                <h2 class="text-white font-bold text-lg" x-text="viewedUserProfile.name"></h2>
+                <p class="text-slate-400 text-sm" x-text="viewedUserProfile.username || ''"></p>
+                <span class="text-xs bg-primary/30 text-primary-light px-2 py-0.5 rounded-full" x-text="viewedUserProfile.level || '攀登者'"></span>
+              </div>
+              <!-- Follow + Message buttons -->
+              <div class="flex gap-2 pb-1">
+                <button @click="followUser(viewedUserProfile.id);viewedUserIsFollowing=!viewedUserIsFollowing"
+                        :class="viewedUserIsFollowing ? 'bg-slate-700 text-slate-300' : 'bg-primary text-white'"
+                        class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+                  <span x-text="viewedUserIsFollowing ? '已关注' : '关注'"></span>
+                </button>
+                <button @click="startChatWithUser(viewedUserProfile);showUserProfileModal=false" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-700 text-white transition-colors hover:bg-slate-600">
+                  私信
+                </button>
+              </div>
+            </div>
+            <!-- Stats -->
+            <div class="grid grid-cols-4 gap-3 px-5 mb-4">
+              <div class="text-center glass rounded-xl py-2">
+                <p class="text-white font-bold text-base" x-text="viewedUserProfile.summits || 0"></p>
+                <p class="text-slate-400 text-xs">登顶</p>
+              </div>
+              <div class="text-center glass rounded-xl py-2">
+                <p class="text-white font-bold text-base" x-text="viewedUserProfile.expeditions || 0"></p>
+                <p class="text-slate-400 text-xs">远征</p>
+              </div>
+              <div class="text-center glass rounded-xl py-2">
+                <p class="text-white font-bold text-base" x-text="viewedUserProfile.followers || 0"></p>
+                <p class="text-slate-400 text-xs">粉丝</p>
+              </div>
+              <div class="text-center glass rounded-xl py-2">
+                <p class="text-white font-bold text-base" x-text="viewedUserProfile.following || 0"></p>
+                <p class="text-slate-400 text-xs">关注</p>
+              </div>
+            </div>
+            <!-- Bio -->
+            <div x-show="viewedUserProfile.bio" class="px-5 mb-4">
+              <p class="text-slate-300 text-sm" x-text="viewedUserProfile.bio"></p>
+            </div>
+            <!-- Posts -->
+            <div class="px-5">
+              <h3 class="text-white font-semibold mb-3">📝 TA 的动态</h3>
+              <div x-show="viewedUserPosts.length === 0" class="text-center py-8">
+                <p class="text-slate-500 text-sm">暂无动态</p>
+              </div>
+              <div class="space-y-3">
+                <template x-for="post in viewedUserPosts" :key="post.id">
+                  <div class="glass rounded-2xl p-4">
+                    <p class="text-slate-200 text-sm mb-2" x-text="post.content"></p>
+                    <div class="flex items-center gap-4 text-slate-500 text-xs">
+                      <span x-text="post.location || ''"></span>
+                      <span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">favorite</span><span x-text="post.likes || 0"></span></span>
+                      <span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">chat_bubble</span><span x-text="post.comments || 0"></span></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+<!-- Location Share Modal -->
+    <div x-show="showLocationShareModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-8"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         class="fixed inset-0 z-[130] flex items-end"
+         style="display:none">
+      <div class="absolute inset-0 bg-black/60" @click="showLocationShareModal=false"></div>
+      <div class="relative z-10 w-full bg-slate-900 rounded-t-3xl p-5 max-h-[70vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-bold text-base">分享定位给谁？</h3>
+          <button @click="showLocationShareModal=false" class="p-1.5 rounded-full hover:bg-white/10">
+            <span class="material-symbols-outlined text-slate-400">close</span>
+          </button>
+        </div>
+        <p class="text-slate-400 text-xs mb-4">选择接收人，对方将收到您当前位置的链接（有效期24小时）</p>
+        <div x-show="locationShareRecipients.length === 0" class="text-center py-6">
+          <p class="text-slate-500 text-sm">暂无联系人</p>
+          <p class="text-slate-600 text-xs mt-1">请先在"紧急联系人"中添加联系人或关注其他用户</p>
+        </div>
+        <div class="space-y-2">
+          <template x-for="r in locationShareRecipients" :key="r.id">
+            <button @click="doShareLocationTo(r)" class="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors">
+              <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center" :class="r.type==='emergency' ? 'bg-red-500/20' : 'bg-primary/20'">
+                <span class="material-symbols-outlined" :class="r.type==='emergency' ? 'text-red-400' : 'text-primary-light'" x-text="r.type==='emergency' ? 'emergency' : 'person'"></span>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-white text-sm font-medium" x-text="r.name"></p>
+                <p class="text-slate-500 text-xs" x-text="r.type==='emergency' ? '紧急联系人' + (r.phone ? ' · ' + r.phone : '') : '关注的用户'"></p>
+              </div>
+              <span class="material-symbols-outlined text-slate-600">send</span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+
     <div x-show="showShare"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0"
@@ -3379,9 +3670,14 @@
               <button @click="shareTrack(selectedTrackDetail)" class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-light text-white font-semibold py-3 rounded-2xl transition-colors">
                 <span class="material-symbols-outlined text-base">share</span>分享轨迹
               </button>
-              <button @click="showCertModal=true; certTrackId=selectedTrack?.id" class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600/70 hover:bg-amber-500/70 rounded-xl text-white text-xs font-medium transition-colors">
-                <span class="material-symbols-outlined text-sm">workspace_premium</span>电子护照
-              </button>
+              <div class="flex gap-2">
+                <button @click="downloadTrackGPX(selectedTrackDetail)" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2.5 rounded-xl text-sm transition-colors">
+                  <span class="material-symbols-outlined text-base">download</span>下载 GPX
+                </button>
+                <button @click="showCertModal=true; certTrackId=selectedTrack?.id" class="flex-1 flex items-center justify-center gap-1.5 bg-amber-600/70 hover:bg-amber-500/70 rounded-xl text-white text-sm font-medium transition-colors py-2.5">
+                  <span class="material-symbols-outlined text-sm">workspace_premium</span>查看证书
+                </button>
+              </div>
             </div>
           </div>
         </template>
@@ -3741,13 +4037,20 @@
             </div>
           </template>
         </div>
+        <!-- Typing indicator -->
+        <div x-show="peerIsTyping" class="px-4 py-1 text-slate-400 text-xs flex items-center gap-1 bg-slate-900/80">
+          <span class="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay:0ms"></span>
+          <span class="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay:150ms"></span>
+          <span class="inline-block w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay:300ms"></span>
+          <span class="ml-1" x-text="(activeChatSession && activeChatSession.name) + ' 正在输入...'"></span>
+        </div>
         <!-- Input -->
         <div class="flex items-center gap-2 px-4 py-3 border-t border-white/10 bg-slate-900 flex-shrink-0">
           <label class="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer">
             <span class="material-symbols-outlined text-slate-400 text-xl">photo_camera</span>
             <input type="file" accept="image/*" multiple class="hidden" @change="handleChatImageSelect($event)">
           </label>
-          <input x-model="chatInput" type="text" placeholder="输入消息..." @keydown.enter="sendChatMessage()" class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-500">
+          <input x-model="chatInput" type="text" placeholder="输入消息..." @keydown.enter="sendChatMessage()" @input="onChatInput()" class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary placeholder-slate-500">
           <button @click="sendChatMessage()" class="w-9 h-9 bg-primary rounded-full flex items-center justify-center hover:bg-primary-light transition-colors">
             <span class="material-symbols-outlined text-white text-base">send</span>
           </button>
@@ -5655,12 +5958,30 @@ function alpineLink() {
     smsCode: '',
     smsCountdown: 0,
     smsTimer: null,
+    // Socket.IO state
+    _socket: null,
+    peerIsTyping: false,
+    newFeedCount: 0,
+    totalUnreadMessages: 0,
+    unreadNotifCount: 0,
+    // User profile viewing modal
+    showUserProfileModal: false,
+    viewedUserProfile: null,
+    viewedUserPosts: [],
+    viewedUserExpeditions: [],
+    viewedUserIsFollowing: false,
+    // Location sharing modal
+    showLocationShareModal: false,
+    locationShareRecipients: [],
     loginForm: { phone: '', password: '' },
     registerForm: { name: '', phone: '', password: '' },
     agreedPrivacy: false,
     agreedTerms: false,
     POLICY_VERSION: '2026-04-20',
     privacySettings: { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false },
+    notifSettings: { new_message: true, new_follower: true, order_status: true, post_comment: true },
+    appLanguage: 'zh-CN',
+    changePwdForm: { old: '', new1: '', new2: '' },
     gearImageUploading: false,
     trackRecordedPoints: [],
     heroSlide: 0,
@@ -5994,7 +6315,7 @@ function alpineLink() {
     // 新增状态
     showNewTrackModal: false,
     trackRecordingState: 'idle', // idle | recording | paused
-    trackLiveStats: { distance: 0, elevation: 5364, seconds: 0 },
+    trackLiveStats: { distance: 0, elevation: 0, seconds: 0 },
     trackTimer: null,
     newTrackName: '',
     publicTracks: [
@@ -6592,6 +6913,32 @@ function alpineLink() {
       this.showChatWindow = true;
       this.currentPage = 'chat';
     },
+    async startChatWithUser(user) {
+      if (!user) return;
+      if (!this.requireAuth()) return;
+      // Create or find existing conversation
+      try {
+        const res = await fetch(API_BASE + '/api/messages/conversations', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ participant_id: user.id })
+        });
+        if (res.ok) {
+          const conv = await res.json();
+          this.activeChatSession = {
+            id: conv.id || Date.now(), conversationId: conv.id,
+            name: user.name || '用户', avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + (user.id || 1)),
+            flag: '', type: 'dm', online: false, unread: 0, lastMsg: '', messages: []
+          };
+          this.showChatWindow = true;
+          this.currentPage = 'chat';
+          this.loadConversationMessages(conv.id);
+        } else {
+          this.openChatWithUser(user.name || '用户', user.avatar);
+        }
+      } catch(e) {
+        this.openChatWithUser(user.name || '用户', user.avatar);
+      }
+    },
     get filteredConversations() {
       if (!this.activeChatType || this.activeChatType === 'all') return this.conversations;
       return this.conversations.filter(c => c.type === this.activeChatType);
@@ -6611,23 +6958,36 @@ function alpineLink() {
       this.sosGps = null;
       this.sosManualLat = '';
       this.sosManualLng = '';
-      // 获取真实GPS坐标
+      // 获取真实GPS坐标 — 单次调用，所有显示（地图+文字+海拔）均来自同一个结果
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          pos => {
+          async pos => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
             this.sosGps = {
-              lat: pos.coords.latitude.toFixed(6),
-              lng: pos.coords.longitude.toFixed(6),
-              accuracy: Math.round(pos.coords.accuracy)
+              lat: lat.toFixed(6),
+              lng: lng.toFixed(6),
+              accuracy: Math.round(pos.coords.accuracy),
+              altitude: null,  // will be filled below
             };
-            // 初始化高德地图
+            // 查询真实海拔
+            try {
+              const altRes = await fetch(API_BASE + '/api/altitude?lat=' + lat + '&lng=' + lng);
+              if (altRes.ok) {
+                const altData = await altRes.json();
+                this.sosGps = { ...this.sosGps, altitude: altData.altitude };
+              }
+            } catch(e) {}
+            // 初始化高德地图 — 同一坐标点
             this.$nextTick(() => {
               if (typeof AMap !== 'undefined' && this.sosGps && !this.sosGps.error) {
                 try {
-                  const lat = parseFloat(this.sosGps.lat);
-                  const lng = parseFloat(this.sosGps.lng);
-                  const sosMap = new AMap.Map('sos-map', { center: [lng, lat], zoom: 12 });
-                  new AMap.Marker({ position: [lng, lat], map: sosMap });
+                  const sosMap = new AMap.Map('sos-map', { center: [lng, lat], zoom: 14 });
+                  new AMap.Marker({
+                    position: [lng, lat],
+                    map: sosMap,
+                    icon: new AMap.Icon({ size: new AMap.Size(32, 32), image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png' }),
+                  });
                 } catch(e) {}
               }
             });
@@ -6636,7 +6996,7 @@ function alpineLink() {
             const errMsgs = { 1: '定位权限被拒绝，请在浏览器设置中允许位置访问', 2: '无法获取位置信息，请检查GPS是否开启', 3: '获取位置超时，请重试' };
             this.sosGps = { error: errMsgs[err.code] || ('无法获取位置：' + (err.message || '未知错误')) };
           },
-          { timeout: 10000, enableHighAccuracy: true }
+          { timeout: 12000, enableHighAccuracy: true }
         );
       } else {
         this.sosGps = { error: '浏览器不支持定位功能' };
@@ -6646,9 +7006,31 @@ function alpineLink() {
     cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
     refreshLocation() { this.showToast('位置已刷新'); },
     shareLocation() { this.showToast('位置已分享'); },
-    callEmergency(number) { this.showToast('正在拨打 ' + number); },
-    callContact(contact) { this.showToast('正在联系 ' + contact.name); },
-    callVIPHotline() { this.showToast('正在拨打 VIP 热线'); },
+    callEmergency(number) {
+      if (!number) return;
+      const clean = String(number).replace(/[\s-]/g, '');
+      // On mobile (touch device), use tel: link to trigger native dialer
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        window.location.href = 'tel:' + clean;
+      } else {
+        // On desktop, copy to clipboard
+        navigator.clipboard.writeText(number).then(() => {
+          this.showToast('号码 ' + number + ' 已复制，请手动拨打', 'info');
+        }).catch(() => {
+          this.showToast('紧急号码：' + number, 'info');
+        });
+      }
+    },
+    callContact(contact) {
+      if (contact.phone || contact.number) {
+        this.callEmergency(contact.phone || contact.number);
+      } else {
+        this.showToast('正在联系 ' + contact.name);
+      }
+    },
+    callVIPHotline() {
+      this.callEmergency('400-888-6699');
+    },
     saveMedicalInfo() { this.showToast('医疗信息已保存'); },
     handleSOSImageUpload(event) {
       const files = event.target.files;
@@ -7018,7 +7400,9 @@ function alpineLink() {
     _startSimulatedTracking() {
       const baseLat = 27.9881 + (Math.random() - 0.5) * 0.05;
       const baseLng = 86.9250 + (Math.random() - 0.5) * 0.05;
-      let curLat = baseLat; let curLng = baseLng; let curEle = 5364;
+      let curLat = baseLat; let curLng = baseLng;
+      // Start elevation from 0; real altitude is fetched when GPS is available
+      let curEle = this.trackLiveStats.elevation || 0;
       this._simInterval = setInterval(() => {
         if (this.trackRecordingState !== 'recording') return;
         curLat += (Math.random() - 0.48) * 0.0005;
@@ -7095,7 +7479,7 @@ function alpineLink() {
     },
     openNewTrack() {
       this.showNewTrackModal = true;
-      this.trackLiveStats = { distance: 0, elevation: 5364, seconds: 0 };
+      this.trackLiveStats = { distance: 0, elevation: 0, seconds: 0 };
       this.$nextTick(() => {
         if (!this.recordingMap) {
           this.recordingMap = this.initAMap('recording-map', { zoom: 13 });
@@ -7566,7 +7950,45 @@ function alpineLink() {
       return contacts;
     },
     sendLocation() {
-      this.showToast('定位已分享给所有紧急联系人 📍');
+      // Show recipient selection modal instead of just a toast
+      if (!this.requireAuth()) return;
+      this.showLocationShareModal = true;
+      this.locationShareRecipients = [];
+      // Load emergency contacts + followed friends
+      Promise.all([
+        this.emergencyContacts || [],
+        fetch(API_BASE + '/api/follows/my-following', { headers: this.getAuthHeaders() })
+          .then(r => r.ok ? r.json() : []).catch(() => [])
+      ]).then(([emContacts, friends]) => {
+        this.locationShareRecipients = [
+          ...(emContacts || []).map(c => ({ id: 'ec_' + (c.id || c.name), name: c.name, type: 'emergency', phone: c.phone })),
+          ...(Array.isArray(friends) ? friends.map(f => ({ id: f.id, name: f.name, avatar: f.avatar, type: 'friend' })) : []),
+        ];
+      }).catch(() => {});
+    },
+    async doShareLocationTo(recipient) {
+      if (!recipient) return;
+      const lat = this.sosGps ? this.sosGps.lat : null;
+      const lng = this.sosGps ? this.sosGps.lng : null;
+      if (!lat || !lng) {
+        this.showToast('获取位置中，请稍候...', 'info');
+        return;
+      }
+      try {
+        const res = await fetch(API_BASE + '/api/location-share', {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ recipient_id: recipient.id, recipient_type: recipient.type, lat, lng })
+        });
+        if (res.ok) {
+          this.showToast('定位已分享给 ' + recipient.name + ' ✅');
+          this.showLocationShareModal = false;
+        } else {
+          this.showToast('分享失败，请重试', 'error');
+        }
+      } catch(e) {
+        this.showToast('网络错误', 'error');
+      }
     },
     // Team Chat
     initTeamChat(groupChatId) {
@@ -7675,6 +8097,23 @@ function alpineLink() {
       } else {
         this.showToast('轨迹：' + (track.name || '我的轨迹'));
       }
+    },
+    async downloadTrackGPX(track) {
+      if (!track || !track.id) { this.showToast('无法下载：轨迹数据不完整', 'error'); return; }
+      try {
+        const res = await fetch(API_BASE + '/api/tracks/' + track.id + '/export?format=gpx');
+        if (!res.ok) { this.showToast('GPX 下载失败', 'error'); return; }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (track.name || 'track') + '.gpx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.showToast('GPX 文件已下载 ✅');
+      } catch(e) { this.showToast('下载失败，请重试', 'error'); }
     },
     calcTrackPoints(track) {
       if (!track) return 0;
@@ -7846,10 +8285,69 @@ function alpineLink() {
     },
     viewImage(url) { window.open(url, '_blank'); },
     viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
+    async openUserProfile(userId, name) {
+      if (!userId && !name) return;
+      // Check if it's the current user's own profile
+      if (this.currentUser && userId === this.currentUser.id) {
+        this.currentPage = 'me';
+        return;
+      }
+      this.showUserProfileModal = true;
+      this.viewedUserProfile = null;
+      this.viewedUserPosts = [];
+      this.viewedUserExpeditions = [];
+      this.viewedUserIsFollowing = false;
+      try {
+        if (userId) {
+          const [userRes, postsRes] = await Promise.all([
+            fetch(API_BASE + '/api/users/' + userId, { headers: this.getAuthHeaders() }),
+            fetch(API_BASE + '/api/users/' + userId + '/posts?limit=20'),
+          ]);
+          if (userRes.ok) {
+            this.viewedUserProfile = await userRes.json();
+            this.viewedUserIsFollowing = !!(this.viewedUserProfile && this.viewedUserProfile.is_following);
+          }
+          if (postsRes.ok) this.viewedUserPosts = await postsRes.json();
+        } else {
+          this.viewedUserProfile = { name: name, avatar: null, level: '攀登者', summits: 0, expeditions: 0, followers: 0, following: 0, bio: '' };
+        }
+      } catch(e) {
+        this.showToast('加载用户资料失败', 'error');
+      }
+    },
     openSidebar() { this.showToast('侧边菜单即将推出'); },
     getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
     getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
     openSettings(type) { this.settingsType = type; this.showSettings = true; },
+    async downloadPassport() {
+      if (!this.requireAuth()) return;
+      if (!this.currentUser) return;
+      this.showToast('正在生成电子护照，请稍候...', 'info');
+      try {
+        const res = await fetch(API_BASE + '/api/user/' + this.currentUser.id + '/passport.pdf', {
+          headers: this.getAuthHeaders()
+        });
+        if (res.status === 403) {
+          const data = await res.json();
+          this.showToast(data.error || '至少完成一次攀登后才能生成电子护照', 'error');
+          return;
+        }
+        if (!res.ok) throw new Error('生成失败');
+        const blob = await res.blob();
+        if (blob.size === 0) throw new Error('PDF 为空');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'summitlink-passport.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.showToast('电子护照已下载 ✅', 'success');
+      } catch(e) {
+        this.showToast('护照生成失败，请完成至少一次攀登后再试', 'error');
+      }
+    },
     handleMenuAction(action) {
       if (action === 'gear') { this.currentPage = 'gear'; }
       else if (action === 'track') { this.currentPage = 'track'; }
@@ -7895,8 +8393,50 @@ function alpineLink() {
           await fetch(API_BASE + '/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
           this.showToast('隐私设置已保存 ✅');
         } catch(e) { this.showToast('网络错误', 'error'); }
+      } else if (this.settingsType === 'notifications' && this.authToken) {
+        try {
+          await fetch(API_BASE + '/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ notifications: this.notifSettings }) });
+          this.showToast('通知设置已保存 ✅');
+        } catch(e) {}
+      } else if (this.settingsType === 'language' && this.authToken) {
+        try {
+          await fetch(API_BASE + '/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ language: this.appLanguage }) });
+          this.showToast('语言设置已保存 ✅');
+        } catch(e) {}
       }
       this.showSettings = false;
+    },
+    async doChangePassword() {
+      if (!this.changePwdForm.old || !this.changePwdForm.new1) {
+        this.showToast('请填写所有字段', 'error'); return;
+      }
+      if (this.changePwdForm.new1 !== this.changePwdForm.new2) {
+        this.showToast('两次输入的新密码不一致', 'error'); return;
+      }
+      try {
+        const res = await fetch(API_BASE + '/api/auth/change-password', {
+          method: 'PUT', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ oldPassword: this.changePwdForm.old, newPassword: this.changePwdForm.new1 })
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '修改失败', 'error'); return; }
+        this.showToast('密码已修改 ✅');
+        this.changePwdForm = { old: '', new1: '', new2: '' };
+        this.settingsType = 'account';
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async requestAccountDeletion() {
+      const confirmed = confirm('确认申请注销账号？您的账号将在24小时后删除，期间可以登录取消。');
+      if (!confirmed) return;
+      try {
+        const res = await fetch(API_BASE + '/api/auth/request-deletion', {
+          method: 'POST', headers: this.getAuthHeaders()
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '操作失败', 'error'); return; }
+        this.showToast('注销申请已提交，账号将在24小时后删除', 'info');
+        this.showSettings = false;
+      } catch(e) { this.showToast('网络错误', 'error'); }
     },
 
     // Auth methods
@@ -8021,6 +8561,59 @@ function alpineLink() {
       this.loginForm = { phone: '', password: '' };
       this.smsCode = '';
       this.showToast('登录成功，欢迎 ' + data.user.name + '！');
+      // Initialize Socket.IO for real-time features
+      this._initSocket(data.token);
+    },
+    _initSocket(token) {
+      if (typeof io === 'undefined') return;
+      if (this._socket) { this._socket.disconnect(); this._socket = null; }
+      this._socket = io(API_BASE, { auth: { token }, transports: ['websocket', 'polling'] });
+      this._socket.on('connect', () => { console.log('[Socket.IO] connected', this._socket.id); });
+      this._socket.on('disconnect', () => { console.log('[Socket.IO] disconnected'); });
+      // Real-time chat message
+      this._socket.on('chat:message', (msg) => {
+        const myId = this.currentUser ? this.currentUser.id : null;
+        // If chat window is open for this conversation
+        if (this.showChatWindow && this.activeChatSession && this.activeChatSession.conversationId === msg.conversation_id && msg.sender_id !== myId) {
+          const mapped = {
+            id: msg.id, from: 'them',
+            text: msg.content || null,
+            images: msg.images ? (typeof msg.images === 'string' ? JSON.parse(msg.images) : msg.images) : [],
+            time: new Date(msg.created_at || Date.now()).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          };
+          this.activeChatSession.messages.push(mapped);
+          this._chatLastMsgId = msg.id;
+          this.$nextTick(() => { const el = document.getElementById('chat-messages-container'); if (el) el.scrollTop = el.scrollHeight; });
+        }
+        // Update unread in conversations list
+        if (msg.sender_id !== myId) {
+          const conv = this.chatSessions.find(c => c.conversationId === msg.conversation_id);
+          if (conv && !(this.showChatWindow && this.activeChatSession && this.activeChatSession.conversationId === msg.conversation_id)) {
+            conv.unread = (conv.unread || 0) + 1;
+            conv.lastMsg = msg.content || '📷 图片';
+            this.totalUnreadMessages = this.chatSessions.reduce((s, c) => s + (c.unread || 0), 0);
+          }
+        }
+      });
+      // Real-time typing indicator
+      this._socket.on('chat:typing', ({ userId, is_typing }) => {
+        if (this.activeChatSession && userId !== (this.currentUser && this.currentUser.id)) {
+          this.peerIsTyping = is_typing;
+          if (is_typing) {
+            clearTimeout(this._typingTimeout);
+            this._typingTimeout = setTimeout(() => { this.peerIsTyping = false; }, 4000);
+          }
+        }
+      });
+      // New social feed post
+      this._socket.on('feed:new_post', () => {
+        this.newFeedCount = (this.newFeedCount || 0) + 1;
+      });
+      // Notification
+      this._socket.on('notification:new', (notif) => {
+        this.unreadNotifCount = (this.unreadNotifCount || 0) + 1;
+        this.showToast('🔔 ' + (notif.title || '新通知'), 'info');
+      });
     },
     requireAuth() {
       if (!this.authToken) { this.showLogin = true; return false; }
@@ -8228,6 +8821,7 @@ function alpineLink() {
       this.activeChatSession = session;
       this.showChatWindow = true;
       this._chatLastMsgId = 0;
+      this.peerIsTyping = false;
       if (this.authToken && session.conversationId) {
         try {
           const res = await fetch(API_BASE + '/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
@@ -8245,8 +8839,12 @@ function alpineLink() {
             this.activeChatSession.unread = 0;
           }
         } catch(e) {}
+        // Join socket.io room for this conversation
+        if (this._socket) {
+          this._socket.emit('chat:join', { conv_id: session.conversationId });
+        }
       }
-      // Start polling for new messages every 5 seconds
+      // Poll as fallback (every 5s) in case socket is unavailable
       if (this._chatPollTimer) clearInterval(this._chatPollTimer);
       this._chatPollTimer = setInterval(() => {
         if (this.showChatWindow && this.activeChatSession && this.activeChatSession.conversationId && this.authToken) {
@@ -8303,11 +8901,27 @@ function alpineLink() {
           } else {
             uploadedUrls = images;
           }
+          // Use REST API to save to DB (also triggers socket.io via gateway)
           await fetch(API_BASE + '/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', {
             method: 'POST', headers: this.getAuthHeaders(),
             body: JSON.stringify({ content: text, type: msgType, images: uploadedUrls })
           });
+          // Additionally emit via socket for immediate delivery to recipient
+          if (this._socket && this._socket.connected) {
+            this._socket.emit('chat:message', { conv_id: this.activeChatSession.conversationId, content: text, type: msgType });
+          }
         } catch(e) {}
+      }
+    },
+    onChatInput() {
+      if (this._socket && this._socket.connected && this.activeChatSession) {
+        this._socket.emit('chat:typing', { conv_id: this.activeChatSession.conversationId, is_typing: true });
+        clearTimeout(this._myTypingTimeout);
+        this._myTypingTimeout = setTimeout(() => {
+          if (this._socket && this._socket.connected && this.activeChatSession) {
+            this._socket.emit('chat:typing', { conv_id: this.activeChatSession.conversationId, is_typing: false });
+          }
+        }, 2000);
       }
     },
 
@@ -8935,14 +9549,29 @@ function alpineLink() {
     },
     handleBannerClick(slide) {
       if (!slide.linkType || slide.linkType === 'none') return;
-      if (slide.linkType === 'peak') {
-        const peak = [...this.eightThousanders, ...this.continentalPeaks].find(p => p.nameEn && p.nameEn.toLowerCase() === slide.linkTarget.toLowerCase());
+      const lt = slide.linkType;
+      const target = slide.linkTarget || '';
+      if (lt === 'peak' || lt === 'mountain') {
+        // Try by nameEn, then by id
+        let peak = [...(this.eightThousanders || []), ...(this.continentalPeaks || [])].find(p =>
+          (p.nameEn && p.nameEn.toLowerCase() === target.toLowerCase()) ||
+          (p.name && p.name === target) ||
+          (String(p.id) === String(target))
+        );
         if (peak) { this.openPeakDetail(peak); }
-      } else if (slide.linkType === 'page') {
-        if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
-        else { this.currentPage = slide.linkTarget || 'explore'; }
-      } else if (slide.linkType === 'insurance') {
+        else { this.showToast('未找到山峰：' + target, 'info'); }
+      } else if (lt === 'page') {
+        if (target === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
+        else { this.currentPage = target || 'explore'; }
+      } else if (lt === 'insurance') {
         this.openInsurance();
+      } else if (lt === 'post') {
+        const post = (this.communityPosts || []).find(p => String(p.id) === String(target));
+        if (post) { this.openComments(post); }
+      } else if (lt === 'article') {
+        this.currentPage = 'community'; this.activeChatType = 'articles';
+      } else if (lt === 'url') {
+        if (target) window.open(target, '_blank');
       }
     },
 
@@ -9033,7 +9662,31 @@ function alpineLink() {
         if (val) { this.loadUnreadCount(); this.loadTracks(); }
       });
       if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
-      // Watch gearMode changes to reload gear (reset category first to avoid double-call)
+      // Initialize socket.io if user is already logged in
+      if (this.authToken) {
+        this._initSocket(this.authToken);
+      }
+      // Watch authToken to init/destroy socket
+      this.$watch('authToken', (val) => {
+        if (val) { this._initSocket(val); }
+        else if (this._socket) { this._socket.disconnect(); this._socket = null; }
+      });
+      // Poll for new feed items every 60 seconds (supplement to socket push)
+      setInterval(() => {
+        if (this.currentPage === 'community' && this.authToken) {
+          // Silent check for new posts
+          fetch(API_BASE + '/api/posts?since=' + (this._lastFeedCheck || Date.now()), { headers: this.getAuthHeaders() })
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+              if (Array.isArray(data) && data.length > 0) {
+                this.newFeedCount = (this.newFeedCount || 0) + data.length;
+              }
+              this._lastFeedCheck = Date.now();
+            }).catch(() => {});
+        } else if (!this._lastFeedCheck) {
+          this._lastFeedCheck = Date.now();
+        }
+      }, 60000);
       this.$watch('gearMode', (val) => {
         if (this.gearCategory !== '全部') {
           this.gearCategory = '全部'; // triggers gearCategory watch → loadGear

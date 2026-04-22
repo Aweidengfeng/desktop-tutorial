@@ -282,4 +282,53 @@ router.post('/:id/order', orderLimiter, auth, (req, res) => {
   }
 });
 
+// GET /api/expeditions/:id/export.gpx — 导出攀登轨迹为 GPX 文件
+router.get('/:id/export.gpx', (req, res) => {
+  try {
+    const expedition = db.prepare('SELECT * FROM expeditions WHERE id = ? AND status = ?').get(req.params.id, 'published');
+    if (!expedition) return res.status(404).json({ error: '活动不存在' });
+    const moments = db.prepare(
+      'SELECT lat, lng, altitude, recorded_at FROM expedition_moments WHERE expedition_id = ? AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY recorded_at ASC'
+    ).all(req.params.id);
+
+    const trkpts = moments.map(m => {
+      const ele = m.altitude ? `<ele>${m.altitude}</ele>` : '';
+      const time = m.recorded_at ? `<time>${new Date(m.recorded_at).toISOString()}</time>` : '';
+      return `    <trkpt lat="${m.lat}" lon="${m.lng}">${ele}${time}</trkpt>`;
+    }).join('\n');
+
+    const safeName = (expedition.title || 'expedition').replace(/[<>&"']/g, '');
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="SummitLink" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>${safeName}</name>
+    <time>${new Date().toISOString()}</time>
+  </metadata>
+  <trk>
+    <name>${safeName}</name>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+</gpx>`;
+    res.setHeader('Content-Type', 'application/gpx+xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(safeName)}.gpx"`);
+    res.send(gpx);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/expeditions/:id/moments — 获取攀登时刻轨迹点（用于地图可视化）
+router.get('/:id/moments', (req, res) => {
+  try {
+    const moments = db.prepare(
+      'SELECT id, lat, lng, altitude, type, media_url, content, recorded_at FROM expedition_moments WHERE expedition_id = ? ORDER BY recorded_at ASC'
+    ).all(req.params.id);
+    res.json(moments);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;

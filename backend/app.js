@@ -163,6 +163,7 @@ app.use('/api/badges', require('./routes/badges'));
 app.use('/api/group-chats', require('./routes/groupChats'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/articles', require('./routes/articles'));
 app.use('/api/profile', require('./routes/profile'));
@@ -240,6 +241,13 @@ app.use('/api/guide-console', require('./routes/guideConsole'));
 app.use('/api/club-console', require('./routes/clubConsole'));
 app.use('/api/ai-coach', require('./routes/aiCoach'));
 app.use('/api/investor', require('./routes/investor'));
+
+// 电子护照（PDF 下载）
+app.use('/api/passport', require('./routes/passport'));
+app.use('/api/user', require('./routes/passport')); // /api/user/:id/passport.pdf
+
+// 海拔查询
+app.use('/api/altitude', require('./routes/altitude'));
 
 // 投资者看板
 const investorHtmlFile = path.join(rootPath, 'investor.html');
