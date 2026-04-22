@@ -121,11 +121,13 @@ router.post('/import-gpx', auth, (req, res) => {
     let distKm = parseFloat(distance_km) || 0;
     if (!distKm && points.length >= 2) {
       let total = 0;
+      // Pre-convert latitudes to radians for efficiency
+      const rads = points.map(p => ({ lat: p.lat * Math.PI / 180, lng: p.lng * Math.PI / 180 }));
       for (let i = 1; i < points.length; i++) {
-        const a = points[i - 1], b = points[i];
-        const dLat = (b.lat - a.lat) * Math.PI / 180;
-        const dLng = (b.lng - a.lng) * Math.PI / 180;
-        const ha = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+        const a = rads[i - 1], b = rads[i];
+        const dLat = b.lat - a.lat;
+        const dLng = b.lng - a.lng;
+        const ha = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat) * Math.cos(b.lat) * Math.sin(dLng / 2) ** 2;
         total += 6371 * 2 * Math.atan2(Math.sqrt(ha), Math.sqrt(1 - ha));
       }
       distKm = Math.round(total * 10) / 10;

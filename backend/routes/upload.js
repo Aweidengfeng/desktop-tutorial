@@ -101,11 +101,10 @@ router.post('/gpx', uploadRateLimit, auth, uploadGpx.single('file'), (req, res) 
   if (!req.file) return res.status(400).json({ error: '未收到 GPX 文件' });
   try {
     const content = fs.readFileSync(req.file.path, 'utf8');
-    // Simple GPX parser: extract trkpt elements
+    // Simple GPX parser: extract trkpt elements using matchAll
     const points = [];
     const trkptRe = /<trkpt\s+lat="([^"]+)"\s+lon="([^"]+)"[^>]*>([\s\S]*?)<\/trkpt>/g;
-    let m;
-    while ((m = trkptRe.exec(content)) !== null) {
+    for (const m of content.matchAll(trkptRe)) {
       const lat = parseFloat(m[1]);
       const lng = parseFloat(m[2]);
       const inner = m[3];
