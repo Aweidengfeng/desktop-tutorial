@@ -13,7 +13,10 @@ const investorLimiter = rateLimit({
 
 function investorAuth(req, res, next) {
   const token = req.headers['x-investor-token'] || req.query.token;
-  const expectedToken = process.env.INVESTOR_TOKEN || process.env.ADMIN_PASSWORD || 'admin';
+  const expectedToken = process.env.INVESTOR_TOKEN || process.env.ADMIN_PASSWORD;
+  if (!expectedToken) {
+    return res.status(503).json({ error: '投资者令牌未配置，请联系管理员' });
+  }
   if (!token || token !== expectedToken) {
     return res.status(401).json({ error: '需要投资者访问令牌' });
   }
