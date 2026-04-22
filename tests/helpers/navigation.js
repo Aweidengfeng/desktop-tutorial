@@ -7,14 +7,13 @@
 /**
  * Click a bottom-nav tab by logical name and wait for its section to appear.
  * @param {import('@playwright/test').Page} page
- * @param {'home'|'explore'|'chat'|'gear'|'me'} tabName
+ * @param {'home'|'explore'|'chat'|'me'} tabName
  */
 async function gotoTab(page, tabName) {
   const nameMap = {
     home: '首页',
-    explore: '探索',
+    explore: '找队友',
     chat: '聊天',
-    gear: '装备',
     me: '我的',
   };
   const label = nameMap[tabName] || tabName;
