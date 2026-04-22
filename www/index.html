@@ -5429,6 +5429,9 @@
 </div>
 
 <script>
+const API_BASE = (window.location.protocol === 'capacitor:' || window.location.protocol === 'file:')
+  ? 'https://desktop-tutorial-production-182a.up.railway.app'
+  : '';
 // 全球热门商业向导带队攀登雪山统计数据
 const COMMERCIAL_PEAKS = [
   { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Furtenbach Adventures', 'Himex', 'Madison Mountaineering'], routes: '东南山脊(南坡)/东北山脊(北坡)', oxygen: true, annualClimbers: 800, annualTeams: 35, isEstimated: true, campKey: '珠穆朗玛峰' },
@@ -6248,7 +6251,7 @@ function alpineLink() {
           notes: this.bookingData.notes || '',
           type: this.bookingData.club_id ? 'club' : 'guide',
         };
-        const res = await fetch('/api/bookings', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(body) });
+        const res = await fetch(API_BASE + '/api/bookings', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(body) });
         if (!res.ok) { const d = await res.json(); this.showToast(d.error || '预约创建失败', 'error'); return; }
         this.showToast('预约已提交，等待向导/俱乐部确认 🎉');
         this.loadUnreadCount();
@@ -6262,7 +6265,7 @@ function alpineLink() {
       post.isLiked = !wasLiked;
       post.likes += post.isLiked ? 1 : -1;
       try {
-        const res = await fetch('/api/posts/' + post.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/posts/' + post.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
           post.isLiked = data.liked;
@@ -6293,7 +6296,7 @@ function alpineLink() {
           if (blobImages.length > 0) {
             imageUrls = await this.uploadImages(blobImages);
           }
-          const res = await fetch('/api/comments', {
+          const res = await fetch(API_BASE + '/api/comments', {
             method: 'POST', headers: this.getAuthHeaders(),
             body: JSON.stringify({ post_id: this.selectedPostForComment.id, content: content || '', images: imageUrls })
           });
@@ -6337,7 +6340,7 @@ function alpineLink() {
         if (this.newPost.videoFile && !videoUrl) {
           const fd = new FormData();
           fd.append('file', this.newPost.videoFile);
-          const vr = await fetch('/api/upload/video', { method: 'POST', headers: { Authorization: 'Bearer ' + this.authToken }, body: fd });
+          const vr = await fetch(API_BASE + '/api/upload/video', { method: 'POST', headers: { Authorization: 'Bearer ' + this.authToken }, body: fd });
           if (vr.ok) { const vd = await vr.json(); videoUrl = vd.url; }
         }
         // 上传图片（blob URLs → 服务器 URLs）
@@ -6347,7 +6350,7 @@ function alpineLink() {
           const uploaded = await this.uploadImages(blobImages);
           imageUrls = [...imageUrls.filter(u => !u.startsWith('blob:')), ...uploaded];
         }
-        const res = await fetch('/api/posts', {
+        const res = await fetch(API_BASE + '/api/posts', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl })
         });
@@ -6429,7 +6432,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.selectedClub) return;
       try {
-        const res = await fetch('/api/clubs/' + this.selectedClub.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/clubs/' + this.selectedClub.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
           this.showToast('已成功加入俱乐部！');
@@ -6450,7 +6453,7 @@ function alpineLink() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
         if (res.ok) {
           const data = await res.json();
           this.newGear.images.push(data.url);
@@ -6467,12 +6470,12 @@ function alpineLink() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.authToken }, body: formData });
+        const res = await fetch(API_BASE + '/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.authToken }, body: formData });
         if (res.ok) {
           const data = await res.json();
           this.userProfile.avatar = data.url;
           if (this.authToken) {
-            await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ avatar: data.url, name: this.userProfile.name }) });
+            await fetch(API_BASE + '/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ avatar: data.url, name: this.userProfile.name }) });
           }
           this.showToast('头像更新成功 ✅');
         } else {
@@ -6495,7 +6498,7 @@ function alpineLink() {
           image: this.newGear.images && this.newGear.images.length > 0 ? this.newGear.images[0] : null,
           images: JSON.stringify(this.newGear.images || []),
         };
-        const res = await fetch('/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
+        const res = await fetch(API_BASE + '/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
         this.gearItems.unshift({ ...data, sellerAvatar: this.userProfile.avatar, seller: this.userProfile.name });
@@ -6513,7 +6516,7 @@ function alpineLink() {
     async joinTeam(team) {
       if (!this.requireAuth()) { this.closeTeamDetail(); return; }
       try {
-        const res = await fetch('/api/teams/' + team.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/teams/' + team.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showToast('已申请加入：' + team.name + ' 🎉');
@@ -6529,7 +6532,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.newTeam.name || !this.newTeam.peak) { this.showToast('请填写队伍名称和目标山峰', 'error'); return; }
       try {
-        const res = await fetch('/api/teams', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.newTeam.name, peak: this.newTeam.peak, date: this.newTeam.date, totalSpots: Number(this.newTeam.spots), level: this.newTeam.level, description: this.newTeam.description }) });
+        const res = await fetch(API_BASE + '/api/teams', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.newTeam.name, peak: this.newTeam.peak, date: this.newTeam.date, totalSpots: Number(this.newTeam.spots), level: this.newTeam.level, description: this.newTeam.description }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '创建失败', 'error'); return; }
         this.teams.unshift({ ...data, leaderAvatar: this.userProfile.avatar });
@@ -6678,7 +6681,7 @@ function alpineLink() {
           max_elevation: Math.round(maxEle),
           points,
         };
-        const res = await fetch('/api/tracks/import-gpx', {
+        const res = await fetch(API_BASE + '/api/tracks/import-gpx', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify(body)
         });
@@ -6782,7 +6785,7 @@ function alpineLink() {
       };
       if (this.authToken) {
         try {
-          await fetch('/api/tracks', {
+          await fetch(API_BASE + '/api/tracks', {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({ name, points: this.trackRecordedPoints, distance: this.trackLiveStats.distance, elevation_gain: this.trackLiveStats.elevation, duration: this.formatTrackDuration(this.trackLiveStats.seconds) }),
@@ -6866,13 +6869,13 @@ function alpineLink() {
       this.commercialClubsLoading = true;
       try {
         // Try to find matching route from backend
-        const routesRes = await fetch('/api/routes');
+        const routesRes = await fetch(API_BASE + '/api/routes');
         if (routesRes.ok) {
           const routes = await routesRes.json();
           const matched = routes.find(r => r.peak && this.commercialBookingData.peakName.includes(r.peak.split(' ')[0]));
           if (matched) {
             this.commercialBookingData.routeId = matched.id;
-            const clubsRes = await fetch('/api/routes/' + matched.id + '/clubs');
+            const clubsRes = await fetch(API_BASE + '/api/routes/' + matched.id + '/clubs');
             if (clubsRes.ok) this.commercialRouteClubs = await clubsRes.json();
           }
         }
@@ -6890,7 +6893,7 @@ function alpineLink() {
       this.commercialClubGuides = [];
       if (!clubId) { this.commercialGuidesLoading = false; return; }
       try {
-        const res = await fetch('/api/clubs/' + clubId + '/guides');
+        const res = await fetch(API_BASE + '/api/clubs/' + clubId + '/guides');
         if (res.ok) this.commercialClubGuides = await res.json();
       } catch(e) {}
       this.commercialGuidesLoading = false;
@@ -6926,7 +6929,7 @@ function alpineLink() {
       // Try to post to backend
       if (this.authToken) {
         try {
-          await fetch('/api/bookings', {
+          await fetch(API_BASE + '/api/bookings', {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({
@@ -6952,7 +6955,7 @@ function alpineLink() {
     async loadMyOrders() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/orders', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/orders', { headers: this.getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
@@ -6991,7 +6994,7 @@ function alpineLink() {
       if (!this.authToken) return;
       this.activityOrdersLoading = true;
       try {
-        const res = await fetch('/api/activity-orders/my', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/activity-orders/my', { headers: this.getAuthHeaders() });
         if (res.ok) this.activityOrders = await res.json();
       } catch(e) {} finally { this.activityOrdersLoading = false; }
     },
@@ -7021,7 +7024,7 @@ function alpineLink() {
       if (!this.authToken) return;
       this.guideServiceOrdersLoading = true;
       try {
-        const res = await fetch('/api/guide-service-orders/my', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/guide-service-orders/my', { headers: this.getAuthHeaders() });
         if (res.ok) this.guideServiceOrders = await res.json();
       } catch(e) {} finally { this.guideServiceOrdersLoading = false; }
     },
@@ -7193,7 +7196,7 @@ function alpineLink() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch(API_BASE + '/api/upload', { method: 'POST', body: formData });
         if (res.ok) {
           const data = await res.json();
           formRef[field] = data.url;
@@ -7296,7 +7299,7 @@ function alpineLink() {
     },
     async loadGroupChatMessages(chatId) {
       try {
-        const res = await fetch('/api/group-chats/' + chatId + '/messages', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/group-chats/' + chatId + '/messages', { headers: this.getAuthHeaders() });
         if (res.ok) {
           const msgs = await res.json();
           const myId = this.currentUser ? this.currentUser.id : null;
@@ -7313,7 +7316,7 @@ function alpineLink() {
     async pollGroupChatMessages(chatId) {
       try {
         const after = this._teamChatLastId || 0;
-        const res = await fetch('/api/group-chats/' + chatId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/group-chats/' + chatId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
         if (res.ok) {
           const msgs = await res.json();
           if (msgs.length > 0) {
@@ -7344,7 +7347,7 @@ function alpineLink() {
       this.teamChatMessages.push(tempMsg);
       if (this.teamChatGroupId && this.authToken) {
         try {
-          const res = await fetch('/api/group-chats/' + this.teamChatGroupId + '/messages', {
+          const res = await fetch(API_BASE + '/api/group-chats/' + this.teamChatGroupId + '/messages', {
             method: 'POST', headers: this.getAuthHeaders(),
             body: JSON.stringify({ content: text }),
           });
@@ -7367,7 +7370,7 @@ function alpineLink() {
       if (localStorage.getItem(claimedKey)) track._pointsClaimed = true;
       if (this.authToken && track.id) {
         try {
-          const res = await fetch('/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
+          const res = await fetch(API_BASE + '/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
           if (res.ok) {
             this.selectedTrackDetail = await res.json();
             if (localStorage.getItem(claimedKey)) this.selectedTrackDetail._pointsClaimed = true;
@@ -7465,7 +7468,7 @@ function alpineLink() {
       }
       this.gearPurchaseLoading = true;
       try {
-        const res = await fetch('/api/gear/' + this.gearPurchaseItem.id + '/order', {
+        const res = await fetch(API_BASE + '/api/gear/' + this.gearPurchaseItem.id + '/order', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify(this.gearPurchaseForm)
         });
@@ -7482,14 +7485,14 @@ function alpineLink() {
       if (!this.authToken) return;
       this.gearOrdersLoading = true;
       try {
-        const res = await fetch('/api/gear/orders/mine', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/gear/orders/mine', { headers: this.getAuthHeaders() });
         if (res.ok) this.gearOrders = await res.json();
       } catch(e) {}
       this.gearOrdersLoading = false;
     },
     async confirmGearDelivery(order) {
       try {
-        const res = await fetch('/api/gear/orders/' + order.id + '/confirm', {
+        const res = await fetch(API_BASE + '/api/gear/orders/' + order.id + '/confirm', {
           method: 'POST', headers: this.getAuthHeaders()
         });
         if (res.ok) {
@@ -7504,7 +7507,7 @@ function alpineLink() {
     },
     async confirmPayment() {
       try {
-        const res = await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
+        const res = await fetch(API_BASE + '/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
         if (!res.ok) {
           // Fallback to mock success for demo (remove in production)
         }
@@ -7525,7 +7528,7 @@ function alpineLink() {
       }
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/guides/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.guideApplyForm) });
+        const res = await fetch(API_BASE + '/api/guides/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.guideApplyForm) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showGuideApply = false;
@@ -7540,7 +7543,7 @@ function alpineLink() {
       }
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/clubs/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.clubApplyForm) });
+        const res = await fetch(API_BASE + '/api/clubs/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.clubApplyForm) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showClubApplyModal = false;
@@ -7592,18 +7595,18 @@ function alpineLink() {
     async saveSettings() {
       if (this.settingsType === 'profile' && this.authToken) {
         try {
-          const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name, avatar: this.userProfile.avatar }) });
+          const res = await fetch(API_BASE + '/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name, avatar: this.userProfile.avatar }) });
           if (res.ok) { const u = await res.json(); this.currentUser = u; this.showToast('资料已保存 ✅'); }
           else { this.showToast('保存失败', 'error'); }
         } catch(e) { this.showToast('网络错误', 'error'); }
       } else if (this.settingsType === 'units' && this.authToken) {
         try {
-          await fetch('/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ useMetric: this.useMetric }) });
+          await fetch(API_BASE + '/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ useMetric: this.useMetric }) });
           this.showToast('单位设置已保存 ✅');
         } catch(e) {}
       } else if (this.settingsType === 'privacy' && this.authToken) {
         try {
-          await fetch('/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
+          await fetch(API_BASE + '/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
           this.showToast('隐私设置已保存 ✅');
         } catch(e) { this.showToast('网络错误', 'error'); }
       }
@@ -7620,7 +7623,7 @@ function alpineLink() {
       if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       this.loginLoading = true;
       try {
-        const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
+        const res = await fetch(API_BASE + '/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
@@ -7631,7 +7634,7 @@ function alpineLink() {
       if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
-        const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION }) });
+        const res = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '注册失败', 'error'); return; }
         this.authToken = data.token;
@@ -7657,7 +7660,7 @@ function alpineLink() {
       if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.smsCountdown > 0) return;
       try {
-        const res = await fetch('/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone }) });
+        const res = await fetch(API_BASE + '/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
         this.showToast('验证码已发送（开发模式：查看服务器控制台）');
@@ -7673,7 +7676,7 @@ function alpineLink() {
       if (!this.smsCode || this.smsCode.length !== 6) { this.showToast('请输入6位验证码', 'error'); return; }
       this.loginLoading = true;
       try {
-        const res = await fetch('/api/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone, code: this.smsCode }) });
+        const res = await fetch(API_BASE + '/api/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone, code: this.smsCode }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '验证失败', 'error'); return; }
         this._handleLoginSuccess(data);
@@ -7684,7 +7687,7 @@ function alpineLink() {
       // Mock: generate a fake code
       const fakeCode = 'wx_' + Date.now();
       try {
-        const res = await fetch('/api/auth/wechat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: fakeCode }) });
+        const res = await fetch(API_BASE + '/api/auth/wechat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: fakeCode }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '微信登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
@@ -7694,7 +7697,7 @@ function alpineLink() {
       // Mock: generate a fake identity token
       const fakeToken = 'apple_mock_' + Date.now();
       try {
-        const res = await fetch('/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: fakeToken }) });
+        const res = await fetch(API_BASE + '/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: fakeToken }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || 'Apple 登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
@@ -7717,7 +7720,7 @@ function alpineLink() {
     async verifyToken() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/auth/me', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/auth/me', { headers: this.getAuthHeaders() });
         if (!res.ok) { localStorage.removeItem('summitlink_token'); this.authToken = null; this.currentUser = null; return; }
         const user = await res.json();
         this.currentUser = user;
@@ -7729,7 +7732,7 @@ function alpineLink() {
     async loadPeaks(type) {
       try {
         const t = type || this.activeCategory;
-        const res = await fetch('/api/peaks?type=' + t);
+        const res = await fetch(API_BASE + '/api/peaks?type=' + t);
         if (!res.ok) return;
         const data = await res.json();
         const mapped = data.map(p => ({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
@@ -7741,7 +7744,7 @@ function alpineLink() {
     },
     async loadGuides() {
       try {
-        const res = await fetch('/api/guides');
+        const res = await fetch(API_BASE + '/api/guides');
         if (!res.ok) return;
         const data = await res.json();
         this.nearbyGuides = data.map(g => ({ ...g, tag: g.rating >= 4.8 ? '🏅 认证精英' : '' }));
@@ -7751,7 +7754,7 @@ function alpineLink() {
     async loadTeams() {
       this.teamsLoading = true;
       try {
-        const res = await fetch('/api/teams');
+        const res = await fetch(API_BASE + '/api/teams');
         if (!res.ok) return;
         const data = await res.json();
         this.teams = data;
@@ -7772,7 +7775,7 @@ function alpineLink() {
     async loadPosts() {
       this.postsLoading = true;
       try {
-        const res = await fetch('/api/posts');
+        const res = await fetch(API_BASE + '/api/posts');
         if (!res.ok) return;
         const data = await res.json();
         this.communityPosts = data.map(p => ({
@@ -7794,7 +7797,7 @@ function alpineLink() {
       // Backend auto-aggregates every hour via cron: SELECT user_id, COUNT(*) as summit_count, MAX(max_elevation) as max_elevation, SUM(distance_km) as total_distance FROM tracks WHERE month=current_month GROUP BY user_id ORDER BY {sort} DESC
       // My rank: GET /api/leaderboard/my-rank?sort=count|elevation|distance
       try {
-        const res = await fetch('/api/leaderboard?sort=' + (this.leaderboardSort || 'count'));
+        const res = await fetch(API_BASE + '/api/leaderboard?sort=' + (this.leaderboardSort || 'count'));
         if (!res.ok) return;
         const data = await res.json();
         if (data.leaders && data.leaders.length > 0) {
@@ -7807,7 +7810,7 @@ function alpineLink() {
     },
     async loadWeather() {
       try {
-        const res = await fetch('/api/weather?location=珠峰大本营');
+        const res = await fetch(API_BASE + '/api/weather?location=珠峰大本营');
         if (!res.ok) return;
         const data = await res.json();
         this.weather = { ...data, condition: 'partly_cloudy' };
@@ -7816,10 +7819,10 @@ function alpineLink() {
     async loadTracks() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/tracks', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/tracks', { headers: this.getAuthHeaders() });
         if (!res.ok) {
           // Fallback to /my for backward compat
-          const res2 = await fetch('/api/tracks/my', { headers: this.getAuthHeaders() });
+          const res2 = await fetch(API_BASE + '/api/tracks/my', { headers: this.getAuthHeaders() });
           if (!res2.ok) return;
           const data2 = await res2.json();
           if (data2.length > 0) this.tracks = data2;
@@ -7834,7 +7837,7 @@ function alpineLink() {
     async loadComments(postId) {
       this.commentsLoading = true;
       try {
-        const res = await fetch('/api/comments?post_id=' + postId);
+        const res = await fetch(API_BASE + '/api/comments?post_id=' + postId);
         if (res.ok) { this.selectedPostComments = await res.json(); }
       } catch(e) {}
       this.commentsLoading = false;
@@ -7843,7 +7846,7 @@ function alpineLink() {
     // Clubs
     async loadClubs() {
       try {
-        const res = await fetch('/api/clubs');
+        const res = await fetch(API_BASE + '/api/clubs');
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) {
@@ -7863,7 +7866,7 @@ function alpineLink() {
     async loadConversations() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/messages/conversations', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/messages/conversations', { headers: this.getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) {
@@ -7890,7 +7893,7 @@ function alpineLink() {
       this._chatLastMsgId = 0;
       if (this.authToken && session.conversationId) {
         try {
-          const res = await fetch('/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
+          const res = await fetch(API_BASE + '/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
           if (res.ok) {
             const msgs = await res.json();
             const myId = this.currentUser ? this.currentUser.id : null;
@@ -7919,7 +7922,7 @@ function alpineLink() {
     async pollChatMessages(conversationId) {
       try {
         const after = this._chatLastMsgId || 0;
-        const res = await fetch('/api/messages/conversations/' + conversationId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/messages/conversations/' + conversationId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
         if (res.ok) {
           const msgs = await res.json();
           if (msgs.length > 0 && this.activeChatSession) {
@@ -7963,7 +7966,7 @@ function alpineLink() {
           } else {
             uploadedUrls = images;
           }
-          await fetch('/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', {
+          await fetch(API_BASE + '/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', {
             method: 'POST', headers: this.getAuthHeaders(),
             body: JSON.stringify({ content: text, type: msgType, images: uploadedUrls })
           });
@@ -7981,7 +7984,7 @@ function alpineLink() {
           const ext = blob.type.split('/')[1] || 'jpg';
           formData.append('files', blob, `image.${ext}`);
         }
-        const res = await fetch('/api/upload/multiple', {
+        const res = await fetch(API_BASE + '/api/upload/multiple', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + this.authToken },
           body: formData
@@ -8050,7 +8053,7 @@ function alpineLink() {
         let uploadedUrls = [];
         if (blobImages.length > 0) uploadedUrls = await this.uploadImages(blobImages);
         const serverUrls = [...this.manualSummit.proof_images.filter(u => !u.startsWith('blob:')), ...uploadedUrls];
-        const res = await fetch('/api/tracks/manual', {
+        const res = await fetch(API_BASE + '/api/tracks/manual', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({
             peak_name: this.manualSummit.peak_name,
@@ -8102,7 +8105,7 @@ function alpineLink() {
     async loadNotifications() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/notifications', { headers: this.getAuthHeaders() });
         if (res.ok) { return await res.json(); }
       } catch(e) {}
       return [];
@@ -8112,7 +8115,7 @@ function alpineLink() {
     async followUser(targetId) {
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/follows', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ target_id: targetId }) });
+        const res = await fetch(API_BASE + '/api/follows', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ target_id: targetId }) });
         const data = await res.json();
         this.showToast(res.ok ? data.message : (data.error || '操作失败'), res.ok ? 'success' : 'error');
       } catch(e) { this.showToast('网络错误', 'error'); }
@@ -8122,11 +8125,11 @@ function alpineLink() {
     async openGuideProfile(guideId, localGuideData = null) {
       try {
         const [guide, expeditions, reviews, posts, photos] = await Promise.all([
-          fetch('/api/guides/' + guideId).then(r => r.ok ? r.json() : null),
-          fetch('/api/guides/' + guideId + '/expeditions').then(r => r.ok ? r.json() : []),
-          fetch('/api/guides/' + guideId + '/reviews').then(r => r.ok ? r.json() : []),
-          fetch('/api/guides/' + guideId + '/posts').then(r => r.ok ? r.json() : []),
-          fetch('/api/guides/' + guideId + '/photos').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/guides/' + guideId).then(r => r.ok ? r.json() : null),
+          fetch(API_BASE + '/api/guides/' + guideId + '/expeditions').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/guides/' + guideId + '/reviews').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/guides/' + guideId + '/posts').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/guides/' + guideId + '/photos').then(r => r.ok ? r.json() : []),
         ]);
         const guideData = guide || localGuideData;
         if (!guideData) { this.showToast('向导信息获取失败', 'error'); return; }
@@ -8151,7 +8154,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.currentGuideProfile) return;
       try {
-        const res = await fetch('/api/guides/' + this.currentGuideProfile.id + '/review', {
+        const res = await fetch(API_BASE + '/api/guides/' + this.currentGuideProfile.id + '/review', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ rating: this.guideReviewForm.rating, content: this.guideReviewForm.content })
         });
@@ -8160,7 +8163,7 @@ function alpineLink() {
         this.showToast('评价已提交 ✅');
         this.guideReviewForm = { rating: 5, content: '' };
         // Refresh reviews
-        const reviews = await fetch('/api/guides/' + this.currentGuideProfile.id + '/reviews').then(r => r.json()).catch(() => []);
+        const reviews = await fetch(API_BASE + '/api/guides/' + this.currentGuideProfile.id + '/reviews').then(r => r.json()).catch(() => []);
         this.currentGuideProfile.reviews_list = reviews;
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
@@ -8177,13 +8180,13 @@ function alpineLink() {
     async openClubProfile(clubId) {
       try {
         const [club, activities, members, reviews, posts, photos, guidesList] = await Promise.all([
-          fetch('/api/clubs/' + clubId).then(r => r.ok ? r.json() : null),
-          fetch('/api/clubs/' + clubId + '/activities').then(r => r.ok ? r.json() : []),
-          fetch('/api/clubs/' + clubId + '/members').then(r => r.ok ? r.json() : []),
-          fetch('/api/clubs/' + clubId + '/reviews').then(r => r.ok ? r.json() : []),
-          fetch('/api/clubs/' + clubId + '/posts').then(r => r.ok ? r.json() : []),
-          fetch('/api/clubs/' + clubId + '/photos').then(r => r.ok ? r.json() : []),
-          fetch('/api/clubs/' + clubId + '/guides').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/clubs/' + clubId).then(r => r.ok ? r.json() : null),
+          fetch(API_BASE + '/api/clubs/' + clubId + '/activities').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/clubs/' + clubId + '/members').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/clubs/' + clubId + '/reviews').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/clubs/' + clubId + '/posts').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/clubs/' + clubId + '/photos').then(r => r.ok ? r.json() : []),
+          fetch(API_BASE + '/api/clubs/' + clubId + '/guides').then(r => r.ok ? r.json() : []),
         ]);
         if (!club) {
           // 尝试从本地 featuredClubs 获取 mock 数据
@@ -8205,7 +8208,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.currentClubProfile) return;
       try {
-        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/clubs/' + this.currentClubProfile.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
           this.showToast('已成功加入俱乐部！');
@@ -8217,7 +8220,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.currentClubProfile) return;
       try {
-        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/review', {
+        const res = await fetch(API_BASE + '/api/clubs/' + this.currentClubProfile.id + '/review', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ rating: this.clubReviewForm.rating, content: this.clubReviewForm.content })
         });
@@ -8225,7 +8228,7 @@ function alpineLink() {
         if (!res.ok) { this.showToast(data.error || '评价失败', 'error'); return; }
         this.showToast('评价已提交 ✅');
         this.clubReviewForm = { rating: 5, content: '' };
-        const reviews = await fetch('/api/clubs/' + this.currentClubProfile.id + '/reviews').then(r => r.json()).catch(() => []);
+        const reviews = await fetch(API_BASE + '/api/clubs/' + this.currentClubProfile.id + '/reviews').then(r => r.json()).catch(() => []);
         this.currentClubProfile.reviews_list = reviews;
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
@@ -8234,7 +8237,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!this.newActivity.title) { this.showToast('请填写活动标题', 'error'); return; }
       try {
-        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/activity', {
+        const res = await fetch(API_BASE + '/api/clubs/' + this.currentClubProfile.id + '/activity', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ ...this.newActivity, price: Number(this.newActivity.price) || 0, max_members: Number(this.newActivity.max_members) || 10 })
         });
@@ -8255,7 +8258,7 @@ function alpineLink() {
     async openNotificationCenter() {
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/notifications', { headers: this.getAuthHeaders() });
         if (res.ok) this.notifications = await res.json();
       } catch(e) {}
       this.showNotificationCenter = true;
@@ -8263,7 +8266,7 @@ function alpineLink() {
     async loadUnreadCount() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/notifications/unread-count', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/notifications/unread-count', { headers: this.getAuthHeaders() });
         if (res.ok) { const d = await res.json(); this.notificationCount = d.count || 0; }
       } catch(e) {}
     },
@@ -8272,14 +8275,14 @@ function alpineLink() {
       n.is_read = 1;
       this.notificationCount = Math.max(0, this.notificationCount - 1);
       try {
-        await fetch('/api/notifications/' + n.id + '/read', { method: 'PUT', headers: this.getAuthHeaders() });
+        await fetch(API_BASE + '/api/notifications/' + n.id + '/read', { method: 'PUT', headers: this.getAuthHeaders() });
       } catch(e) {}
     },
     async markAllNotificationsRead() {
       this.notifications.forEach(n => { n.is_read = 1; });
       this.notificationCount = 0;
       try {
-        await fetch('/api/notifications/read-all', { method: 'PUT', headers: this.getAuthHeaders() });
+        await fetch(API_BASE + '/api/notifications/read-all', { method: 'PUT', headers: this.getAuthHeaders() });
       } catch(e) {}
     },
     confirmBookingFromNotif(n) {
@@ -8296,7 +8299,7 @@ function alpineLink() {
     },
     async confirmBookingById(bookingId) {
       try {
-        const res = await fetch('/api/bookings/' + bookingId + '/confirm', { method: 'PUT', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/bookings/' + bookingId + '/confirm', { method: 'PUT', headers: this.getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
           this.showToast('预约已确认 ✅');
@@ -8310,7 +8313,7 @@ function alpineLink() {
       if (!this.rejectingNotif) return;
       const bookingId = this.rejectingNotif.related_id || this.rejectingNotif;
       try {
-        const res = await fetch('/api/bookings/' + bookingId + '/reject', {
+        const res = await fetch(API_BASE + '/api/bookings/' + bookingId + '/reject', {
           method: 'PUT', headers: this.getAuthHeaders(),
           body: JSON.stringify({ reason: this.rejectReason || '对方暂时无法安排' })
         });
@@ -8329,7 +8332,7 @@ function alpineLink() {
     async openMyBookings() {
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/bookings/my', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/bookings/my', { headers: this.getAuthHeaders() });
         if (res.ok) this.myBookings = await res.json();
       } catch(e) {}
       this.showMyBookings = true;
@@ -8338,7 +8341,7 @@ function alpineLink() {
     async openIncomingBookings() {
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/bookings/incoming', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/bookings/incoming', { headers: this.getAuthHeaders() });
         if (res.ok) this.incomingBookings = await res.json();
       } catch(e) {}
       this.showIncomingBookings = true;
@@ -8359,7 +8362,7 @@ function alpineLink() {
       this.selectedArticle = art;
       this.showArticleDetail = true;
       try {
-        const res = await fetch('/api/articles/' + art.id);
+        const res = await fetch(API_BASE + '/api/articles/' + art.id);
         if (res.ok) {
           const full = await res.json();
           this.selectedArticle = full;
@@ -8373,7 +8376,7 @@ function alpineLink() {
       if (!this.requireAuth()) return;
       if (!art) return;
       try {
-        const res = await fetch('/api/articles/' + art.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/articles/' + art.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
           art.like_count = data.like_count;
@@ -8385,7 +8388,7 @@ function alpineLink() {
     // ─── Rescue / 全球紧急救援 ──────────────────────────────────────────────
     async loadRescueContacts() {
       try {
-        const res = await fetch('/api/rescue/contacts');
+        const res = await fetch(API_BASE + '/api/rescue/contacts');
         if (res.ok) this.rescueContacts = await res.json();
       } catch(e) {}
     },
@@ -8394,7 +8397,7 @@ function alpineLink() {
       this.showToast('SOS 已发送！救援正在响应', 'warning');
       if (this.authToken) {
         try {
-          await fetch('/api/rescue/sos', {
+          await fetch(API_BASE + '/api/rescue/sos', {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({ location: '27.9881° N, 86.9250° E', peak_name: '珠穆朗玛峰大本营', message: 'SOS求救' })
@@ -8416,7 +8419,7 @@ function alpineLink() {
         this.showToast('请填写山峰名称和联系电话', 'error'); return;
       }
       try {
-        const res = await fetch('/api/customs', {
+        const res = await fetch(API_BASE + '/api/customs', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify(this.customsForm)
         });
@@ -8432,14 +8435,14 @@ function alpineLink() {
     async loadMedicalInfo() {
       if (!this.authToken || this.medicalInfoLoaded) return;
       try {
-        const res = await fetch('/api/profile/medical', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/profile/medical', { headers: this.getAuthHeaders() });
         if (res.ok) { this.medicalInfo = await res.json(); this.medicalInfoLoaded = true; }
       } catch(e) {}
     },
     async saveMedicalInfo() {
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/profile/medical', {
+        const res = await fetch(API_BASE + '/api/profile/medical', {
           method: 'PUT', headers: this.getAuthHeaders(),
           body: JSON.stringify(this.medicalInfo)
         });
@@ -8450,7 +8453,7 @@ function alpineLink() {
     async loadEmergencyContacts() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/profile/emergency-contacts', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/profile/emergency-contacts', { headers: this.getAuthHeaders() });
         if (res.ok) this.userEmergencyContacts = await res.json();
       } catch(e) {}
     },
@@ -8459,7 +8462,7 @@ function alpineLink() {
         this.showToast('请填写姓名和电话', 'error'); return;
       }
       try {
-        const res = await fetch('/api/profile/emergency-contacts', {
+        const res = await fetch(API_BASE + '/api/profile/emergency-contacts', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify(this.newContact)
         });
@@ -8474,7 +8477,7 @@ function alpineLink() {
     },
     async deleteEmergencyContact(id) {
       try {
-        const res = await fetch('/api/profile/emergency-contacts/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/profile/emergency-contacts/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
         if (res.ok) {
           this.userEmergencyContacts = this.userEmergencyContacts.filter(c => c.id !== id);
           this.showToast('联系人已删除');
@@ -8484,14 +8487,14 @@ function alpineLink() {
     async loadGearChecklist() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/profile/gear-checklist', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/profile/gear-checklist', { headers: this.getAuthHeaders() });
         if (res.ok) this.userGearChecklist = await res.json();
       } catch(e) {}
     },
     async addGearItem() {
       if (!this.newGearItemName.trim()) return;
       try {
-        const res = await fetch('/api/profile/gear-checklist', {
+        const res = await fetch(API_BASE + '/api/profile/gear-checklist', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ item_name: this.newGearItemName.trim() })
         });
@@ -8507,7 +8510,7 @@ function alpineLink() {
       const newReady = !item.is_ready;
       item.is_ready = newReady;
       try {
-        const res = await fetch('/api/profile/gear-checklist/' + item.id, {
+        const res = await fetch(API_BASE + '/api/profile/gear-checklist/' + item.id, {
           method: 'PUT', headers: this.getAuthHeaders(),
           body: JSON.stringify({ is_ready: newReady })
         });
@@ -8517,13 +8520,13 @@ function alpineLink() {
     async loadFavorites() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/profile/favorites', { headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/profile/favorites', { headers: this.getAuthHeaders() });
         if (res.ok) this.userFavorites = await res.json();
       } catch(e) {}
     },
     async removeFavorite(id) {
       try {
-        const res = await fetch('/api/profile/favorites/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        const res = await fetch(API_BASE + '/api/profile/favorites/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
         if (res.ok) {
           this.userFavorites = this.userFavorites.filter(f => f.id !== id);
           this.showToast('已取消收藏');
@@ -8534,7 +8537,7 @@ function alpineLink() {
     // ─── Featured Clubs (Problem 1) ─────────────────────────────────────────
     async loadFeaturedClubs() {
       try {
-        const res = await fetch('/api/clubs/featured');
+        const res = await fetch(API_BASE + '/api/clubs/featured');
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) {
@@ -8551,7 +8554,7 @@ function alpineLink() {
     // ─── Popular Peaks Weather ────────────────────────────────────────────────
     async loadPopularPeaksWeather() {
       try {
-        const res = await fetch('/api/weather/popular-peaks');
+        const res = await fetch(API_BASE + '/api/weather/popular-peaks');
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) this.popularPeaksWeather = data;
@@ -8562,7 +8565,7 @@ function alpineLink() {
     // ─── Banners (Problem 6) ────────────────────────────────────────────────
     async loadBanners() {
       try {
-        const res = await fetch('/api/banners');
+        const res = await fetch(API_BASE + '/api/banners');
         if (res.ok) {
           const data = await res.json();
           if (data.length > 0) {
@@ -8596,7 +8599,7 @@ function alpineLink() {
     async loadInsurancePlans() {
       this.insurancePlansLoading = true;
       try {
-        const res = await fetch('/api/insurance/plans');
+        const res = await fetch(API_BASE + '/api/insurance/plans');
         if (res.ok) this.insurancePlans = await res.json();
       } catch(e) {}
       this.insurancePlansLoading = false;
@@ -8612,7 +8615,7 @@ function alpineLink() {
         this.showToast('请填写姓名和联系电话', 'error'); return;
       }
       try {
-        const res = await fetch('/api/insurance/inquire', {
+        const res = await fetch(API_BASE + '/api/insurance/inquire', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ ...this.insuranceInquiry, plan_id: this.selectedInsurancePlan?.id })
         });
@@ -8696,7 +8699,7 @@ function alpineLink() {
       if (sharedTrackId) {
         this.$nextTick(async () => {
           try {
-            const res = await fetch('/api/tracks/' + sharedTrackId);
+            const res = await fetch(API_BASE + '/api/tracks/' + sharedTrackId);
             if (res.ok) {
               const track = await res.json();
               this.currentPage = 'track';
