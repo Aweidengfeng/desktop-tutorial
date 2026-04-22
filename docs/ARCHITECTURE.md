@@ -186,3 +186,37 @@ graph TB
 | **Alpine.js** | 前端响应式状态管理（CDN 加载）| [alpinejs.dev](https://alpinejs.dev) |
 | **Tailwind CSS** | 前端 CSS 框架（CDN 加载）| [tailwindcss.com](https://tailwindcss.com) |
 | **Railway** | 云部署平台 | [railway.app](https://railway.app) |
+
+---
+
+## 2026 升级：Chat Gateway、Feed、Badges
+
+### WebSocket Chat Gateway (`backend/routes/chat.gateway.js`)
+- 使用 **socket.io** 实现实时双向通信
+- JWT 鉴权中间件验证连接
+- 事件：`chat:join` / `chat:leave` / `chat:message` / `chat:typing` / `chat:read` / `chat:recall`
+- SOS 关键词自动触发 `sos:alert` 广播
+- 持久化消息到 `messages` 表，读取状态存入 `message_reads`
+
+### Feed API (`GET /api/posts/feed`)
+- **recommended**：基于 `feed_scores` 表评分排序
+- **following**：JOIN `follows` 表仅展示已关注用户内容（需登录）
+- **nearby**：筛选有位置信息的帖子
+- 游标分页（`cursor` + `nextCursor`）
+
+### Badges System (`backend/routes/badges.js`)
+- 22 枚内置徽章，覆盖海拔、七大洲之巅、社交、技术等类别
+- `POST /api/badges/check` 幂等检测并颁发徽章
+- 4 个等级：bronze / silver / gold / platinum
+
+### New Tables (2026)
+| 表名 | 用途 |
+|------|------|
+| `message_reads` | 消息已读状态 |
+| `conversation_members` | 群聊成员及角色 |
+| `mountain_wishlists` | 心愿山峰 |
+| `mountain_footprints` | 登顶记录 |
+| `badges` / `user_badges` | 徽章系统 |
+| `post_saves` | 收藏帖子 |
+| `feed_scores` | 推荐流评分 |
+| `post_media` | 帖子多媒体 |

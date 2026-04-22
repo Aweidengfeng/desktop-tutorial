@@ -158,6 +158,8 @@ app.use('/api/comments', require('./routes/comments'));
 app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/mountains', require('./routes/mountains'));
+app.use('/api/badges', require('./routes/badges'));
 app.use('/api/group-chats', require('./routes/groupChats'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
@@ -290,6 +292,12 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-app.listen(PORT, '0.0.0.0', () => {
+const http = require('http');
+const server = http.createServer(app);
+
+const { initChatGateway } = require('./routes/chat.gateway');
+initChatGateway(server);
+
+server.listen(PORT, '0.0.0.0', () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV }, 'SummitLink API started');
 });

@@ -29,7 +29,8 @@
     "testEnvironment": "node",
     "testMatch": [
       "**/tests/api-new-features.test.js",
-      "**/tests/api-commerce.test.js"
+      "**/tests/api-commerce.test.js",
+      "**/tests/api-2026-features.test.js"
     ],
     "testTimeout": 15000
   }

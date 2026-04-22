@@ -1972,4 +1972,146 @@ CREATE TABLE IF NOT EXISTS platform_transactions (
 );
 `);
 
+// ── 2026 Migrations ─────────────────────────────────────────────
+
+// Extend messages table
+const msgCols = db.pragma('table_info(messages)').map(c => c.name);
+if (!msgCols.includes('recalled_at')) db.exec("ALTER TABLE messages ADD COLUMN recalled_at DATETIME");
+if (!msgCols.includes('reply_to_id')) db.exec("ALTER TABLE messages ADD COLUMN reply_to_id INTEGER");
+if (!msgCols.includes('content_json')) db.exec("ALTER TABLE messages ADD COLUMN content_json TEXT");
+
+// Extend conversations table
+const convCols = db.pragma('table_info(conversations)').map(c => c.name);
+if (!convCols.includes('type')) db.exec("ALTER TABLE conversations ADD COLUMN type TEXT DEFAULT 'dm'");
+if (!convCols.includes('name')) db.exec("ALTER TABLE conversations ADD COLUMN name TEXT");
+if (!convCols.includes('owner_id')) db.exec("ALTER TABLE conversations ADD COLUMN owner_id INTEGER");
+if (!convCols.includes('last_msg_at')) db.exec("ALTER TABLE conversations ADD COLUMN last_msg_at DATETIME");
+
+// New tables: message_reads, conversation_members
+db.exec(`
+CREATE TABLE IF NOT EXISTS message_reads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  msg_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(msg_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS conversation_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conv_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT DEFAULT 'member',
+  muted INTEGER DEFAULT 0,
+  last_read_msg_id INTEGER,
+  UNIQUE(conv_id, user_id)
+);
+`);
+
+// Extend peaks table
+const peakCols = db.pragma('table_info(peaks)').map(c => c.name);
+if (!peakCols.includes('first_ascent_year')) db.exec("ALTER TABLE peaks ADD COLUMN first_ascent_year INTEGER");
+if (!peakCols.includes('first_ascent_team')) db.exec("ALTER TABLE peaks ADD COLUMN first_ascent_team TEXT");
+if (!peakCols.includes('death_rate')) db.exec("ALTER TABLE peaks ADD COLUMN death_rate REAL");
+if (!peakCols.includes('best_months')) db.exec("ALTER TABLE peaks ADD COLUMN best_months TEXT");
+if (!peakCols.includes('routes_json')) db.exec("ALTER TABLE peaks ADD COLUMN routes_json TEXT");
+if (!peakCols.includes('contour_svg')) db.exec("ALTER TABLE peaks ADD COLUMN contour_svg TEXT");
+if (!peakCols.includes('stories_json')) db.exec("ALTER TABLE peaks ADD COLUMN stories_json TEXT");
+if (!peakCols.includes('region')) db.exec("ALTER TABLE peaks ADD COLUMN region TEXT");
+
+// New tables for mountains, feed, badges
+db.exec(`
+CREATE TABLE IF NOT EXISTS mountain_wishlists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  peak_id INTEGER NOT NULL,
+  note TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, peak_id)
+);
+
+CREATE TABLE IF NOT EXISTS mountain_footprints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  peak_id INTEGER NOT NULL,
+  summit_date TEXT,
+  story TEXT,
+  photo TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS badges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  name_en TEXT,
+  description TEXT,
+  icon TEXT,
+  category TEXT,
+  condition_type TEXT,
+  condition_value INTEGER,
+  tier TEXT DEFAULT 'silver'
+);
+
+CREATE TABLE IF NOT EXISTS user_badges (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  badge_id INTEGER NOT NULL,
+  unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  progress INTEGER DEFAULT 0,
+  UNIQUE(user_id, badge_id)
+);
+
+CREATE TABLE IF NOT EXISTS post_media (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  media_type TEXT DEFAULT 'image',
+  url TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS post_saves (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  post_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, post_id)
+);
+
+CREATE TABLE IF NOT EXISTS feed_scores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL UNIQUE,
+  score REAL DEFAULT 0,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+// Seed badges
+const badgeCount = db.prepare('SELECT COUNT(*) as cnt FROM badges').get();
+if (badgeCount.cnt === 0) {
+  const insertBadge = db.prepare(`INSERT INTO badges (name, name_en, description, icon, category, condition_type, condition_value, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  insertBadge.run('3000米俱乐部', '3000m Club', '首次登顶海拔3000米以上山峰', '🏔️', 'altitude', 'summit_altitude', 3000, 'bronze');
+  insertBadge.run('5000米俱乐部', '5000m Club', '首次登顶海拔5000米以上山峰', '🏔️', 'altitude', 'summit_altitude', 5000, 'silver');
+  insertBadge.run('6000米俱乐部', '6000m Club', '首次登顶海拔6000米以上山峰', '⛰️', 'altitude', 'summit_altitude', 6000, 'silver');
+  insertBadge.run('7000米俱乐部', '7000m Club', '首次登顶海拔7000米以上山峰', '🗻', 'altitude', 'summit_altitude', 7000, 'gold');
+  insertBadge.run('8000米俱乐部', '8000m Club', '首次登顶海拔8000米以上山峰', '🌟', 'altitude', 'summit_altitude', 8000, 'platinum');
+  insertBadge.run('亚洲之巅', 'Asia Summit', '登顶珠穆朗玛峰 - 亚洲最高峰', '🇨🇳', 'seven_summits', 'peak_id', 1, 'gold');
+  insertBadge.run('欧洲之巅', 'Europe Summit', '登顶厄尔布鲁士峰 - 欧洲最高峰', '🇷🇺', 'seven_summits', 'peak_id', 2, 'gold');
+  insertBadge.run('非洲之巅', 'Africa Summit', '登顶乞力马扎罗山 - 非洲最高峰', '🌍', 'seven_summits', 'peak_id', 3, 'gold');
+  insertBadge.run('北美之巅', 'North America Summit', '登顶迪纳利峰 - 北美最高峰', '🦅', 'seven_summits', 'peak_id', 4, 'gold');
+  insertBadge.run('南美之巅', 'South America Summit', '登顶阿空加瓜峰 - 南美最高峰', '🌎', 'seven_summits', 'peak_id', 5, 'gold');
+  insertBadge.run('大洋洲之巅', 'Oceania Summit', '登顶查亚峰 - 大洋洲最高峰', '🦘', 'seven_summits', 'peak_id', 6, 'gold');
+  insertBadge.run('南极之巅', 'Antarctica Summit', '登顶文森峰 - 南极洲最高峰', '🐧', 'seven_summits', 'peak_id', 7, 'gold');
+  insertBadge.run('14座8000米峰', '14 Eight-Thousanders', '登顶全部14座海拔8000米以上山峰', '👑', '14peaks', 'peak_count', 14, 'platinum');
+  insertBadge.run('冰壁猎手', 'Ice Hunter', '完成冰壁攀登技术认证', '🧊', 'technical', 'skill_type', 0, 'silver');
+  insertBadge.run('大岩壁征服者', 'Big Wall Conqueror', '完成大岩壁攀登', '🧗', 'technical', 'skill_type', 1, 'gold');
+  insertBadge.run('混合攀登达人', 'Mixed Climbing Expert', '完成混合地形攀登', '🔨', 'technical', 'skill_type', 2, 'silver');
+  insertBadge.run('夜行者', 'Night Climber', '完成夜间攀登', '🌙', 'technical', 'skill_type', 3, 'silver');
+  insertBadge.run('百人领队', 'Team Leader 100', '组织超过10次队伍活动且参与者累计100人', '👥', 'club', 'team_count', 10, 'gold');
+  insertBadge.run('紧急救援者', 'SOS Rescuer', '参与紧急救援行动', '🆘', 'club', 'sos_count', 1, 'gold');
+  insertBadge.run('初心', 'First Post', '发布第一条动态', '📝', 'social', 'post_count', 1, 'bronze');
+  insertBadge.run('百赞达人', '100 Likes', '累计获得100个赞', '❤️', 'social', 'likes_count', 100, 'silver');
+  insertBadge.run('千粉达人', '1000 Followers', '获得1000位粉丝', '⭐', 'social', 'followers_count', 1000, 'gold');
+  console.log('✅ 徽章种子数据填充完成');
+}
+
 module.exports = db;
