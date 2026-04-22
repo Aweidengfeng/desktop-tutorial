@@ -45,6 +45,14 @@
     @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); } 70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
     .pulse-red { animation: pulse-red 2s infinite; }
     .bottom-sheet { border-radius: 20px 20px 0 0; }
+    /* Button click feedback */
+    button { transition: transform 0.1s, opacity 0.1s; }
+    button:active { transform: scale(0.95); opacity: 0.8; }
+    /* Skeleton pulse */
+    @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    .skeleton { animation: shimmer 1.5s ease-in-out infinite; background: #334155; border-radius: 8px; }
+    /* Text shadow for readability on images */
+    .text-shadow { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
   </style>
   <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
   <script>
@@ -174,9 +182,9 @@
           </div>
         </template>
         <div class="absolute bottom-4 left-4 right-10">
-          <p class="text-xs text-primary-light font-semibold tracking-widest uppercase mb-1">Featured Peak</p>
-          <h2 class="text-2xl font-display font-bold text-white" x-text="heroSlides[heroSlide].name"></h2>
-          <p class="text-slate-300 text-sm" x-text="heroSlides[heroSlide].sub"></p>
+          <p class="text-xs text-primary-light font-semibold tracking-widest uppercase mb-1 text-shadow">Featured Peak</p>
+          <h2 class="text-2xl font-display font-bold text-white text-shadow" x-text="heroSlides[heroSlide].name"></h2>
+          <p class="text-slate-300 text-sm text-shadow" x-text="heroSlides[heroSlide].sub"></p>
         </div>
         <!-- Arrows -->
         <button @click="heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/50 transition-colors">
@@ -712,34 +720,59 @@
             <h3 class="font-display font-bold text-white mb-1 text-base">🏔️ 全球热门商业向导带队攀登雪山</h3>
             <p class="text-slate-400 text-xs mb-3">浏览热门雪山商业攀登路线，选择山峰后可在线预约</p>
           </div>
-          <!-- 筛选控件 -->
-          <div class="flex gap-2 mb-3 overflow-x-auto scroll-hide">
-            <select x-model="commercialFilter.region" class="bg-slate-800 text-white text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0">
-              <option value="">全部地区</option>
-              <option value="喜马拉雅">喜马拉雅</option>
-              <option value="喀喇昆仑">喀喇昆仑</option>
-              <option value="安第斯">安第斯</option>
-              <option value="帕米尔">帕米尔</option>
-              <option value="非洲">非洲</option>
-              <option value="高加索">高加索</option>
-              <option value="横断山脉">横断山脉</option>
-              <option value="昆仑山">昆仑山</option>
-              <option value="北美">北美</option>
-              <option value="大洋洲">大洋洲</option>
-              <option value="南极">南极</option>
-            </select>
-            <select x-model="commercialFilter.difficulty" class="bg-slate-800 text-white text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0">
-              <option value="">全部难度</option>
-              <option value="入门6000m">入门6000m</option>
-              <option value="进阶7000m">进阶7000m</option>
-              <option value="技术型">技术型</option>
-              <option value="8000m级">8000m级</option>
-            </select>
-            <select x-model="commercialFilter.sortBy" class="bg-slate-800 text-white text-xs rounded-lg px-2 py-1.5 outline-none flex-shrink-0">
-              <option value="altitude">按海拔</option>
-              <option value="annualClimbers">按年攀登人数</option>
-              <option value="difficulty">按难度</option>
-            </select>
+          <!-- 筛选控件 - 自定义 pill 样式 -->
+          <div class="flex gap-2 mb-3 overflow-x-auto scroll-hide pb-1">
+            <!-- 地区筛选 -->
+            <div class="relative flex-shrink-0" x-data="{ openRegion: false }">
+              <button @click="openRegion=!openRegion"
+                      class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all"
+                      :class="commercialFilter.region ? 'border-primary-light text-primary-light' : ''">
+                <span x-text="commercialFilter.region || '全部地区'"></span>
+                <span class="material-symbols-outlined text-xs" style="font-size:14px">expand_more</span>
+              </button>
+              <div x-show="openRegion" @click.away="openRegion=false"
+                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
+                <button @click="commercialFilter.region=''; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="!commercialFilter.region ? 'text-primary-light font-semibold' : ''">全部地区</button>
+                <button @click="commercialFilter.region='喜马拉雅'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='喜马拉雅' ? 'text-primary-light' : ''">喜马拉雅</button>
+                <button @click="commercialFilter.region='喀喇昆仑'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='喀喇昆仑' ? 'text-primary-light' : ''">喀喇昆仑</button>
+                <button @click="commercialFilter.region='帕米尔'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='帕米尔' ? 'text-primary-light' : ''">帕米尔</button>
+                <button @click="commercialFilter.region='横断山脉'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='横断山脉' ? 'text-primary-light' : ''">横断山脉</button>
+                <button @click="commercialFilter.region='安第斯'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='安第斯' ? 'text-primary-light' : ''">安第斯</button>
+                <button @click="commercialFilter.region='非洲'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='非洲' ? 'text-primary-light' : ''">非洲</button>
+                <button @click="commercialFilter.region='北美'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.region==='北美' ? 'text-primary-light' : ''">北美</button>
+              </div>
+            </div>
+            <!-- 难度筛选 -->
+            <div class="relative flex-shrink-0" x-data="{ openDiff: false }">
+              <button @click="openDiff=!openDiff"
+                      class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all"
+                      :class="commercialFilter.difficulty ? 'border-primary-light text-primary-light' : ''">
+                <span x-text="commercialFilter.difficulty || '全部难度'"></span>
+                <span class="material-symbols-outlined text-xs" style="font-size:14px">expand_more</span>
+              </button>
+              <div x-show="openDiff" @click.away="openDiff=false"
+                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
+                <button @click="commercialFilter.difficulty=''; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="!commercialFilter.difficulty ? 'text-primary-light font-semibold' : ''">全部难度</button>
+                <button @click="commercialFilter.difficulty='入门6000m'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='入门6000m' ? 'text-primary-light' : ''">入门6000m</button>
+                <button @click="commercialFilter.difficulty='进阶7000m'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='进阶7000m' ? 'text-primary-light' : ''">进阶7000m</button>
+                <button @click="commercialFilter.difficulty='技术型'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='技术型' ? 'text-primary-light' : ''">技术型</button>
+                <button @click="commercialFilter.difficulty='8000m级'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.difficulty==='8000m级' ? 'text-primary-light' : ''">8000m级</button>
+              </div>
+            </div>
+            <!-- 排序筛选 -->
+            <div class="relative flex-shrink-0" x-data="{ openSort: false }">
+              <button @click="openSort=!openSort"
+                      class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all">
+                <span x-text="commercialFilter.sortBy === 'altitude' ? '按海拔' : commercialFilter.sortBy === 'annualClimbers' ? '按年攀登量' : '按难度'"></span>
+                <span class="material-symbols-outlined text-xs" style="font-size:14px">swap_vert</span>
+              </button>
+              <div x-show="openSort" @click.away="openSort=false"
+                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[130px]">
+                <button @click="commercialFilter.sortBy='altitude'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="commercialFilter.sortBy==='altitude' ? 'text-primary-light font-semibold' : ''">按海拔</button>
+                <button @click="commercialFilter.sortBy='annualClimbers'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.sortBy==='annualClimbers' ? 'text-primary-light font-semibold' : ''">按年攀登量</button>
+                <button @click="commercialFilter.sortBy='difficulty'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.sortBy==='difficulty' ? 'text-primary-light font-semibold' : ''">按难度</button>
+              </div>
+            </div>
           </div>
           <!-- 山峰卡片列表 -->
           <div class="space-y-3">
@@ -930,11 +963,48 @@
               </div>
             </template>
           </div>
+          <!-- Empty state for teams -->
+          <div x-show="teams.length === 0" class="flex flex-col items-center justify-center py-16 text-center px-8">
+            <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">group_add</span>
+            <p class="text-slate-300 font-semibold text-lg mb-2">还没有队伍</p>
+            <p class="text-slate-500 text-sm mb-6">发起一个攀登计划，找到志同道合的伙伴</p>
+            <button @click="showCreateTeam=true" class="bg-primary text-white px-6 py-2 rounded-full text-sm font-semibold active:scale-95 transition-all">
+              发起队伍
+            </button>
+          </div>
         </div>
-
-        <!-- Posts Section -->
         <div x-show="activeChatType==='posts' || activeChatType==='all'" class="mb-5">
           <h3 class="font-semibold text-white mb-3" x-show="activeChatType==='all'">最新动态</h3>
+          <!-- Skeleton loading -->
+          <div x-show="postsLoading" class="space-y-3">
+            <div class="glass rounded-2xl p-4">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="skeleton w-9 h-9 rounded-full"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="skeleton h-3 rounded w-1/3"></div>
+                  <div class="skeleton h-2 rounded w-1/4"></div>
+                </div>
+              </div>
+              <div class="skeleton h-48 rounded-xl mb-3"></div>
+              <div class="space-y-2">
+                <div class="skeleton h-3 rounded w-3/4"></div>
+                <div class="skeleton h-3 rounded w-1/2"></div>
+              </div>
+            </div>
+            <div class="glass rounded-2xl p-4">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="skeleton w-9 h-9 rounded-full"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="skeleton h-3 rounded w-2/5"></div>
+                  <div class="skeleton h-2 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="skeleton h-3 rounded w-full"></div>
+                <div class="skeleton h-3 rounded w-4/5"></div>
+              </div>
+            </div>
+          </div>
           <template x-for="post in (communitySearchQuery ? filteredCommunityPosts : communityPosts)" :key="post.id">
             <div class="glass rounded-2xl p-4 mb-3">
               <div class="flex items-center gap-3 mb-3">
@@ -943,6 +1013,11 @@
                   <p class="text-white text-sm font-semibold" x-text="post.author || post.authorName"></p>
                   <p class="text-slate-500 text-xs" x-text="(post.timeAgo || '最近') + (post.location ? ' · ' + post.location : '')"></p>
                 </div>
+                <button x-show="currentUser && (post.authorId || post.author_id) && (post.authorId || post.author_id) !== currentUser.id"
+                        @click.stop="followUser(post.authorId || post.author_id)"
+                        class="flex-shrink-0 text-xs px-3 py-1 rounded-full border border-primary-light text-primary-light hover:bg-primary-light hover:text-white transition-colors active:scale-95">
+                  关注
+                </button>
               </div>
               <p class="text-slate-300 text-sm mb-3" x-text="post.content"></p>
               <!-- 单图 -->
@@ -978,9 +1053,13 @@
               </div>
             </div>
           </template>
-          <div x-show="communityPosts.length === 0" class="text-center py-8 text-slate-500">
-            <span class="material-symbols-outlined text-4xl">article</span>
-            <p class="mt-2 text-sm">暂无帖子</p>
+          <div x-show="communityPosts.length === 0" class="flex flex-col items-center justify-center py-16 text-center px-8">
+            <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">landscape</span>
+            <p class="text-slate-300 font-semibold text-lg mb-2">还没有动态</p>
+            <p class="text-slate-500 text-sm mb-6">成为第一个分享攀登故事的人吧</p>
+            <button @click="showPostEditor=true" class="bg-primary text-white px-6 py-2 rounded-full text-sm font-semibold active:scale-95 transition-all">
+              发布第一条动态
+            </button>
           </div>
         </div>
 
@@ -1251,9 +1330,13 @@
               </div>
             </div>
           </template>
+          <!-- Empty state for chat sessions -->
+          <div x-show="chatSessions.filter(s => chatSubTab === 'all' || s.type === chatSubTab || (chatSubTab === 'club' && s.type === 'club')).length === 0" class="flex flex-col items-center justify-center py-16 text-center px-8">
+            <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">chat</span>
+            <p class="text-slate-300 font-semibold text-lg mb-2">还没有消息</p>
+            <p class="text-slate-500 text-sm">去探索页找到感兴趣的向导或队友，开始对话吧</p>
+          </div>
         </div>
-
-        <!-- Square Tab -->
         <div x-show="chatSubTab === 'square'" class="space-y-3">
           <div class="glass rounded-2xl p-4">
             <div class="flex items-center gap-3 mb-2">
@@ -1369,7 +1452,13 @@
         <!-- Profile Card -->
         <div class="glass rounded-3xl p-5 mb-4">
           <div class="flex items-center gap-4 mb-4">
-            <img :src="userProfile.avatar" class="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary-light">
+            <div class="relative cursor-pointer" @click="triggerAvatarUpload()">
+              <img :src="userProfile.avatar" class="w-16 h-16 rounded-2xl object-cover ring-2 ring-primary-light">
+              <div class="absolute -bottom-1 -right-1 bg-primary rounded-full p-1 shadow-lg">
+                <span class="material-symbols-outlined text-white text-xs" style="font-size:14px">photo_camera</span>
+              </div>
+            </div>
+            <input type="file" id="avatarInput" accept="image/*" class="hidden" @change="uploadAvatar($event)">
             <div class="flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-display font-bold text-xl text-white" x-text="userProfile.name"></h3>
@@ -2707,7 +2796,10 @@
               </div>
             </div>
           </template>
-          <div x-show="!commentsLoading && selectedPostComments.length === 0" class="text-center py-6 text-slate-500 text-sm">暂无评论，快来发表第一条吧～</div>
+          <div x-show="!commentsLoading && selectedPostComments.length === 0" class="flex flex-col items-center justify-center py-10 text-center">
+            <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">chat_bubble_outline</span>
+            <p class="text-slate-400 text-sm">还没有评论，来说点什么吧</p>
+          </div>
         </div>
         <div class="p-4 border-t border-white/10">
           <!-- 评论图片预览 -->
@@ -5367,6 +5459,8 @@ function alpineLink() {
     activeChatSession: null,
     chatSubTab: 'all',
     meSubPage: 'profile',
+    postsLoading: true,
+    teamsLoading: true,
     chatSessions: [
       {
         id: 1, name: '扎西次仁', nameEn: 'Zhaxi Ciren',
@@ -6269,19 +6363,23 @@ function alpineLink() {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.authToken }, body: formData });
         if (res.ok) {
           const data = await res.json();
           this.userProfile.avatar = data.url;
           if (this.authToken) {
             await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ avatar: data.url, name: this.userProfile.name }) });
           }
-          this.showToast('头像已更新 ✅');
+          this.showToast('头像更新成功 ✅');
         } else {
           this.showToast('头像上传失败', 'error');
         }
-      } catch(e) { this.showToast('上传失败', 'error'); }
+      } catch(e) { this.showToast('头像上传失败', 'error'); }
       event.target.value = '';
+    },
+    triggerAvatarUpload() {
+      const input = document.getElementById('avatarInput');
+      if (input) input.click();
     },
     async submitGear() {
       if (!this.requireAuth()) return;
@@ -7499,12 +7597,13 @@ function alpineLink() {
       } catch(e) {}
     },
     async loadTeams() {
+      this.teamsLoading = true;
       try {
         const res = await fetch('/api/teams');
         if (!res.ok) return;
         const data = await res.json();
         this.teams = data;
-      } catch(e) {}
+      } catch(e) {} finally { this.teamsLoading = false; }
     },
     async loadGear(mode, category) {
       try {
@@ -7519,6 +7618,7 @@ function alpineLink() {
       } catch(e) {}
     },
     async loadPosts() {
+      this.postsLoading = true;
       try {
         const res = await fetch('/api/posts');
         if (!res.ok) return;
@@ -7533,7 +7633,7 @@ function alpineLink() {
           commentPreview: [],
         }));
         this.filteredCommunityPosts = this.communityPosts;
-      } catch(e) {}
+      } catch(e) {} finally { this.postsLoading = false; }
     },
     async loadLeaderboard() {
       // Backend API contract:

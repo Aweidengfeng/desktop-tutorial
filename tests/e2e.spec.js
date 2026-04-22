@@ -50,7 +50,10 @@ async function doLogin(page) {
   await page.locator('[x-show="showLogin"] button.w-full').first().click();
 
   // 等待登录 API 响应，确认服务端已处理请求
-  return loginResponse;
+  const resp = await loginResponse;
+  // 等待登录弹窗关闭（Alpine.js transition 动画需要时间）
+  await loginBox.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+  return resp;
 }
 
 // ─── 测试套件 ─────────────────────────────────────────────────────────────────
