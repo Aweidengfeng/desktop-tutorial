@@ -1620,6 +1620,81 @@ CREATE TABLE IF NOT EXISTS gear_orders (
 // 迁移：将旧的 'available' 状态向导更新为 'approved'（修复内置向导无法被列表接口返回的问题）
 db.prepare("UPDATE guides SET status = 'approved' WHERE status = 'available'").run();
 
+// ── 群聊系统表（队伍/俱乐部多人聊天）─────────────────────────────────────
+db.exec(`
+CREATE TABLE IF NOT EXISTS group_chats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  team_id INTEGER,
+  name TEXT NOT NULL,
+  avatar TEXT,
+  created_by INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS group_chat_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT DEFAULT 'member',
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(chat_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS group_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id INTEGER NOT NULL,
+  sender_id INTEGER NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  type TEXT DEFAULT 'text',
+  images TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_messages_chat ON group_messages(chat_id);
+CREATE INDEX IF NOT EXISTS idx_group_chat_members_user ON group_chat_members(user_id);
+`);
+
+// posts 表：补充 video_url 字段
+const existingPostColsVideo = db.pragma('table_info(posts)').map(c => c.name);
+if (!existingPostColsVideo.includes('video_url')) {
+  db.exec('ALTER TABLE posts ADD COLUMN video_url TEXT DEFAULT NULL');
+}
+
+// articles 表：补充 status 字段（pending/published/rejected）
+const existingArticleCols = db.pragma('table_info(articles)').map(c => c.name);
+if (!existingArticleCols.includes('status')) {
+  db.exec("ALTER TABLE articles ADD COLUMN status TEXT DEFAULT 'published'");
+}
+if (!existingArticleCols.includes('reject_reason')) {
+  db.exec('ALTER TABLE articles ADD COLUMN reject_reason TEXT DEFAULT NULL');
+}
+if (!existingArticleCols.includes('reviewed_at')) {
+  db.exec('ALTER TABLE articles ADD COLUMN reviewed_at DATETIME DEFAULT NULL');
+}
+
+// tracks 表：补充 is_manual 字段（手动记录登顶，无GPS轨迹）
+const existingTrackColsManual = db.pragma('table_info(tracks)').map(c => c.name);
+if (!existingTrackColsManual.includes('is_manual')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN is_manual INTEGER DEFAULT 0');
+}
+if (!existingTrackColsManual.includes('proof_images')) {
+  db.exec('ALTER TABLE tracks ADD COLUMN proof_images TEXT DEFAULT NULL');
+}
+
+// team_members 表：补充 approved_at 字段
+const existingTeamMemberCols = db.pragma('table_info(team_members)').map(c => c.name);
+if (!existingTeamMemberCols.includes('approved_at')) {
+  db.exec('ALTER TABLE team_members ADD COLUMN approved_at DATETIME DEFAULT NULL');
+}
+if (!existingTeamMemberCols.includes('group_chat_id')) {
+  db.exec('ALTER TABLE team_members ADD COLUMN group_chat_id INTEGER DEFAULT NULL');
+}
+// teams 表：关联群聊
+const existingTeamColsChat = db.pragma('table_info(teams)').map(c => c.name);
+if (!existingTeamColsChat.includes('group_chat_id')) {
+  db.exec('ALTER TABLE teams ADD COLUMN group_chat_id INTEGER DEFAULT NULL');
+}
+
 // ── 内置山峰数据（首次启动时自动填充，无需 SEED_ON_START）──────────────────
 {
   const peakSeedCount = db.prepare('SELECT COUNT(*) as cnt FROM peaks').get();

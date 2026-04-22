@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
   try {
     const posts = db.prepare(`
       SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, images, location, likes, comments, tags, emojis, created_at as createdAt
+             content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts ORDER BY created_at DESC
     `).all();
     const parsed = posts.map(p => ({
@@ -32,7 +32,7 @@ router.get('/:id', (req, res) => {
   try {
     const post = db.prepare(`
       SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, images, location, likes, comments, tags, emojis, created_at as createdAt
+             content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts WHERE id = ?
     `).get(req.params.id);
     if (!post) return res.status(404).json({ error: '动态不存在' });
@@ -48,7 +48,7 @@ router.get('/:id', (req, res) => {
 // POST /api/posts（需要JWT）
 router.post('/', postWriteLimiter, auth, (req, res) => {
   try {
-    const { content, image, images, location, tags, emojis } = req.body;
+    const { content, image, images, video_url, location, tags, emojis } = req.body;
     if (content) {
       const check = moderation.checkText(content);
       if (!check.ok) {
@@ -65,12 +65,12 @@ router.post('/', postWriteLimiter, auth, (req, res) => {
     const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
     const firstImage = image || imagesArr[0] || '';
     const result = db.prepare(`
-      INSERT INTO posts (user_id, author_name, author_avatar, content, image, images, location, tags, emojis)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, user.name, user.avatar, content, firstImage, imagesStr, location || '', tagsStr, emojisStr);
+      INSERT INTO posts (user_id, author_name, author_avatar, content, image, images, video_url, location, tags, emojis)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, user.name, user.avatar, content, firstImage, imagesStr, video_url || null, location || '', tagsStr, emojisStr);
     const post = db.prepare(`
       SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, images, location, likes, comments, tags, emojis, created_at as createdAt
+             content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts WHERE id = ?
     `).get(result.lastInsertRowid);
     post.tags = post.tags ? JSON.parse(post.tags) : [];

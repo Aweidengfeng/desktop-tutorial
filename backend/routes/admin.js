@@ -831,6 +831,259 @@ router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, (req,
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
 });
 
+// ── 山峰管理 CRUD ────────────────────────────────────────────────────────────
+
+// GET /api/admin/peaks — 列出所有山峰（支持分页/搜索）
+router.get('/peaks', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, q = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const like = `%${q}%`;
+    const rows = db.prepare(`
+      SELECT id, name, name_en, altitude, country, continent, difficulty,
+             type, category, best_season, first_ascent, latitude, longitude,
+             image, data_source, created_at
+      FROM peaks
+      WHERE (? = '' OR name LIKE ? OR name_en LIKE ? OR country LIKE ?)
+      ORDER BY altitude DESC
+      LIMIT ? OFFSET ?
+    `).all(q, like, like, like, parseInt(limit), offset);
+    const total = db.prepare(`
+      SELECT COUNT(*) as c FROM peaks
+      WHERE (? = '' OR name LIKE ? OR name_en LIKE ? OR country LIKE ?)
+    `).get(q, like, like, like).c;
+    res.json({ peaks: rows, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/peaks — 新增山峰
+router.post('/peaks', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const {
+      name, name_en, altitude, country, continent, difficulty, image,
+      cover_image, type, category, categories, description, best_season,
+      first_ascent, deaths, success_rate, annual_climbers, commercial_teams,
+      latitude, longitude, region, routes, camps, main_route, supplemental_oxygen,
+      season_detail, operating_company, data_source, permit_fee,
+    } = req.body;
+    if (!name) return res.status(400).json({ error: '山峰名称不能为空' });
+    const categoriesStr = Array.isArray(categories) ? JSON.stringify(categories) : (categories || null);
+    const routesStr = Array.isArray(routes) ? JSON.stringify(routes) : (routes || null);
+    const campsStr = Array.isArray(camps) ? JSON.stringify(camps) : (camps || null);
+    const result = db.prepare(`
+      INSERT INTO peaks (name, name_en, altitude, country, continent, difficulty, image, cover_image,
+                         type, category, categories, description, best_season, first_ascent, deaths,
+                         success_rate, annual_climbers, commercial_teams, latitude, longitude, region,
+                         routes, camps, main_route, supplemental_oxygen, season_detail,
+                         operating_company, data_source, permit_fee)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(name, name_en || null, altitude || null, country || null, continent || null,
+           difficulty || null, image || null, cover_image || null,
+           type || null, category || null, categoriesStr,
+           description || null, best_season || null, first_ascent || null,
+           deaths || null, success_rate || null, annual_climbers || null,
+           commercial_teams || null, latitude || null, longitude || null,
+           region || null, routesStr, campsStr, main_route || null,
+           supplemental_oxygen || 0, season_detail || null,
+           operating_company || null, data_source || '管理员录入', permit_fee || null);
+    const peak = db.prepare('SELECT * FROM peaks WHERE id = ?').get(result.lastInsertRowid);
+    res.json(peak);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/peaks/:id — 编辑山峰
+router.put('/peaks/:id', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const peak = db.prepare('SELECT id FROM peaks WHERE id = ?').get(req.params.id);
+    if (!peak) return res.status(404).json({ error: '山峰不存在' });
+    const allowed = [
+      'name', 'name_en', 'altitude', 'country', 'continent', 'difficulty', 'image', 'cover_image',
+      'type', 'category', 'description', 'best_season', 'first_ascent', 'deaths', 'success_rate',
+      'annual_climbers', 'commercial_teams', 'latitude', 'longitude', 'region', 'main_route',
+      'supplemental_oxygen', 'season_detail', 'operating_company', 'data_source', 'permit_fee',
+    ];
+    const updates = [];
+    const vals = [];
+    for (const key of allowed) {
+      if (key in req.body) {
+        updates.push(`${key} = ?`);
+        vals.push(req.body[key]);
+      }
+    }
+    if (req.body.categories !== undefined) {
+      updates.push('categories = ?');
+      vals.push(Array.isArray(req.body.categories) ? JSON.stringify(req.body.categories) : req.body.categories);
+    }
+    if (req.body.routes !== undefined) {
+      updates.push('routes = ?');
+      vals.push(Array.isArray(req.body.routes) ? JSON.stringify(req.body.routes) : req.body.routes);
+    }
+    if (updates.length === 0) return res.status(400).json({ error: '没有需要更新的字段' });
+    vals.push(req.params.id);
+    db.prepare(`UPDATE peaks SET ${updates.join(', ')} WHERE id = ?`).run(...vals);
+    const updated = db.prepare('SELECT * FROM peaks WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/peaks/:id — 删除山峰
+router.delete('/peaks/:id', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const peak = db.prepare('SELECT id, name FROM peaks WHERE id = ?').get(req.params.id);
+    if (!peak) return res.status(404).json({ error: '山峰不存在' });
+    db.prepare('DELETE FROM peaks WHERE id = ?').run(req.params.id);
+    res.json({ success: true, deleted: peak.name });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/peaks/suggestions — 用户提交的山峰建议列表
+router.get('/peaks/suggestions', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `
+      SELECT ps.*, u.name as submitter_name
+      FROM peak_suggestions ps
+      LEFT JOIN users u ON u.id = ps.user_id
+    `;
+    const params = [];
+    if (status) { sql += ' WHERE ps.status = ?'; params.push(status); }
+    sql += ' ORDER BY ps.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const rows = db.prepare(sql).all(...params);
+    const countSql = status
+      ? 'SELECT COUNT(*) as c FROM peak_suggestions WHERE status = ?'
+      : 'SELECT COUNT(*) as c FROM peak_suggestions';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ suggestions: rows, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/peaks/suggestions/:id/approve — 审批山峰建议（approve/reject）
+router.put('/peaks/suggestions/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const suggestion = db.prepare('SELECT * FROM peak_suggestions WHERE id = ?').get(req.params.id);
+    if (!suggestion) return res.status(404).json({ error: '建议不存在' });
+    if (action === 'approve') {
+      // 将建议转为正式山峰
+      const routesStr = suggestion.routes || null;
+      db.prepare(`
+        INSERT INTO peaks (name, name_en, altitude, country, continent, difficulty, description,
+                           best_season, routes, latitude, longitude, image, data_source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '用户投稿')
+      `).run(suggestion.name, suggestion.name_en, suggestion.altitude, suggestion.country,
+             suggestion.continent, suggestion.difficulty, suggestion.description,
+             suggestion.best_season, routesStr, suggestion.latitude, suggestion.longitude, suggestion.image);
+      db.prepare("UPDATE peak_suggestions SET status = 'approved' WHERE id = ?").run(req.params.id);
+      // 通知用户
+      if (suggestion.user_id) {
+        try {
+          db.prepare("INSERT INTO notifications (user_id, type, content) VALUES (?, 'peak_suggestion_approved', ?)")
+            .run(suggestion.user_id, `您提交的山峰「${suggestion.name}」已通过审核，已收录到山峰数据库！`);
+        } catch(e) {}
+      }
+      res.json({ success: true, message: '已通过审核并收录' });
+    } else if (action === 'reject') {
+      db.prepare("UPDATE peak_suggestions SET status = 'rejected' WHERE id = ?").run(req.params.id);
+      if (suggestion.user_id) {
+        try {
+          db.prepare("INSERT INTO notifications (user_id, type, content) VALUES (?, 'peak_suggestion_rejected', ?)")
+            .run(suggestion.user_id, `您提交的山峰「${suggestion.name}」未通过审核${reason ? '：' + reason : ''}`);
+        } catch(e) {}
+      }
+      res.json({ success: true, message: '已拒绝' });
+    } else {
+      res.status(400).json({ error: 'action 必须为 approve 或 reject' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ── 攻略管理 ─────────────────────────────────────────────────────────────────
+
+// GET /api/admin/articles — 攻略列表（含审核状态）
+router.get('/articles', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `
+      SELECT a.id, a.title, a.category, a.status, a.view_count, a.like_count,
+             a.created_at, a.reviewed_at, a.reject_reason,
+             u.name as author_name
+      FROM articles a
+      LEFT JOIN users u ON u.id = a.author_id
+    `;
+    const params = [];
+    if (status) { sql += ' WHERE a.status = ?'; params.push(status); }
+    sql += ' ORDER BY a.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const rows = db.prepare(sql).all(...params);
+    const countSql = status
+      ? 'SELECT COUNT(*) as c FROM articles WHERE status = ?'
+      : 'SELECT COUNT(*) as c FROM articles';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ articles: rows, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/articles/:id/review — 审核攻略（approve/reject）
+router.put('/articles/:id/review', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const article = db.prepare('SELECT id, title, author_id FROM articles WHERE id = ?').get(req.params.id);
+    if (!article) return res.status(404).json({ error: '攻略不存在' });
+    if (action === 'approve') {
+      db.prepare(`UPDATE articles SET status = 'published', reviewed_at = CURRENT_TIMESTAMP, reject_reason = NULL WHERE id = ?`).run(req.params.id);
+      if (article.author_id) {
+        try {
+          db.prepare("INSERT INTO notifications (user_id, type, content) VALUES (?, 'article_approved', ?)")
+            .run(article.author_id, `您发布的攻略「${article.title}」已通过审核并公开展示`);
+        } catch(e) {}
+      }
+    } else if (action === 'reject') {
+      db.prepare(`UPDATE articles SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP, reject_reason = ? WHERE id = ?`)
+        .run(reason || '内容不符合规范', req.params.id);
+      if (article.author_id) {
+        try {
+          db.prepare("INSERT INTO notifications (user_id, type, content) VALUES (?, 'article_rejected', ?)")
+            .run(article.author_id, `您发布的攻略「${article.title}」未通过审核${reason ? '：' + reason : ''}`);
+        } catch(e) {}
+      }
+    } else {
+      return res.status(400).json({ error: 'action 必须为 approve 或 reject' });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/articles/:id — 删除攻略
+router.delete('/articles/:id', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const article = db.prepare('SELECT id, title FROM articles WHERE id = ?').get(req.params.id);
+    if (!article) return res.status(404).json({ error: '攻略不存在' });
+    db.prepare('DELETE FROM articles WHERE id = ?').run(req.params.id);
+    res.json({ success: true, deleted: article.title });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/admin/sos-records — 查看所有SOS救援记录
 router.get('/sos-records', adminWriteLimiter, adminAuth, (req, res) => {
   try {

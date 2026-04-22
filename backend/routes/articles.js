@@ -9,14 +9,15 @@ router.get('/', (req, res) => {
     const { category } = req.query;
     let sql = `
       SELECT a.id, a.title, a.category, a.read_time_minutes, a.cover_image,
-             a.view_count, a.like_count, a.created_at,
+             a.view_count, a.like_count, a.created_at, a.status,
              u.name AS author_name
       FROM articles a
       LEFT JOIN users u ON u.id = a.author_id
+      WHERE (a.status IS NULL OR a.status = 'published')
     `;
     const params = [];
     if (category && category !== 'all') {
-      sql += ' WHERE a.category = ?';
+      sql += ' AND a.category = ?';
       params.push(category);
     }
     sql += ' ORDER BY a.created_at DESC';
@@ -36,6 +37,7 @@ router.get('/featured', (req, res) => {
              u.name AS author_name
       FROM articles a
       LEFT JOIN users u ON u.id = a.author_id
+      WHERE (a.status IS NULL OR a.status = 'published')
       ORDER BY a.view_count DESC, a.like_count DESC
       LIMIT 6
     `).all();
@@ -67,7 +69,7 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST /api/articles — 发布文章（需登录）
+// POST /api/articles — 发布文章（需登录，提交后待审核）
 router.post('/', auth, (req, res) => {
   try {
     const { title, category, content, read_time_minutes, cover_image } = req.body;
@@ -79,11 +81,11 @@ router.post('/', auth, (req, res) => {
       return res.status(400).json({ error: '分类不正确' });
     }
     const result = db.prepare(`
-      INSERT INTO articles (title, category, content, read_time_minutes, cover_image, author_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO articles (title, category, content, read_time_minutes, cover_image, author_id, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending')
     `).run(title, category, content, read_time_minutes || 5, cover_image || null, req.user.id);
     const article = db.prepare('SELECT * FROM articles WHERE id = ?').get(result.lastInsertRowid);
-    res.json(article);
+    res.json({ ...article, message: '攻略已提交，等待管理员审核后公开展示' });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

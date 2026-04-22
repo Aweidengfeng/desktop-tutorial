@@ -18,11 +18,16 @@ router.get('/', auth, (req, res) => {
   try {
     const tracks = db.prepare(`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, created_at
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
+             is_manual, proof_images, created_at
       FROM tracks WHERE user_id = ?
       ORDER BY date DESC
     `).all(req.user.id);
-    const parsed = tracks.map(t => ({ ...t, points: t.points ? JSON.parse(t.points) : [] }));
+    const parsed = tracks.map(t => ({
+      ...t,
+      points: t.points ? JSON.parse(t.points) : [],
+      proof_images: t.proof_images ? JSON.parse(t.proof_images) : [],
+    }));
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -34,11 +39,16 @@ router.get('/my', auth, (req, res) => {
   try {
     const tracks = db.prepare(`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
+             is_manual, proof_images
       FROM tracks WHERE user_id = ?
       ORDER BY date DESC
     `).all(req.user.id);
-    const parsed = tracks.map(t => ({ ...t, points: t.points ? JSON.parse(t.points) : [] }));
+    const parsed = tracks.map(t => ({
+      ...t,
+      points: t.points ? JSON.parse(t.points) : [],
+      proof_images: t.proof_images ? JSON.parse(t.proof_images) : [],
+    }));
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -50,12 +60,14 @@ router.get('/:id', auth, (req, res) => {
   try {
     const track = db.prepare(`
       SELECT id, user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
-             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, created_at
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
+             is_manual, proof_images, created_at
       FROM tracks WHERE id = ?
     `).get(req.params.id);
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
     if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权访问' });
     track.points = track.points ? JSON.parse(track.points) : [];
+    track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
     res.json(track);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -89,6 +101,100 @@ router.post('/', auth, (req, res) => {
     `).get(result.lastInsertRowid);
     track.points = track.points ? JSON.parse(track.points) : [];
     res.json({ ...track, flagged, rewardGranted: !flagged, ...(flagReason ? { flagReason } : {}) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+/**
+ * POST /api/tracks/import-gpx — 从已解析的GPX点数据导入轨迹（需要JWT）
+ * 前端先调用 /api/upload/gpx 得到轨迹点数组，再调用此接口存库
+ */
+router.post('/import-gpx', auth, (req, res) => {
+  try {
+    const { name, peak_name, date, distance_km, elevation_gain, points, weather, notes } = req.body;
+    if (!points || !Array.isArray(points) || points.length < 2) {
+      return res.status(400).json({ error: '轨迹点数据不足，至少需要2个点' });
+    }
+    const pointsStr = JSON.stringify(points);
+    // 计算距离（若未提供）
+    let distKm = parseFloat(distance_km) || 0;
+    if (!distKm && points.length >= 2) {
+      let total = 0;
+      // Pre-convert latitudes to radians for efficiency
+      const rads = points.map(p => ({ lat: p.lat * Math.PI / 180, lng: p.lng * Math.PI / 180 }));
+      for (let i = 1; i < points.length; i++) {
+        const a = rads[i - 1], b = rads[i];
+        const dLat = b.lat - a.lat;
+        const dLng = b.lng - a.lng;
+        const ha = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat) * Math.cos(b.lat) * Math.sin(dLng / 2) ** 2;
+        total += 6371 * 2 * Math.atan2(Math.sqrt(ha), Math.sqrt(1 - ha));
+      }
+      distKm = Math.round(total * 10) / 10;
+    }
+    // 计算爬升（若未提供）
+    let eleGain = parseFloat(elevation_gain) || 0;
+    if (!eleGain) {
+      for (let i = 1; i < points.length; i++) {
+        const diff = (points[i].ele || 0) - (points[i - 1].ele || 0);
+        if (diff > 0) eleGain += diff;
+      }
+      eleGain = Math.round(eleGain);
+    }
+    const check = validateTrack(points);
+    const flagged = check.ok ? 0 : 1;
+    const flagReason = check.ok ? null : check.reason;
+    const trackDate = date || new Date().toISOString().split('T')[0];
+    const result = db.prepare(`
+      INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
+                          points, weather, notes, flagged, flag_reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, name || peak_name || '导入轨迹', peak_name || '', trackDate,
+           distKm, distKm, eleGain, eleGain, pointsStr,
+           weather || '', notes || '', flagged, flagReason);
+    const track = db.prepare(`
+      SELECT id, name, peak_name, date, distance_km, elevation_gain, points, created_at
+      FROM tracks WHERE id = ?
+    `).get(result.lastInsertRowid);
+    track.points = track.points ? JSON.parse(track.points) : [];
+    res.json({ ...track, imported: true, flagged, rewardGranted: !flagged });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+/**
+ * POST /api/tracks/manual — 手动记录登顶（无GPS轨迹，需要JWT）
+ * 适合真实攀登但无轨迹记录的情况，需提供照片等证明材料
+ */
+router.post('/manual', auth, (req, res) => {
+  try {
+    const { peak_name, date, altitude, notes, proof_images } = req.body;
+    if (!peak_name) return res.status(400).json({ error: '山峰名称不能为空' });
+    if (!date) return res.status(400).json({ error: '攀登日期不能为空' });
+    const proofArr = Array.isArray(proof_images) ? proof_images : [];
+    if (proofArr.length === 0) return res.status(400).json({ error: '请至少上传一张证明照片' });
+    const proofStr = JSON.stringify(proofArr);
+    const result = db.prepare(`
+      INSERT INTO tracks (user_id, name, peak_name, date, elevation, elevation_gain,
+                          notes, image, is_manual, proof_images, flagged, flag_reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0, NULL)
+    `).run(req.user.id, peak_name + ' 登顶记录', peak_name, date,
+           altitude || 0, altitude || 0, notes || '', proofArr[0] || '', proofStr);
+    const track = db.prepare(`
+      SELECT id, name, peak_name, date, elevation, notes, image, is_manual, proof_images, created_at
+      FROM tracks WHERE id = ?
+    `).get(result.lastInsertRowid);
+    track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
+    // Also insert to summit_records for leaderboard
+    try {
+      const user = db.prepare('SELECT name, avatar FROM users WHERE id = ?').get(req.user.id);
+      db.prepare(`
+        INSERT INTO summit_records (user_id, name, avatar, peak, date)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(req.user.id, user ? user.name : '', user ? user.avatar : '', peak_name, date);
+    } catch(e) {}
+    res.json({ ...track, manual: true, rewardGranted: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

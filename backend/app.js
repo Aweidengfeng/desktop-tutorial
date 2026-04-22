@@ -154,6 +154,7 @@ app.use('/api/comments', require('./routes/comments'));
 app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/group-chats', require('./routes/groupChats'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin', require('./routes/admin'));
