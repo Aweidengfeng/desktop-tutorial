@@ -7917,7 +7917,7 @@ function alpineLink() {
         });
         clearTimeout(timer);
         let data = {};
-        try { data = await res.json(); } catch(_) {}
+        try { data = await res.json(); } catch(jsonErr) { console.debug('[SummitLink] 登录响应非JSON:', jsonErr); }
         if (!res.ok) {
           if (res.status === 401) { this.showToast('手机号或密码错误，请重试', 'error'); }
           else if (res.status === 404) { this.showToast('接口不存在(404)，请联系开发者', 'error'); }
