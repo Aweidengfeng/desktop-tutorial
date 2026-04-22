@@ -2475,7 +2475,7 @@
                   <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span class="text-green-400 text-xs font-semibold">GPS 定位已获取</span>
                 </div>
-                <p class="text-slate-300 text-sm" x-text="'📍 ' + (sosGps ? sosGps.lat : '') + '° N, ' + (sosGps ? sosGps.lng : '') + '° E'"></p>
+                <p class="text-slate-300 text-sm" x-text="sosGps ? ('📍 ' + Math.abs(sosGps.lat) + '° ' + (sosGps.lat >= 0 ? 'N' : 'S') + ', ' + Math.abs(sosGps.lng) + '° ' + (sosGps.lng >= 0 ? 'E' : 'W')) : ''"></p>
                 <!-- 地图容器 -->
                 <div id="sos-map" style="height:200px;border-radius:12px;margin-top:10px;background:#1e293b;"></div>
               </div>
@@ -2487,8 +2487,8 @@
                 </div>
                 <p class="text-slate-400 text-xs mb-2">请手动输入坐标：</p>
                 <div class="flex gap-2">
-                  <input x-model="sosManualLat" type="number" step="0.000001" placeholder="纬度 (如 27.988)" class="flex-1 bg-slate-700 text-white text-sm rounded-xl px-3 py-2 outline-none placeholder-slate-500">
-                  <input x-model="sosManualLng" type="number" step="0.000001" placeholder="经度 (如 86.925)" class="flex-1 bg-slate-700 text-white text-sm rounded-xl px-3 py-2 outline-none placeholder-slate-500">
+                  <input x-model="sosManualLat" type="number" step="0.000001" min="-90" max="90" placeholder="纬度 (-90~90)" class="flex-1 bg-slate-700 text-white text-sm rounded-xl px-3 py-2 outline-none placeholder-slate-500">
+                  <input x-model="sosManualLng" type="number" step="0.000001" min="-180" max="180" placeholder="经度 (-180~180)" class="flex-1 bg-slate-700 text-white text-sm rounded-xl px-3 py-2 outline-none placeholder-slate-500">
                 </div>
               </div>
             </div>
@@ -3100,7 +3100,7 @@
                     </div>
                   </div>
                 </template>
-                <div x-show="!(selectedTeam && selectedTeam.members || teamChatMembers).length" class="text-center py-8 text-slate-500 text-sm">暂无成员数据</div>
+                <div x-show="!((selectedTeam && selectedTeam.members ? selectedTeam.members : teamChatMembers).length)" class="text-center py-8 text-slate-500 text-sm">暂无成员数据</div>
               </div>
             </div>
             <!-- Chat Tab -->
@@ -5993,42 +5993,42 @@ function alpineLink() {
       if (!query || !query.trim()) { this.globalSearchResults = []; return; }
       const q = query.trim().toLowerCase();
       const results = [];
-      // 搜索山峰
-      const peakMatches = [...this.eightThousanders, ...this.continentalPeaks, ...this.worldPeaks].filter(p =>
+      // 搜索山峰（记录总数后再截取）
+      const allPeaks = [...this.eightThousanders, ...this.continentalPeaks, ...this.worldPeaks].filter(p =>
         (p.name && p.name.toLowerCase().includes(q)) ||
         (p.nameEn && p.nameEn.toLowerCase().includes(q)) ||
         (p.country && p.country.toLowerCase().includes(q))
-      ).slice(0, 3);
-      if (peakMatches.length) results.push({ type: '山峰', label: '🏔️ 山峰', icon: '🏔️', items: peakMatches, total: peakMatches.length });
+      );
+      if (allPeaks.length) results.push({ type: '山峰', label: '🏔️ 山峰', icon: '🏔️', items: allPeaks.slice(0, 3), total: allPeaks.length });
       // 搜索向导
-      const guideMatches = [...(this.nearbyGuides || []), ...(this.guides || [])].filter((g, i, arr) => arr.findIndex(x => x.id === g.id) === i).filter(g =>
+      const allGuides = [...(this.nearbyGuides || []), ...(this.guides || [])].filter((g, i, arr) => arr.findIndex(x => x.id === g.id) === i).filter(g =>
         (g.name && g.name.toLowerCase().includes(q)) ||
         (g.specialty && g.specialty.toLowerCase().includes(q))
-      ).slice(0, 3);
-      if (guideMatches.length) results.push({ type: '向导', label: '🧗 向导', icon: '🧗', items: guideMatches, total: guideMatches.length });
+      );
+      if (allGuides.length) results.push({ type: '向导', label: '🧗 向导', icon: '🧗', items: allGuides.slice(0, 3), total: allGuides.length });
       // 搜索俱乐部
-      const clubMatches = (this.featuredClubs || []).filter(c =>
+      const allClubs = (this.featuredClubs || []).filter(c =>
         (c.name && c.name.toLowerCase().includes(q)) ||
         (c.specialty && c.specialty.toLowerCase().includes(q))
-      ).slice(0, 3);
-      if (clubMatches.length) results.push({ type: '俱乐部', label: '🏛️ 俱乐部', icon: '🏛️', items: clubMatches, total: clubMatches.length });
+      );
+      if (allClubs.length) results.push({ type: '俱乐部', label: '🏛️ 俱乐部', icon: '🏛️', items: allClubs.slice(0, 3), total: allClubs.length });
       // 搜索动态
-      const postMatches = (this.communityPosts || []).filter(p =>
+      const allPosts = (this.communityPosts || []).filter(p =>
         (p.content && p.content.toLowerCase().includes(q)) ||
         (p.author && p.author.toLowerCase().includes(q))
-      ).slice(0, 3);
-      if (postMatches.length) results.push({ type: '动态', label: '💬 动态', icon: '💬', items: postMatches.map(p => ({ ...p, name: p.content ? p.content.slice(0, 40) : '' })), total: postMatches.length });
+      );
+      if (allPosts.length) results.push({ type: '动态', label: '💬 动态', icon: '💬', items: allPosts.slice(0, 3).map(p => ({ ...p, name: p.content ? p.content.slice(0, 40) : '' })), total: allPosts.length });
       // 搜索队伍
-      const teamMatches = (this.teams || []).filter(t =>
+      const allTeams = (this.teams || []).filter(t =>
         (t.name && t.name.toLowerCase().includes(q)) ||
         (t.peak && t.peak.toLowerCase().includes(q))
-      ).slice(0, 3);
-      if (teamMatches.length) results.push({ type: '队伍', label: '👥 队伍', icon: '👥', items: teamMatches, total: teamMatches.length });
+      );
+      if (allTeams.length) results.push({ type: '队伍', label: '👥 队伍', icon: '👥', items: allTeams.slice(0, 3), total: allTeams.length });
       // 搜索轨迹
-      const trackMatches = (this.tracks || []).filter(t =>
+      const allTracks = (this.tracks || []).filter(t =>
         t.name && t.name.toLowerCase().includes(q)
-      ).slice(0, 3);
-      if (trackMatches.length) results.push({ type: '轨迹', label: '📍 轨迹', icon: '📍', items: trackMatches, total: trackMatches.length });
+      );
+      if (allTracks.length) results.push({ type: '轨迹', label: '📍 轨迹', icon: '📍', items: allTracks.slice(0, 3), total: allTracks.length });
       this.globalSearchResults = results;
       // 同时保存搜索历史
       if (query.trim() && !this.searchHistory.includes(query.trim())) {
