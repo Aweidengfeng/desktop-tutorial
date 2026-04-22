@@ -5566,7 +5566,7 @@ function alpineLink() {
     gearMode: 'buy',
     gearCategory: '全部',
     activeChatType: 'all',
-    darkMode: window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : true,
+    darkMode: localStorage.getItem('darkMode') !== null ? localStorage.getItem('darkMode') === 'true' : (window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : true),
     sosGps: null,
     sosManualLat: '',
     sosManualLng: '',
@@ -5985,6 +5985,7 @@ function alpineLink() {
     toggleDarkMode() {
       this.darkMode = !this.darkMode;
       document.body.classList.toggle('light-mode', !this.darkMode);
+      localStorage.setItem('darkMode', this.darkMode);
     },
 
     // 全局搜索（搜索所有模块）
@@ -6521,7 +6522,8 @@ function alpineLink() {
             });
           },
           err => {
-            this.sosGps = { error: '无法获取位置：' + (err.message || '权限被拒绝') };
+            const errMsgs = { 1: '定位权限被拒绝，请在浏览器设置中允许位置访问', 2: '无法获取位置信息，请检查GPS是否开启', 3: '获取位置超时，请重试' };
+            this.sosGps = { error: errMsgs[err.code] || ('无法获取位置：' + (err.message || '未知错误')) };
           },
           { timeout: 10000, enableHighAccuracy: true }
         );
@@ -8593,8 +8595,15 @@ function alpineLink() {
       this.sosStep = 1;
       this.showToast('SOS 已发送！救援正在响应', 'warning');
       // 确定使用的坐标（GPS或手动输入）
-      const lat = (this.sosGps && !this.sosGps.error) ? this.sosGps.lat : (this.sosManualLat || null);
-      const lng = (this.sosGps && !this.sosGps.error) ? this.sosGps.lng : (this.sosManualLng || null);
+      let lat = (this.sosGps && !this.sosGps.error) ? this.sosGps.lat : (this.sosManualLat || null);
+      let lng = (this.sosGps && !this.sosGps.error) ? this.sosGps.lng : (this.sosManualLng || null);
+      // 验证坐标有效性
+      if (lat !== null && lng !== null) {
+        const latNum = parseFloat(lat), lngNum = parseFloat(lng);
+        if (isNaN(latNum) || latNum < -90 || latNum > 90 || isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+          lat = null; lng = null;
+        }
+      }
       const locationStr = (lat && lng) ? (lat + '° N, ' + lng + '° E') : '位置未知';
       try {
         await fetch(API_BASE + '/api/sos', {
@@ -8857,8 +8866,11 @@ function alpineLink() {
       // 监听系统主题变化
       if (window.matchMedia) {
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-          this.darkMode = e.matches;
-          document.body.classList.toggle('light-mode', !this.darkMode);
+          // 仅在用户未手动设置时跟随系统
+          if (localStorage.getItem('darkMode') === null) {
+            this.darkMode = e.matches;
+            document.body.classList.toggle('light-mode', !this.darkMode);
+          }
         });
       }
       // Initialize public tracks
