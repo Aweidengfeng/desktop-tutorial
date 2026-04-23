@@ -182,7 +182,8 @@ router.post('/:id/review', guideWriteLimiter, auth, async (req, res) => {
     `;
     if (avgResult) {
       const newRating = Math.round(avgResult.avg_rating * 10) / 10;
-      await prisma.$executeRaw`UPDATE guides SET rating = ${newRating}, reviews = ${avgResult.cnt} WHERE id = ${id}`;
+      const reviewCount = Number(avgResult.cnt);
+      await prisma.$executeRaw`UPDATE guides SET rating = ${newRating}, reviews = ${reviewCount} WHERE id = ${id}`;
     }
     res.json({ success: true, message: '评价已提交' });
   } catch (e) {
