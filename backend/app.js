@@ -118,9 +118,10 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
     let result = html
       .replaceAll('YOUR_AMAP_KEY', amapKey)
       .replaceAll('YOUR_AMAP_SECURITY_CODE', amapSecurityCode);
-    // 注入 SENTRY_DSN 到前端
+    // 注入 SENTRY_DSN 和 API_BASE 到前端
     const sentryDsn = process.env.SENTRY_DSN || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const apiBase = process.env.API_BASE || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}</script>`;
     result = result.replace('</head>', sentryScript + '\n</head>');
     // 若 Key 或安全密钥未配置，注入提示脚本
     if (!amapKey || !amapSecurityCode) {
