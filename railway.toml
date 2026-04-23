@@ -1,6 +1,6 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "cd backend && npm install"
+buildCommand = "cd backend && npm install && DATABASE_URL=\"file:/tmp/build.db\" npx prisma generate --schema=prisma/schema.prisma"
 
 [deploy]
 startCommand = "node backend/db/seed.js && node backend/app.js"

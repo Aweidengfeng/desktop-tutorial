@@ -1,5 +1,10 @@
 require('dotenv').config();
 
+// ── 数据库初始化（建表 + 内置种子数据）──────────────────────────────────────
+// database.js 使用 better-sqlite3 执行 CREATE TABLE IF NOT EXISTS，确保所有
+// 表在 Prisma 路由使用之前已存在。必须在任何路由 require 之前加载。
+require('./db/database');
+
 const pino = require('pino');
 const pinoHttp = require('pino-http');
 const { randomUUID } = require('crypto');
