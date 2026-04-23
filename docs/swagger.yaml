@@ -69,6 +69,30 @@ tags:
     description: P2 — SOS 安全模块
   - name: Stats
     description: P2 — 后台统计模块
+  - name: Teams
+    description: P1 — 组队模块
+  - name: Weather
+    description: P1 — 气象/天气模块
+  - name: Leaderboard
+    description: P1 — 排行榜模块
+  - name: Messages
+    description: P1 — 私信/会话模块
+  - name: Notifications
+    description: P1 — 通知模块
+  - name: Follows
+    description: P2 — 关注模块
+  - name: Search
+    description: P1 — 全局搜索模块
+  - name: Badges
+    description: P2 — 徽章/成就模块
+  - name: Gear
+    description: P2 — 装备租借模块
+  - name: Tracks
+    description: P2 — 轨迹/登顶记录模块
+  - name: Upload
+    description: P2 — 文件上传模块
+  - name: Banners
+    description: P2 — 横幅/广告模块
 
 components:
   securitySchemes:
@@ -552,6 +576,338 @@ components:
           format: date-time
           nullable: true
           example: null
+
+    # ────────── 组队 ──────────
+    Team:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 珠峰南坡2026春季队
+        peak:
+          type: string
+          example: 珠穆朗玛峰
+        date:
+          type: string
+          format: date
+          example: "2026-05-01"
+        spots:
+          type: integer
+          description: 剩余名额
+          example: 2
+        totalSpots:
+          type: integer
+          description: 总名额
+          example: 6
+        level:
+          type: string
+          example: 高级
+        leader:
+          type: string
+          example: 扎西
+        leaderAvatar:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatar.jpg
+        description:
+          type: string
+          example: 8000米专业队，需有C2+经验
+        difficulty:
+          type: string
+          nullable: true
+          example: 极难
+        fee:
+          type: number
+          nullable: true
+          example: 50000
+        status:
+          type: string
+          enum: [recruiting, full, completed, cancelled]
+          example: recruiting
+        groupChatId:
+          type: integer
+          nullable: true
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T08:00:00Z"
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 10
+        name:
+          type: string
+          example: 李明
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatar.jpg
+        status:
+          type: string
+          enum: [leader, approved, pending, rejected]
+          example: approved
+        joinedAt:
+          type: string
+          format: date-time
+          example: "2026-01-16T10:00:00Z"
+
+    # ────────── 私信 ──────────
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        otherId:
+          type: integer
+          example: 2
+        otherName:
+          type: string
+          example: 张三
+        otherAvatar:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatar.jpg
+        lastMsg:
+          type: string
+          nullable: true
+          example: 明天几点出发？
+        unread:
+          type: integer
+          example: 3
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-20T14:00:00Z"
+
+    PrivateMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        sender_id:
+          type: integer
+          example: 1
+        content:
+          type: string
+          example: 明天几点出发？
+        type:
+          type: string
+          enum: [text, image, mixed]
+          example: text
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: []
+        is_read:
+          type: integer
+          enum: [0, 1]
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-20T14:00:00Z"
+
+    # ────────── 通知 ──────────
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        type:
+          type: string
+          example: team_join_request
+        content:
+          type: string
+          example: 李明 申请加入您的队伍「珠峰春季队」，请及时审核
+        title:
+          type: string
+          nullable: true
+          example: 新的入队申请
+        body:
+          type: string
+          nullable: true
+          example: null
+        link:
+          type: string
+          nullable: true
+          example: null
+        related_id:
+          type: integer
+          nullable: true
+          example: 1
+        is_read:
+          type: integer
+          enum: [0, 1]
+          example: 0
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-20T09:00:00Z"
+
+    # ────────── 徽章 ──────────
+    Badge:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 初登者
+        description:
+          type: string
+          example: 完成第一次登山记录
+        icon:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/badge_icon.png
+        category:
+          type: string
+          example: 登山
+        condition_type:
+          type: string
+          example: post_count
+        condition_value:
+          type: integer
+          example: 1
+        unlocked_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        progress:
+          type: integer
+          nullable: true
+          example: 0
+
+    # ────────── 装备 ──────────
+    GearItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 高空靴（8000m+）
+        category:
+          type: string
+          example: 鞋类
+        brand:
+          type: string
+          example: La Sportiva
+        description:
+          type: string
+          example: 适合8000米以上极端低温环境
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - https://example.com/gear1.jpg
+        daily_rate:
+          type: number
+          example: 200
+        stock:
+          type: integer
+          example: 5
+        status:
+          type: string
+          enum: [available, rented, maintenance]
+          example: available
+
+    # ────────── 轨迹 ──────────
+    Track:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        peak_name:
+          type: string
+          example: 珠穆朗玛峰
+        date:
+          type: string
+          format: date
+          example: "2026-05-10"
+        max_elevation:
+          type: integer
+          example: 8849
+        distance_km:
+          type: number
+          example: 12.5
+        duration_min:
+          type: integer
+          example: 720
+        gpx_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/track.gpx
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-05-10T16:00:00Z"
+
+    # ────────── 排行榜 ──────────
+    LeaderboardEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 扎西
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/avatar.jpg
+        level:
+          type: integer
+          example: 8
+        summit_count:
+          type: integer
+          example: 12
+        max_elevation:
+          type: integer
+          example: 8849
+        total_distance:
+          type: number
+          nullable: true
+          example: 145.3
+        best_peak:
+          type: string
+          example: 珠穆朗玛峰
 
   # ────────── 通用参数 ──────────
   parameters:
@@ -3100,3 +3456,1524 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  # ────────── 5.1 组队模块 ──────────
+  /api/teams:
+    get:
+      tags: [Teams]
+      summary: 获取招募中的队伍列表
+      description: 返回所有状态为 recruiting 的队伍，按创建时间降序排列。
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+    post:
+      tags: [Teams]
+      summary: 创建队伍（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, peak, date, totalSpots]
+              properties:
+                name:
+                  type: string
+                  example: 珠峰南坡2026春季队
+                peak:
+                  type: string
+                  example: 珠穆朗玛峰
+                date:
+                  type: string
+                  format: date
+                  example: "2026-05-01"
+                totalSpots:
+                  type: integer
+                  example: 6
+                level:
+                  type: string
+                  example: 高级
+                description:
+                  type: string
+                  example: 需有C2+经验
+                difficulty:
+                  type: string
+                  example: 极难
+                fee:
+                  type: number
+                  example: 50000
+      responses:
+        '200':
+          description: 创建成功，返回新队伍信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/teams/{id}:
+    get:
+      tags: [Teams]
+      summary: 获取队伍详情（含成员列表）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Team'
+                  - type: object
+                    properties:
+                      members:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TeamMember'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/teams/{id}/join:
+    post:
+      tags: [Teams]
+      summary: 申请加入队伍（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 申请成功，等待队长审核
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 成功申请加入队伍，等待队长审核
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/teams/{id}/members/{memberId}/approve:
+    put:
+      tags: [Teams]
+      summary: 队长批准成员入队（需登录）
+      description: 仅队长可调用。批准后成员自动加入队伍群聊。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 审批成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  groupChatId:
+                    type: integer
+                    nullable: true
+                    example: 3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/teams/{id}/members/{memberId}/reject:
+    put:
+      tags: [Teams]
+      summary: 队长拒绝成员申请（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 拒绝成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.2 气象/天气模块 ──────────
+  /api/weather:
+    get:
+      tags: [Weather]
+      summary: 查询当前天气
+      description: 按经纬度或山峰名称查询当前气象数据（OpenMeteo 数据源）。
+      parameters:
+        - name: lat
+          in: query
+          description: 纬度
+          schema:
+            type: number
+            example: 27.98
+        - name: lon
+          in: query
+          description: 经度
+          schema:
+            type: number
+            example: 86.92
+        - name: location
+          in: query
+          description: 山峰名称（内置坐标映射）
+          schema:
+            type: string
+            example: 珠穆朗玛峰
+      responses:
+        '200':
+          description: 天气数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  temperature:
+                    type: number
+                    example: -20.5
+                  windspeed:
+                    type: number
+                    example: 45.2
+                  windspeed_ms:
+                    type: number
+                    example: 12.6
+                  weathercode:
+                    type: integer
+                    example: 3
+                  is_day:
+                    type: integer
+                    example: 1
+                  time:
+                    type: string
+                    example: "2026-05-01T08:00"
+
+  /api/weather/forecast:
+    get:
+      tags: [Weather]
+      summary: 查询天气预报（7天）
+      parameters:
+        - name: lat
+          in: query
+          schema:
+            type: number
+            example: 27.98
+        - name: lon
+          in: query
+          schema:
+            type: number
+            example: 86.92
+        - name: location
+          in: query
+          schema:
+            type: string
+            example: 珠穆朗玛峰
+      responses:
+        '200':
+          description: 7天预报数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  daily:
+                    type: object
+                    description: OpenMeteo daily forecast object
+
+  /api/weather/camps:
+    get:
+      tags: [Weather]
+      summary: 查询山峰各营地天气
+      parameters:
+        - name: peak
+          in: query
+          required: true
+          description: 山峰名称
+          schema:
+            type: string
+            example: 珠穆朗玛峰
+      responses:
+        '200':
+          description: 各营地当前天气列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: 大本营 EBC
+                    altitude:
+                      type: integer
+                      example: 5364
+                    temperature:
+                      type: number
+                      example: -15.2
+                    windspeed:
+                      type: number
+                      example: 30.1
+                    weathercode:
+                      type: integer
+                      example: 2
+
+  /api/weather/popular-peaks:
+    get:
+      tags: [Weather]
+      summary: 热门山峰天气一览
+      description: 返回一批内置热门山峰的当前天气摘要。
+      responses:
+        '200':
+          description: 热门峰天气列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    peak:
+                      type: string
+                      example: 珠穆朗玛峰
+                    temperature:
+                      type: number
+                      example: -22.0
+                    windspeed:
+                      type: number
+                      example: 55.0
+
+  # ────────── 5.3 排行榜模块 ──────────
+  /api/leaderboard:
+    get:
+      tags: [Leaderboard]
+      summary: 多维度攀登榜单
+      description: 支持按登顶次数、海拔、距离排序，支持用户/俱乐部维度，支持时间范围和峰种筛选。
+      parameters:
+        - name: sort
+          in: query
+          description: 排序维度
+          schema:
+            type: string
+            enum: [count, elevation, distance]
+            default: count
+        - name: period
+          in: query
+          description: 时间范围
+          schema:
+            type: string
+            enum: [week, month, year, all]
+            default: month
+        - name: scope
+          in: query
+          description: 统计维度（用户/俱乐部）
+          schema:
+            type: string
+            enum: [user, club]
+            default: user
+        - name: peak_type
+          in: query
+          description: 峰种筛选
+          schema:
+            type: string
+            enum: [8000ers, continental, world, alpine]
+        - name: month
+          in: query
+          description: 指定月份（YYYY-MM，period=month 时生效）
+          schema:
+            type: string
+            example: "2026-05"
+      responses:
+        '200':
+          description: 榜单数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  month:
+                    type: string
+                    nullable: true
+                    example: "2026-05"
+                  period:
+                    type: string
+                    example: month
+                  sort:
+                    type: string
+                    example: count
+                  scope:
+                    type: string
+                    example: user
+                  peak_type:
+                    type: string
+                    nullable: true
+                    example: null
+                  leaders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+
+  /api/leaderboard/monthly:
+    get:
+      tags: [Leaderboard]
+      summary: 本月攀登月榜（兼容旧版，Top 10）
+      responses:
+        '200':
+          description: 月榜 Top 10
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+
+  # ────────── 5.4 私信/会话模块 ──────────
+  /api/messages/conversations:
+    get:
+      tags: [Messages]
+      summary: 获取当前用户所有会话列表（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 会话列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Messages]
+      summary: 创建或获取与指定用户的会话（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_user_id]
+              properties:
+                target_user_id:
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: 返回会话对象
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/messages/conversations/{id}/messages:
+    get:
+      tags: [Messages]
+      summary: 获取会话消息列表（需登录）
+      description: 返回会话内所有消息，并将对方消息标记为已读。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 会话ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 消息列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrivateMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Messages]
+      summary: 发送私信（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 会话ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  example: 明天几点出发？
+                type:
+                  type: string
+                  enum: [text, image, mixed]
+                  example: text
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  example: []
+      responses:
+        '200':
+          description: 发送成功，返回消息对象
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivateMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/messages/conversations/{id}/messages/poll:
+    get:
+      tags: [Messages]
+      summary: 长轮询获取新消息（需登录）
+      description: 返回 id > after 的新消息，用于轻量级实时刷新。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: after
+          in: query
+          description: 上一条已知消息的 id，返回比它更新的消息
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 新消息列表（可能为空数组）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrivateMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────── 5.5 通知模块 ──────────
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: 获取通知列表（需登录，最近20条）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 通知列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: 获取未读通知数（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 未读数
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: 全部标为已读（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: 单条通知标为已读（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.6 关注模块 ──────────
+  /api/follows:
+    post:
+      tags: [Follows]
+      summary: 关注用户（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id:
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: 关注成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 关注成功
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/follows/{target_id}:
+    delete:
+      tags: [Follows]
+      summary: 取消关注（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: target_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 已取消关注
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/follows/status/{target_id}:
+    get:
+      tags: [Follows]
+      summary: 检查是否已关注目标用户（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: target_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 关注状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/follows/my-following:
+    get:
+      tags: [Follows]
+      summary: 获取我关注的用户列表（需登录，最多50条）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 关注列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 2
+                    name:
+                      type: string
+                      example: 张三
+                    avatar:
+                      type: string
+                      format: uri
+                      nullable: true
+                    level:
+                      type: integer
+                      example: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.7 全局搜索模块 ──────────
+  /api/search:
+    get:
+      tags: [Search]
+      summary: 全局搜索（峰、向导、俱乐部、文章）
+      description: 基于 FTS5 全文检索，中文自动降级为 LIKE 模糊查询。
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 搜索关键词
+          schema:
+            type: string
+            example: 珠穆朗玛
+        - name: type
+          in: query
+          description: 过滤类型
+          schema:
+            type: string
+            enum: [all, peak, guide, club, article]
+            default: all
+        - name: limit
+          in: query
+          description: 返回条数上限（最大 100）
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: 珠穆朗玛峰
+                    description:
+                      type: string
+                      example: 世界最高峰，海拔8849米
+                    type:
+                      type: string
+                      enum: [peak, guide, club, article]
+                      example: peak
+                    ref_id:
+                      type: string
+                      example: "1"
+
+  # ────────── 5.8 徽章/成就模块 ──────────
+  /api/badges:
+    get:
+      tags: [Badges]
+      summary: 获取全部徽章定义列表
+      responses:
+        '200':
+          description: 徽章列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Badge'
+
+  /api/badges/my:
+    get:
+      tags: [Badges]
+      summary: 获取当前用户的徽章解锁状态（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 徽章列表（含解锁进度）
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Badge'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/badges/check:
+    post:
+      tags: [Badges]
+      summary: 检查并发放新解锁的徽章（需登录）
+      description: 依据当前用户的帖子数、登顶海拔、点赞数、粉丝数重新计算可解锁徽章，并写入数据库。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 本次新解锁的徽章列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unlocked:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Badge'
+                  count:
+                    type: integer
+                    example: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.9 装备租借模块 ──────────
+  /api/gear:
+    get:
+      tags: [Gear]
+      summary: 获取装备列表
+      parameters:
+        - name: category
+          in: query
+          description: 按类别筛选
+          schema:
+            type: string
+            example: 鞋类
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 装备列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GearItem'
+    post:
+      tags: [Gear]
+      summary: 发布装备（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, daily_rate]
+              properties:
+                name:
+                  type: string
+                  example: 高空靴（8000m+）
+                category:
+                  type: string
+                  example: 鞋类
+                brand:
+                  type: string
+                  example: La Sportiva
+                description:
+                  type: string
+                  example: 极端低温防护
+                daily_rate:
+                  type: number
+                  example: 200
+                stock:
+                  type: integer
+                  example: 5
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GearItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/gear/orders/mine:
+    get:
+      tags: [Gear]
+      summary: 获取我的装备订单（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    gear_id:
+                      type: integer
+                      example: 5
+                    status:
+                      type: string
+                      example: pending
+                    start_date:
+                      type: string
+                      format: date
+                      example: "2026-05-01"
+                    end_date:
+                      type: string
+                      format: date
+                      example: "2026-05-10"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/gear/{id}:
+    get:
+      tags: [Gear]
+      summary: 获取装备详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 装备详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GearItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/gear/{id}/order:
+    post:
+      tags: [Gear]
+      summary: 下单租借装备（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start_date, end_date]
+              properties:
+                start_date:
+                  type: string
+                  format: date
+                  example: "2026-05-01"
+                end_date:
+                  type: string
+                  format: date
+                  example: "2026-05-10"
+      responses:
+        '200':
+          description: 下单成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  orderId:
+                    type: integer
+                    example: 12
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.10 轨迹/登顶记录模块 ──────────
+  /api/tracks:
+    get:
+      tags: [Tracks]
+      summary: 获取登顶记录列表（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 轨迹列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Track'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Tracks]
+      summary: 创建登顶记录（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peak_name, date, max_elevation]
+              properties:
+                peak_name:
+                  type: string
+                  example: 珠穆朗玛峰
+                date:
+                  type: string
+                  format: date
+                  example: "2026-05-10"
+                max_elevation:
+                  type: integer
+                  example: 8849
+                distance_km:
+                  type: number
+                  example: 12.5
+                duration_min:
+                  type: integer
+                  example: 720
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Track'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tracks/my:
+    get:
+      tags: [Tracks]
+      summary: 获取我的登顶记录（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 我的轨迹列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Track'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tracks/{id}:
+    get:
+      tags: [Tracks]
+      summary: 获取轨迹详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 轨迹详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Track'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Tracks]
+      summary: 删除轨迹（需登录，仅本人）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/tracks/{id}/export:
+    get:
+      tags: [Tracks]
+      summary: 导出 GPX 文件
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: GPX 文件内容
+          content:
+            application/gpx+xml:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.11 文件上传模块 ──────────
+  /api/upload:
+    post:
+      tags: [Upload]
+      summary: 上传单张图片（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    example: https://example.com/uploads/image.jpg
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/upload/multiple:
+    post:
+      tags: [Upload]
+      summary: 上传多张图片（需登录，最多9张）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 9
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  urls:
+                    type: array
+                    items:
+                      type: string
+                      format: uri
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/upload/video:
+    post:
+      tags: [Upload]
+      summary: 上传视频（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    example: https://example.com/uploads/video.mp4
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/upload/gpx:
+    post:
+      tags: [Upload]
+      summary: 上传 GPX 轨迹文件（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    example: https://example.com/uploads/track.gpx
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.12 横幅/广告模块 ──────────
+  /api/banners:
+    get:
+      tags: [Banners]
+      summary: 获取当前生效的横幅列表
+      responses:
+        '200':
+          description: 横幅列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    title:
+                      type: string
+                      example: 2026珠峰春季队招募
+                    image_url:
+                      type: string
+                      format: uri
+                      example: https://example.com/banner.jpg
+                    link:
+                      type: string
+                      format: uri
+                      nullable: true
+                      example: https://example.com/activity/1
+                    sort_order:
+                      type: integer
+                      example: 1
+                    is_active:
+                      type: integer
+                      example: 1
+    post:
+      tags: [Banners]
+      summary: 创建横幅（需 admin 权限）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, image_url]
+              properties:
+                title:
+                  type: string
+                  example: 2026珠峰春季队招募
+                image_url:
+                  type: string
+                  format: uri
+                link:
+                  type: string
+                  format: uri
+                  nullable: true
+                sort_order:
+                  type: integer
+                  example: 1
+                is_active:
+                  type: integer
+                  enum: [0, 1]
+                  example: 1
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/banners/{id}:
+    put:
+      tags: [Banners]
+      summary: 更新横幅（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                image_url:
+                  type: string
+                  format: uri
+                link:
+                  type: string
+                  format: uri
+                  nullable: true
+                sort_order:
+                  type: integer
+                is_active:
+                  type: integer
+                  enum: [0, 1]
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Banners]
+      summary: 删除横幅（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
