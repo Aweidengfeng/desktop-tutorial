@@ -398,6 +398,20 @@
         this.loading = false;
       },
 
+      getAuthToken() {
+        const urlToken = new URLSearchParams(window.location.search).get('token');
+        if (urlToken) {
+          try { localStorage.setItem('summitlink_token', urlToken); } catch(e) {}
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('token');
+            window.history.replaceState({}, '', url.toString());
+          } catch(e) {}
+          return urlToken;
+        }
+        return localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+      },
+
       async loadLevels() {
         try {
           const r = await fetch('/api/certification/levels');
@@ -406,8 +420,7 @@
       },
 
       async checkAuth() {
-        const urlToken = new URLSearchParams(window.location.search).get('token');
-        const token = urlToken || localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = this.getAuthToken();
         if (!token) return;
         try {
           const r = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
@@ -460,7 +473,7 @@
       },
 
       async publishActivity() {
-        const token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = this.getAuthToken();
         if (!token) return;
         this.publishLoading = true;
         try {
@@ -498,7 +511,7 @@
       },
 
       async submitApplication() {
-        const token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = this.getAuthToken();
         if (!token) return;
         this.applyLoading = true;
         try {
