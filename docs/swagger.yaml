@@ -5571,6 +5571,461 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/admin/clubs:
+    get:
+      tags: [Stats]
+      summary: 俱乐部列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 俱乐部列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clubs:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Stats]
+      summary: 管理员新建俱乐部（需 admin 权限）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: 珠峰探险俱乐部
+                region:
+                  type: string
+                  example: 尼泊尔
+                specialty:
+                  type: string
+                  example: 8000m峰
+                description:
+                  type: string
+                contact:
+                  type: string
+                verified:
+                  type: boolean
+      responses:
+        '200':
+          description: 新建成功，返回俱乐部对象
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/clubs/{id}:
+    put:
+      tags: [Stats]
+      summary: 管理员编辑俱乐部（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                region:
+                  type: string
+                specialty:
+                  type: string
+                description:
+                  type: string
+                contact:
+                  type: string
+                verified:
+                  type: boolean
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/routes:
+    get:
+      tags: [Stats]
+      summary: 攀登线路列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 线路列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        peak:
+                          type: string
+                        difficulty:
+                          type: string
+                        region:
+                          type: string
+                        altitude:
+                          type: integer
+                        duration_days:
+                          type: integer
+                        best_season:
+                          type: string
+                        status:
+                          type: string
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Stats]
+      summary: 管理员新建攀登线路（需 admin 权限）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: 珠峰南坡标准线
+                peak:
+                  type: string
+                  example: 珠穆朗玛峰
+                difficulty:
+                  type: string
+                  enum: [较易, 中等, 难, 极难]
+                region:
+                  type: string
+                altitude:
+                  type: integer
+                duration_days:
+                  type: integer
+                best_season:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: 创建成功，返回线路对象
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/routes/{id}:
+    put:
+      tags: [Stats]
+      summary: 管理员编辑攀登线路（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                peak:
+                  type: string
+                difficulty:
+                  type: string
+                region:
+                  type: string
+                altitude:
+                  type: integer
+                duration_days:
+                  type: integer
+                best_season:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: 更新成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Stats]
+      summary: 管理员删除攀登线路（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/orders:
+    get:
+      tags: [Stats]
+      summary: 订单列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 订单列表
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/bookings:
+    get:
+      tags: [Stats]
+      summary: 预约列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+      responses:
+        '200':
+          description: 预约列表
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/sos-records:
+    get:
+      tags: [Stats]
+      summary: SOS救援记录列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, resolved]
+      responses:
+        '200':
+          description: SOS记录列表
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/sos-records/{id}/status:
+    put:
+      tags: [Stats]
+      summary: 更新SOS处理状态（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, processing, resolved]
+      responses:
+        '200':
+          description: 状态已更新
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/withdrawals:
+    get:
+      tags: [Stats]
+      summary: 提现申请列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        '200':
+          description: 提现申请列表
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/withdrawals/{id}/approve:
+    put:
+      tags: [Stats]
+      summary: 批准提现申请（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 已批准
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/withdrawals/{id}/reject:
+    put:
+      tags: [Stats]
+      summary: 拒绝提现申请（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: 已拒绝
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/stats:
+    get:
+      tags: [Stats]
+      summary: 平台总览统计（需 admin 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 统计数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUsers:
+                    type: integer
+                  totalPosts:
+                    type: integer
+                  totalOrders:
+                    type: integer
+                  totalClubs:
+                    type: integer
+                  totalBookings:
+                    type: integer
+                  newUsersToday:
+                    type: integer
+                  pendingPosts:
+                    type: integer
+                  pendingGuides:
+                    type: integer
+                  pendingBookings:
+                    type: integer
+                  pendingSos:
+                    type: integer
+                  pendingWithdrawals:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # ────────── 5.16 预约/委托模块 ──────────
   /api/bookings/my:
     get:
