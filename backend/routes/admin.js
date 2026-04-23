@@ -276,17 +276,23 @@ router.post('/clubs', adminWriteLimiter, adminAuth, async (req, res) => {
 // PUT /api/admin/clubs/:id — 管理员编辑俱乐部信息
 router.put('/clubs/:id', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
-    const club = (await prisma.$queryRaw`SELECT id FROM clubs WHERE id = ${req.params.id}`)[0];
+    const club = (await prisma.$queryRaw`SELECT id, name, region, specialty, description, contact, verified FROM clubs WHERE id = ${req.params.id}`)[0];
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
-    const { name, region, specialty, description, contact, verified } = req.body;
-    const verifiedVal = verified ? 1 : 0;
+    const body = req.body;
+    const name = 'name' in body ? (body.name || null) : club.name;
+    if ('name' in body && !body.name) return res.status(400).json({ error: '俱乐部名称不能为空' });
+    const region = 'region' in body ? (body.region || null) : club.region;
+    const specialty = 'specialty' in body ? (body.specialty || null) : club.specialty;
+    const description = 'description' in body ? (body.description || null) : club.description;
+    const contact = 'contact' in body ? (body.contact || null) : club.contact;
+    const verifiedVal = 'verified' in body ? (body.verified ? 1 : 0) : club.verified;
     await prisma.$executeRaw`
       UPDATE clubs SET
-        name = ${name || null},
-        region = ${region || null},
-        specialty = ${specialty || null},
-        description = ${description || null},
-        contact = ${contact || null},
+        name = ${name},
+        region = ${region},
+        specialty = ${specialty},
+        description = ${description},
+        contact = ${contact},
         verified = ${verifiedVal}
       WHERE id = ${req.params.id}
     `;
@@ -1165,19 +1171,28 @@ router.post('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
 // PUT /api/admin/routes/:id — 编辑攀登线路
 router.put('/routes/:id', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
-    const route = (await prisma.$queryRaw`SELECT id FROM climbing_routes WHERE id = ${req.params.id}`)[0];
+    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${req.params.id}`)[0];
     if (!route) return res.status(404).json({ error: '线路不存在' });
-    const { name, peak, difficulty, region, altitude, duration_days, best_season, description } = req.body;
+    const body = req.body;
+    const name = 'name' in body ? (body.name || null) : route.name;
+    if ('name' in body && !body.name) return res.status(400).json({ error: '线路名称不能为空' });
+    const peak = 'peak' in body ? (body.peak || null) : route.peak;
+    const difficulty = 'difficulty' in body ? (body.difficulty || null) : route.difficulty;
+    const region = 'region' in body ? (body.region || null) : route.region;
+    const altitude = 'altitude' in body ? (body.altitude ? parseInt(body.altitude) : null) : route.altitude;
+    const duration_days = 'duration_days' in body ? (body.duration_days ? parseInt(body.duration_days) : null) : route.duration_days;
+    const best_season = 'best_season' in body ? (body.best_season || null) : route.best_season;
+    const description = 'description' in body ? (body.description || null) : route.description;
     await prisma.$executeRaw`
       UPDATE climbing_routes SET
-        name = ${name || null},
-        peak = ${peak || null},
-        difficulty = ${difficulty || null},
-        region = ${region || null},
-        altitude = ${altitude ? parseInt(altitude) : null},
-        duration_days = ${duration_days ? parseInt(duration_days) : null},
-        best_season = ${best_season || null},
-        description = ${description || null}
+        name = ${name},
+        peak = ${peak},
+        difficulty = ${difficulty},
+        region = ${region},
+        altitude = ${altitude},
+        duration_days = ${duration_days},
+        best_season = ${best_season},
+        description = ${description}
       WHERE id = ${req.params.id}
     `;
     const updated = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${req.params.id}`)[0];
