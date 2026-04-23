@@ -283,6 +283,55 @@ router.put('/clubs/:id/verify', adminAuth, (req, res) => {
   }
 });
 
+// DELETE /api/admin/clubs/:id — 软删除俱乐部
+router.delete('/clubs/:id', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const club = db.prepare('SELECT id FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    db.prepare("UPDATE clubs SET status = 'deleted' WHERE id = ?").run(req.params.id);
+    try { db.prepare("UPDATE club_applications SET status = 'deleted' WHERE club_id = ? AND status NOT IN ('rejected','deleted')").run(req.params.id); } catch(e) {}
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/clubs/:id/revoke-certification — 撤销俱乐部认证
+router.post('/clubs/:id/revoke-certification', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const club = db.prepare('SELECT id, creator_id, name, status FROM clubs WHERE id = ?').get(req.params.id);
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    db.prepare("UPDATE clubs SET status = 'revoked', verified = 0, cert_expires_at = NULL, listing_fee_paid = 0 WHERE id = ?").run(req.params.id);
+    try {
+      db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)')
+        .run(club.creator_id, 'club_revoked', '俱乐部认证已撤销',
+          `您的俱乐部「${club.name}」认证已被管理员撤销${reason ? '，原因：' + reason : ''}，如有疑问请联系客服。`, '/club-portal');
+    } catch(e) {}
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/guides/:id/revoke-certification — 撤销向导认证
+router.post('/guides/:id/revoke-certification', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const guide = db.prepare('SELECT id, user_id, name, status FROM guides WHERE id = ?').get(req.params.id);
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    db.prepare("UPDATE guides SET status = 'revoked', cert_expires_at = NULL, listing_fee_paid = 0 WHERE id = ?").run(req.params.id);
+    try {
+      db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)')
+        .run(guide.user_id, 'guide_revoked', '向导认证已撤销',
+          `您的向导「${guide.name}」认证已被管理员撤销${reason ? '，原因：' + reason : ''}，如有疑问请联系客服。`, '/guide-portal');
+    } catch(e) {}
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/admin/bookings
 router.get('/bookings', adminAuth, (req, res) => {
   try {
