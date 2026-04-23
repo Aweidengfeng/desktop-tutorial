@@ -181,7 +181,7 @@ router.post('/:id/review', guideWriteLimiter, auth, async (req, res) => {
       FROM reviews WHERE target_type = 'guide' AND target_id = ${id}
     `;
     if (avgResult) {
-      const newRating = Math.round(avgResult.avg_rating * 10) / 10;
+      const newRating = Math.round(Number(avgResult.avg_rating) * 10) / 10;
       const reviewCount = Number(avgResult.cnt);
       await prisma.$executeRaw`UPDATE guides SET rating = ${newRating}, reviews = ${reviewCount} WHERE id = ${id}`;
     }
