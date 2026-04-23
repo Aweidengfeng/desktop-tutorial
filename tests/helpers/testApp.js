@@ -63,6 +63,7 @@ function createApp() {
 
   app.use('/api/offline-expeditions', require('../../backend/routes/offlineExpeditions'));
   app.use('/api/climbing-log',        require('../../backend/routes/climbingLog'));
+  app.use('/api/routes',              require('../../backend/routes/routes'));
   app.use('/api/guide-console',       require('../../backend/routes/guideConsole'));
   app.use('/api/club-console',        require('../../backend/routes/clubConsole'));
   app.use('/api/ai-coach',            require('../../backend/routes/aiCoach'));

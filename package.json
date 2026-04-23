@@ -39,7 +39,8 @@
       "**/tests/api-new-features.test.js",
       "**/tests/api-commerce.test.js",
       "**/tests/api-2026-features.test.js",
-      "**/tests/api-offline-expedition.test.js"
+      "**/tests/api-offline-expedition.test.js",
+      "**/tests/api-routes-teams.test.js"
     ],
     "testTimeout": 15000
   }
