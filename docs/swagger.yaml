@@ -1,0 +1,3102 @@
+openapi: 3.0.3
+info:
+  title: AlpineLink 雪域 API
+  description: |
+    AlpineLink 雪域高端登山户外社交平台后端 API 文档。
+
+    ## 认证方式
+    大多数接口需要在请求头中携带 JWT Token：
+    ```
+    Authorization: Bearer <token>
+    ```
+    Token 通过 `/api/auth/login` 获取。
+
+    ## 接口分级
+    - **P0**：核心功能，认证模块
+    - **P1**：主要业务，帖子、评论、山峰/路线、活动、消息
+    - **P2**：扩展功能，向导、俱乐部、SOS、后台统计
+
+    ## 统一响应格式
+    ```json
+    { "code": 0, "message": "success", "data": {} }
+    ```
+
+    ## WebSocket 实时消息
+    连接地址：`ws://<host>/ws?token=<jwt_token>`
+
+    消息格式：
+    ```json
+    { "type": "message", "chatId": 1, "content": "你好", "msgType": "text" }
+    ```
+
+    服务端推送格式：
+    ```json
+    { "type": "message", "data": { "id": 1, "chatId": 1, "senderId": 2, "content": "你好", "msgType": "text", "createdAt": "2026-01-01T00:00:00Z" } }
+    ```
+  version: 1.0.0
+  contact:
+    name: AlpineLink CEO
+    url: https://desktop-tutorial-production-182a.up.railway.app
+
+servers:
+  - url: https://desktop-tutorial-production-182a.up.railway.app
+    description: Railway 生产环境
+  - url: http://localhost:3000
+    description: 本地开发环境
+
+tags:
+  - name: Auth
+    description: P0 — 认证模块（手机号+验证码登录）
+  - name: Users
+    description: P0 — 用户管理
+  - name: Posts
+    description: P1 — 帖子/动态模块
+  - name: Comments
+    description: P1 — 评论模块
+  - name: Peaks
+    description: P1 — 山峰模块
+  - name: Routes
+    description: P1 — 路线模块
+  - name: Activities
+    description: P1 — 活动/组队模块
+  - name: Chats
+    description: P1 — 消息/聊天模块
+  - name: Guides
+    description: P2 — 向导模块
+  - name: Clubs
+    description: P2 — 俱乐部模块
+  - name: SOS
+    description: P2 — SOS 安全模块
+  - name: Stats
+    description: P2 — 后台统计模块
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token，通过 `/api/auth/login` 获取
+
+  schemas:
+    # ────────── 通用 ──────────
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 1003
+        message:
+          type: string
+          example: 未登录或Token无效
+        data:
+          nullable: true
+          example: null
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+
+    # ────────── 用户 ──────────
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: 张三
+        phone:
+          type: string
+          example: "13800138000"
+        avatar:
+          type: string
+          format: uri
+          example: https://example.com/avatar.jpg
+        role:
+          type: string
+          enum: [user, admin, guide]
+          example: user
+        gender:
+          type: string
+          example: 男
+        bio:
+          type: string
+          example: 热爱登山的探险家
+        level:
+          type: integer
+          example: 5
+        exp:
+          type: integer
+          example: 1200
+        peaks:
+          type: integer
+          example: 3
+        status:
+          type: string
+          enum: [active, banned]
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    # ────────── 帖子 ──────────
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        content:
+          type: string
+          example: 今天登顶珠穆朗玛峰，感觉太棒了！
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - https://example.com/img1.jpg
+            - https://example.com/img2.jpg
+        video_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://example.com/video.mp4
+        location:
+          type: string
+          example: 珠穆朗玛峰大本营
+        likes_count:
+          type: integer
+          example: 128
+        comments_count:
+          type: integer
+          example: 32
+        tags:
+          type: array
+          items:
+            type: string
+          example: [登山, 珠峰, 挑战]
+        status:
+          type: string
+          enum: [active, hidden]
+          example: active
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    # ────────── 评论 ──────────
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        post_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 2
+        content:
+          type: string
+          example: 太厉害了，我也想去！
+        parent_id:
+          type: integer
+          nullable: true
+          example: null
+        likes_count:
+          type: integer
+          example: 5
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    # ────────── 山峰 ──────────
+    Peak:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 珠穆朗玛峰
+        name_en:
+          type: string
+          example: Mount Everest
+        altitude:
+          type: integer
+          example: 8848
+        difficulty:
+          type: string
+          enum: [较易, 中等, 难, 极难]
+          example: 极难
+        country:
+          type: string
+          example: 中国/尼泊尔
+        region:
+          type: string
+          example: 喜马拉雅山脉
+        success_rate:
+          type: number
+          format: float
+          example: 29.5
+        death_count:
+          type: integer
+          example: 305
+        best_season:
+          type: string
+          example: 4月-5月
+        description:
+          type: string
+          example: 世界最高峰，海拔8848.86米
+        cover_image:
+          type: string
+          format: uri
+          example: https://example.com/everest.jpg
+        status:
+          type: string
+          example: active
+
+    # ────────── 路线 ──────────
+    Route:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        peak_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 标准南坡路线
+        difficulty:
+          type: string
+          enum: [较易, 中等, 难, 极难]
+          example: 极难
+        description:
+          type: string
+          example: 从尼泊尔侧登顶珠峰的经典路线
+        cover_image:
+          type: string
+          format: uri
+          example: https://example.com/route.jpg
+        altitude:
+          type: integer
+          example: 8848
+        duration_days:
+          type: integer
+          example: 60
+        best_season:
+          type: string
+          example: 4月-5月
+        region:
+          type: string
+          example: 尼泊尔
+        status:
+          type: string
+          example: active
+
+    # ────────── 活动 ──────────
+    Activity:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        route_id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: 2026年春季珠峰登顶计划
+        content:
+          type: string
+          example: 组织一支专业团队，计划2026年5月冲顶珠峰
+        cover_image:
+          type: string
+          format: uri
+          example: https://example.com/activity.jpg
+        max_participants:
+          type: integer
+          example: 10
+        current_participants:
+          type: integer
+          example: 3
+        start_date:
+          type: string
+          format: date
+          example: "2026-04-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-06-01"
+        location:
+          type: string
+          example: 尼泊尔加德满都
+        difficulty:
+          type: string
+          example: 极难
+        status:
+          type: string
+          enum: [招募中, 已满, 进行中, 已结束]
+          example: 招募中
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    # ────────── 聊天/消息 ──────────
+    Chat:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id_1:
+          type: integer
+          example: 1
+        user_id_2:
+          type: integer
+          example: 2
+        last_message:
+          type: string
+          example: 明天见！
+        last_time:
+          type: string
+          format: date-time
+          example: "2026-01-01T12:00:00Z"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T00:00:00Z"
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        chat_id:
+          type: integer
+          example: 1
+        sender_id:
+          type: integer
+          example: 1
+        type:
+          type: string
+          enum: [text, image, voice]
+          example: text
+        content:
+          type: string
+          example: 明天见！
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T12:00:00Z"
+
+    # ────────── 向导 ──────────
+    Guide:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 10
+        name:
+          type: string
+          example: 扎西
+        country:
+          type: string
+          example: 中国
+        avatar:
+          type: string
+          format: uri
+          example: https://example.com/guide.jpg
+        rating:
+          type: number
+          format: float
+          example: 4.9
+        review_count:
+          type: integer
+          example: 48
+        specialty:
+          type: string
+          example: 8000米以上高峰
+        daily_rate:
+          type: integer
+          example: 800
+        experience:
+          type: integer
+          example: 15
+        certifications:
+          type: array
+          items:
+            type: string
+          example: [UIAGM, 国家登山教练]
+        bio:
+          type: string
+          example: 15年高海拔登山向导经验，成功带队登顶珠峰12次
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+          example: approved
+
+    # ────────── 俱乐部 ──────────
+    Club:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 雪域探险俱乐部
+        avatar:
+          type: string
+          format: uri
+          example: https://example.com/club.jpg
+        description:
+          type: string
+          example: 专注于高海拔登山的专业俱乐部
+        cover_image:
+          type: string
+          format: uri
+          example: https://example.com/club_cover.jpg
+        leader_id:
+          type: integer
+          example: 1
+        member_count:
+          type: integer
+          example: 50
+        region:
+          type: string
+          example: 西藏
+        status:
+          type: string
+          example: active
+
+    # ────────── SOS ──────────
+    SOS:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        location:
+          type: string
+          example: "28.0000,86.9250"
+        message:
+          type: string
+          example: 受伤无法行走，需要紧急救援
+        status:
+          type: string
+          enum: [待处理, 处理中, 已解决]
+          example: 待处理
+        handler_id:
+          type: integer
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-01T08:00:00Z"
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+  # ────────── 通用参数 ──────────
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 页码，从 1 开始
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    LimitParam:
+      name: limit
+      in: query
+      description: 每页条数
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+  # ────────── 通用响应 ──────────
+  responses:
+    Unauthorized:
+      description: 未登录或 Token 无效
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 1003
+            message: 未登录或Token无效
+            data: null
+    Forbidden:
+      description: 权限不足
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 1004
+            message: 权限不足
+            data: null
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 1005
+            message: 资源不存在
+            data: null
+    BadRequest:
+      description: 参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: 1001
+            message: 参数缺失
+            data: null
+
+# ══════════════════════════════════════════════════════
+# PATHS
+# ══════════════════════════════════════════════════════
+paths:
+
+  # ────────── 4.1 认证模块 ──────────
+  /api/auth/send-code:
+    post:
+      tags: [Auth]
+      summary: 发送短信验证码
+      description: |
+        通过阿里云短信服务向指定手机号发送6位数字验证码。
+        同一手机号60秒内只能发送一次。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  description: 手机号（11位国内手机号）
+                  example: "13800138000"
+            example:
+              phone: "13800138000"
+      responses:
+        '200':
+          description: 验证码发送成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 验证码已发送
+                data: null
+        '400':
+          description: 参数错误或发送过于频繁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_phone:
+                  summary: 手机号缺失
+                  value:
+                    code: 1001
+                    message: 参数缺失
+                    data: null
+                too_frequent:
+                  summary: 60秒内重复发送
+                  value:
+                    code: 2001
+                    message: 验证码已发送，请等待60秒
+                    data: null
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: 手机号+验证码登录（登录/注册合一）
+      description: |
+        用手机号和短信验证码登录。若该手机号未注册则自动注册并登录。
+        成功后返回 JWT Token，有效期7天。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone:
+                  type: string
+                  example: "13800138000"
+                code:
+                  type: string
+                  description: 6位短信验证码
+                  example: "123456"
+            example:
+              phone: "13800138000"
+              code: "123456"
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                            example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                          user:
+                            $ref: '#/components/schemas/User'
+              example:
+                code: 0
+                message: success
+                data:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  user:
+                    id: 1
+                    username: 用户13800138000
+                    phone: "13800138000"
+                    avatar: null
+                    role: user
+                    status: active
+        '400':
+          description: 验证码错误或已过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 2002
+                message: 验证码错误或已过期
+                data: null
+        '403':
+          description: 账号已被封禁
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 2003
+                message: 账号已被封禁
+                data: null
+
+  /api/auth/logout:
+    get:
+      tags: [Auth]
+      summary: 退出登录
+      description: 使当前 Token 失效（服务端加入黑名单）。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 退出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 已退出登录
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/profile:
+    get:
+      tags: [Users]
+      summary: 获取当前用户个人资料
+      description: 返回已登录用户的完整个人资料。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  username: 张三
+                  phone: "13800138000"
+                  avatar: https://example.com/avatar.jpg
+                  role: user
+                  gender: 男
+                  bio: 热爱登山的探险家
+                  level: 5
+                  exp: 1200
+                  peaks: 3
+                  status: active
+                  created_at: "2026-01-01T00:00:00Z"
+                  updated_at: "2026-01-01T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Users]
+      summary: 更新个人资料
+      description: 更新当前登录用户的个人资料，所有字段均为可选。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: 张三
+                avatar:
+                  type: string
+                  format: uri
+                  example: https://example.com/new_avatar.jpg
+                gender:
+                  type: string
+                  example: 男
+                bio:
+                  type: string
+                  example: 喜欢爬山
+            example:
+              username: 张三
+              bio: 喜欢爬山，已登顶3座八千米高峰
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+              example:
+                code: 0
+                message: 更新成功
+                data:
+                  id: 1
+                  username: 张三
+                  bio: 喜欢爬山，已登顶3座八千米高峰
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: 用户列表（需 admin 权限）
+      description: 获取所有用户列表，支持分页，仅管理员可访问。
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: 按状态筛选
+          schema:
+            type: string
+            enum: [active, banned]
+        - name: role
+          in: query
+          description: 按角色筛选
+          schema:
+            type: string
+            enum: [user, admin, guide]
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/User'
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          limit:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      username: 张三
+                      phone: "13800138000"
+                      role: user
+                      status: active
+                  total: 1000
+                  page: 1
+                  limit: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: 获取用户详情
+      description: 根据用户 ID 获取用户公开信息，需登录。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 用户 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  username: 张三
+                  avatar: https://example.com/avatar.jpg
+                  bio: 热爱登山
+                  peaks: 3
+                  level: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.2 帖子/动态模块 ──────────
+  /api/posts:
+    get:
+      tags: [Posts]
+      summary: 动态列表
+      description: 获取所有动态，按发布时间倒序排列，支持分页。
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: tag
+          in: query
+          description: 按标签筛选
+          schema:
+            type: string
+            example: 登山
+        - name: user_id
+          in: query
+          description: 按用户 ID 筛选（看某人的动态）
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Post'
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          limit:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      user_id: 1
+                      content: 今天登顶珠穆朗玛峰！
+                      images: [https://example.com/img1.jpg]
+                      likes_count: 128
+                      comments_count: 32
+                      tags: [登山, 珠峰]
+                      status: active
+                      created_at: "2026-01-01T00:00:00Z"
+                  total: 5000
+                  page: 1
+                  limit: 20
+    post:
+      tags: [Posts]
+      summary: 发布动态
+      description: 发布一条新动态，支持文字、图片和视频。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  example: 今天登顶珠穆朗玛峰！
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  example: [https://example.com/img1.jpg]
+                video_url:
+                  type: string
+                  format: uri
+                  example: null
+                location:
+                  type: string
+                  example: 珠穆朗玛峰大本营
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: [登山, 珠峰]
+            example:
+              content: 今天登顶珠穆朗玛峰！
+              images:
+                - https://example.com/img1.jpg
+              location: 珠穆朗玛峰大本营
+              tags: [登山, 珠峰]
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Post'
+              example:
+                code: 0
+                message: 发布成功
+                data:
+                  id: 1
+                  user_id: 1
+                  content: 今天登顶珠穆朗玛峰！
+                  status: active
+                  created_at: "2026-01-01T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/posts/{id}:
+    get:
+      tags: [Posts]
+      summary: 动态详情
+      description: 获取指定 ID 的动态详情。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 动态 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Post'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  user_id: 1
+                  content: 今天登顶珠穆朗玛峰！
+                  images: [https://example.com/img1.jpg]
+                  likes_count: 128
+                  comments_count: 32
+                  tags: [登山, 珠峰]
+                  status: active
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Posts]
+      summary: 删除动态
+      description: 删除指定 ID 的动态。只有作者本人或管理员可以删除。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 动态 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 删除成功
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/posts/{id}/like:
+    post:
+      tags: [Posts]
+      summary: 点赞动态
+      description: 对指定动态点赞，同一用户只能点一次。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 动态 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 点赞成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 点赞成功
+                data:
+                  likes_count: 129
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Posts]
+      summary: 取消点赞
+      description: 取消对指定动态的点赞。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 动态 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 取消点赞成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 取消点赞成功
+                data:
+                  likes_count: 128
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.3 评论模块 ──────────
+  /api/posts/{id}/comments:
+    get:
+      tags: [Comments]
+      summary: 获取评论列表
+      description: 获取指定动态的评论列表，支持分页。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 动态 ID
+          schema:
+            type: integer
+            example: 1
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Comment'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      post_id: 1
+                      user_id: 2
+                      content: 太厉害了！
+                      parent_id: null
+                      likes_count: 5
+                      created_at: "2026-01-01T01:00:00Z"
+                  total: 32
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Comments]
+      summary: 添加评论
+      description: 对指定动态添加评论或回复某条评论（通过 parent_id 实现）。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 动态 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  example: 太厉害了，我也想去！
+                parent_id:
+                  type: integer
+                  nullable: true
+                  description: 父评论 ID，回复时传入
+                  example: null
+            example:
+              content: 太厉害了，我也想去！
+      responses:
+        '200':
+          description: 评论成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Comment'
+              example:
+                code: 0
+                message: 评论成功
+                data:
+                  id: 10
+                  post_id: 1
+                  user_id: 3
+                  content: 太厉害了，我也想去！
+                  parent_id: null
+                  likes_count: 0
+                  created_at: "2026-01-02T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/comments/{id}:
+    delete:
+      tags: [Comments]
+      summary: 删除评论
+      description: 删除指定 ID 的评论，只有评论作者或管理员可以删除。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 评论 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 删除成功
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.4 山峰/路线模块 ──────────
+  /api/peaks:
+    get:
+      tags: [Peaks]
+      summary: 山峰列表
+      description: 获取所有山峰列表，支持分页和筛选。
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: difficulty
+          in: query
+          description: 按难度筛选
+          schema:
+            type: string
+            enum: [较易, 中等, 难, 极难]
+        - name: country
+          in: query
+          description: 按国家筛选
+          schema:
+            type: string
+            example: 中国
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Peak'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      name: 珠穆朗玛峰
+                      name_en: Mount Everest
+                      altitude: 8848
+                      difficulty: 极难
+                      country: 中国/尼泊尔
+                      success_rate: 29.5
+                  total: 37
+
+  /api/peaks/{id}:
+    get:
+      tags: [Peaks]
+      summary: 山峰详情
+      description: 获取指定 ID 的山峰详情信息。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 山峰 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Peak'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  name: 珠穆朗玛峰
+                  name_en: Mount Everest
+                  altitude: 8848
+                  difficulty: 极难
+                  country: 中国/尼泊尔
+                  region: 喜马拉雅山脉
+                  success_rate: 29.5
+                  death_count: 305
+                  best_season: 4月-5月
+                  description: 世界最高峰，海拔8848.86米
+                  cover_image: https://example.com/everest.jpg
+                  status: active
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/routes:
+    get:
+      tags: [Routes]
+      summary: 路线列表
+      description: 获取所有路线列表，支持分页和按山峰筛选。
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: peak_id
+          in: query
+          description: 按山峰 ID 筛选
+          schema:
+            type: integer
+        - name: difficulty
+          in: query
+          description: 按难度筛选
+          schema:
+            type: string
+            enum: [较易, 中等, 难, 极难]
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Route'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      peak_id: 1
+                      name: 标准南坡路线
+                      difficulty: 极难
+                      altitude: 8848
+                      duration_days: 60
+                  total: 4
+
+    post:
+      tags: [Routes]
+      summary: 创建路线（需 admin 权限）
+      description: 创建新的攀登路线，仅管理员可操作。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peak_id, name, difficulty]
+              properties:
+                peak_id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: 北坡路线
+                difficulty:
+                  type: string
+                  enum: [较易, 中等, 难, 极难]
+                  example: 极难
+                description:
+                  type: string
+                  example: 从西藏侧登顶的经典路线
+                cover_image:
+                  type: string
+                  format: uri
+                  example: https://example.com/route2.jpg
+                altitude:
+                  type: integer
+                  example: 8848
+                duration_days:
+                  type: integer
+                  example: 55
+                best_season:
+                  type: string
+                  example: 5月
+                region:
+                  type: string
+                  example: 西藏
+            example:
+              peak_id: 1
+              name: 北坡路线
+              difficulty: 极难
+              description: 从西藏侧登顶珠峰
+              altitude: 8848
+              duration_days: 55
+              best_season: 5月
+              region: 西藏
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Route'
+              example:
+                code: 0
+                message: 创建成功
+                data:
+                  id: 5
+                  peak_id: 1
+                  name: 北坡路线
+                  difficulty: 极难
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/routes/{id}:
+    get:
+      tags: [Routes]
+      summary: 路线详情
+      description: 获取指定 ID 的路线详情。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 路线 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Route'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  peak_id: 1
+                  name: 标准南坡路线
+                  difficulty: 极难
+                  description: 从尼泊尔侧登顶珠峰的经典路线
+                  altitude: 8848
+                  duration_days: 60
+                  best_season: 4月-5月
+                  region: 尼泊尔
+                  status: active
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Routes]
+      summary: 更新路线（需 admin 权限）
+      description: 更新指定 ID 的路线信息，仅管理员可操作。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 路线 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                difficulty:
+                  type: string
+                  enum: [较易, 中等, 难, 极难]
+                description:
+                  type: string
+                cover_image:
+                  type: string
+                  format: uri
+                altitude:
+                  type: integer
+                duration_days:
+                  type: integer
+                best_season:
+                  type: string
+                region:
+                  type: string
+                status:
+                  type: string
+            example:
+              description: 更新后的路线描述
+              best_season: 4月-6月
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Route'
+              example:
+                code: 0
+                message: 更新成功
+                data:
+                  id: 1
+                  name: 标准南坡路线
+                  best_season: 4月-6月
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.5 活动/组队模块 ──────────
+  /api/activities:
+    get:
+      tags: [Activities]
+      summary: 活动列表
+      description: 获取所有活动列表，支持分页和状态筛选。
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: 按状态筛选
+          schema:
+            type: string
+            enum: [招募中, 已满, 进行中, 已结束]
+        - name: difficulty
+          in: query
+          description: 按难度筛选
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Activity'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      title: 2026年春季珠峰登顶计划
+                      status: 招募中
+                      max_participants: 10
+                      current_participants: 3
+                  total: 200
+
+    post:
+      tags: [Activities]
+      summary: 创建活动
+      description: 创建一个新的组队活动。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content, max_participants, start_date, end_date]
+              properties:
+                route_id:
+                  type: integer
+                  example: 1
+                title:
+                  type: string
+                  example: 2026年春季珠峰登顶计划
+                content:
+                  type: string
+                  example: 组织专业团队，计划2026年5月冲顶珠峰
+                cover_image:
+                  type: string
+                  format: uri
+                  example: https://example.com/activity.jpg
+                max_participants:
+                  type: integer
+                  example: 10
+                start_date:
+                  type: string
+                  format: date
+                  example: "2026-04-01"
+                end_date:
+                  type: string
+                  format: date
+                  example: "2026-06-01"
+                location:
+                  type: string
+                  example: 尼泊尔加德满都
+                difficulty:
+                  type: string
+                  example: 极难
+            example:
+              route_id: 1
+              title: 2026年春季珠峰登顶计划
+              content: 组织专业团队，计划2026年5月冲顶珠峰
+              max_participants: 10
+              start_date: "2026-04-01"
+              end_date: "2026-06-01"
+              location: 尼泊尔加德满都
+              difficulty: 极难
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Activity'
+              example:
+                code: 0
+                message: 创建成功
+                data:
+                  id: 1
+                  title: 2026年春季珠峰登顶计划
+                  status: 招募中
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/activities/{id}:
+    get:
+      tags: [Activities]
+      summary: 活动详情
+      description: 获取指定 ID 的活动详情。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 活动 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Activity'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  user_id: 1
+                  route_id: 1
+                  title: 2026年春季珠峰登顶计划
+                  content: 组织专业团队，计划2026年5月冲顶珠峰
+                  max_participants: 10
+                  current_participants: 3
+                  start_date: "2026-04-01"
+                  end_date: "2026-06-01"
+                  location: 尼泊尔加德满都
+                  status: 招募中
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Activities]
+      summary: 更新活动
+      description: 更新活动信息，只有活动发起人或管理员可以操作。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 活动 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                cover_image:
+                  type: string
+                  format: uri
+                max_participants:
+                  type: integer
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+                location:
+                  type: string
+                status:
+                  type: string
+                  enum: [招募中, 已满, 进行中, 已结束]
+            example:
+              status: 已满
+              max_participants: 12
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Activity'
+              example:
+                code: 0
+                message: 更新成功
+                data:
+                  id: 1
+                  status: 已满
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Activities]
+      summary: 删除活动
+      description: 删除指定 ID 的活动，只有发起人或管理员可以操作。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 活动 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 删除成功
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/activities/{id}/join:
+    post:
+      tags: [Activities]
+      summary: 报名参加活动
+      description: 当前登录用户报名参加指定活动，活动状态必须为「招募中」。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 活动 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 报名成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 报名成功
+                data:
+                  current_participants: 4
+        '400':
+          description: 活动已满或已报名
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 1002
+                message: 活动已满，无法报名
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/activities/{id}/quit:
+    post:
+      tags: [Activities]
+      summary: 退出活动
+      description: 当前登录用户退出已报名的活动。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 活动 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 退出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 已退出活动
+                data:
+                  current_participants: 3
+        '400':
+          description: 未报名该活动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: 1002
+                message: 您未参加该活动
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.6 消息/聊天模块 ──────────
+  /api/chats:
+    get:
+      tags: [Chats]
+      summary: 会话列表
+      description: |
+        获取当前用户的所有私聊会话，按最后消息时间倒序排列。
+
+        **WebSocket 实时消息说明：**
+        - 连接地址：`ws://<host>/ws?token=<jwt_token>`
+        - 连接成功后服务端推送未读消息数
+        - 客户端发送消息格式：`{"type":"message","chatId":1,"content":"你好","msgType":"text"}`
+        - 服务端推送格式：`{"type":"message","data":{...Message对象}}`
+        - 心跳：客户端每30秒发送 `{"type":"ping"}`，服务端回复 `{"type":"pong"}`
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Chat'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      user_id_1: 1
+                      user_id_2: 2
+                      last_message: 明天见！
+                      last_time: "2026-01-01T12:00:00Z"
+                  total: 10
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/chats/start:
+    post:
+      tags: [Chats]
+      summary: 发起会话
+      description: 与指定用户发起私聊，若会话已存在则直接返回现有会话。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: integer
+                  description: 对方用户 ID
+                  example: 2
+            example:
+              user_id: 2
+      responses:
+        '200':
+          description: 会话创建/获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Chat'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  user_id_1: 1
+                  user_id_2: 2
+                  last_message: null
+                  last_time: null
+                  created_at: "2026-01-01T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/chats/{id}/messages:
+    get:
+      tags: [Chats]
+      summary: 消息历史
+      description: 获取指定会话的消息记录，按发送时间倒序排列，支持分页。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 会话 ID
+          schema:
+            type: integer
+            example: 1
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Message'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      chat_id: 1
+                      sender_id: 1
+                      type: text
+                      content: 你好！
+                      created_at: "2026-01-01T10:00:00Z"
+                  total: 50
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Chats]
+      summary: 发送消息（REST）
+      description: |
+        通过 REST 接口发送消息（也可通过 WebSocket 发送）。
+        发送成功后，对方会通过 WebSocket 实时收到消息推送。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 会话 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, type]
+              properties:
+                type:
+                  type: string
+                  enum: [text, image, voice]
+                  example: text
+                content:
+                  type: string
+                  example: 明天见！
+            example:
+              type: text
+              content: 明天见！
+      responses:
+        '200':
+          description: 发送成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Message'
+              example:
+                code: 0
+                message: 发送成功
+                data:
+                  id: 10
+                  chat_id: 1
+                  sender_id: 1
+                  type: text
+                  content: 明天见！
+                  created_at: "2026-01-01T12:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.7 向导模块 ──────────
+  /api/guides:
+    get:
+      tags: [Guides]
+      summary: 向导列表
+      description: 获取所有已审核通过的向导列表，按评分倒序排列。
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: country
+          in: query
+          description: 按国籍筛选
+          schema:
+            type: string
+            example: 中国
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Guide'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      name: 扎西
+                      country: 中国
+                      rating: 4.9
+                      review_count: 48
+                      specialty: 8000米以上高峰
+                      daily_rate: 800
+                  total: 7
+
+  /api/guides/{id}:
+    get:
+      tags: [Guides]
+      summary: 向导详情
+      description: 获取指定 ID 的向导详情信息。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 向导 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Guide'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  user_id: 10
+                  name: 扎西
+                  country: 中国
+                  avatar: https://example.com/guide.jpg
+                  rating: 4.9
+                  review_count: 48
+                  specialty: 8000米以上高峰
+                  daily_rate: 800
+                  experience: 15
+                  certifications: [UIAGM, 国家登山教练]
+                  bio: 15年高海拔登山向导经验，成功带队登顶珠峰12次
+                  status: approved
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/guides/apply:
+    post:
+      tags: [Guides]
+      summary: 申请成为向导
+      description: 提交向导申请，管理员审核后生效。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, country, specialty, experience]
+              properties:
+                name:
+                  type: string
+                  example: 扎西
+                country:
+                  type: string
+                  example: 中国
+                specialty:
+                  type: string
+                  example: 8000米以上高峰
+                daily_rate:
+                  type: integer
+                  example: 800
+                experience:
+                  type: integer
+                  description: 经验年数
+                  example: 15
+                certifications:
+                  type: array
+                  items:
+                    type: string
+                  example: [UIAGM]
+                bio:
+                  type: string
+                  example: 15年高海拔登山经验
+            example:
+              name: 扎西
+              country: 中国
+              specialty: 8000米以上高峰
+              daily_rate: 800
+              experience: 15
+              certifications: [UIAGM]
+              bio: 15年高海拔登山向导经验
+      responses:
+        '200':
+          description: 申请提交成功，等待审核
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 申请已提交，等待审核
+                data:
+                  id: 8
+                  status: pending
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 4.8 俱乐部模块 ──────────
+  /api/clubs:
+    get:
+      tags: [Clubs]
+      summary: 俱乐部列表
+      description: 获取所有俱乐部列表，支持分页。
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: region
+          in: query
+          description: 按地区筛选
+          schema:
+            type: string
+            example: 西藏
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Club'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      name: 雪域探险俱乐部
+                      member_count: 50
+                      region: 西藏
+                  total: 20
+
+    post:
+      tags: [Clubs]
+      summary: 创建俱乐部（需 admin 权限）
+      description: 创建新俱乐部，仅管理员可操作。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, description]
+              properties:
+                name:
+                  type: string
+                  example: 雪域探险俱乐部
+                avatar:
+                  type: string
+                  format: uri
+                  example: https://example.com/club.jpg
+                description:
+                  type: string
+                  example: 专注于高海拔登山的专业俱乐部
+                cover_image:
+                  type: string
+                  format: uri
+                  example: https://example.com/club_cover.jpg
+                region:
+                  type: string
+                  example: 西藏
+            example:
+              name: 雪域探险俱乐部
+              description: 专注于高海拔登山的专业俱乐部
+              region: 西藏
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Club'
+              example:
+                code: 0
+                message: 创建成功
+                data:
+                  id: 21
+                  name: 雪域探险俱乐部
+                  region: 西藏
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/clubs/{id}:
+    get:
+      tags: [Clubs]
+      summary: 俱乐部详情
+      description: 获取指定 ID 的俱乐部详情。
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 俱乐部 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Club'
+              example:
+                code: 0
+                message: success
+                data:
+                  id: 1
+                  name: 雪域探险俱乐部
+                  avatar: https://example.com/club.jpg
+                  description: 专注于高海拔登山的专业俱乐部
+                  leader_id: 1
+                  member_count: 50
+                  region: 西藏
+                  status: active
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Clubs]
+      summary: 更新俱乐部（需 admin 权限）
+      description: 更新指定 ID 的俱乐部信息，仅管理员可操作。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 俱乐部 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                avatar:
+                  type: string
+                  format: uri
+                description:
+                  type: string
+                cover_image:
+                  type: string
+                  format: uri
+                region:
+                  type: string
+                status:
+                  type: string
+            example:
+              description: 更新后的俱乐部简介
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Club'
+              example:
+                code: 0
+                message: 更新成功
+                data:
+                  id: 1
+                  name: 雪域探险俱乐部
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/clubs/{id}/join:
+    post:
+      tags: [Clubs]
+      summary: 加入俱乐部
+      description: 当前登录用户申请加入指定俱乐部。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 俱乐部 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 加入成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 加入成功
+                data:
+                  member_count: 51
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/clubs/{id}/quit:
+    post:
+      tags: [Clubs]
+      summary: 退出俱乐部
+      description: 当前登录用户退出已加入的俱乐部。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 俱乐部 ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: 退出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                code: 0
+                message: 已退出俱乐部
+                data:
+                  member_count: 50
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.9 SOS 安全模块 ──────────
+  /api/sos:
+    post:
+      tags: [SOS]
+      summary: 发送 SOS 求救信号
+      description: |
+        发送紧急求救信号，包含位置坐标和求救信息。
+        发送后系统自动通知管理员，建议同时通过 WebSocket 实时推送。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location]
+              properties:
+                location:
+                  type: string
+                  description: 位置坐标，格式为 "纬度,经度"
+                  example: "28.0000,86.9250"
+                message:
+                  type: string
+                  example: 受伤无法行走，需要紧急救援
+            example:
+              location: "28.0000,86.9250"
+              message: 受伤无法行走，需要紧急救援
+      responses:
+        '200':
+          description: SOS 发送成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SOS'
+              example:
+                code: 0
+                message: SOS已发送，救援人员正在响应
+                data:
+                  id: 1
+                  user_id: 1
+                  location: "28.0000,86.9250"
+                  message: 受伤无法行走，需要紧急救援
+                  status: 待处理
+                  created_at: "2026-01-01T08:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags: [SOS]
+      summary: SOS 记录列表（需 admin 权限）
+      description: 获取所有 SOS 求救记录，仅管理员可查看。
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          description: 按处理状态筛选
+          schema:
+            type: string
+            enum: [待处理, 处理中, 已解决]
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          list:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/SOS'
+                          total:
+                            type: integer
+              example:
+                code: 0
+                message: success
+                data:
+                  list:
+                    - id: 1
+                      user_id: 1
+                      location: "28.0000,86.9250"
+                      message: 受伤无法行走，需要紧急救援
+                      status: 待处理
+                      created_at: "2026-01-01T08:00:00Z"
+                  total: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/sos/{id}:
+    put:
+      tags: [SOS]
+      summary: 处理 SOS（需 admin 权限）
+      description: 管理员更新 SOS 处理状态，仅管理员可操作。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: SOS 记录 ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [处理中, 已解决]
+                  example: 处理中
+                handler_id:
+                  type: integer
+                  description: 处理人员 ID
+                  example: 5
+            example:
+              status: 处理中
+              handler_id: 5
+      responses:
+        '200':
+          description: 处理成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SOS'
+              example:
+                code: 0
+                message: 已更新处理状态
+                data:
+                  id: 1
+                  status: 处理中
+                  handler_id: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 4.10 后台统计模块 ──────────
+  /api/stats:
+    get:
+      tags: [Stats]
+      summary: 总览统计数据（需 admin 权限）
+      description: 获取平台整体统计数据概览，仅管理员可访问。
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalUsers:
+                            type: integer
+                            example: 1000
+                          totalPosts:
+                            type: integer
+                            example: 5000
+                          totalActivities:
+                            type: integer
+                            example: 200
+                          activeUsers:
+                            type: integer
+                            example: 300
+                          newUsersToday:
+                            type: integer
+                            example: 10
+                          growthRate:
+                            type: string
+                            example: "15%"
+              example:
+                code: 0
+                message: success
+                data:
+                  totalUsers: 1000
+                  totalPosts: 5000
+                  totalActivities: 200
+                  activeUsers: 300
+                  newUsersToday: 10
+                  growthRate: "15%"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/stats/users:
+    get:
+      tags: [Stats]
+      summary: 用户统计（需 admin 权限）
+      description: 获取用户相关统计数据，包括注册趋势、角色分布等，仅管理员可访问。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: 统计周期
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalUsers:
+                            type: integer
+                            example: 1000
+                          activeUsers:
+                            type: integer
+                            example: 300
+                          bannedUsers:
+                            type: integer
+                            example: 5
+                          newUsersToday:
+                            type: integer
+                            example: 10
+                          growthRate:
+                            type: string
+                            example: "15%"
+                          roleDistribution:
+                            type: object
+                            properties:
+                              user:
+                                type: integer
+                                example: 980
+                              guide:
+                                type: integer
+                                example: 15
+                              admin:
+                                type: integer
+                                example: 5
+              example:
+                code: 0
+                message: success
+                data:
+                  totalUsers: 1000
+                  activeUsers: 300
+                  bannedUsers: 5
+                  newUsersToday: 10
+                  growthRate: "15%"
+                  roleDistribution:
+                    user: 980
+                    guide: 15
+                    admin: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/stats/posts:
+    get:
+      tags: [Stats]
+      summary: 帖子统计（需 admin 权限）
+      description: 获取帖子/动态相关统计数据，仅管理员可访问。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: 统计周期
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalPosts:
+                            type: integer
+                            example: 5000
+                          newPostsToday:
+                            type: integer
+                            example: 50
+                          totalLikes:
+                            type: integer
+                            example: 120000
+                          totalComments:
+                            type: integer
+                            example: 35000
+                          hiddenPosts:
+                            type: integer
+                            example: 20
+              example:
+                code: 0
+                message: success
+                data:
+                  totalPosts: 5000
+                  newPostsToday: 50
+                  totalLikes: 120000
+                  totalComments: 35000
+                  hiddenPosts: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/stats/activities:
+    get:
+      tags: [Stats]
+      summary: 活动统计（需 admin 权限）
+      description: 获取活动/组队相关统计数据，仅管理员可访问。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: 统计周期
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: month
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalActivities:
+                            type: integer
+                            example: 200
+                          activeActivities:
+                            type: integer
+                            example: 45
+                          completedActivities:
+                            type: integer
+                            example: 130
+                          totalParticipants:
+                            type: integer
+                            example: 850
+              example:
+                code: 0
+                message: success
+                data:
+                  totalActivities: 200
+                  activeActivities: 45
+                  completedActivities: 130
+                  totalParticipants: 850
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
