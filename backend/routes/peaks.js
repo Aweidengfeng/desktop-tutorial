@@ -2,14 +2,22 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const peakWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁，请稍后再试' } });
 
 // Helper: parse JSON fields on a peak object returned from Prisma
+function safeJsonParse(str, fallback = []) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch(e) { return fallback; }
+}
+
 function parsePeakJson(peak) {
   if (!peak) return peak;
-  peak.routes = peak.routeDetails ? (() => { try { return JSON.parse(peak.routeDetails); } catch(e) { return []; } })() : [];
-  peak.camps = peak.campsData ? (() => { try { return JSON.parse(peak.campsData); } catch(e) { return []; } })() : [];
-  peak.categories = peak.categories ? (() => { try { return JSON.parse(peak.categories); } catch(e) { return []; } })() : [];
-  peak.gallery = peak.gallery ? (() => { try { return JSON.parse(peak.gallery); } catch(e) { return []; } })() : [];
+  peak.routes = safeJsonParse(peak.routeDetails);
+  peak.camps = safeJsonParse(peak.campsData);
+  peak.categories = safeJsonParse(peak.categories);
+  peak.gallery = safeJsonParse(peak.gallery);
   delete peak.routeDetails;
   delete peak.campsData;
   return peak;
@@ -66,7 +74,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/peaks/suggest — 用户提交山峰建议（需要JWT）
 // 注意：此路由必须在 /:id 之前注册
-router.post('/suggest', auth, async (req, res) => {
+router.post('/suggest', peakWriteLimiter, auth, async (req, res) => {
   try {
     const { name, name_en, altitude, country, continent, difficulty, description, best_season, routes, latitude, longitude, image } = req.body;
     if (!name) return res.status(400).json({ error: '山峰名称不能为空' });

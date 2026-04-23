@@ -10,6 +10,8 @@ const rateLimit = require('express-rate-limit');
 
 const applyRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: '申请频率过高，请稍后再试' } });
 const payRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作频率过高，请稍后再试' } });
+const guideReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁，请稍后再试' } });
+const guideWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁，请稍后再试' } });
 
 // Helper: parse peaks_led JSON field
 function parseGuide(guide) {
@@ -38,7 +40,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/guides/my/profile — 已登录向导查看自己的主页数据
-router.get('/my/profile', auth, async (req, res) => {
+router.get('/my/profile', guideReadLimiter, auth, async (req, res) => {
   try {
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
     if (!guide) return res.status(404).json({ error: '您尚未成为向导' });
@@ -49,7 +51,7 @@ router.get('/my/profile', auth, async (req, res) => {
 });
 
 // PUT /api/guides/my/profile — 已登录向导更新主页
-router.put('/my/profile', auth, async (req, res) => {
+router.put('/my/profile', guideWriteLimiter, auth, async (req, res) => {
   try {
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
     if (!guide) return res.status(404).json({ error: '您尚未成为向导' });
@@ -73,7 +75,7 @@ router.put('/my/profile', auth, async (req, res) => {
 
 // GET /api/guides/me — 查看自己的申请/向导状态（需要JWT）
 // 注意：此路由必须在 /:id 之前注册，防止 'me' 被当作 id
-router.get('/me', auth, async (req, res) => {
+router.get('/me', guideReadLimiter, auth, async (req, res) => {
   try {
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
     if (!guide) {
@@ -91,7 +93,7 @@ router.get('/me', auth, async (req, res) => {
 
 // PUT /api/guides/me — 更新自己的资料（仅 pending 状态可改）
 // 注意：此路由必须在 /:id 之前注册
-router.put('/me', auth, async (req, res) => {
+router.put('/me', guideWriteLimiter, auth, async (req, res) => {
   try {
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
     if (!guide) return res.status(404).json({ error: '您尚未提交向导申请' });
@@ -161,7 +163,7 @@ router.get('/:id/reviews', async (req, res) => {
 });
 
 // POST /api/guides/:id/review — 提交评价（需登录）
-router.post('/:id/review', auth, async (req, res) => {
+router.post('/:id/review', guideWriteLimiter, auth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${id}`;
@@ -276,7 +278,7 @@ router.get('/:id/photos', async (req, res) => {
 
 // POST /api/guides/payment — 向导入驻支付（预留，后续完善）
 // TODO: 接入真实支付系统（支付宝/微信支付）
-router.post('/payment', auth, async (req, res) => {
+router.post('/payment', guideWriteLimiter, auth, async (req, res) => {
   try {
     const { guide_application_id, amount, payment_method } = req.body;
     if (!guide_application_id || !amount) {
@@ -300,7 +302,7 @@ router.post('/payment', auth, async (req, res) => {
 });
 
 // POST /api/guides/:id/commercial-apply — 向导提交商业资质申请
-router.post('/:id/commercial-apply', auth, async (req, res) => {
+router.post('/:id/commercial-apply', guideWriteLimiter, auth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${id}`;
@@ -380,7 +382,7 @@ router.get('/:guideId/services', async (req, res) => {
 });
 
 // POST /api/guides/:guideId/services — 向导发布服务
-router.post('/:guideId/services', auth, async (req, res) => {
+router.post('/:guideId/services', guideWriteLimiter, auth, async (req, res) => {
   try {
     const guideId = parseInt(req.params.guideId);
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${guideId}`;
@@ -416,7 +418,7 @@ router.post('/:guideId/services', auth, async (req, res) => {
 });
 
 // PUT /api/guides/:guideId/services/:id — 更新向导服务
-router.put('/:guideId/services/:id', auth, async (req, res) => {
+router.put('/:guideId/services/:id', guideWriteLimiter, auth, async (req, res) => {
   try {
     const guideId = parseInt(req.params.guideId);
     const svcId = parseInt(req.params.id);
@@ -470,7 +472,7 @@ router.put('/:guideId/services/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/guides/:guideId/services/:id — 软删向导服务
-router.delete('/:guideId/services/:id', auth, async (req, res) => {
+router.delete('/:guideId/services/:id', guideWriteLimiter, auth, async (req, res) => {
   try {
     const guideId = parseInt(req.params.guideId);
     const svcId = parseInt(req.params.id);
@@ -489,7 +491,7 @@ router.delete('/:guideId/services/:id', auth, async (req, res) => {
 });
 
 // POST /api/guides/:guideId/services/:id/book — 预约向导服务
-router.post('/:guideId/services/:id/book', auth, async (req, res) => {
+router.post('/:guideId/services/:id/book', guideWriteLimiter, auth, async (req, res) => {
   try {
     const guideId = parseInt(req.params.guideId);
     const svcId = parseInt(req.params.id);
@@ -541,7 +543,7 @@ router.post('/:guideId/services/:id/book', auth, async (req, res) => {
 });
 
 // GET /api/guides/:guideId/services/:id/bookings — 向导查看预约列表
-router.get('/:guideId/services/:id/bookings', auth, async (req, res) => {
+router.get('/:guideId/services/:id/bookings', guideReadLimiter, auth, async (req, res) => {
   try {
     const guideId = parseInt(req.params.guideId);
     const svcId = parseInt(req.params.id);
