@@ -27,6 +27,9 @@ const { clearDbCache } = require('./db');
 function createApp() {
   clearDbCache();
 
+  // Ensure tables are created by database.js before routes use Prisma
+  require('../../backend/db/database');
+
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));

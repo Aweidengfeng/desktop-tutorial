@@ -98,12 +98,12 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
     }
+    if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
+      return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
+    }
     const existingUser = await prisma.user.findUnique({ where: { phone } });
     if (existingUser) {
       return res.status(400).json({ error: '手机号已注册' });
-    }
-    if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
-      return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
     }
     const username = '@' + name.toLowerCase().replace(/\s+/g, '') + '_' + phone.slice(-4);
     const avatar = 'https://i.pravatar.cc/150?u=' + phone;
