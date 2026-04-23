@@ -277,13 +277,12 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
 });
 
 // GET /api/expeditions/:id/export.gpx — 导出攀登轨迹为 GPX 文件
-router.get('/:id/export.gpx', (req, res) => {
+router.get('/:id/export.gpx', async (req, res) => {
   try {
-    const expedition = db.prepare('SELECT * FROM expeditions WHERE id = ? AND status = ?').get(req.params.id, 'published');
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId} AND status = 'published'`;
     if (!expedition) return res.status(404).json({ error: '活动不存在' });
-    const moments = db.prepare(
-      'SELECT lat, lng, altitude, recorded_at FROM expedition_moments WHERE expedition_id = ? AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY recorded_at ASC'
-    ).all(req.params.id);
+    const moments = await prisma.$queryRaw`SELECT lat, lng, altitude, recorded_at FROM expedition_moments WHERE expedition_id = ${expId} AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY recorded_at ASC`;
 
     const trkpts = moments.map(m => {
       const ele = m.altitude ? `<ele>${m.altitude}</ele>` : '';
@@ -314,11 +313,10 @@ ${trkpts}
 });
 
 // GET /api/expeditions/:id/moments — 获取攀登时刻轨迹点（用于地图可视化）
-router.get('/:id/moments', (req, res) => {
+router.get('/:id/moments', async (req, res) => {
   try {
-    const moments = db.prepare(
-      'SELECT id, lat, lng, altitude, type, media_url, content, recorded_at FROM expedition_moments WHERE expedition_id = ? ORDER BY recorded_at ASC'
-    ).all(req.params.id);
+    const expId = parseInt(req.params.id);
+    const moments = await prisma.$queryRaw`SELECT id, lat, lng, altitude, type, media_url, content, recorded_at FROM expedition_moments WHERE expedition_id = ${expId} ORDER BY recorded_at ASC`;
     res.json(moments);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

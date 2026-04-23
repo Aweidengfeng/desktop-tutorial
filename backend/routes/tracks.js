@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { validateTrack } = require('../utils/trackValidator');
@@ -14,15 +14,15 @@ const exportLimiter = rateLimit({
 });
 
 // GET /api/tracks — 获取轨迹列表（支持 user_id=me 过滤）
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
-    const tracks = db.prepare(`
+    const tracks = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
              is_manual, proof_images, created_at
-      FROM tracks WHERE user_id = ?
+      FROM tracks WHERE user_id = ${req.user.id}
       ORDER BY date DESC
-    `).all(req.user.id);
+    `;
     const parsed = tracks.map(t => ({
       ...t,
       points: t.points ? JSON.parse(t.points) : [],
@@ -35,15 +35,15 @@ router.get('/', auth, (req, res) => {
 });
 
 // GET /api/tracks/my（兼容旧接口）
-router.get('/my', auth, (req, res) => {
+router.get('/my', auth, async (req, res) => {
   try {
-    const tracks = db.prepare(`
+    const tracks = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
              is_manual, proof_images
-      FROM tracks WHERE user_id = ?
+      FROM tracks WHERE user_id = ${req.user.id}
       ORDER BY date DESC
-    `).all(req.user.id);
+    `;
     const parsed = tracks.map(t => ({
       ...t,
       points: t.points ? JSON.parse(t.points) : [],
@@ -56,14 +56,15 @@ router.get('/my', auth, (req, res) => {
 });
 
 // GET /api/tracks/:id — 获取轨迹详情
-router.get('/:id', auth, (req, res) => {
+router.get('/:id', auth, async (req, res) => {
   try {
-    const track = db.prepare(`
+    const trackId = parseInt(req.params.id);
+    const [track] = await prisma.$queryRaw`
       SELECT id, user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
              is_manual, proof_images, created_at
-      FROM tracks WHERE id = ?
-    `).get(req.params.id);
+      FROM tracks WHERE id = ${trackId}
+    `;
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
     if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权访问' });
     track.points = track.points ? JSON.parse(track.points) : [];
@@ -75,7 +76,7 @@ router.get('/:id', auth, (req, res) => {
 });
 
 // POST /api/tracks（需要JWT）
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { name, peak_name, date, distance, distance_km, elevation, elevation_gain,
             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points } = req.body;
@@ -84,21 +85,24 @@ router.post('/', auth, (req, res) => {
     const check = validateTrack(pointsArr);
     const flagged = check.ok ? 0 : 1;
     const flagReason = check.ok ? null : check.reason;
-    const result = db.prepare(`
+    const dist = distance || distance_km || 0;
+    const distKm = distance_km || distance || 0;
+    const elev = elevation || elevation_gain || 0;
+    const elevGain = elevation_gain || elevation || 0;
+    await prisma.$executeRaw`
       INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
                           max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, flagged, flag_reason)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, name, peak_name || name || '', date,
-           distance || distance_km || 0, distance_km || distance || 0,
-           elevation || elevation_gain || 0, elevation_gain || elevation || 0,
-           max_elevation || 0, start_elevation || 0,
-           duration || '', duration_minutes || 0,
-           weather || '', notes || '', image || '', pointsStr, flagged, flagReason);
-    const track = db.prepare(`
+      VALUES (${req.user.id}, ${name}, ${peak_name || name || ''}, ${date},
+              ${dist}, ${distKm}, ${elev}, ${elevGain},
+              ${max_elevation || 0}, ${start_elevation || 0},
+              ${duration || ''}, ${duration_minutes || 0},
+              ${weather || ''}, ${notes || ''}, ${image || ''}, ${pointsStr}, ${flagged}, ${flagReason})
+    `;
+    const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
-      FROM tracks WHERE id = ?
-    `).get(result.lastInsertRowid);
+      FROM tracks WHERE id = last_insert_rowid()
+    `;
     track.points = track.points ? JSON.parse(track.points) : [];
     res.json({ ...track, flagged, rewardGranted: !flagged, ...(flagReason ? { flagReason } : {}) });
   } catch (e) {
@@ -110,7 +114,7 @@ router.post('/', auth, (req, res) => {
  * POST /api/tracks/import-gpx — 从已解析的GPX点数据导入轨迹（需要JWT）
  * 前端先调用 /api/upload/gpx 得到轨迹点数组，再调用此接口存库
  */
-router.post('/import-gpx', auth, (req, res) => {
+router.post('/import-gpx', auth, async (req, res) => {
   try {
     const { name, peak_name, date, distance_km, elevation_gain, points, weather, notes } = req.body;
     if (!points || !Array.isArray(points) || points.length < 2) {
@@ -145,17 +149,17 @@ router.post('/import-gpx', auth, (req, res) => {
     const flagged = check.ok ? 0 : 1;
     const flagReason = check.ok ? null : check.reason;
     const trackDate = date || new Date().toISOString().split('T')[0];
-    const result = db.prepare(`
+    const result2 = await prisma.$executeRaw`
       INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
                           points, weather, notes, flagged, flag_reason)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, name || peak_name || '导入轨迹', peak_name || '', trackDate,
-           distKm, distKm, eleGain, eleGain, pointsStr,
-           weather || '', notes || '', flagged, flagReason);
-    const track = db.prepare(`
+      VALUES (${req.user.id}, ${name || peak_name || '导入轨迹'}, ${peak_name || ''}, ${trackDate},
+              ${distKm}, ${distKm}, ${eleGain}, ${eleGain}, ${pointsStr},
+              ${weather || ''}, ${notes || ''}, ${flagged}, ${flagReason})
+    `;
+    const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance_km, elevation_gain, points, created_at
-      FROM tracks WHERE id = ?
-    `).get(result.lastInsertRowid);
+      FROM tracks WHERE id = last_insert_rowid()
+    `;
     track.points = track.points ? JSON.parse(track.points) : [];
     res.json({ ...track, imported: true, flagged, rewardGranted: !flagged });
   } catch (e) {
@@ -167,7 +171,7 @@ router.post('/import-gpx', auth, (req, res) => {
  * POST /api/tracks/manual — 手动记录登顶（无GPS轨迹，需要JWT）
  * 适合真实攀登但无轨迹记录的情况，需提供照片等证明材料
  */
-router.post('/manual', auth, (req, res) => {
+router.post('/manual', auth, async (req, res) => {
   try {
     const { peak_name, date, altitude, notes, proof_images } = req.body;
     if (!peak_name) return res.status(400).json({ error: '山峰名称不能为空' });
@@ -175,24 +179,25 @@ router.post('/manual', auth, (req, res) => {
     const proofArr = Array.isArray(proof_images) ? proof_images : [];
     if (proofArr.length === 0) return res.status(400).json({ error: '请至少上传一张证明照片' });
     const proofStr = JSON.stringify(proofArr);
-    const result = db.prepare(`
+    const alt = altitude || 0;
+    await prisma.$executeRaw`
       INSERT INTO tracks (user_id, name, peak_name, date, elevation, elevation_gain,
                           notes, image, is_manual, proof_images, flagged, flag_reason)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0, NULL)
-    `).run(req.user.id, peak_name + ' 登顶记录', peak_name, date,
-           altitude || 0, altitude || 0, notes || '', proofArr[0] || '', proofStr);
-    const track = db.prepare(`
+      VALUES (${req.user.id}, ${peak_name + ' 登顶记录'}, ${peak_name}, ${date},
+              ${alt}, ${alt}, ${notes || ''}, ${proofArr[0] || ''}, 1, ${proofStr}, 0, NULL)
+    `;
+    const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, elevation, notes, image, is_manual, proof_images, created_at
-      FROM tracks WHERE id = ?
-    `).get(result.lastInsertRowid);
+      FROM tracks WHERE id = last_insert_rowid()
+    `;
     track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
     // Also insert to summit_records for leaderboard
     try {
-      const user = db.prepare('SELECT name, avatar FROM users WHERE id = ?').get(req.user.id);
-      db.prepare(`
+      const [user] = await prisma.$queryRaw`SELECT name, avatar FROM users WHERE id = ${req.user.id}`;
+      await prisma.$executeRaw`
         INSERT INTO summit_records (user_id, name, avatar, peak, date)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(req.user.id, user ? user.name : '', user ? user.avatar : '', peak_name, date);
+        VALUES (${req.user.id}, ${user ? user.name : ''}, ${user ? user.avatar : ''}, ${peak_name}, ${date})
+      `;
     } catch(e) {}
     res.json({ ...track, manual: true, rewardGranted: true });
   } catch (e) {
@@ -201,12 +206,13 @@ router.post('/manual', auth, (req, res) => {
 });
 
 // DELETE /api/tracks/:id
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const track = db.prepare('SELECT * FROM tracks WHERE id = ?').get(req.params.id);
+    const trackId = parseInt(req.params.id);
+    const [track] = await prisma.$queryRaw`SELECT * FROM tracks WHERE id = ${trackId}`;
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
     if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权删除' });
-    db.prepare('DELETE FROM tracks WHERE id = ?').run(req.params.id);
+    await prisma.$executeRaw`DELETE FROM tracks WHERE id = ${trackId}`;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -218,12 +224,13 @@ router.delete('/:id', auth, (req, res) => {
  * 导出轨迹为 GPX 1.1 或 KML 2.2 格式。
  * 公开轨迹（is_public=1）任何人可下载；非公开轨迹仅作者可下载。
  */
-router.get('/:id/export', exportLimiter, (req, res) => {
+router.get('/:id/export', exportLimiter, async (req, res) => {
   try {
-    const track = db.prepare(`
+    const trackId = parseInt(req.params.id);
+    const [track] = await prisma.$queryRaw`
       SELECT id, user_id, name, peak_name, date, points, is_public
-      FROM tracks WHERE id = ?
-    `).get(req.params.id);
+      FROM tracks WHERE id = ${trackId}
+    `;
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
 
     // 权限校验：非公开轨迹需要登录且是作者
