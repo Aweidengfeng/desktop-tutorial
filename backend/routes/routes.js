@@ -60,13 +60,13 @@ router.post('/', auth, async (req, res) => {
     if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });
     const { name, peak, difficulty, cover, description, altitude, duration_days, best_season, region } = req.body;
     if (!name) return res.status(400).json({ error: '线路名称不能为空' });
-    const inserted = await prisma.$queryRaw`
+    await prisma.$executeRaw`
       INSERT INTO climbing_routes (name, peak, difficulty, cover, description, altitude, duration_days, best_season, region)
       VALUES (${name}, ${peak || ''}, ${difficulty || ''}, ${cover || ''}, ${description || ''},
               ${altitude || 0}, ${duration_days || 0}, ${best_season || ''}, ${region || ''})
-      RETURNING id
     `;
-    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${inserted[0].id}`)[0];
+    const [{ id: newId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
+    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${newId}`)[0];
     res.json(route);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -107,12 +107,12 @@ router.post('/pricing', auth, async (req, res) => {
       return res.status(403).json({ error: '无权操作' });
     }
     const includesStr = typeof includes === 'string' ? includes : JSON.stringify(includes || []);
-    const inserted = await prisma.$queryRaw`
+    await prisma.$executeRaw`
       INSERT OR REPLACE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people)
       VALUES (${Number(club_id)}, ${Number(route_id)}, ${price}, ${includesStr}, ${duration || 0}, ${max_people || 10})
-      RETURNING id
     `;
-    const pricing = (await prisma.$queryRaw`SELECT * FROM club_route_pricing WHERE id = ${inserted[0].id}`)[0];
+    const [{ id: pricingId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
+    const pricing = (await prisma.$queryRaw`SELECT * FROM club_route_pricing WHERE id = ${pricingId}`)[0];
     res.json(pricing);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

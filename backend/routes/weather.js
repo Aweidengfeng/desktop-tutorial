@@ -552,7 +552,7 @@ router.get('/popular-peaks', async (req, res) => {
 // GET /api/weather/summit-window/:peakId
 router.get('/summit-window/:peakId', summitWindowLimiter, async (req, res) => {
   const peakId = parseInt(req.params.peakId);
-  const [peak] = await prisma.$queryRaw`SELECT * FROM peaks WHERE id = ${peakId}`;
+  const [peak] = await prisma.$queryRaw`SELECT latitude, longitude FROM peaks WHERE id = ${peakId}`;
   if (!peak) return res.status(404).json({ error: '山峰不存在' });
 
   const lat = peak.latitude || 27.98;

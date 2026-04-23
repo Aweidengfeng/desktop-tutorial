@@ -47,24 +47,22 @@ router.post('/', auth, async (req, res) => {
   try {
     const { name, peak, date, totalSpots, level, description, equipment_required, notes, difficulty, fee } = req.body;
     const user = (await prisma.$queryRaw`SELECT * FROM users WHERE id = ${req.user.id}`)[0];
-    const teamInserted = await prisma.$queryRaw`
+    await prisma.$executeRaw`
       INSERT INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, equipment_required, notes, difficulty, fee)
       VALUES (${name}, ${peak}, ${date}, ${totalSpots}, ${totalSpots}, ${level},
               ${user.name}, ${user.avatar}, ${req.user.id}, ${description || ''},
               ${equipment_required || null}, ${notes || null}, ${difficulty || null}, ${fee || null})
-      RETURNING id
     `;
-    const teamId = teamInserted[0].id;
+    const [{ id: teamId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     // 创建者自动加入 team_members（leader）
     await prisma.$executeRaw`
       INSERT OR IGNORE INTO team_members (team_id, user_id, name, avatar, status) VALUES (${teamId}, ${req.user.id}, ${user.name}, ${user.avatar}, 'leader')
     `;
     // 自动为新队伍创建群聊
-    const chatInserted = await prisma.$queryRaw`
+    await prisma.$executeRaw`
       INSERT INTO group_chats (team_id, name, avatar, created_by) VALUES (${teamId}, ${name}, ${user.avatar || ''}, ${req.user.id})
-      RETURNING id
     `;
-    const chatId = chatInserted[0].id;
+    const [{ id: chatId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     await prisma.$executeRaw`UPDATE teams SET group_chat_id = ${chatId} WHERE id = ${teamId}`;
     // 队长加入群聊
     await prisma.$executeRaw`INSERT OR IGNORE INTO group_chat_members (chat_id, user_id, role) VALUES (${chatId}, ${req.user.id}, 'owner')`;
