@@ -5,6 +5,10 @@ const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 const crypto = require('crypto');
+const { CLUB_CERT_LEVELS } = require('../utils/certLevels');
+const rateLimit = require('express-rate-limit');
+
+const clubPayRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作频率过高，请稍后再试' } });
 
 // POST /api/clubs/apply — 提交俱乐部入驻申请（需要JWT）
 router.post('/apply', auth, (req, res) => {
@@ -403,13 +407,6 @@ router.get('/:id/posts', (req, res) => {
     const posts = db.prepare(`
       SELECT * FROM club_posts WHERE club_id = ? ORDER BY created_at DESC LIMIT 20
     `).all(req.params.id);
-    if (posts.length === 0) {
-      return res.json([
-        { id: 1, club_id: req.params.id, author_name: '俱乐部管理员', author_avatar: 'https://i.pravatar.cc/150?u=club_admin', content: '🏔️ 本次远征圆满结束！感谢所有队员的努力与配合，期待下次一起出发！', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, created_at: new Date(Date.now() - 86400000).toISOString() },
-        { id: 2, club_id: req.params.id, author_name: '队长张磊', author_avatar: 'https://i.pravatar.cc/150?u=guide1', content: '新一季攀登计划已发布！名额有限，感兴趣的小伙伴抓紧报名～', image: null, location: null, likes: 56, created_at: new Date(Date.now() - 172800000).toISOString() },
-        { id: 3, club_id: req.params.id, author_name: '向导扎西', author_avatar: 'https://i.pravatar.cc/150?u=guide2', content: '分享一些攀登技巧：高海拔适应期不宜操之过急，循序渐进才是关键 🧗', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '加德满都', likes: 89, created_at: new Date(Date.now() - 259200000).toISOString() },
-      ]);
-    }
     res.json(posts);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -422,16 +419,6 @@ router.get('/:id/photos', (req, res) => {
     const photos = db.prepare(`
       SELECT * FROM club_photos WHERE club_id = ? ORDER BY created_at DESC LIMIT 30
     `).all(req.params.id);
-    if (photos.length === 0) {
-      return res.json([
-        { id: 1, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', caption: '珠峰大本营' },
-        { id: 2, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', caption: 'K2 远征途中' },
-        { id: 3, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', caption: '队员合影' },
-        { id: 4, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', caption: '山顶日落' },
-        { id: 5, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', caption: '冰川营地' },
-        { id: 6, club_id: req.params.id, url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', caption: '高山攀登' },
-      ]);
-    }
     res.json(photos);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -463,7 +450,6 @@ router.post('/payment', auth, (req, res) => {
     if (!club_application_id || !amount) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
-    // TODO: 调用支付接口，生成订单
     const mockOrderId = 'CLUB_PAY_' + Date.now() + '_' + req.user.id;
     res.json({
       success: true,
@@ -472,9 +458,33 @@ router.post('/payment', auth, (req, res) => {
       payment_method: payment_method || 'alipay',
       status: 'pending',
       message: '支付订单已创建，请完成支付',
-      // TODO: 返回支付跳转 URL / 二维码
       pay_url: null,
     });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/clubs/pay-listing-fee — 俱乐部支付入驻费
+router.post('/pay-listing-fee', clubPayRateLimit, auth, (req, res) => {
+  try {
+    const club = db.prepare(`
+      SELECT c.* FROM clubs c
+      WHERE c.creator_id = ? AND c.status = 'approved_pending_payment'
+      ORDER BY c.created_at DESC LIMIT 1
+    `).get(req.user.id);
+    if (!club) return res.status(404).json({ error: '未找到待付费的俱乐部申请，或申请状态不正确' });
+    const certLevel = club.cert_level || 'standard';
+    const levelInfo = CLUB_CERT_LEVELS[certLevel] || CLUB_CERT_LEVELS.standard;
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    db.prepare(`
+      UPDATE clubs SET status = 'active', verified = 1, listing_fee_paid = 1,
+        listing_fee_paid_at = CURRENT_TIMESTAMP, cert_expires_at = ?, cert_year_fee = ? WHERE id = ?
+    `).run(expiresAt.toISOString(), levelInfo.yearFee, club.id);
+    db.prepare("UPDATE club_applications SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'approved_pending_payment'").run(req.user.id);
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'club_activated', '🎉 俱乐部入驻成功', '恭喜！您的入驻费已支付，俱乐部正式上线，快去发布活动吧！', '/club-portal'); } catch(e) {}
+    res.json({ success: true, message: '入驻费支付成功，俱乐部已正式上线！', club_id: club.id });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

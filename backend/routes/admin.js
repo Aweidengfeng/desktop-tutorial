@@ -193,7 +193,10 @@ router.get('/guides', adminAuth, (req, res) => {
     const { page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const guides = db.prepare(
-      'SELECT id, user_id, name, cert, specialty, languages, day_rate, region, status, created_at FROM guide_applications ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      `SELECT id, user_id, name, cert, specialty, languages, day_rate, region, status, created_at,
+              id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url,
+              passport_url, is_international, nationality, cert_level
+       FROM guide_applications ORDER BY created_at DESC LIMIT ? OFFSET ?`
     ).all(parseInt(limit), offset);
     const total = db.prepare('SELECT COUNT(*) as c FROM guide_applications').get().c;
     res.json({ guides, total, page: parseInt(page), limit: parseInt(limit) });
@@ -203,20 +206,21 @@ router.get('/guides', adminAuth, (req, res) => {
 });
 
 // PUT /api/admin/guides/:id/approve
-router.put('/guides/:id/approve', adminAuth, (req, res) => {
+router.put('/guides/:id/approve', adminWriteLimiter, adminAuth, (req, res) => {
   try {
     const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: '申请不存在' });
-    db.prepare("UPDATE guide_applications SET status = 'approved' WHERE id = ?").run(req.params.id);
-    // Update or insert guide record so it appears in front-end listings
+    db.prepare("UPDATE guide_applications SET status = 'approved_pending_payment' WHERE id = ?").run(req.params.id);
+    // Update or insert guide record with pending_payment status
     const existing = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(app.user_id);
     if (existing) {
-      db.prepare("UPDATE guides SET status = 'approved' WHERE user_id = ?").run(app.user_id);
+      db.prepare("UPDATE guides SET status = 'approved_pending_payment' WHERE user_id = ?").run(app.user_id);
     } else {
       db.prepare(`INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, 'approved')`
+                  VALUES (?, ?, ?, ?, ?, ?, ?, 'approved_pending_payment')`
       ).run(app.user_id, app.name, app.cert, app.specialty, app.languages, app.day_rate, app.region);
     }
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(app.user_id, 'guide_review', '向导申请审核通过，请完成付费', '您的向导申请已审核通过，请支付入驻费后正式入驻平台', '/guide-portal'); } catch(e) {}
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -438,6 +442,29 @@ router.delete('/reviews/:id', adminAuth, (req, res) => {
 
 // ── A6: 俱乐部申请审核 ──────────────────────────────────────────
 
+// GET /api/admin/guide-applications
+router.get('/guide-applications', adminWriteLimiter, adminAuth, (req, res) => {
+  try {
+    const { status = '', page = 1, limit = 50 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `SELECT ga.*, u.name as applicant_name, u.phone as applicant_phone
+               FROM guide_applications ga
+               LEFT JOIN users u ON u.id = ga.user_id`;
+    const params = [];
+    if (status) { sql += ' WHERE ga.status = ?'; params.push(status); }
+    sql += ' ORDER BY ga.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const applications = db.prepare(sql).all(...params);
+    const countSql = status
+      ? 'SELECT COUNT(*) as c FROM guide_applications WHERE status = ?'
+      : 'SELECT COUNT(*) as c FROM guide_applications';
+    const total = db.prepare(countSql).get(...(status ? [status] : [])).c;
+    res.json({ applications, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/admin/club-applications?status=pending|approved|rejected
 router.get('/club-applications', adminAuth, (req, res) => {
   try {
@@ -464,18 +491,22 @@ router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, (req
     const app = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: '申请不存在' });
     const now = new Date().toISOString();
-    db.prepare("UPDATE club_applications SET status = 'approved' WHERE id = ?").run(req.params.id);
-    // 将俱乐部状态更新为 active/verified
-    const existingClub = db.prepare('SELECT id FROM clubs WHERE creator_id = ?').get(app.user_id);
+    db.prepare("UPDATE club_applications SET status = 'approved_pending_payment' WHERE id = ?").run(req.params.id);
+    // Create or update club record with pending_payment status
+    const existingClub = app.club_id
+      ? db.prepare('SELECT id FROM clubs WHERE id = ?').get(app.club_id)
+      : db.prepare('SELECT id FROM clubs WHERE creator_id = ?').get(app.user_id);
     if (existingClub) {
-      db.prepare("UPDATE clubs SET status = 'active', verified = 1, approved_at = ?, approved_by = 'admin' WHERE id = ?")
+      db.prepare("UPDATE clubs SET status = 'approved_pending_payment', approved_at = ?, approved_by = 'admin' WHERE id = ?")
         .run(now, existingClub.id);
     } else {
-      db.prepare(`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, creator_id, status, verified, approved_at, approved_by)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1, ?, 'admin')`)
-        .run(app.club_name, app.description, app.specialty, app.region, app.type || '综合',
-             app.contact, app.wechat, app.website, app.user_id, now);
+      const ins = db.prepare(`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, business_license_url, creator_id, status, approved_at, approved_by)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved_pending_payment', ?, 'admin')`)
+        .run(app.club_name || app.name, app.description, app.specialty, app.region, app.type || '综合',
+             app.contact, app.wechat, app.website, app.cert_url || null, app.user_id, now);
+      db.prepare('UPDATE club_applications SET club_id = ? WHERE id = ?').run(ins.lastInsertRowid, app.id);
     }
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(app.user_id, 'club_review', '俱乐部申请审核通过，请完成付费', '您的俱乐部申请已审核通过，请支付入驻费后正式入驻平台', '/club-portal'); } catch(e) {}
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -678,21 +709,27 @@ router.post('/guide-applications/:id/review', adminWriteLimiter, adminAuth, (req
     const { action, note } = req.body; // action: approve|reject|need_info
     const app = db.prepare('SELECT * FROM guide_applications WHERE id = ?').get(req.params.id);
     if (!app) return res.status(404).json({ error: '申请不存在' });
-    const statusMap = { approve: 'approved', reject: 'rejected', need_info: 'need_info' };
+    const statusMap = { approve: 'approved_pending_payment', reject: 'rejected', need_info: 'need_info' };
     const newStatus = statusMap[action];
     if (!newStatus) return res.status(400).json({ error: '无效操作' });
     db.prepare('UPDATE guide_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
-    if (newStatus === 'approved') {
+    if (newStatus === 'approved_pending_payment') {
       const certLevel = app.cert_level || 'basic';
-      const levelInfo = GUIDE_CERT_LEVELS[certLevel] || GUIDE_CERT_LEVELS.basic;
-      const expiresAt = new Date();
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      db.prepare(`
-        UPDATE guides SET status = 'approved', cert_level = ?, cert_expires_at = ?, cert_year_fee = ?
-        WHERE user_id = ?
-      `).run(certLevel, expiresAt.toISOString(), levelInfo.yearFee, app.user_id);
+      const existing = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(app.user_id);
+      if (existing) {
+        db.prepare("UPDATE guides SET status = 'approved_pending_payment', cert_level = ? WHERE user_id = ?").run(certLevel, app.user_id);
+      } else {
+        db.prepare(`INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status, cert_level,
+                      id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url, passport_url, is_international, nationality)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'approved_pending_payment', ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).run(app.user_id, app.name, app.cert, app.specialty, app.languages, app.day_rate, app.region,
+              certLevel, app.id_card_url || null, app.climbing_cert_url || null,
+              app.insurance_cert_url || null, app.health_cert_url || null,
+              app.passport_url || null, app.is_international || 0, app.nationality || null);
+      }
     }
-    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(app.user_id, 'guide_review', '向导申请审核结果', `您的向导申请已${newStatus === 'approved' ? '通过' : newStatus === 'rejected' ? '驳回' : '需要补充材料'}`, '/profile'); } catch(e) {}
+    const statusLabel = newStatus === 'approved_pending_payment' ? '审核通过，请完成付费' : newStatus === 'rejected' ? '已驳回' : '需要补充材料';
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(app.user_id, 'guide_review', `向导申请${statusLabel}`, `您的向导申请：${statusLabel}${note ? '。备注：' + note : ''}`, '/guide-portal'); } catch(e) {}
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
 });
@@ -703,20 +740,15 @@ router.post('/club-applications/:id/review', adminWriteLimiter, adminAuth, (req,
     const { action, note } = req.body;
     const clubApp = db.prepare('SELECT * FROM club_applications WHERE id = ?').get(req.params.id);
     if (!clubApp) return res.status(404).json({ error: '申请不存在' });
-    const statusMap = { approve: 'approved', reject: 'rejected', need_info: 'need_info' };
+    const statusMap = { approve: 'approved_pending_payment', reject: 'rejected', need_info: 'need_info' };
     const newStatus = statusMap[action];
     if (!newStatus) return res.status(400).json({ error: '无效操作' });
     db.prepare('UPDATE club_applications SET status = ?, note = ? WHERE id = ?').run(newStatus, note || null, req.params.id);
-    if (newStatus === 'approved' && clubApp.club_id) {
+    if (newStatus === 'approved_pending_payment' && clubApp.club_id) {
       const certLevel = clubApp.cert_level || 'standard';
-      const levelInfo = CLUB_CERT_LEVELS[certLevel] || CLUB_CERT_LEVELS.standard;
-      const expiresAt = new Date();
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      db.prepare(`
-        UPDATE clubs SET verified = 1, cert_level = ?, cert_expires_at = ?, cert_year_fee = ?
-        WHERE id = ?
-      `).run(certLevel, expiresAt.toISOString(), levelInfo.yearFee, clubApp.club_id);
+      db.prepare("UPDATE clubs SET status = 'approved_pending_payment', cert_level = ? WHERE id = ?").run(certLevel, clubApp.club_id);
     }
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(clubApp.user_id, 'club_review', '俱乐部申请审核结果', `您的俱乐部申请已${newStatus === 'approved_pending_payment' ? '通过，请完成付费' : newStatus === 'rejected' ? '驳回' : '需要补充材料'}`, '/club-portal'); } catch(e) {}
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
 });

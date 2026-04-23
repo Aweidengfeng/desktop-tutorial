@@ -5,6 +5,11 @@ const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 const crypto = require('crypto');
+const { GUIDE_CERT_LEVELS } = require('../utils/certLevels');
+const rateLimit = require('express-rate-limit');
+
+const applyRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: '申请频率过高，请稍后再试' } });
+const payRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作频率过高，请稍后再试' } });
 
 // GET /api/guides
 router.get('/', (req, res) => {
@@ -195,30 +200,49 @@ router.post('/:id/review', auth, (req, res) => {
 });
 
 // POST /api/guides/apply（需要JWT）
-router.post('/apply', auth, (req, res) => {
+router.post('/apply', applyRateLimit, auth, (req, res) => {
   try {
-    const { name, cert, specialty, languages, dayRate, region } = req.body;
+    const { name, cert, specialty, languages, dayRate, region,
+            id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url,
+            passport_url, is_international, nationality, cert_level } = req.body;
     if (!name) return res.status(400).json({ error: '姓名不能为空' });
     // 检查是否已有申请
     const existing = db.prepare("SELECT id, status FROM guide_applications WHERE user_id = ?").get(req.user.id);
     if (existing && existing.status === 'pending') {
       return res.status(400).json({ error: '您已有待审核的申请，请等待审核结果' });
     }
+    const level = cert_level || 'basic';
     // 插入申请记录
     db.prepare(`
-      INSERT INTO guide_applications (user_id, name, cert, specialty, languages, day_rate, region)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, name, cert, specialty, languages, dayRate, region);
+      INSERT INTO guide_applications (user_id, name, cert, specialty, languages, day_rate, region,
+        id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url,
+        passport_url, is_international, nationality, cert_level)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, name, cert, specialty, languages, dayRate, region,
+           id_card_url || null, climbing_cert_url || null,
+           insurance_cert_url || null, health_cert_url || null,
+           passport_url || null, is_international ? 1 : 0, nationality || null, level);
     // 同时插入或更新向导表（待审核）
     const existingGuide = db.prepare('SELECT id FROM guides WHERE user_id = ?').get(req.user.id);
     if (!existingGuide) {
       db.prepare(`
-        INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
-      `).run(req.user.id, name, cert, specialty, languages, dayRate, region);
+        INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status, cert_level,
+          id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url, passport_url, is_international, nationality)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(req.user.id, name, cert, specialty, languages, dayRate, region, level,
+             id_card_url || null, climbing_cert_url || null,
+             insurance_cert_url || null, health_cert_url || null,
+             passport_url || null, is_international ? 1 : 0, nationality || null);
     } else {
-      db.prepare("UPDATE guides SET status = 'pending', name=?, cert=?, specialty=?, languages=?, day_rate=?, region=? WHERE user_id=?")
-        .run(name, cert, specialty, languages, dayRate, region, req.user.id);
+      db.prepare(`UPDATE guides SET status = 'pending', name=?, cert=?, specialty=?, languages=?, day_rate=?, region=?,
+        cert_level=?, id_card_url=COALESCE(?,id_card_url), climbing_cert_url=COALESCE(?,climbing_cert_url),
+        insurance_cert_url=COALESCE(?,insurance_cert_url), health_cert_url=COALESCE(?,health_cert_url),
+        passport_url=COALESCE(?,passport_url), is_international=?, nationality=COALESCE(?,nationality)
+        WHERE user_id=?`)
+        .run(name, cert, specialty, languages, dayRate, region, level,
+             id_card_url || null, climbing_cert_url || null,
+             insurance_cert_url || null, health_cert_url || null,
+             passport_url || null, is_international ? 1 : 0, nationality || null, req.user.id);
     }
     res.json({ success: true, message: '申请已提交，7天内审核完成' });
   } catch (e) {
@@ -232,13 +256,6 @@ router.get('/:id/posts', (req, res) => {
     const posts = db.prepare(`
       SELECT * FROM guide_posts WHERE guide_id = ? ORDER BY created_at DESC LIMIT 20
     `).all(req.params.id);
-    if (posts.length === 0) {
-      return res.json([
-        { id: 1, guide_id: req.params.id, author_name: '向导', author_avatar: 'https://i.pravatar.cc/150?u=guide_post1', content: '🏔️ 今天成功带队登顶！天气绝佳，能见度极好，可以清晰看到周边群峰。感谢队员们的信任和配合！', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '高山营地', likes: 98, created_at: new Date(Date.now() - 86400000).toISOString() },
-        { id: 2, guide_id: req.params.id, author_name: '向导', author_avatar: 'https://i.pravatar.cc/150?u=guide_post2', content: '分享一些高海拔适应技巧：爬高睡低是黄金法则，充足的水分补充非常重要。有问题欢迎留言！', image: null, location: null, likes: 156, created_at: new Date(Date.now() - 259200000).toISOString() },
-        { id: 3, guide_id: req.params.id, author_name: '向导', author_avatar: 'https://i.pravatar.cc/150?u=guide_post3', content: '新一期攀登培训班开始报名！适合有基础的攀登爱好者，涵盖冰雪技术、绳索操作等核心技能。', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '培训基地', likes: 74, created_at: new Date(Date.now() - 432000000).toISOString() },
-      ]);
-    }
     res.json(posts);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -251,16 +268,6 @@ router.get('/:id/photos', (req, res) => {
     const photos = db.prepare(`
       SELECT * FROM guide_photos WHERE guide_id = ? ORDER BY created_at DESC LIMIT 30
     `).all(req.params.id);
-    if (photos.length === 0) {
-      return res.json([
-        { id: 1, guide_id: req.params.id, url: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', caption: '珠峰登顶' },
-        { id: 2, guide_id: req.params.id, url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', caption: 'K2 攀登途中' },
-        { id: 3, guide_id: req.params.id, url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', caption: '阿尔卑斯攀登' },
-        { id: 4, guide_id: req.params.id, url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', caption: '高山营地风光' },
-        { id: 5, guide_id: req.params.id, url: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', caption: '冰川穿越' },
-        { id: 6, guide_id: req.params.id, url: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', caption: '队员登顶庆祝' },
-      ]);
-    }
     res.json(photos);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -298,22 +305,45 @@ router.post('/:id/commercial-apply', auth, (req, res) => {
     const guide = db.prepare('SELECT * FROM guides WHERE id = ?').get(req.params.id);
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     if (guide.user_id !== req.user.id) return res.status(403).json({ error: '只能提交自己的资质' });
-    const { id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url } = req.body;
+    const { id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url, passport_url } = req.body;
     db.prepare(`
       UPDATE guides SET
         id_card_url = COALESCE(?, id_card_url),
         climbing_cert_url = COALESCE(?, climbing_cert_url),
         insurance_cert_url = COALESCE(?, insurance_cert_url),
         health_cert_url = COALESCE(?, health_cert_url),
+        passport_url = COALESCE(?, passport_url),
         commercial_status = 'pending',
         commercial_applied_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
       id_card_url || null, climbing_cert_url || null,
       insurance_cert_url || null, health_cert_url || null,
+      passport_url || null,
       req.params.id
     );
     res.json({ success: true, message: '商业资质申请已提交，请等待审核' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/pay-listing-fee — 向导支付入驻费
+router.post('/pay-listing-fee', payRateLimit, auth, (req, res) => {
+  try {
+    const guide = db.prepare("SELECT * FROM guides WHERE user_id = ? AND status = 'approved_pending_payment'").get(req.user.id);
+    if (!guide) return res.status(404).json({ error: '未找到待付费的向导申请，或申请状态不正确' });
+    const certLevel = guide.cert_level || 'basic';
+    const levelInfo = GUIDE_CERT_LEVELS[certLevel] || GUIDE_CERT_LEVELS.basic;
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    db.prepare(`
+      UPDATE guides SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP,
+        cert_expires_at = ?, cert_year_fee = ? WHERE user_id = ?
+    `).run(expiresAt.toISOString(), levelInfo.yearFee, req.user.id);
+    db.prepare("UPDATE guide_applications SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP WHERE user_id = ? AND status = 'approved_pending_payment'").run(req.user.id);
+    try { db.prepare('INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, ?, ?, ?, ?)').run(req.user.id, 'guide_activated', '🎉 向导认证激活成功', '恭喜！您的入驻费已支付，向导资质正式生效，开始接单吧！', '/guide-portal'); } catch(e) {}
+    res.json({ success: true, message: '入驻费支付成功，向导资质已激活！', guide_id: guide.id });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

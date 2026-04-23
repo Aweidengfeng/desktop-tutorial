@@ -881,15 +881,36 @@
           <div x-show="!guideApplicationsLoading && guideApplications.length===0" class="text-center py-8 text-slate-400">暂无向导申请</div>
           <div class="overflow-x-auto" x-show="!guideApplicationsLoading && guideApplications.length>0">
             <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
-              <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">用户ID</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2 pr-4">时间</th><th class="text-left py-2">操作</th>
+              <th class="text-left py-2 pr-3">ID</th>
+              <th class="text-left py-2 pr-3">申请人</th>
+              <th class="text-left py-2 pr-3">姓名</th>
+              <th class="text-left py-2 pr-3">专长</th>
+              <th class="text-left py-2 pr-3">等级</th>
+              <th class="text-left py-2 pr-3">状态</th>
+              <th class="text-left py-2 pr-3">时间</th>
+              <th class="text-left py-2">操作</th>
             </tr></thead><tbody>
               <template x-for="app in guideApplications" :key="app.id">
                 <tr class="border-b border-white/5 hover:bg-white/5">
-                  <td class="py-2 pr-4 text-slate-300" x-text="app.id"></td>
-                  <td class="py-2 pr-4 text-white" x-text="app.user_id"></td>
-                  <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="app.status||'pending'"></span></td>
-                  <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
-                  <td class="py-2"><button @click="reviewDrawer={open:true,type:'guide',item:app,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
+                  <td class="py-2 pr-3 text-slate-300" x-text="app.id"></td>
+                  <td class="py-2 pr-3 text-white text-xs" x-text="(app.applicant_name || app.user_id) + (app.is_international ? ' 🌐' : '')"></td>
+                  <td class="py-2 pr-3 text-slate-200" x-text="app.name||'-'"></td>
+                  <td class="py-2 pr-3 text-slate-400 text-xs max-w-[100px] truncate" x-text="app.specialty||'-'"></td>
+                  <td class="py-2 pr-3 text-xs"><span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300" x-text="app.cert_level||'basic'"></span></td>
+                  <td class="py-2 pr-3">
+                    <span :class="{
+                      'bg-yellow-500/20 text-yellow-300': app.status==='pending',
+                      'bg-green-500/20 text-green-300': app.status==='approved',
+                      'bg-orange-500/20 text-orange-300': app.status==='approved_pending_payment',
+                      'bg-red-500/20 text-red-300': app.status==='rejected',
+                      'bg-blue-500/20 text-blue-300': app.status==='need_info'
+                    }" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved':'已通过','approved_pending_payment':'待付费','rejected':'已驳回','need_info':'需补充'}[app.status]||app.status"></span>
+                  </td>
+                  <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
+                  <td class="py-2 flex gap-1 flex-wrap">
+                    <button @click="reviewDrawer={open:true,type:'guide',item:app,action:'',note:''}" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button>
+                    <button @click="viewCerts(app)" class="px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs text-white">查看证件</button>
+                  </td>
                 </tr>
               </template>
             </tbody></table>
@@ -900,14 +921,26 @@
           <div x-show="!clubApplicationsLoading && clubApplications.length===0" class="text-center py-8 text-slate-400">暂无俱乐部申请</div>
           <div class="overflow-x-auto" x-show="!clubApplicationsLoading && clubApplications.length>0">
             <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
-              <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">名称</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2 pr-4">时间</th><th class="text-left py-2">操作</th>
+              <th class="text-left py-2 pr-3">ID</th><th class="text-left py-2 pr-3">俱乐部名称</th><th class="text-left py-2 pr-3">联系方式</th><th class="text-left py-2 pr-3">营业执照</th><th class="text-left py-2 pr-3">状态</th><th class="text-left py-2 pr-3">时间</th><th class="text-left py-2">操作</th>
             </tr></thead><tbody>
               <template x-for="app in clubApplications" :key="app.id">
                 <tr class="border-b border-white/5 hover:bg-white/5">
-                  <td class="py-2 pr-4 text-slate-300" x-text="app.id"></td>
-                  <td class="py-2 pr-4 text-white" x-text="app.name||app.club_id"></td>
-                  <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="app.status||'pending'"></span></td>
-                  <td class="py-2 pr-4 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
+                  <td class="py-2 pr-3 text-slate-300" x-text="app.id"></td>
+                  <td class="py-2 pr-3 text-white font-medium" x-text="app.club_name||app.name||'-'"></td>
+                  <td class="py-2 pr-3 text-slate-400 text-xs" x-text="app.contact||'-'"></td>
+                  <td class="py-2 pr-3 text-xs">
+                    <a x-show="app.cert_url" :href="app.cert_url" target="_blank" class="text-blue-400 hover:underline">查看执照</a>
+                    <span x-show="!app.cert_url" class="text-slate-500">-</span>
+                  </td>
+                  <td class="py-2 pr-3">
+                    <span :class="{
+                      'bg-yellow-500/20 text-yellow-300': app.status==='pending',
+                      'bg-green-500/20 text-green-300': app.status==='approved',
+                      'bg-orange-500/20 text-orange-300': app.status==='approved_pending_payment',
+                      'bg-red-500/20 text-red-300': app.status==='rejected'
+                    }" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved':'已通过','approved_pending_payment':'待付费','rejected':'已驳回','need_info':'需补充'}[app.status]||app.status"></span>
+                  </td>
+                  <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
                   <td class="py-2"><button @click="reviewDrawer={open:true,type:'club',item:app,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
                 </tr>
               </template>
@@ -929,6 +962,32 @@
                 <button @click="reviewDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
                 <button @click="reviewApplication(reviewDrawer.type, reviewDrawer.item?.id)" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">确认</button>
               </div>
+            </div>
+          </div>
+        </div>
+        <!-- Certs Viewer Modal -->
+        <div x-show="certsModal.open" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" @click.self="certsModal.open=false">
+          <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4 max-h-screen overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-lg">证件查看 <span x-show="certsModal.is_international" class="text-blue-400">🌐 国际向导</span></h3>
+              <button @click="certsModal.open=false" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-3">
+              <div x-show="certsModal.nationality" class="flex gap-2 items-center text-sm">
+                <span class="text-slate-400 w-24">国籍</span>
+                <span class="text-white" x-text="certsModal.nationality"></span>
+              </div>
+              <template x-for="[label, url] in [['身份证', certsModal.id_card_url], ['攀登资质', certsModal.climbing_cert_url], ['保险证明', certsModal.insurance_cert_url], ['健康证明', certsModal.health_cert_url], ['护照', certsModal.passport_url]]" :key="label">
+                <div class="flex gap-2 items-center text-sm">
+                  <span class="text-slate-400 w-24 shrink-0" x-text="label"></span>
+                  <template x-if="url">
+                    <a :href="url" target="_blank" class="text-blue-400 hover:underline truncate" x-text="url.split('/').pop() || '查看文件'"></a>
+                  </template>
+                  <template x-if="!url">
+                    <span class="text-slate-600">未上传</span>
+                  </template>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -1247,6 +1306,7 @@
         clubApplications: [], clubApplicationsLoading: false,
         applicationsSubTab: 'guide',
         reviewDrawer: { open: false, type: '', item: null, action: '', note: '' },
+        certsModal: { open: false, id_card_url: null, climbing_cert_url: null, insurance_cert_url: null, health_cert_url: null, passport_url: null, is_international: 0, nationality: null },
 
         // Suspicious Tracks
         suspiciousTracks: [], suspiciousTracksLoading: false,
@@ -1644,16 +1704,28 @@
         async loadGuideApplications() {
           this.guideApplicationsLoading = true;
           try {
-            const d = await this.api('GET', '/guide-applications?limit=50');
-            this.guideApplications = d.applications || d;
+            const d = await this.api('GET', '/guide-applications?limit=100');
+            this.guideApplications = d.applications || (Array.isArray(d) ? d : []);
           } catch(e) {} finally { this.guideApplicationsLoading = false; }
         },
         async loadClubApplications() {
           this.clubApplicationsLoading = true;
           try {
-            const d = await this.api('GET', '/club-applications?limit=50');
-            this.clubApplications = d.applications || d;
+            const d = await this.api('GET', '/club-applications?limit=100');
+            this.clubApplications = d.applications || (Array.isArray(d) ? d : []);
           } catch(e) {} finally { this.clubApplicationsLoading = false; }
+        },
+        viewCerts(app) {
+          this.certsModal = {
+            open: true,
+            id_card_url: app.id_card_url || null,
+            climbing_cert_url: app.climbing_cert_url || null,
+            insurance_cert_url: app.insurance_cert_url || null,
+            health_cert_url: app.health_cert_url || null,
+            passport_url: app.passport_url || null,
+            is_international: app.is_international || 0,
+            nationality: app.nationality || null,
+          };
         },
         async reviewApplication(type, id) {
           const { action, note } = this.reviewDrawer;

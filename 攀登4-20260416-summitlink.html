@@ -5756,11 +5756,7 @@ function alpineLink() {
       es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
     },
     t(key) { const lang = this.translations[this.currentLang] || this.translations['zh']; return lang[key] || this.translations['zh'][key] || key; },
-    nearbyGuides: [
-      { id: 101, name: '扎西旺堆', flag: '🇨🇳', nationality: '中国', avatar: 'https://i.pravatar.cc/150?u=guide1', specialty: '珠峰/K2/南极洲', languages: ['中文','English'], rating: 4.9, reviews: 127, dayRate: 350, tag: '🏅 认证精英' },
-      { id: 102, name: 'Ang Dorji', flag: '🇳🇵', nationality: '尼泊尔', avatar: 'https://i.pravatar.cc/150?u=guide2', specialty: '喜马拉雅全系列', languages: ['English','Nepali'], rating: 4.8, reviews: 98, dayRate: 280, tag: '⭐ 本周最热' },
-      { id: 103, name: 'Marc Dubois', flag: '🇫🇷', nationality: '法国', avatar: 'https://i.pravatar.cc/150?u=guide3', specialty: '阿尔卑斯/安第斯', languages: ['Français','English'], rating: 4.7, reviews: 64, dayRate: 420, tag: '🌐 多语言' },
-    ],
+    nearbyGuides: [],
     summitLeaderboard: [
       { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
       { id: 2, name: 'Pemba Sherpa', flag: '🇳🇵', avatar: 'https://i.pravatar.cc/150?u=lb2', peak: 'K2 8611m', date: '4月10日' },
@@ -5795,21 +5791,13 @@ function alpineLink() {
       { id: 2, title: 'K2绝壁攀登记录', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '李明', avatar: 'https://i.pravatar.cc/150?u=li', altitude: 8611, difficulty: '极难', duration: '45天', date: '2024-07-25', peak: 'K2', likes: 567, comments: 89, views: 3400, tags: ['K2', '技术攀登', '挑战'], excerpt: '历时45天的K2远征，经历了风暴、高反和团队合作的考验...' },
       { id: 3, title: '马特洪峰北壁技术路线', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', author: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', altitude: 4478, difficulty: '难', duration: '2天', date: '2024-08-15', peak: '马特洪峰', likes: 123, comments: 28, views: 890, tags: ['阿尔卑斯', '技术路线', '欧洲'], excerpt: '马特洪峰北壁是阿尔卑斯最具挑战性的路线之一，本文记录了攀登过程...' },
     ],
-    clubs: [
-      { id: 1, name: '中国高山协会', type: '专业', region: '中国', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专注于中国高山探险和技术攀登的专业协会，拥有多名国家级攀登运动员', members: 1280, expeditions: 45, founded: '2005', verified: true, specialty: '8000米峰', achievements: ['珠峰无氧登顶', 'K2首次全女队登顶', '14座8000米峰完成者'] },
-      { id: 2, name: '阿尔派探险俱乐部', type: '综合', region: '北京', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '面向攀登爱好者的综合性俱乐部，提供从初级到专业的培训和远征服务', members: 560, expeditions: 28, founded: '2010', verified: true, specialty: '技术攀登', achievements: ['洛子峰新路线开辟', '南极文森峰团队登顶'] },
-      { id: 3, name: '北京户外探险队', type: '休闲', region: '北京', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', description: '以休闲户外和中低海拔攀登为主的俱乐部，适合初学者和爱好者参与', members: 890, expeditions: 120, founded: '2015', verified: true, specialty: '中低海拔', achievements: ['年度最佳户外俱乐部', '组织公益攀登活动100+'] },
-    ],
+    clubs: [],
     expeditions: [
       { id: 1, title: '2025珠峰商业远征', peak: '珠穆朗玛峰', date: '2025-04-01', duration: '60天', difficulty: '极难', spots: 3, totalSpots: 8, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang', price: 380000, image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专业向导带领的珠峰南坡商业远征，全程高山支援，适合有经验的攀登者' },
       { id: 2, title: 'K2夏季挑战队', peak: 'K2', date: '2025-06-15', duration: '45天', difficulty: '极难', spots: 2, totalSpots: 6, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li', price: 450000, image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', description: 'K2 标准路线挑战，要求参与者有8000米以上攀登经历' },
       { id: 3, title: '马特洪峰技术攀登营', peak: '马特洪峰', date: '2025-08-01', duration: '14天', difficulty: '难', spots: 4, totalSpots: 6, leader: '王芳', leaderAvatar: 'https://i.pravatar.cc/150?u=wang', price: 35000, image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '由资深向导带领的马特洪峰技术攀登，含技术培训和北壁尝试' },
     ],
-    guides: [
-      { id: 1, name: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', rating: 4.9, reviews: 128, experience: 15, languages: ['中文', '英语', '尼泊尔语'], summits: ['珠穆朗玛峰', 'K2', '干城章嘉峰', '洛子峰'], price: 35000, available: true, specialty: '8000米峰专家', bio: '15年高山攀登经验，成功登顶全部14座8000米峰，专注于帮助客户安全实现高山梦想' },
-      { id: 2, name: '李明', avatar: 'https://i.pravatar.cc/150?u=li', rating: 4.8, reviews: 96, experience: 12, languages: ['中文', '英语'], summits: ['K2', '马特洪峰', '白朗峰', '麦金利山'], price: 28000, available: true, specialty: '技术攀登专家', bio: '12年攀登经验，专注于技术性路线，曾开辟多条新路线，擅长冰雪技术教学' },
-      { id: 3, name: 'Sara Neymann', avatar: 'https://i.pravatar.cc/150?u=sara', rating: 4.7, reviews: 74, experience: 10, languages: ['英语', '法语', '意大利语'], summits: ['马特洪峰', '白朗峰', '大帕拉迪索峰', '埃格尔北壁'], price: 25000, available: true, specialty: '阿尔卑斯专家', bio: '十年阿尔卑斯攀登经验，UIAGM认证向导，专注于西欧技术路线' },
-    ],
+    guides: [],
     gearItems: [
       { id: 1, name: '黑钻Momentum高山靴', brand: 'Black Diamond', price: 2800, condition: '九成新', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', description: '用过两次，无明显磨损，尺码43', seller: '张磊', sellerAvatar: 'https://i.pravatar.cc/150?u=zhang' },
       { id: 2, name: 'Petzl高山头盔', brand: 'Petzl', price: 680, condition: '全新', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', description: '全新未使用，原价980元，尺寸M/L可调', seller: '李明', sellerAvatar: 'https://i.pravatar.cc/150?u=li' },
@@ -7846,15 +7834,13 @@ function alpineLink() {
         const res = await fetch('/api/clubs');
         if (res.ok) {
           const data = await res.json();
-          if (data.length > 0) {
-            this.clubs = data.map(c => ({
-              ...c,
-              cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
-              verified: !!c.verified,
-              specialty: c.specialty || '攀登',
-              achievements: [],
-            }));
-          }
+          this.clubs = data.map(c => ({
+            ...c,
+            cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+            verified: !!c.verified,
+            specialty: c.specialty || '攀登',
+            achievements: [],
+          }));
         }
       } catch(e) {}
     },
