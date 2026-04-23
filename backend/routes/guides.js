@@ -25,6 +25,25 @@ function parseGuide(guide) {
 }
 
 // GET /api/guides
+// GET /api/guides — list approved guides
+/**
+ * @swagger
+ * /api/guides:
+ *   get:
+ *     tags: [向导]
+ *     summary: 获取已审核通过的向导列表
+ *     description: 返回 status=approved 的向导，按评分降序排列
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: 向导数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Guide'
+ */
 router.get('/', async (req, res) => {
   try {
     const guides = await prisma.$queryRaw`

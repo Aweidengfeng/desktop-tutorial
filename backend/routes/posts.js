@@ -10,6 +10,24 @@ const feedLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: t
 const saveLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '操作太频繁' } });
 
 // GET /api/posts?type=all
+/**
+ * @swagger
+ * /api/posts:
+ *   get:
+ *     tags: [帖子]
+ *     summary: 获取全部帖子
+ *     description: 返回所有帖子，按发布时间倒序
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: 帖子数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Post'
+ */
 router.get('/', async (req, res) => {
   try {
     const posts = await prisma.$queryRaw`
@@ -30,6 +48,38 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/posts/feed - 3 modes: following, recommended, nearby
+/**
+ * @swagger
+ * /api/posts/feed:
+ *   get:
+ *     tags: [帖子]
+ *     summary: 获取信息流帖子
+ *     description: 支持三种模式：following（关注）、recommended（推荐）、nearby（附近）
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: mode
+ *         schema:
+ *           type: string
+ *           enum: [following, recommended, nearby]
+ *           default: recommended
+ *       - in: query
+ *         name: cursor
+ *         schema: { type: integer }
+ *         description: 翻页游标（上次最后一条帖子 ID）
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20, maximum: 50 }
+ *     responses:
+ *       200:
+ *         description: 帖子数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Post'
+ */
 router.get('/feed', feedLimiter, async (req, res) => {
   try {
     const { mode = 'recommended', cursor, limit = 20 } = req.query;

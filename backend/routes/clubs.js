@@ -126,6 +126,28 @@ router.get('/featured', async (req, res) => {
 });
 
 // GET /api/clubs
+/**
+ * @swagger
+ * /api/clubs:
+ *   get:
+ *     tags: [俱乐部]
+ *     summary: 获取俱乐部列表
+ *     description: 返回 status=active 的俱乐部，按成员数降序排列
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 100, maximum: 100 }
+ *     responses:
+ *       200:
+ *         description: 俱乐部数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Club'
+ */
 router.get('/', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 100, 100);
@@ -141,6 +163,32 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/clubs/:id — 俱乐部详情
+/**
+ * @swagger
+ * /api/clubs/{id}:
+ *   get:
+ *     tags: [俱乐部]
+ *     summary: 获取俱乐部详情
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: 俱乐部详情
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Club'
+ *       404:
+ *         description: 俱乐部不存在
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);

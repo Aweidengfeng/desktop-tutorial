@@ -25,6 +25,36 @@ function parsePeakJson(peak) {
 
 // GET /api/peaks?category=eight_thousanders|seven_summits|classic|technical
 // 同时向后兼容旧的 ?type= 参数
+/**
+ * @swagger
+ * /api/peaks:
+ *   get:
+ *     tags: [山峰]
+ *     summary: 获取山峰列表
+ *     description: 返回全部山峰，可按分类过滤
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [eight_thousanders, seven_summits, classic, technical]
+ *         description: 山峰分类
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: 山峰类型（兼容旧参数）
+ *     responses:
+ *       200:
+ *         description: 山峰数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Peak'
+ */
 router.get('/', async (req, res) => {
   try {
     const { type, category } = req.query;
@@ -74,6 +104,45 @@ router.get('/', async (req, res) => {
 
 // POST /api/peaks/suggest — 用户提交山峰建议（需要JWT）
 // 注意：此路由必须在 /:id 之前注册
+/**
+ * @swagger
+ * /api/peaks/suggest:
+ *   post:
+ *     tags: [山峰]
+ *     summary: 提交山峰建议
+ *     description: 登录用户可提交新山峰信息建议，待管理员审核
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name: { type: string, description: 山峰中文名 }
+ *               name_en: { type: string }
+ *               altitude: { type: integer, description: 海拔（米）}
+ *               country: { type: string }
+ *               continent: { type: string }
+ *               difficulty: { type: string }
+ *               description: { type: string }
+ *               best_season: { type: string }
+ *               latitude: { type: number }
+ *               longitude: { type: number }
+ *     responses:
+ *       200:
+ *         description: 建议已提交
+ *       400:
+ *         description: 山峰名称不能为空
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: 未登录
+ */
 router.post('/suggest', peakWriteLimiter, auth, async (req, res) => {
   try {
     const { name, name_en, altitude, country, continent, difficulty, description, best_season, routes, latitude, longitude, image } = req.body;
@@ -103,6 +172,30 @@ router.post('/suggest', peakWriteLimiter, auth, async (req, res) => {
 
 // GET /api/peaks/:id/weather — 代理返回该山峰的天气
 // 注意：此路由必须在 /:id 之前注册
+/**
+ * @swagger
+ * /api/peaks/{id}/weather:
+ *   get:
+ *     tags: [山峰]
+ *     summary: 获取山峰天气
+ *     description: 根据山峰坐标代理获取当前天气数据
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *         description: 山峰 ID
+ *     responses:
+ *       200:
+ *         description: 天气数据
+ *       404:
+ *         description: 山峰不存在或暂无坐标
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:id/weather', async (req, res) => {
   try {
     const peak = await prisma.peak.findUnique({
@@ -144,6 +237,33 @@ router.get('/:id/weather', async (req, res) => {
 });
 
 // GET /api/peaks/:id
+/**
+ * @swagger
+ * /api/peaks/{id}:
+ *   get:
+ *     tags: [山峰]
+ *     summary: 获取山峰详情
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *         description: 山峰 ID
+ *     responses:
+ *       200:
+ *         description: 山峰详情
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Peak'
+ *       404:
+ *         description: 山峰不存在
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/:id', async (req, res) => {
   try {
     const peak = await prisma.peak.findUnique({

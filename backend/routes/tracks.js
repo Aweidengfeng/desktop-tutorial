@@ -14,6 +14,64 @@ const exportLimiter = rateLimit({
 });
 
 // GET /api/tracks — 获取轨迹列表（支持 user_id=me 过滤）
+/**
+ * @swagger
+ * /api/tracks:
+ *   get:
+ *     tags: [轨迹]
+ *     summary: 获取当前用户的轨迹列表
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 轨迹数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Track'
+ *       401:
+ *         description: 未登录
+ *   post:
+ *     tags: [轨迹]
+ *     summary: 上传轨迹
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, points]
+ *             properties:
+ *               name: { type: string, description: 轨迹名称 }
+ *               peak_name: { type: string }
+ *               date: { type: string, format: date }
+ *               distance: { type: number }
+ *               elevation_gain: { type: number }
+ *               duration: { type: integer }
+ *               notes: { type: string }
+ *               points:
+ *                 type: array
+ *                 description: GPS 坐标点数组
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     lat: { type: number }
+ *                     lng: { type: number }
+ *                     ele: { type: number }
+ *     responses:
+ *       200:
+ *         description: 轨迹创建成功
+ *       400:
+ *         description: 参数错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/', auth, async (req, res) => {
   try {
     const tracks = await prisma.$queryRaw`

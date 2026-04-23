@@ -86,6 +86,62 @@ async function safeUser(user) {
 }
 
 // POST /api/auth/register
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     tags: [认证]
+ *     summary: 用户注册
+ *     description: 使用手机号、姓名和密码注册新账户
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, phone, password, policyVersion, agreedPrivacy, agreedTerms]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: 用户姓名
+ *               phone:
+ *                 type: string
+ *                 description: 手机号（中国大陆格式）
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               policyVersion:
+ *                 type: string
+ *                 description: 隐私政策版本号
+ *               agreedPrivacy:
+ *                 type: boolean
+ *               agreedTerms:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: 注册成功，返回 token 和用户信息
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token: { type: string }
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: 参数错误或手机号已注册
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       422:
+ *         description: 未同意最新版协议
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
@@ -131,6 +187,42 @@ router.post('/register', registerLimiter, async (req, res) => {
 });
 
 // POST /api/auth/login
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     tags: [认证]
+ *     summary: 用户登录
+ *     description: 使用手机号和密码登录，返回 JWT token
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [phone, password]
+ *             properties:
+ *               phone: { type: string, description: 手机号 }
+ *               password: { type: string }
+ *     responses:
+ *       200:
+ *         description: 登录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token: { type: string }
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: 手机号或密码错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { phone, password } = req.body;
@@ -148,6 +240,28 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // GET /api/auth/me
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     tags: [认证]
+ *     summary: 获取当前登录用户信息
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 返回用户信息
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         description: 未登录
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 router.get('/me', authReadLimiter, auth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });

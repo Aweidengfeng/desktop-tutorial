@@ -16,6 +16,55 @@ function normalizeLeader(l) {
 }
 
 // GET /api/leaderboard — 多维度攀登榜单
+/**
+ * @swagger
+ * /api/leaderboard:
+ *   get:
+ *     tags: [排行榜]
+ *     summary: 攀登排行榜
+ *     description: 支持多维度、多时间段排名，可按用户或俱乐部聚合
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [count, elevation, distance]
+ *           default: count
+ *         description: 排序维度
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year, all]
+ *           default: month
+ *         description: 时间范围
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [user, club]
+ *           default: user
+ *         description: 聚合维度
+ *       - in: query
+ *         name: peak_type
+ *         schema: { type: string }
+ *         description: 山峰类型过滤
+ *     responses:
+ *       200:
+ *         description: 排行榜数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   rank: { type: integer }
+ *                   user_id: { type: integer }
+ *                   username: { type: string }
+ *                   count: { type: integer }
+ */
 router.get('/', leaderboardLimiter, async (req, res) => {
   try {
     const { sort = 'count', period = 'month', month, peak_type, scope = 'user' } = req.query;

@@ -8,6 +8,32 @@ const routesReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHead
 const routesWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
 
 // GET /api/routes — 所有线路列表
+/**
+ * @swagger
+ * /api/routes:
+ *   get:
+ *     tags: [山峰]
+ *     summary: 获取攀登线路列表
+ *     description: 返回所有 status=active 的攀登线路，按海拔降序
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: 线路数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id: { type: integer }
+ *                   name: { type: string }
+ *                   peak: { type: string }
+ *                   difficulty: { type: string }
+ *                   altitude: { type: integer }
+ *                   duration_days: { type: integer }
+ *                   best_season: { type: string }
+ */
 router.get('/', routesReadLimiter, async (req, res) => {
   try {
     const routes = await prisma.$queryRaw`
