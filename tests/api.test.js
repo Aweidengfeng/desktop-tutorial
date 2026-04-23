@@ -314,7 +314,7 @@ async function testProfile() {
     const res = await fetch(`${BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: '重复用户', phone: '13800138000', password: '123456' }),
+      body: JSON.stringify({ name: '重复用户', phone: '13800138000', password: '123456', policyVersion: '2026-04-20', agreedPrivacy: true, agreedTerms: true }),
     });
     assert(res.status === 400, `预期 400，实际 ${res.status}`);
     const data = await res.json();

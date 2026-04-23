@@ -144,6 +144,10 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
   });
 });
 
+// 确保 better-sqlite3 建表语句在 Prisma 路由初始化之前执行
+// （testApp.js 已采用相同策略：先 require database.js，再挂载路由）
+require('./db/database');
+
 // 挂载路由
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/peaks', require('./routes/peaks'));
