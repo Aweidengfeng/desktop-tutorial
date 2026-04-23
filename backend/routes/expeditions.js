@@ -17,7 +17,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 
 // 下单限流：每分钟最多20次，防止刷单
@@ -33,10 +33,10 @@ const orderLimiter = rateLimit({
  * 检查当前用户是否为已审核通过的向导或俱乐部，并返回 publisher 信息。
  * @returns {{ type: 'guide'|'club', id: number } | null}
  */
-function getPublisher(userId) {
-  const guide = db.prepare("SELECT id FROM guides WHERE user_id = ? AND status = 'approved'").get(userId);
+async function getPublisher(userId) {
+  const [guide] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${userId} AND status = 'approved'`;
   if (guide) return { type: 'guide', id: guide.id };
-  const club = db.prepare("SELECT id FROM clubs WHERE creator_id = ? AND verified = 1 AND status = 'active'").get(userId);
+  const [club] = await prisma.$queryRaw`SELECT id FROM clubs WHERE creator_id = ${userId} AND verified = 1 AND status = 'active'`;
   if (club) return { type: 'club', id: club.id };
   return null;
 }
@@ -44,15 +44,15 @@ function getPublisher(userId) {
 // ── 订单相关路由（放在 /:id 之前，防止 'orders' 被当作 id 解析）────
 
 // GET /api/expeditions/orders/my — 我的订单
-router.get('/orders/my', auth, (req, res) => {
+router.get('/orders/my', auth, async (req, res) => {
   try {
-    const orders = db.prepare(`
+    const orders = await prisma.$queryRaw`
       SELECT eo.*, e.title as expedition_title, e.cover_image, e.start_date, e.end_date
       FROM expedition_orders eo
       LEFT JOIN expeditions e ON e.id = eo.expedition_id
-      WHERE eo.user_id = ?
+      WHERE eo.user_id = ${req.user.id}
       ORDER BY eo.created_at DESC
-    `).all(req.user.id);
+    `;
     res.json(orders);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -61,33 +61,30 @@ router.get('/orders/my', auth, (req, res) => {
 
 // POST /api/expeditions/orders/:id/mock-pay — 模拟支付（内测）
 // TODO: 替换为真实支付（B2 阶段）
-router.post('/orders/:id/mock-pay', auth, (req, res) => {
+router.post('/orders/:id/mock-pay', auth, async (req, res) => {
   try {
-    const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ? AND user_id = ?')
-      .get(req.params.id, req.user.id);
+    const orderId = parseInt(req.params.id);
+    const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = ${orderId} AND user_id = ${req.user.id}`;
     if (!order) return res.status(404).json({ error: '订单不存在' });
     if (order.status !== 'pending_payment') {
       return res.status(400).json({ error: `订单状态为 ${order.status}，无法支付` });
     }
     const now = new Date().toISOString();
-    db.prepare("UPDATE expedition_orders SET status = 'paid', paid_at = ? WHERE id = ?")
-      .run(now, order.id);
+    await prisma.$executeRaw`UPDATE expedition_orders SET status = 'paid', paid_at = ${now} WHERE id = ${order.id}`;
     // 通知发布者（简单起见，写入 notifications）
     try {
-      const expedition = db.prepare('SELECT publisher_type, publisher_id, title FROM expeditions WHERE id = ?')
-        .get(order.expedition_id);
+      const [expedition] = await prisma.$queryRaw`SELECT publisher_type, publisher_id, title FROM expeditions WHERE id = ${order.expedition_id}`;
       if (expedition) {
         let notifyUserId = null;
         if (expedition.publisher_type === 'guide') {
-          const g = db.prepare('SELECT user_id FROM guides WHERE id = ?').get(expedition.publisher_id);
+          const [g] = await prisma.$queryRaw`SELECT user_id FROM guides WHERE id = ${expedition.publisher_id}`;
           if (g) notifyUserId = g.user_id;
         } else if (expedition.publisher_type === 'club') {
-          const c = db.prepare('SELECT creator_id FROM clubs WHERE id = ?').get(expedition.publisher_id);
+          const [c] = await prisma.$queryRaw`SELECT creator_id FROM clubs WHERE id = ${expedition.publisher_id}`;
           if (c) notifyUserId = c.creator_id;
         }
         if (notifyUserId) {
-          db.prepare("INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'order_paid', ?, ?)")
-            .run(notifyUserId, `【新订单】${expedition.title} 已付款，订单号：${order.order_no}`, order.id);
+          await prisma.$executeRaw`INSERT INTO notifications (user_id, type, content, related_id) VALUES (${notifyUserId}, 'order_paid', ${`【新订单】${expedition.title} 已付款，订单号：${order.order_no}`}, ${order.id})`;
         }
       }
     } catch (e) { /* 通知失败不影响主流程 */ }
@@ -100,9 +97,9 @@ router.post('/orders/:id/mock-pay', auth, (req, res) => {
 // ── 主路由 ──────────────────────────────────────────────────────
 
 // POST /api/expeditions — 已审核通过的向导/俱乐部发布商业攀登
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
-    const publisher = getPublisher(req.user.id);
+    const publisher = await getPublisher(req.user.id);
     if (!publisher) {
       return res.status(403).json({ error: '只有已审核通过的向导或俱乐部才能发布商业攀登' });
     }
@@ -117,14 +114,22 @@ router.post('/', auth, (req, res) => {
     // 获取该向导/俱乐部的 commission_rate
     let commission_rate = 0.15;
     if (publisher.type === 'guide') {
-      const g = db.prepare('SELECT commission_rate FROM guides WHERE id = ?').get(publisher.id);
+      const [g] = await prisma.$queryRaw`SELECT commission_rate FROM guides WHERE id = ${publisher.id}`;
       if (g && g.commission_rate != null) commission_rate = g.commission_rate;
     } else {
-      const c = db.prepare('SELECT commission_rate FROM clubs WHERE id = ?').get(publisher.id);
+      const [c] = await prisma.$queryRaw`SELECT commission_rate FROM clubs WHERE id = ${publisher.id}`;
       if (c && c.commission_rate != null) commission_rate = c.commission_rate;
     }
     const now = new Date().toISOString();
-    const result = db.prepare(`
+    const peakId = peak_id || null;
+    const galleryStr = gallery ? JSON.stringify(gallery) : null;
+    const itineraryStr = itinerary ? JSON.stringify(itinerary) : null;
+    const includedStr = included_services ? JSON.stringify(included_services) : null;
+    const excludedStr = excluded_services ? JSON.stringify(excluded_services) : null;
+    const addonsStr = addons ? JSON.stringify(addons) : null;
+    const gdStr = group_discount ? JSON.stringify(group_discount) : null;
+    const psStr = payment_stages ? JSON.stringify(payment_stages) : null;
+    await prisma.$executeRaw`
       INSERT INTO expeditions (
         publisher_type, publisher_id, peak_id, title, cover_image, gallery,
         route_name, difficulty, start_date, end_date, total_days,
@@ -132,25 +137,17 @@ router.post('/', auth, (req, res) => {
         included_services, excluded_services, base_price, currency, addons,
         early_bird_price, early_bird_deadline, group_discount, payment_stages,
         cancel_policy, commission_rate, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
-    `).run(
-      publisher.type, publisher.id, peak_id || null, title,
-      cover_image || null, gallery ? JSON.stringify(gallery) : null,
-      route_name || null, difficulty || null,
-      start_date || null, end_date || null, total_days || 0,
-      min_participants || 1, max_participants || 10,
-      meeting_point || null,
-      itinerary ? JSON.stringify(itinerary) : null,
-      included_services ? JSON.stringify(included_services) : null,
-      excluded_services ? JSON.stringify(excluded_services) : null,
-      base_price, currency || 'CNY',
-      addons ? JSON.stringify(addons) : null,
-      early_bird_price || null, early_bird_deadline || null,
-      group_discount ? JSON.stringify(group_discount) : null,
-      payment_stages ? JSON.stringify(payment_stages) : null,
-      cancel_policy || null, commission_rate, now, now
-    );
-    const expedition = db.prepare('SELECT * FROM expeditions WHERE id = ?').get(result.lastInsertRowid);
+      ) VALUES (${publisher.type}, ${publisher.id}, ${peakId}, ${title},
+        ${cover_image || null}, ${galleryStr},
+        ${route_name || null}, ${difficulty || null},
+        ${start_date || null}, ${end_date || null}, ${total_days || 0},
+        ${min_participants || 1}, ${max_participants || 10},
+        ${meeting_point || null}, ${itineraryStr}, ${includedStr}, ${excludedStr},
+        ${base_price}, ${currency || 'CNY'}, ${addonsStr},
+        ${early_bird_price || null}, ${early_bird_deadline || null},
+        ${gdStr}, ${psStr}, ${cancel_policy || null}, ${commission_rate}, 'pending', ${now}, ${now})
+    `;
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = last_insert_rowid()`;
     res.json(expedition);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -158,7 +155,7 @@ router.post('/', auth, (req, res) => {
 });
 
 // GET /api/expeditions — 远征列表
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { category, peak_id, publisher_type, status = 'published', page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -168,15 +165,16 @@ router.get('/', (req, res) => {
     if (peak_id) { where.push('e.peak_id = ?'); params.push(parseInt(peak_id)); }
     if (publisher_type) { where.push('e.publisher_type = ?'); params.push(publisher_type); }
     const whereStr = where.length ? 'WHERE ' + where.join(' AND ') : '';
-    const expeditions = db.prepare(`
+    const expeditions = await prisma.$queryRawUnsafe(`
       SELECT e.*, p.name as peak_name
       FROM expeditions e
       LEFT JOIN peaks p ON p.id = e.peak_id
       ${whereStr}
       ORDER BY e.created_at DESC
       LIMIT ? OFFSET ?
-    `).all(...params, parseInt(limit), offset);
-    const total = db.prepare(`SELECT COUNT(*) as c FROM expeditions e ${whereStr}`).get(...params).c;
+    `, ...params, parseInt(limit), offset);
+    const [totalRow] = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as c FROM expeditions e ${whereStr}`, ...params);
+    const total = Number(totalRow.c);
     res.json({ expeditions, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -184,16 +182,16 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/expeditions/:id — 远征详情
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const expedition = db.prepare(`
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`
       SELECT e.*, p.name as peak_name, p.latitude, p.longitude
       FROM expeditions e
       LEFT JOIN peaks p ON p.id = e.peak_id
-      WHERE e.id = ?
-    `).get(req.params.id);
+      WHERE e.id = ${expId}
+    `;
     if (!expedition) return res.status(404).json({ error: '远征不存在' });
-    // 解析 JSON 字段
     ['gallery', 'itinerary', 'included_services', 'excluded_services', 'addons', 'group_discount', 'payment_stages'].forEach(field => {
       if (expedition[field]) {
         try { expedition[field] = JSON.parse(expedition[field]); } catch (e) {}
@@ -206,11 +204,12 @@ router.get('/:id', (req, res) => {
 });
 
 // PUT /api/expeditions/:id — 发布者修改（仅 pending 状态可改）
-router.put('/:id', auth, (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
-    const expedition = db.prepare('SELECT * FROM expeditions WHERE id = ?').get(req.params.id);
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId}`;
     if (!expedition) return res.status(404).json({ error: '远征不存在' });
-    const publisher = getPublisher(req.user.id);
+    const publisher = await getPublisher(req.user.id);
     if (!publisher || publisher.type !== expedition.publisher_type || publisher.id !== expedition.publisher_id) {
       return res.status(403).json({ error: '无权修改该远征' });
     }
@@ -219,19 +218,18 @@ router.put('/:id', auth, (req, res) => {
     }
     const { title, cover_image, base_price, difficulty, start_date, end_date } = req.body;
     const now = new Date().toISOString();
-    db.prepare(`
+    await prisma.$executeRaw`
       UPDATE expeditions SET
-        title = COALESCE(?, title),
-        cover_image = COALESCE(?, cover_image),
-        base_price = COALESCE(?, base_price),
-        difficulty = COALESCE(?, difficulty),
-        start_date = COALESCE(?, start_date),
-        end_date = COALESCE(?, end_date),
-        updated_at = ?
-      WHERE id = ?
-    `).run(title || null, cover_image || null, base_price || null, difficulty || null,
-           start_date || null, end_date || null, now, expedition.id);
-    const updated = db.prepare('SELECT * FROM expeditions WHERE id = ?').get(expedition.id);
+        title = COALESCE(${title || null}, title),
+        cover_image = COALESCE(${cover_image || null}, cover_image),
+        base_price = COALESCE(${base_price || null}, base_price),
+        difficulty = COALESCE(${difficulty || null}, difficulty),
+        start_date = COALESCE(${start_date || null}, start_date),
+        end_date = COALESCE(${end_date || null}, end_date),
+        updated_at = ${now}
+      WHERE id = ${expedition.id}
+    `;
+    const [updated] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expedition.id}`;
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -239,16 +237,14 @@ router.put('/:id', auth, (req, res) => {
 });
 
 // POST /api/expeditions/:id/order — 用户下单
-router.post('/:id/order', orderLimiter, auth, (req, res) => {
+router.post('/:id/order', orderLimiter, auth, async (req, res) => {
   try {
-    const expedition = db.prepare("SELECT * FROM expeditions WHERE id = ? AND status = 'published'")
-      .get(req.params.id);
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId} AND status = 'published'`;
     if (!expedition) return res.status(404).json({ error: '远征不存在或暂未开放报名' });
     const { participants = 1, selected_addons, contact_name, contact_phone, emergency_contact, emergency_phone, notes } = req.body;
-    // 计算价格
     let subtotal = expedition.base_price * participants;
     let discount = 0;
-    // 团队折扣
     if (expedition.group_discount) {
       try {
         const gd = typeof expedition.group_discount === 'string' ? JSON.parse(expedition.group_discount) : expedition.group_discount;
@@ -262,20 +258,18 @@ router.post('/:id/order', orderLimiter, auth, (req, res) => {
     const publisher_income = total - platform_fee;
     const order_no = 'EX' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
     const now = new Date().toISOString();
-    const result = db.prepare(`
+    const addonsStr = selected_addons ? JSON.stringify(selected_addons) : null;
+    await prisma.$executeRaw`
       INSERT INTO expedition_orders (
         order_no, expedition_id, user_id, participants, selected_addons,
         subtotal, discount, total, platform_fee, publisher_income,
         status, contact_name, contact_phone, emergency_contact, emergency_phone, notes, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?, ?, ?, ?, ?)
-    `).run(
-      order_no, expedition.id, req.user.id, participants,
-      selected_addons ? JSON.stringify(selected_addons) : null,
-      subtotal, discount, total, platform_fee, publisher_income,
-      contact_name || null, contact_phone || null,
-      emergency_contact || null, emergency_phone || null, notes || null, now
-    );
-    const order = db.prepare('SELECT * FROM expedition_orders WHERE id = ?').get(result.lastInsertRowid);
+      ) VALUES (${order_no}, ${expedition.id}, ${req.user.id}, ${participants}, ${addonsStr},
+        ${subtotal}, ${discount}, ${total}, ${platform_fee}, ${publisher_income},
+        'pending_payment', ${contact_name || null}, ${contact_phone || null},
+        ${emergency_contact || null}, ${emergency_phone || null}, ${notes || null}, ${now})
+    `;
+    const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = last_insert_rowid()`;
     res.json(order);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -283,13 +277,12 @@ router.post('/:id/order', orderLimiter, auth, (req, res) => {
 });
 
 // GET /api/expeditions/:id/export.gpx — 导出攀登轨迹为 GPX 文件
-router.get('/:id/export.gpx', (req, res) => {
+router.get('/:id/export.gpx', async (req, res) => {
   try {
-    const expedition = db.prepare('SELECT * FROM expeditions WHERE id = ? AND status = ?').get(req.params.id, 'published');
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId} AND status = 'published'`;
     if (!expedition) return res.status(404).json({ error: '活动不存在' });
-    const moments = db.prepare(
-      'SELECT lat, lng, altitude, recorded_at FROM expedition_moments WHERE expedition_id = ? AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY recorded_at ASC'
-    ).all(req.params.id);
+    const moments = await prisma.$queryRaw`SELECT lat, lng, altitude, recorded_at FROM expedition_moments WHERE expedition_id = ${expId} AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY recorded_at ASC`;
 
     const trkpts = moments.map(m => {
       const ele = m.altitude ? `<ele>${m.altitude}</ele>` : '';
@@ -320,11 +313,10 @@ ${trkpts}
 });
 
 // GET /api/expeditions/:id/moments — 获取攀登时刻轨迹点（用于地图可视化）
-router.get('/:id/moments', (req, res) => {
+router.get('/:id/moments', async (req, res) => {
   try {
-    const moments = db.prepare(
-      'SELECT id, lat, lng, altitude, type, media_url, content, recorded_at FROM expedition_moments WHERE expedition_id = ? ORDER BY recorded_at ASC'
-    ).all(req.params.id);
+    const expId = parseInt(req.params.id);
+    const moments = await prisma.$queryRaw`SELECT id, lat, lng, altitude, type, media_url, content, recorded_at FROM expedition_moments WHERE expedition_id = ${expId} ORDER BY recorded_at ASC`;
     res.json(moments);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

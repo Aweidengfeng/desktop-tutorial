@@ -7,7 +7,9 @@
 'use strict';
 
 // ── 测试前设置环境变量（必须在 require app 之前）──────────────────────────────
-process.env.DATABASE_PATH   = ':memory:';
+const testDbPath = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
+process.env.DATABASE_PATH   = testDbPath;
+process.env.DATABASE_URL    = process.env.DATABASE_URL || `file:${testDbPath}`;
 process.env.JWT_SECRET      = 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD  = 'test-admin-password';
 process.env.ADMIN_USERNAME  = 'admin';
@@ -362,7 +364,7 @@ describe('7. 审核流转 /api/admin/guide-applications + club-applications', ()
     expect(res.body.success).toBe(true);
 
     const updated = db.prepare('SELECT status FROM guide_applications WHERE id = ?').get(app_rec.id);
-    expect(updated.status).toBe('approved');
+    expect(updated.status).toBe('approved_pending_payment');
   });
 
   test('向导申请 action=reject → status=rejected，note 写入', async () => {
@@ -397,7 +399,7 @@ describe('7. 审核流转 /api/admin/guide-applications + club-applications', ()
       .send({ action: 'approve' });
     expect(res.status).toBe(200);
     const updated = db.prepare('SELECT status FROM club_applications WHERE id = ?').get(app_rec.id);
-    expect(updated.status).toBe('approved');
+    expect(updated.status).toBe('approved_pending_payment');
   });
 
   test('非管理员 → 403', async () => {

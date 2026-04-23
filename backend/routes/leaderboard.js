@@ -1,15 +1,71 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const prisma = require('../db/prisma');
+const rateLimit = require('express-rate-limit');
+
+const leaderboardLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+
+function normalizeLeader(l) {
+  return {
+    ...l,
+    id: typeof l.id === 'bigint' ? Number(l.id) : l.id,
+    summit_count: Number(l.summit_count),
+    max_elevation: Number(l.max_elevation),
+    total_distance: l.total_distance !== undefined ? Number(l.total_distance) : undefined,
+  };
+}
 
 // GET /api/leaderboard — 多维度攀登榜单
-// 查询参数：
-//   sort=count|elevation|distance（默认 count）
-//   period=month|week|year|all（默认 month）
-//   month=YYYY-MM（period=month 时生效，默认本月）
-//   peak_type=8000ers|continental|world|alpine（可选，按峰种过滤）
-//   scope=user|club（默认 user；scope=club 时按俱乐部汇总）
-router.get('/', (req, res) => {
+/**
+ * @swagger
+ * /api/leaderboard:
+ *   get:
+ *     tags: [排行榜]
+ *     summary: 攀登排行榜
+ *     description: 支持多维度、多时间段排名，可按用户或俱乐部聚合
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [count, elevation, distance]
+ *           default: count
+ *         description: 排序维度
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year, all]
+ *           default: month
+ *         description: 时间范围
+ *       - in: query
+ *         name: scope
+ *         schema:
+ *           type: string
+ *           enum: [user, club]
+ *           default: user
+ *         description: 聚合维度
+ *       - in: query
+ *         name: peak_type
+ *         schema: { type: string }
+ *         description: 山峰类型过滤
+ *     responses:
+ *       200:
+ *         description: 排行榜数组
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   rank: { type: integer }
+ *                   user_id: { type: integer }
+ *                   username: { type: string }
+ *                   count: { type: integer }
+ */
+router.get('/', leaderboardLimiter, async (req, res) => {
   try {
     const { sort = 'count', period = 'month', month, peak_type, scope = 'user' } = req.query;
 
@@ -26,7 +82,6 @@ router.get('/', (req, res) => {
     let timeWhere = '';
     const params = [];
     if (period === 'week') {
-      // 本周（周一~今天）
       timeWhere = "AND date(t.date) >= date('now', 'weekday 0', '-6 days')";
     } else if (period === 'year') {
       timeWhere = "AND strftime('%Y', t.date) = strftime('%Y', 'now')";
@@ -54,16 +109,14 @@ router.get('/', (req, res) => {
       params.push(peakTypeMap[peak_type], peakTypeMap[peak_type]);
     }
 
-    // 反作弊过滤：排除 flagged 和 reward_granted=0 的轨迹
     const antiCheatWhere = `
       AND COALESCE(t.flagged, 0) = 0
       AND COALESCE(t.reward_granted, 1) = 1
     `;
 
-    let leaders;
+    let rawLeaders;
     if (scope === 'club') {
-      // 俱乐部维度：按 club_members 汇总
-      leaders = db.prepare(`
+      const sql = `
         SELECT c.id, c.name, c.cover as avatar, c.specialty as level,
                COUNT(t.id) as summit_count,
                MAX(COALESCE(t.max_elevation, t.elevation, 0)) as max_elevation,
@@ -80,10 +133,10 @@ router.get('/', (req, res) => {
         GROUP BY c.id
         ORDER BY ${sortField} DESC
         LIMIT 20
-      `).all(...params);
+      `;
+      rawLeaders = await prisma.$queryRawUnsafe(sql, ...params);
     } else {
-      // 用户维度（默认）
-      leaders = db.prepare(`
+      const sql = `
         SELECT u.id, u.name, u.avatar, u.level,
                COUNT(t.id) as summit_count,
                MAX(COALESCE(t.max_elevation, t.elevation, 0)) as max_elevation,
@@ -99,9 +152,11 @@ router.get('/', (req, res) => {
         GROUP BY u.id
         ORDER BY ${sortField} DESC
         LIMIT 20
-      `).all(...params);
+      `;
+      rawLeaders = await prisma.$queryRawUnsafe(sql, ...params);
     }
 
+    const leaders = rawLeaders.map(normalizeLeader);
     const targetMonth = (period === 'month') ? (month || new Date().toISOString().slice(0, 7)) : null;
     res.json({ month: targetMonth, period, sort: sortKey, scope, peak_type: peak_type || null, leaders });
   } catch (e) {
@@ -110,10 +165,10 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/leaderboard/monthly — 兼容旧版月榜（只保留一份）
-router.get('/monthly', (req, res) => {
+router.get('/monthly', leaderboardLimiter, async (req, res) => {
   try {
     const targetMonth = new Date().toISOString().slice(0, 7);
-    const leaders = db.prepare(`
+    const rawLeaders = await prisma.$queryRawUnsafe(`
       SELECT u.id, u.name, u.avatar, u.level,
              COUNT(t.id) as summit_count,
              MAX(COALESCE(t.max_elevation, t.elevation, 0)) as max_elevation,
@@ -126,7 +181,13 @@ router.get('/monthly', (req, res) => {
       GROUP BY u.id
       ORDER BY COUNT(t.id) DESC
       LIMIT 10
-    `).all(targetMonth);
+    `, targetMonth);
+    const leaders = rawLeaders.map(l => ({
+      ...l,
+      id: typeof l.id === 'bigint' ? Number(l.id) : l.id,
+      summit_count: Number(l.summit_count),
+      max_elevation: Number(l.max_elevation),
+    }));
     res.json(leaders);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

@@ -118,9 +118,10 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
     let result = html
       .replaceAll('YOUR_AMAP_KEY', amapKey)
       .replaceAll('YOUR_AMAP_SECURITY_CODE', amapSecurityCode);
-    // 注入 SENTRY_DSN 到前端
+    // 注入 SENTRY_DSN 和 API_BASE 到前端
     const sentryDsn = process.env.SENTRY_DSN || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const apiBase = process.env.API_BASE || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}</script>`;
     result = result.replace('</head>', sentryScript + '\n</head>');
     // 若 Key 或安全密钥未配置，注入提示脚本
     if (!amapKey || !amapSecurityCode) {
@@ -266,9 +267,47 @@ app.get('/investor', htmlPageLimiter, (req, res) => {
 const pkgVersion = (() => {
   try { return require('../package.json').version; } catch (e) { return '1.0.0'; }
 })();
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     tags: [健康]
+ *     summary: 服务健康检查
+ *     description: 返回服务状态、运行时间和版本号
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: 服务正常
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: ok }
+ *                 uptime: { type: number, description: 运行时间（秒）}
+ *                 version: { type: string }
+ */
 app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), version: pkgVersion });
 });
+
+// ── OpenAPI 文档（开发和测试环境下开放）──────────────────────────────
+if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
+  const swaggerUi = require('swagger-ui-express');
+  const swaggerSpec = require('./swagger');
+  const swaggerLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api/docs', swaggerLimiter, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get('/api/docs.json', swaggerLimiter, (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(swaggerSpec);
+  });
+  console.log('📖 API 文档已启用: /api/docs');
+}
 
 // 根路径
 app.get('/', (req, res) => {

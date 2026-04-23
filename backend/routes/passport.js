@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 
 const passportLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -15,33 +15,31 @@ const passportLimiter = rateLimit({
 });
 
 // GET /api/passport/verify/:uuid — 护照验证（公开接口）
-router.get('/verify/:uuid', (req, res) => {
+router.get('/verify/:uuid', async (req, res) => {
   try {
-    const user = db.prepare("SELECT id, name, avatar FROM users WHERE passport_uuid = ?").get(req.params.uuid);
+    const uuid = req.params.uuid;
+    const [user] = await prisma.$queryRaw`SELECT id, name, avatar FROM users WHERE passport_uuid = ${uuid}`;
     if (!user) return res.status(404).json({ valid: false, error: '护照不存在或已失效' });
-    const completedCount = db.prepare(
-      "SELECT COUNT(*) as c FROM user_expeditions_log WHERE user_id = ? AND status IN ('completed','summited')"
-    ).get(user.id);
-    res.json({ valid: true, name: user.name, completedExpeditions: completedCount.c });
+    const [completedCount] = await prisma.$queryRaw`SELECT COUNT(*) as c FROM user_expeditions_log WHERE user_id = ${user.id} AND status IN ('completed','summited')`;
+    res.json({ valid: true, name: user.name, completedExpeditions: Number(completedCount.c) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // GET /api/passport/my — 获取当前用户护照元数据（需登录）
-router.get('/my', auth, (req, res) => {
+router.get('/my', auth, async (req, res) => {
   try {
-    const user = db.prepare('SELECT id, name, avatar, passport_uuid FROM users WHERE id = ?').get(req.user.id);
-    const completed = db.prepare(
-      "SELECT * FROM user_expeditions_log WHERE user_id = ? AND status IN ('completed','summited') ORDER BY ended_at DESC"
-    ).all(req.user.id);
+    const userId = req.user.id;
+    const [user] = await prisma.$queryRaw`SELECT id, name, avatar, passport_uuid FROM users WHERE id = ${userId}`;
+    const completed = await prisma.$queryRaw`SELECT * FROM user_expeditions_log WHERE user_id = ${userId} AND status IN ('completed','summited') ORDER BY ended_at DESC`;
     if (!completed.length) {
       return res.status(403).json({ error: '完成至少一次攀登才能生成电子护照' });
     }
     let uuid = user.passport_uuid;
     if (!uuid) {
       uuid = crypto.randomUUID();
-      try { db.prepare('UPDATE users SET passport_uuid = ? WHERE id = ?').run(uuid, req.user.id); } catch(e) {}
+      try { await prisma.$executeRaw`UPDATE users SET passport_uuid = ${uuid} WHERE id = ${userId}`; } catch(e) {}
     }
     res.json({
       uuid,
@@ -56,35 +54,34 @@ router.get('/my', auth, (req, res) => {
 });
 
 // GET /api/user/:id/passport.pdf — 下载电子护照（需登录，只能下载自己的护照）
-router.get('/:id/passport.pdf', passportLimiter, auth, (req, res) => {
+router.get('/:id/passport.pdf', passportLimiter, auth, async (req, res) => {
   const targetId = parseInt(req.params.id, 10);
   if (targetId !== req.user.id) {
     return res.status(403).json({ error: '只能下载自己的电子护照' });
   }
   try {
-    const user = db.prepare('SELECT id, name, avatar, passport_uuid, created_at FROM users WHERE id = ?').get(req.user.id);
+    const userId = req.user.id;
+    const [user] = await prisma.$queryRaw`SELECT id, name, avatar, passport_uuid, created_at FROM users WHERE id = ${userId}`;
     if (!user) return res.status(404).json({ error: '用户不存在' });
 
     // Try to get completed expeditions from multiple possible tables
     let completed = [];
     try {
-      completed = db.prepare(
-        "SELECT uel.*, p.name as peak_name_db, p.altitude as peak_altitude FROM user_expeditions_log uel LEFT JOIN peaks p ON p.name = uel.peak_name WHERE uel.user_id = ? AND uel.status IN ('completed','summited') ORDER BY uel.ended_at DESC"
-      ).all(req.user.id);
+      completed = await prisma.$queryRaw`SELECT uel.*, p.name as peak_name_db, p.altitude as peak_altitude FROM user_expeditions_log uel LEFT JOIN peaks p ON p.name = uel.peak_name WHERE uel.user_id = ${userId} AND uel.status IN ('completed','summited') ORDER BY uel.ended_at DESC`;
     } catch(e) {}
 
     // Fallback: use expedition_orders + tracks
     if (!completed.length) {
       let expOrders = [];
       try {
-        expOrders = db.prepare(`
+        expOrders = await prisma.$queryRaw`
           SELECT eo.*, e.title as peak_name, p.altitude as peak_altitude, p.name as peak_name_db
           FROM expedition_orders eo
           LEFT JOIN expeditions e ON eo.expedition_id = e.id
           LEFT JOIN peaks p ON e.peak_id = p.id
-          WHERE eo.user_id = ? AND eo.status IN ('completed','paid','confirmed')
+          WHERE eo.user_id = ${userId} AND eo.status IN ('completed','paid','confirmed')
           ORDER BY eo.created_at DESC
-        `).all(req.user.id);
+        `;
       } catch(e) {}
       completed.push(...expOrders.map(o => ({ ...o, ended_at: o.created_at, summited: 0 })));
     }
@@ -92,7 +89,7 @@ router.get('/:id/passport.pdf', passportLimiter, auth, (req, res) => {
     // Fallback: use tracks
     let tracks = [];
     try {
-      tracks = db.prepare('SELECT * FROM tracks WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+      tracks = await prisma.$queryRaw`SELECT * FROM tracks WHERE user_id = ${userId} ORDER BY created_at DESC`;
     } catch(e) {}
 
     if (!completed.length && !tracks.length) {
@@ -114,7 +111,7 @@ router.get('/:id/passport.pdf', passportLimiter, auth, (req, res) => {
     let uuid = user.passport_uuid;
     if (!uuid) {
       uuid = crypto.randomUUID();
-      try { db.prepare('UPDATE users SET passport_uuid = ? WHERE id = ?').run(uuid, req.user.id); } catch(e) {}
+      try { await prisma.$executeRaw`UPDATE users SET passport_uuid = ${uuid} WHERE id = ${userId}`; } catch(e) {}
     }
 
     const totalGain = completed.reduce((s, e) => s + (e.max_altitude || 0), 0);

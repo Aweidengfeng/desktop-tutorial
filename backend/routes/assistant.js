@@ -3,7 +3,7 @@ const router = express.Router();
 const https = require('https');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 
 const assistantLimiter = rateLimit({ windowMs: 60*1000, max: 10 });
 
@@ -36,13 +36,13 @@ router.post('/chat', assistantLimiter, auth, async (req, res) => {
 
     if (context?.peakId) {
       try {
-        const peak = db.prepare('SELECT name, altitude, difficulty, description FROM peaks WHERE id = ?').get(context.peakId);
+        const peak = (await prisma.$queryRaw`SELECT name, altitude, difficulty, description FROM peaks WHERE id = ${context.peakId}`)[0];
         if (peak) systemPrompt += `\n当前山峰: ${peak.name} (${peak.altitude}m, ${peak.difficulty})`;
       } catch(e) {}
     }
 
     try {
-      const tracks = db.prepare('SELECT name, peak_name, distance_km, elevation_gain FROM tracks WHERE user_id = ? ORDER BY created_at DESC LIMIT 3').all(req.user.id);
+      const tracks = await prisma.$queryRaw`SELECT name, peak_name, distance_km, elevation_gain FROM tracks WHERE user_id = ${req.user.id} ORDER BY created_at DESC LIMIT 3`;
       if (tracks.length > 0) {
         systemPrompt += '\n用户近期轨迹: ' + tracks.map(t => `${t.name}(${t.peak_name},${t.distance_km}km)`).join(', ');
       }

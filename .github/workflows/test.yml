@@ -35,6 +35,10 @@ jobs:
       - name: Install backend dependencies
         run: cd backend && npm install
 
+      # ── 生成 Prisma Client ────────────────────────────────────────────────────
+      - name: Generate Prisma Client
+        run: DATABASE_URL="file:/tmp/ci.db" npx prisma generate --schema=backend/prisma/schema.prisma
+
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -51,6 +55,7 @@ jobs:
           PORT: 8080
           JWT_SECRET: ci_test_secret_not_for_production
           ADMIN_PASSWORD: ci_test_admin_password
+          API_BASE: http://localhost:8080
 
       # ── 等待服务器就绪 ────────────────────────────────────────────────────
       - name: Wait for backend to be ready

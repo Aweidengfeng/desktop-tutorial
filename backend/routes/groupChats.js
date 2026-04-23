@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const moderation = require('../utils/moderation');
@@ -13,55 +13,49 @@ const groupMsgLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-/**
- * GET /api/group-chats — 获取当前用户所在的所有群聊
- */
-router.get('/', auth, (req, res) => {
+// GET / - get user's group chats
+router.get('/', auth, async (req, res) => {
   try {
-    const chats = db.prepare(`
+    const chats = await prisma.$queryRaw`
       SELECT gc.id, gc.team_id as teamId, gc.name, gc.avatar, gc.created_at as createdAt,
         (SELECT gm.content FROM group_messages gm WHERE gm.chat_id = gc.id ORDER BY gm.created_at DESC LIMIT 1) as lastMsg,
         (SELECT gm.created_at FROM group_messages gm WHERE gm.chat_id = gc.id ORDER BY gm.created_at DESC LIMIT 1) as lastMsgAt
       FROM group_chats gc
       JOIN group_chat_members gcm ON gcm.chat_id = gc.id
-      WHERE gcm.user_id = ?
+      WHERE gcm.user_id = ${req.user.id}
       ORDER BY lastMsgAt DESC, gc.created_at DESC
-    `).all(req.user.id);
+    `;
     res.json(chats);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
-/**
- * GET /api/group-chats/:id — 群聊详情（包含成员列表）
- */
-router.get('/:id', auth, (req, res) => {
+// GET /:id - group chat details
+router.get('/:id', auth, async (req, res) => {
   try {
-    const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const member = (await prisma.$queryRaw`SELECT id FROM group_chat_members WHERE chat_id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!member) return res.status(403).json({ error: '您不是该群聊成员' });
-    const chat = db.prepare('SELECT id, team_id as teamId, name, avatar, created_at as createdAt FROM group_chats WHERE id = ?').get(req.params.id);
+    const chat = (await prisma.$queryRaw`SELECT id, team_id as teamId, name, avatar, created_at as createdAt FROM group_chats WHERE id = ${Number(req.params.id)}`)[0];
     if (!chat) return res.status(404).json({ error: '群聊不存在' });
-    const members = db.prepare(`
+    const members = await prisma.$queryRaw`
       SELECT gcm.user_id as userId, gcm.role, gcm.joined_at as joinedAt,
              u.name, u.avatar
       FROM group_chat_members gcm
       JOIN users u ON u.id = gcm.user_id
-      WHERE gcm.chat_id = ?
+      WHERE gcm.chat_id = ${Number(req.params.id)}
       ORDER BY gcm.joined_at ASC
-    `).all(req.params.id);
+    `;
     res.json({ ...chat, members });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
-/**
- * GET /api/group-chats/:id/messages — 获取群聊消息（分页）
- */
-router.get('/:id/messages', auth, (req, res) => {
+// GET /:id/messages - get messages with pagination
+router.get('/:id/messages', auth, async (req, res) => {
   try {
-    const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const member = (await prisma.$queryRaw`SELECT id FROM group_chat_members WHERE chat_id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!member) return res.status(403).json({ error: '您不是该群聊成员' });
     const { before, limit = 50 } = req.query;
     let sql = `
@@ -71,15 +65,14 @@ router.get('/:id/messages', auth, (req, res) => {
       JOIN users u ON u.id = gm.sender_id
       WHERE gm.chat_id = ?
     `;
-    const params = [req.params.id];
+    const params = [Number(req.params.id)];
     if (before) {
       sql += ' AND gm.id < ?';
       params.push(parseInt(before));
     }
     sql += ' ORDER BY gm.created_at DESC LIMIT ?';
     params.push(Math.min(parseInt(limit), 100));
-    const msgs = db.prepare(sql).all(...params);
-    // Return in chronological order
+    const msgs = await prisma.$queryRawUnsafe(sql, ...params);
     const parsed = msgs.reverse().map(m => ({
       ...m,
       images: m.images ? JSON.parse(m.images) : [],
@@ -90,12 +83,10 @@ router.get('/:id/messages', auth, (req, res) => {
   }
 });
 
-/**
- * POST /api/group-chats/:id/messages — 发送群聊消息（需要JWT，限流）
- */
-router.post('/:id/messages', groupMsgLimiter, auth, (req, res) => {
+// POST /:id/messages - send group message
+router.post('/:id/messages', groupMsgLimiter, auth, async (req, res) => {
   try {
-    const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const member = (await prisma.$queryRaw`SELECT id FROM group_chat_members WHERE chat_id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!member) return res.status(403).json({ error: '您不是该群聊成员' });
     const { content, type, images } = req.body;
     const imagesArr = Array.isArray(images) ? images : [];
@@ -106,13 +97,15 @@ router.post('/:id/messages', groupMsgLimiter, auth, (req, res) => {
     }
     const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
     const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
-    const result = db.prepare(`
-      INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (?, ?, ?, ?, ?)
-    `).run(req.params.id, req.user.id, content || '', msgType, imagesStr);
-    const user = db.prepare('SELECT name, avatar FROM users WHERE id = ?').get(req.user.id);
-    const msg = db.prepare(`
-      SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ?
-    `).get(result.lastInsertRowid);
+    await prisma.$executeRaw`
+      INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (${Number(req.params.id)}, ${req.user.id}, ${content || ''}, ${msgType}, ${imagesStr})
+    `;
+    const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
+    const insertedId = Number(idRow.id);
+    const user = (await prisma.$queryRaw`SELECT name, avatar FROM users WHERE id = ${req.user.id}`)[0];
+    const msg = (await prisma.$queryRaw`
+      SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ${insertedId}
+    `)[0];
     msg.images = msg.images ? JSON.parse(msg.images) : [];
     msg.senderName = user ? user.name : '';
     msg.senderAvatar = user ? user.avatar : '';
@@ -122,23 +115,21 @@ router.post('/:id/messages', groupMsgLimiter, auth, (req, res) => {
   }
 });
 
-/**
- * GET /api/group-chats/:id/messages/poll?after=<lastMsgId> — 长轮询获取新消息
- */
-router.get('/:id/messages/poll', auth, (req, res) => {
+// GET /:id/messages/poll
+router.get('/:id/messages/poll', auth, async (req, res) => {
   try {
-    const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(req.params.id, req.user.id);
+    const member = (await prisma.$queryRaw`SELECT id FROM group_chat_members WHERE chat_id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!member) return res.status(403).json({ error: '您不是该群聊成员' });
     const after = parseInt(req.query.after) || 0;
-    const msgs = db.prepare(`
+    const msgs = await prisma.$queryRaw`
       SELECT gm.id, gm.sender_id as senderId, gm.content, gm.type, gm.images, gm.created_at as createdAt,
              u.name as senderName, u.avatar as senderAvatar
       FROM group_messages gm
       JOIN users u ON u.id = gm.sender_id
-      WHERE gm.chat_id = ? AND gm.id > ?
+      WHERE gm.chat_id = ${Number(req.params.id)} AND gm.id > ${after}
       ORDER BY gm.created_at ASC
       LIMIT 50
-    `).all(req.params.id, after);
+    `;
     const parsed = msgs.map(m => ({ ...m, images: m.images ? JSON.parse(m.images) : [] }));
     res.json(parsed);
   } catch (e) {

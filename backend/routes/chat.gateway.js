@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const { checkText } = require('../utils/moderation');
 
 const SOS_KEYWORDS = ['救命', 'SOS', 'sos', '遇难', '求救', '紧急', '危险', '失联'];
@@ -38,7 +38,7 @@ function initChatGateway(server) {
       socket.leave(`conv:${conv_id}`);
     });
 
-    socket.on('chat:message', ({ conv_id, content, type = 'text', reply_to_id, content_json }) => {
+    socket.on('chat:message', async ({ conv_id, content, type = 'text', reply_to_id, content_json }) => {
       if (!conv_id || !content) return;
       const check = checkText(content);
       if (!check.ok) {
@@ -47,12 +47,10 @@ function initChatGateway(server) {
       }
       const isSOS = SOS_KEYWORDS.some(kw => content.includes(kw));
       try {
-        const result = db.prepare(`
-          INSERT INTO messages (conversation_id, sender_id, content, type, reply_to_id, content_json)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(conv_id, uid, content, type, reply_to_id || null, content_json ? JSON.stringify(content_json) : null);
-        const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid);
-        db.prepare('UPDATE conversations SET updated_at = CURRENT_TIMESTAMP, last_msg_at = CURRENT_TIMESTAMP WHERE id = ?').run(conv_id);
+        await prisma.$executeRaw`INSERT INTO messages (conversation_id, sender_id, content, type, reply_to_id, content_json) VALUES (${conv_id}, ${uid}, ${content}, ${type}, ${reply_to_id || null}, ${content_json ? JSON.stringify(content_json) : null})`;
+        const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
+        const msg = (await prisma.$queryRaw`SELECT * FROM messages WHERE id = ${Number(idRow.id)}`)[0];
+        await prisma.$executeRaw`UPDATE conversations SET updated_at = CURRENT_TIMESTAMP, last_msg_at = CURRENT_TIMESTAMP WHERE id = ${conv_id}`;
         io.to(`conv:${conv_id}`).emit('chat:message', msg);
         if (isSOS) {
           io.emit('sos:alert', { userId: uid, conv_id, content, msg_id: msg.id });
@@ -67,35 +65,32 @@ function initChatGateway(server) {
       socket.to(`conv:${conv_id}`).emit('chat:typing', { userId: uid, is_typing });
     });
 
-    socket.on('chat:read', ({ conv_id, msg_id }) => {
+    socket.on('chat:read', async ({ conv_id, msg_id }) => {
       if (!conv_id || !msg_id) return;
       try {
-        db.prepare('INSERT OR IGNORE INTO message_reads (msg_id, user_id) VALUES (?, ?)').run(msg_id, uid);
+        await prisma.$executeRaw`INSERT OR IGNORE INTO message_reads (msg_id, user_id) VALUES (${msg_id}, ${uid})`;
         try {
-          db.prepare('UPDATE conversation_members SET last_read_msg_id = ? WHERE conv_id = ? AND user_id = ?').run(msg_id, conv_id, uid);
+          await prisma.$executeRaw`UPDATE conversation_members SET last_read_msg_id = ${msg_id} WHERE conv_id = ${conv_id} AND user_id = ${uid}`;
         } catch(e) {}
         socket.to(`conv:${conv_id}`).emit('chat:read', { userId: uid, msg_id });
       } catch (e) {}
     });
 
-    socket.on('chat:recall', ({ msg_id }) => {
+    socket.on('chat:recall', async ({ msg_id }) => {
       if (!msg_id) return;
       try {
-        const msg = db.prepare('SELECT * FROM messages WHERE id = ? AND sender_id = ?').get(msg_id, uid);
+        const msg = (await prisma.$queryRaw`SELECT * FROM messages WHERE id = ${msg_id} AND sender_id = ${uid}`)[0];
         if (!msg) { socket.emit('chat:error', { error: 'not_found' }); return; }
-        db.prepare('UPDATE messages SET recalled_at = CURRENT_TIMESTAMP WHERE id = ?').run(msg_id);
+        await prisma.$executeRaw`UPDATE messages SET recalled_at = CURRENT_TIMESTAMP WHERE id = ${msg_id}`;
         io.to(`conv:${msg.conversation_id}`).emit('chat:recall', { msg_id });
       } catch (e) {
         socket.emit('chat:error', { error: 'db_error' });
       }
     });
 
-    // ── 群聊 ──────────────────────────────────────────────────────────────
-
-    socket.on('group:join', ({ chat_id }) => {
+    socket.on('group:join', async ({ chat_id }) => {
       if (!chat_id) return;
-      // 验证成员身份
-      const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(chat_id, uid);
+      const member = (await prisma.$queryRaw`SELECT id FROM group_chat_members WHERE chat_id = ${chat_id} AND user_id = ${uid}`)[0];
       if (!member) { socket.emit('chat:error', { error: 'not_member' }); return; }
       socket.join(`group:${chat_id}`);
     });
@@ -105,12 +100,12 @@ function initChatGateway(server) {
       socket.leave(`group:${chat_id}`);
     });
 
-    socket.on('group:message', ({ chat_id, content, type = 'text', images }) => {
+    socket.on('group:message', async ({ chat_id, content, type = 'text', images }) => {
       if (!chat_id || (!content && (!images || images.length === 0))) {
         socket.emit('chat:error', { error: 'empty_message' });
         return;
       }
-      const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(chat_id, uid);
+      const member = (await prisma.$queryRaw`SELECT id FROM group_chat_members WHERE chat_id = ${chat_id} AND user_id = ${uid}`)[0];
       if (!member) { socket.emit('chat:error', { error: 'not_member' }); return; }
       if (content) {
         const check = checkText(content);
@@ -120,11 +115,10 @@ function initChatGateway(server) {
         const imagesArr = Array.isArray(images) ? images : [];
         const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
         const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
-        const result = db.prepare(
-          'INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (?, ?, ?, ?, ?)'
-        ).run(chat_id, uid, content || '', msgType, imagesStr);
-        const user = db.prepare('SELECT name, avatar FROM users WHERE id = ?').get(uid);
-        const msg = db.prepare('SELECT id, sender_id, content, type, images, created_at FROM group_messages WHERE id = ?').get(result.lastInsertRowid);
+        await prisma.$executeRaw`INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (${chat_id}, ${uid}, ${content || ''}, ${msgType}, ${imagesStr})`;
+        const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
+        const user = (await prisma.$queryRaw`SELECT name, avatar FROM users WHERE id = ${uid}`)[0];
+        const msg = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, created_at FROM group_messages WHERE id = ${Number(idRow.id)}`)[0];
         msg.images = msg.images ? JSON.parse(msg.images) : [];
         msg.senderName = user ? user.name : '';
         msg.senderAvatar = user ? user.avatar : '';

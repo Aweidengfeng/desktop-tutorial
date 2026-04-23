@@ -5,7 +5,10 @@
  */
 
 // 必须在 require 任何后端模块之前设置环境变量
-process.env.DATABASE_PATH   = process.env.DATABASE_PATH   || ':memory:';
+// Prisma 不支持 :memory:，因此使用临时文件同时让 better-sqlite3 和 Prisma 共用同一个数据库文件
+const testDbPath = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
+process.env.DATABASE_PATH   = process.env.DATABASE_PATH   || testDbPath;
+process.env.DATABASE_URL    = process.env.DATABASE_URL    || `file:${testDbPath}`;
 process.env.JWT_SECRET      = process.env.JWT_SECRET      || 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD  = process.env.ADMIN_PASSWORD  || 'test-admin-password';
 process.env.ADMIN_USERNAME  = process.env.ADMIN_USERNAME  || 'admin';
@@ -23,6 +26,9 @@ const { clearDbCache } = require('./db');
  */
 function createApp() {
   clearDbCache();
+
+  // Ensure tables are created by database.js before routes use Prisma
+  require('../../backend/db/database');
 
   const app = express();
   app.use(cors());
@@ -57,10 +63,26 @@ function createApp() {
 
   app.use('/api/offline-expeditions', require('../../backend/routes/offlineExpeditions'));
   app.use('/api/climbing-log',        require('../../backend/routes/climbingLog'));
+  app.use('/api/routes',              require('../../backend/routes/routes'));
   app.use('/api/guide-console',       require('../../backend/routes/guideConsole'));
   app.use('/api/club-console',        require('../../backend/routes/clubConsole'));
   app.use('/api/ai-coach',            require('../../backend/routes/aiCoach'));
   app.use('/api/investor',            require('../../backend/routes/investor'));
+  app.use('/api/profile',             require('../../backend/routes/profile'));
+  app.use('/api/follows',             require('../../backend/routes/follows'));
+  app.use('/api/comments',            require('../../backend/routes/comments'));
+  app.use('/api/banners',             require('../../backend/routes/banners'));
+  app.use('/api/users',               require('../../backend/routes/users'));
+  app.use('/api/user',                require('../../backend/routes/passport'));
+  app.use('/api/passport',            require('../../backend/routes/passport'));
+  app.use('/api/rescue',              require('../../backend/routes/rescue'));
+  app.use('/api/insurance',           require('../../backend/routes/insurance'));
+  app.use('/api/location-share',      require('../../backend/routes/locationShare'));
+  app.use('/api/altitude',            require('../../backend/routes/altitude'));
+  app.use('/api/articles',            require('../../backend/routes/articles'));
+  app.use('/api/orders',              require('../../backend/routes/orders'));
+  app.use('/api/pay',                 require('../../backend/routes/pay'));
+  app.use('/api/upload',              require('../../backend/routes/upload'));
 
   // AI 助手（仅当 ENABLE_ASSISTANT=true 时挂载）
   if (process.env.ENABLE_ASSISTANT === 'true') {

@@ -1,0 +1,1157 @@
+// AlpineLink — Prisma Schema
+// 方案A：全新重建，对应 backend/db/database.js 中的全部核心表
+//
+// 开发/测试：provider = "sqlite"，DATABASE_URL="file:./dev.db"
+// 生产 Railway：将 provider 改为 "postgresql"，DATABASE_URL 指向 Railway Postgres
+//
+// 生成客户端：npx prisma generate
+// 推送到数据库：npx prisma db push
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// 用户与认证
+// ─────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  username     String?  @unique
+  phone        String?  @unique
+  password     String?
+  avatar       String?
+  level        String   @default("初级攀登者")
+  summits      Int      @default(0)
+  expeditions  Int      @default(0)
+  followers    Int      @default(0)
+  following    Int      @default(0)
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  isBanned     Boolean  @default(false) @map("is_banned")
+  wechatOpenid String?  @map("wechat_openid")
+  appleSub     String?  @map("apple_sub")
+  passportUuid String?  @map("passport_uuid")
+  settings     String   @default("{}") // JSON stored as text
+  privacy      String   @default("{}") // JSON stored as text
+  policyVersion   String?  @map("policy_version")
+  policyAgreedAt  DateTime? @map("policy_agreed_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  smsCodes             SmsCode[]
+  posts                Post[]
+  comments             Comment[]
+  commentLikes         CommentLike[]
+  postLikes            Like[]
+  tracks               Track[]
+  gearListings         Gear[]
+  guideApplication     GuideApplication?
+  guide                Guide?
+  clubCreated          Club[]              @relation("ClubCreator")
+  clubMemberships      ClubMember[]
+  clubApplications     ClubApplication[]
+  teamsMemberships     TeamMember[]
+  teamsLed             Team[]              @relation("TeamLeader")
+  conversationsAsUser1 Conversation[]      @relation("ConvUser1")
+  conversationsAsUser2 Conversation[]      @relation("ConvUser2")
+  sentMessages         Message[]
+  bookings             Booking[]
+  orders               Order[]
+  customOrders         CustomOrder[]
+  summitRecords        SummitRecord[]
+  sosRecords           SosRecord[]
+  notifications        Notification[]
+  followersRel         Follow[]            @relation("Following")
+  followingRel         Follow[]            @relation("Follower")
+  favorites            Favorite[]
+  gearChecklists       GearChecklist[]
+  medicalInfo          MedicalInfo?
+  emergencyContacts    EmergencyContact[]
+  articles             Article[]
+  insuranceInquiries   InsuranceInquiry[]
+  expeditionsLog       UserExpeditionLog[]
+  expeditionSubscriptions ExpeditionSubscriber[]
+  smartGearLists       SmartGearList[]
+  coachAssessment      CoachAssessment?
+  userAchievements     UserAchievement[]
+  userSummits          UserSummit[]
+  userExpeditions      UserExpedition[]
+  reviews              Review[]
+  peakSuggestions      PeakSuggestion[]
+  moderationLogs       ModerationLog[]
+  expeditionOrders     ExpeditionOrder[]
+  activityOrders       ActivityOrder[]
+  guideServices        GuideService[]
+
+  @@map("users")
+}
+
+model SmsCode {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  purpose   String   @default("login")
+  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds (matches database.js INTEGER column)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone])
+  @@map("sms_codes")
+}
+
+// ─────────────────────────────────────────
+// 山峰与路线
+// ─────────────────────────────────────────
+
+model Peak {
+  id               Int      @id @default(autoincrement())
+  name             String
+  nameEn           String?  @map("name_en")
+  altitude         Int?
+  country          String?
+  continent        String?
+  difficulty       String?
+  image            String?
+  coverImage       String?  @map("cover_image")
+  type             String?
+  category         String?
+  categories       String?  // JSON array
+  description      String?
+  region           String?
+  bestSeason       String?  @map("best_season")
+  successRate      String?  @map("success_rate")
+  firstAscent      String?  @map("first_ascent")
+  firstAscentYear  Int?     @map("first_ascent_year")
+  firstAscentBy    String?  @map("first_ascent_by")
+  deaths           Int      @default(0)
+  latitude         Float?
+  longitude        Float?
+  routeDetails     String?  @map("routes")  // JSON
+  campsData        String?  @map("camps")   // JSON
+  technicalGrade   String?  @map("technical_grade")
+  technicalNotes   String?  @map("technical_notes")
+  permitRequired   Boolean  @default(false) @map("permit_required")
+  permitFee        String?  @map("permit_fee")
+  annualClimbers   Int      @default(0) @map("annual_climbers")
+  commercialTeams  Int      @default(0) @map("commercial_teams")
+  seasonDetail     String?  @map("season_detail")
+  supplementalOxygen Boolean @default(false) @map("supplemental_oxygen")
+  mainRoute        String?  @map("main_route")
+  operatingCompany String?  @map("operating_company")
+  dataSource       String   @default("内部参考数据") @map("data_source")
+  gallery          String?  // JSON array
+
+  routes          ClimbingRoute[]
+  expeditionsLog  UserExpeditionLog[]
+  smartGearLists  SmartGearList[]
+  peakSuggestions PeakSuggestion[]
+  userSummits     UserSummit[]
+  userExpeditions UserExpedition[]
+  guideExpeditions GuideExpedition[]
+
+  @@map("peaks")
+}
+
+model ClimbingRoute {
+  id          Int      @id @default(autoincrement())
+  peakId      Int      @map("peak_id")
+  name        String
+  difficulty  String?
+  maxAltitude Int?     @map("max_altitude")
+  distance    Float?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  peak              Peak               @relation(fields: [peakId], references: [id], onDelete: Cascade)
+  clubRoutePricings ClubRoutePricing[]
+
+  @@index([peakId])
+  @@map("climbing_routes")
+}
+
+// ─────────────────────────────────────────
+// 动态 / 帖子
+// ─────────────────────────────────────────
+
+model Post {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  authorName   String?  @map("author_name")
+  authorAvatar String?  @map("author_avatar")
+  content      String?
+  image        String?
+  location     String?
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postLikes Like[]
+  postComments Comment[]
+
+  @@index([userId])
+  @@map("posts")
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  postId    Int      @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("likes")
+}
+
+model Comment {
+  id              Int      @id @default(autoincrement())
+  postId          Int      @map("post_id")
+  userId          Int      @map("user_id")
+  authorName      String?  @map("author_name")
+  authorAvatar    String?  @map("author_avatar")
+  content         String
+  parentId        Int?     @map("parent_id")
+  parentCommentId Int?     @map("parent_comment_id")
+  replyToUserId   Int?     @map("reply_to_user_id")
+  replyToUserName String?  @map("reply_to_user_name")
+  likesCount      Int      @default(0) @map("likes")
+  images          String?  // JSON array of image URLs
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  post     Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  Comment[]     @relation("CommentReplies")
+  likes    CommentLike[]
+
+  @@index([postId])
+  @@map("comments")
+}
+
+model CommentLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  commentId Int      @map("comment_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@map("comment_likes")
+}
+
+// ─────────────────────────────────────────
+// 向导
+// ─────────────────────────────────────────
+
+model Guide {
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @unique @map("user_id")
+  name                String?
+  avatar              String?
+  flag                String?
+  nationality         String?
+  rating              Float    @default(5.0)
+  reviewsCount        Int      @default(0) @map("reviews")
+  specialty           String?
+  dayRate             Int?     @map("day_rate")
+  cert                String?
+  languages           String?
+  region              String?
+  status              String   @default("pending")
+  commissionRate      Float    @default(0.15) @map("commission_rate")
+  bio                 String?
+  peaksLed            String?  @map("peaks_led")   // JSON
+  totalExpeditions    Int      @default(0) @map("total_expeditions")
+  coverImage          String?  @map("cover_image")
+  wechat              String?
+  experienceYears     Int      @default(0) @map("experience_years")
+  affiliationType     String   @default("freelance") @map("affiliation_type")
+  affiliationClubId   Int?     @map("affiliation_club_id")
+  affiliationClubName String?  @map("affiliation_club_name")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  expeditions GuideExpedition[]
+  posts       GuidePost[]
+  photos      GuidePhoto[]
+  services    GuideService[]
+
+  @@map("guides")
+}
+
+model GuideApplication {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique @map("user_id")
+  name            String?
+  cert            String?
+  certLevel       String    @default("basic") @map("cert_level")
+  specialty       String?
+  languages       String?
+  dayRate         Int?      @map("day_rate")
+  region          String?
+  regions         String?   // JSON array
+  phone           String?
+  experience      String?
+  isInternational Boolean   @default(false) @map("is_international")
+  nationality     String?
+  idCardUrl       String?   @map("id_card_url")
+  climbingCertUrl String?   @map("climbing_cert_url")
+  insuranceCertUrl String?  @map("insurance_cert_url")
+  healthCertUrl   String?   @map("health_cert_url")
+  passportUrl     String?   @map("passport_url")
+  listingFeePaid  Boolean   @default(false) @map("listing_fee_paid")
+  listingFeePaidAt DateTime? @map("listing_fee_paid_at")
+  status          String    @default("pending")
+  reviewNote      String?   @map("review_note")
+  reviewedBy      Int?      @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  note            String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("guide_applications")
+}
+
+model GuideExpedition {
+  id          Int      @id @default(autoincrement())
+  guideId     Int      @map("guide_id")
+  peakId      Int?     @map("peak_id")
+  peakName    String?  @map("peak_name")
+  date        String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  peak  Peak? @relation(fields: [peakId], references: [id], onDelete: SetNull)
+
+  @@index([guideId])
+  @@map("guide_expeditions")
+}
+
+model GuidePost {
+  id        Int      @id @default(autoincrement())
+  guideId   Int      @map("guide_id")
+  content   String?
+  image     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@map("guide_posts")
+}
+
+model GuidePhoto {
+  id        Int      @id @default(autoincrement())
+  guideId   Int      @map("guide_id")
+  url       String
+  caption   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@map("guide_photos")
+}
+
+model GuideService {
+  id          Int      @id @default(autoincrement())
+  guideId     Int?     @map("guide_id")
+  userId      Int?     @map("user_id")
+  title       String?
+  description String?
+  price       Float?
+  duration    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  guide Guide? @relation(fields: [guideId], references: [id], onDelete: SetNull)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("guide_services")
+}
+
+// ─────────────────────────────────────────
+// 俱乐部
+// ─────────────────────────────────────────
+
+model Club {
+  id             Int      @id @default(autoincrement())
+  name           String
+  description    String?
+  cover          String?
+  specialty      String?
+  region         String?
+  type           String   @default("综合")
+  membersCount   Int      @default(0) @map("members_count")
+  expeditions    Int      @default(0)
+  verified       Boolean  @default(false)
+  founded        String?
+  status         String   @default("active")
+  creatorId      Int?     @map("creator_id")
+  commissionRate Float    @default(0.15) @map("commission_rate")
+  contact        String?
+  wechat         String?
+  website        String?
+  coverImage     String?  @map("cover_image")
+  logo           String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  creator        User?            @relation("ClubCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  members        ClubMember[]
+  applications   ClubApplication[]
+  activities     ClubActivity[]
+  posts          ClubPost[]
+  photos         ClubPhoto[]
+  routePricings  ClubRoutePricing[]
+
+  @@map("clubs")
+}
+
+model ClubMember {
+  id       Int      @id @default(autoincrement())
+  clubId   Int      @map("club_id")
+  userId   Int      @map("user_id")
+  role     String   @default("member")
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+  @@map("club_members")
+}
+
+model ClubApplication {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  clubName     String    @map("club_name")
+  description  String?
+  clubId       Int?      @map("club_id")
+  status       String    @default("pending")
+  certLevel    String    @default("standard") @map("cert_level")
+  listingFeePaid   Boolean   @default(false) @map("listing_fee_paid")
+  listingFeePaidAt DateTime? @map("listing_fee_paid_at")
+  reviewNote   String?   @map("review_note")
+  reviewedBy   Int?      @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at")
+  note         String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club? @relation(fields: [clubId], references: [id], onDelete: SetNull)
+
+  @@map("club_applications")
+}
+
+model ClubActivity {
+  id          Int      @id @default(autoincrement())
+  clubId      Int      @map("club_id")
+  title       String
+  description String?
+  date        String?
+  location    String?
+  maxMembers  Int?     @map("max_members")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@map("club_activities")
+}
+
+model ClubPost {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  content   String?
+  image     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@map("club_posts")
+}
+
+model ClubPhoto {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  url       String
+  caption   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@map("club_photos")
+}
+
+model ClubRoutePricing {
+  id        Int      @id @default(autoincrement())
+  clubId    Int      @map("club_id")
+  routeId   Int      @map("route_id")
+  price     Float
+  currency  String   @default("CNY")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  club  Club          @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  route ClimbingRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@map("club_route_pricing")
+}
+
+// ─────────────────────────────────────────
+// 组队 / 活动
+// ─────────────────────────────────────────
+
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String?
+  peak        String?
+  date        String?
+  spots       Int?
+  totalSpots  Int?     @map("total_spots")
+  level       String?
+  leaderId    Int?     @map("leader_id")
+  description String?
+  status      String   @default("recruiting")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  leader  User?        @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  members TeamMember[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id          Int       @id @default(autoincrement())
+  teamId      Int       @map("team_id")
+  userId      Int       @map("user_id")
+  role        String    @default("member")
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+  approvedAt  DateTime? @map("approved_at")
+  groupChatId Int?      @map("group_chat_id")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+// ─────────────────────────────────────────
+// 聊天 / 消息
+// ─────────────────────────────────────────
+
+model Conversation {
+  id         Int       @id @default(autoincrement())
+  user1Id    Int       @map("user1_id")
+  user2Id    Int       @map("user2_id")
+  type       String    @default("dm")
+  lastMsgAt  DateTime? @map("last_msg_at")
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user1    User      @relation("ConvUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2    User      @relation("ConvUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([user1Id, user2Id])
+  @@map("conversations")
+}
+
+model Message {
+  id             Int      @id @default(autoincrement())
+  conversationId Int      @map("conversation_id")
+  senderId       Int      @map("sender_id")
+  content        String
+  isRead         Boolean  @default(false) @map("is_read")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+// ─────────────────────────────────────────
+// 预约 / 订单
+// ─────────────────────────────────────────
+
+model Booking {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  mountain    String?
+  guideId     Int?     @map("guide_id")
+  guideName   String?  @map("guide_name")
+  date        String?
+  members     Int      @default(1)
+  notes       String?
+  amount      Float    @default(0)
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guide Guide? @relation(fields: [guideId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("bookings")
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  orderNo   String   @unique @map("order_no")
+  amount    Float?
+  method    String?
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+}
+
+model CustomOrder {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  peakName      String   @map("peak_name")
+  preferredDate String?  @map("preferred_date")
+  groupSize     Int      @default(1) @map("group_size")
+  notes         String?
+  contactPhone  String?  @map("contact_phone")
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("custom_orders")
+}
+
+// ─────────────────────────────────────────
+// 远征 / 订单（商业攀登）
+// ─────────────────────────────────────────
+
+model Expedition {
+  id          Int      @id @default(autoincrement())
+  peakName    String?  @map("peak_name")
+  title       String?
+  description String?
+  date        String?
+  price       Float?
+  currency    String   @default("CNY")
+  maxMembers  Int?     @map("max_members")
+  difficulty  String?
+  status      String   @default("open")
+  clubId      Int?     @map("club_id")
+  guideId     Int?     @map("guide_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  orders ExpeditionOrder[]
+
+  @@map("expeditions")
+}
+
+model ExpeditionOrder {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  expeditionId Int      @map("expedition_id")
+  amount       Float?
+  status       String   @default("pending")
+  paymentState String?  @map("payment_state")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expedition Expedition @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("expedition_orders")
+}
+
+model ActivityOrder {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  activityId Int?     @map("activity_id")
+  amount     Float?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_orders")
+}
+
+// ─────────────────────────────────────────
+// 装备
+// ─────────────────────────────────────────
+
+model Gear {
+  id            Int      @id @default(autoincrement())
+  sellerId      Int?     @map("seller_id")
+  name          String?
+  brand         String?
+  price         Float?
+  conditionText String?  @map("condition_text")
+  image         String?
+  description   String?
+  mode          String   @default("buy")
+  category      String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  seller User? @relation(fields: [sellerId], references: [id], onDelete: SetNull)
+
+  @@map("gear")
+}
+
+model GearChecklist {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  itemName  String   @map("item_name")
+  category  String?
+  isReady   Boolean  @default(false) @map("is_ready")
+  notes     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("gear_checklist")
+}
+
+model SmartGearList {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  peakId       Int?     @map("peak_id")
+  peakName     String   @map("peak_name")
+  altitudeTier String?  @map("altitude_tier")
+  season       String?
+  difficulty   String?
+  items        String   // JSON array stored as text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peak Peak? @relation(fields: [peakId], references: [id], onDelete: SetNull)
+
+  @@map("smart_gear_lists")
+}
+
+// ─────────────────────────────────────────
+// 轨迹 / 记录
+// ─────────────────────────────────────────
+
+model Track {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  name        String?
+  date        String?
+  distance    Float?
+  elevation   Int?
+  duration    String?
+  image       String?
+  peakName    String?  @map("peak_name")
+  distanceKm  Float?   @map("distance_km")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tracks")
+}
+
+model SummitRecord {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  name      String?
+  avatar    String?
+  flag      String?
+  peak      String?
+  date      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("summit_records")
+}
+
+// ─────────────────────────────────────────
+// 离线远征日志（新模块）
+// ─────────────────────────────────────────
+
+model UserExpeditionLog {
+  id              Int       @id @default(autoincrement())
+  clientUuid      String    @unique @map("client_uuid")
+  userId          Int       @map("user_id")
+  peakId          Int?      @map("peak_id")
+  peakName        String?   @map("peak_name")
+  status          String    @default("ongoing")
+  startedAt       DateTime  @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  summited        Boolean   @default(false)
+  maxAltitude     Float     @default(0) @map("max_altitude")
+  totalGain       Float     @default(0) @map("total_gain")
+  durationSec     Int       @default(0) @map("duration_sec")
+  coverMediaUrl   String?   @map("cover_media_url")
+  posterUrl       String?   @map("poster_url")
+  totalMoments    Int       @default(0) @map("total_moments")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peak        Peak?                  @relation(fields: [peakId], references: [id], onDelete: SetNull)
+  moments     ExpeditionMoment[]
+  subscribers ExpeditionSubscriber[]
+
+  @@index([userId])
+  @@map("user_expeditions_log")
+}
+
+model ExpeditionMoment {
+  id            Int      @id @default(autoincrement())
+  clientUuid    String   @unique @map("client_uuid")
+  expeditionId  Int      @map("expedition_id")
+  recordedAt    DateTime @map("recorded_at")
+  altitude      Float    @default(0)
+  lat           Float?
+  lng           Float?
+  type          String   @default("text")
+  mediaUrl      String?  @map("media_url")
+  content       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  expedition UserExpeditionLog @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+
+  @@index([expeditionId])
+  @@map("expedition_moments")
+}
+
+model ExpeditionSubscriber {
+  id           Int      @id @default(autoincrement())
+  expeditionId Int      @map("expedition_id")
+  userId       Int      @map("user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  expedition UserExpeditionLog @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expeditionId, userId])
+  @@map("expedition_subscribers")
+}
+
+// ─────────────────────────────────────────
+// SOS / 救援
+// ─────────────────────────────────────────
+
+model SosRecord {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  location  String?
+  peakName  String?  @map("peak_name")
+  message   String?
+  status    String   @default("pending")
+  timestamp DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("sos_records")
+}
+
+model RescueContact {
+  id     Int     @id @default(autoincrement())
+  name   String
+  phone  String?
+  region String?
+  type   String  @default("regional")
+
+  @@map("rescue_contacts")
+}
+
+// ─────────────────────────────────────────
+// 个人信息 / 健康
+// ─────────────────────────────────────────
+
+model MedicalInfo {
+  id          Int    @id @default(autoincrement())
+  userId      Int    @unique @map("user_id")
+  bloodType   String? @map("blood_type")
+  allergies   String?
+  healthNotes String? @map("health_notes")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("medical_info")
+}
+
+model EmergencyContact {
+  id           Int    @id @default(autoincrement())
+  userId       Int    @map("user_id")
+  name         String
+  relationship String?
+  phone        String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
+
+// ─────────────────────────────────────────
+// AI 教练 / 成就
+// ─────────────────────────────────────────
+
+model CoachAssessment {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique @map("user_id")
+  maxAltitude    Int      @default(0) @map("max_altitude")
+  gearSkill      String   @default("beginner") @map("gear_skill")
+  fitness        String   @default("moderate")
+  technicalSkill String   @default("beginner") @map("technical_skill")
+  goalPeak       String?  @map("goal_peak")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coach_assessments")
+}
+
+model UserAchievement {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  achievementId String   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model UserSummit {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  peakId    Int?     @map("peak_id")
+  peakName  String?  @map("peak_name")
+  summitAt  DateTime? @map("summit_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peak Peak? @relation(fields: [peakId], references: [id], onDelete: SetNull)
+
+  @@map("user_summits")
+}
+
+model UserExpedition {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  peakId      Int?     @map("peak_id")
+  peakName    String?  @map("peak_name")
+  startDate   String?  @map("start_date")
+  endDate     String?  @map("end_date")
+  result      String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peak Peak? @relation(fields: [peakId], references: [id], onDelete: SetNull)
+
+  @@map("user_expeditions")
+}
+
+// ─────────────────────────────────────────
+// 保险
+// ─────────────────────────────────────────
+
+model InsurancePlan {
+  id             Int      @id @default(autoincrement())
+  name           String
+  region         String?
+  coverageType   String?  @map("coverage_type")
+  priceCny       Float    @default(0) @map("price_cny")
+  priceUsd       Float    @default(0) @map("price_usd")
+  coverageAmount String?  @map("coverage_amount")
+  description    String?
+  features       String?
+  provider       String?
+  buyUrl         String?  @map("buy_url")
+  isActive       Boolean  @default(true) @map("is_active")
+  sortOrder      Int      @default(99) @map("sort_order")
+
+  inquiries InsuranceInquiry[]
+
+  @@map("insurance_plans")
+}
+
+model InsuranceInquiry {
+  id            Int      @id @default(autoincrement())
+  userId        Int?     @map("user_id")
+  planId        Int?     @map("plan_id")
+  planName      String?  @map("plan_name")
+  name          String
+  phone         String
+  peakName      String?  @map("peak_name")
+  departureDate String?  @map("departure_date")
+  status        String   @default("pending")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  plan InsurancePlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@map("insurance_inquiries")
+}
+
+// ─────────────────────────────────────────
+// 内容 / 文章
+// ─────────────────────────────────────────
+
+model Article {
+  id              Int      @id @default(autoincrement())
+  title           String
+  category        String
+  content         String?
+  readTimeMinutes Int      @default(5) @map("read_time_minutes")
+  coverImage      String?  @map("cover_image")
+  authorId        Int?     @map("author_id")
+  viewCount       Int      @default(0) @map("view_count")
+  likeCount       Int      @default(0) @map("like_count")
+  status          String   @default("published")
+  rejectReason    String?  @map("reject_reason")
+  reviewedAt      DateTime? @map("reviewed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@map("articles")
+}
+
+model Banner {
+  id            Int      @id @default(autoincrement())
+  title         String
+  subtitle      String?
+  imageUrl      String   @map("image_url")
+  linkType      String   @default("none") @map("link_type")
+  linkTarget    String?  @map("link_target")
+  gradientFrom  String   @default("#1e4f60") @map("gradient_from")
+  gradientTo    String   @default("#0f172a") @map("gradient_to")
+  sortOrder     Int      @default(99) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("banners")
+}
+
+// ─────────────────────────────────────────
+// 社交 / 通知
+// ─────────────────────────────────────────
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int      @map("follower_id")
+  followingId Int      @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String?
+  content   String?
+  relatedId Int?     @map("related_id")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String
+  itemId    Int      @map("item_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, itemId])
+  @@map("favorites")
+}
+
+// ─────────────────────────────────────────
+// 评价
+// ─────────────────────────────────────────
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  targetType String   @map("target_type") // "guide" | "club" | "peak"
+  targetId   Int      @map("target_id")
+  rating     Float    @default(5.0)
+  content    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@map("reviews")
+}
+
+// ─────────────────────────────────────────
+// 山峰建议 / 管理
+// ─────────────────────────────────────────
+
+model PeakSuggestion {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  peakId      Int?     @map("peak_id")
+  name        String?
+  nameEn      String?  @map("name_en")
+  altitude    Int?
+  country     String?
+  continent   String?
+  difficulty  String?
+  description String?
+  bestSeason  String?  @map("best_season")
+  routes      String?  // JSON
+  latitude    Float?
+  longitude   Float?
+  image       String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peak Peak? @relation(fields: [peakId], references: [id], onDelete: SetNull)
+
+  @@map("peak_suggestions")
+}
+
+model ModerationLog {
+  id         Int      @id @default(autoincrement())
+  adminId    Int      @map("admin_id")
+  action     String
+  targetType String?  @map("target_type")
+  targetId   Int?     @map("target_id")
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("moderation_logs")
+}

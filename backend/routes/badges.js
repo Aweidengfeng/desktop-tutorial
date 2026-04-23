@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
@@ -8,9 +8,9 @@ const readLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: 
 const checkLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: '操作太频繁' } });
 
 // GET /api/badges
-router.get('/', readLimiter, (req, res) => {
+router.get('/', readLimiter, async (req, res) => {
   try {
-    const badges = db.prepare('SELECT * FROM badges ORDER BY category, condition_value').all();
+    const badges = await prisma.$queryRaw`SELECT * FROM badges ORDER BY category, condition_value`;
     res.json(badges);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -18,14 +18,14 @@ router.get('/', readLimiter, (req, res) => {
 });
 
 // GET /api/badges/my
-router.get('/my', readLimiter, auth, (req, res) => {
+router.get('/my', readLimiter, auth, async (req, res) => {
   try {
-    const badges = db.prepare(`
+    const badges = await prisma.$queryRaw`
       SELECT b.*, ub.unlocked_at, ub.progress
       FROM badges b
-      LEFT JOIN user_badges ub ON ub.badge_id = b.id AND ub.user_id = ?
+      LEFT JOIN user_badges ub ON ub.badge_id = b.id AND ub.user_id = ${req.user.id}
       ORDER BY b.category, b.condition_value
-    `).all(req.user.id);
+    `;
     res.json(badges);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -33,19 +33,19 @@ router.get('/my', readLimiter, auth, (req, res) => {
 });
 
 // POST /api/badges/check
-router.post('/check', checkLimiter, auth, (req, res) => {
+router.post('/check', checkLimiter, auth, async (req, res) => {
   try {
     const uid = req.user.id;
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(uid);
+    const user = (await prisma.$queryRaw`SELECT * FROM users WHERE id = ${uid}`)[0];
     if (!user) return res.status(404).json({ error: '用户不存在' });
 
-    const postCount = db.prepare('SELECT COUNT(*) as cnt FROM posts WHERE user_id = ?').get(uid).cnt;
-    const totalLikes = db.prepare('SELECT COALESCE(SUM(likes), 0) as total FROM posts WHERE user_id = ?').get(uid).total;
+    const postCountRow = (await prisma.$queryRaw`SELECT COUNT(*) as cnt FROM posts WHERE user_id = ${uid}`)[0];
+    const postCount = Number(postCountRow.cnt);
+    const totalLikesRow = (await prisma.$queryRaw`SELECT COALESCE(SUM(likes), 0) as total FROM posts WHERE user_id = ${uid}`)[0];
+    const totalLikes = Number(totalLikesRow.total);
 
-    const allBadges = db.prepare('SELECT * FROM badges').all();
+    const allBadges = await prisma.$queryRaw`SELECT * FROM badges`;
     const unlocked = [];
-
-    const insertBadge = db.prepare('INSERT OR IGNORE INTO user_badges (user_id, badge_id, progress) VALUES (?, ?, ?)');
 
     for (const badge of allBadges) {
       let eligible = false;
@@ -54,12 +54,12 @@ router.post('/check', checkLimiter, auth, (req, res) => {
           eligible = postCount >= badge.condition_value;
           break;
         case 'summit_altitude': {
-          const highPeak = db.prepare(`
+          const highPeak = (await prisma.$queryRaw`
             SELECT mf.id FROM mountain_footprints mf
             JOIN peaks p ON p.id = mf.peak_id
-            WHERE mf.user_id = ? AND p.altitude >= ?
+            WHERE mf.user_id = ${uid} AND p.altitude >= ${badge.condition_value}
             LIMIT 1
-          `).get(uid, badge.condition_value);
+          `)[0];
           eligible = !!highPeak;
           break;
         }
@@ -73,8 +73,8 @@ router.post('/check', checkLimiter, auth, (req, res) => {
           break;
       }
       if (eligible) {
-        const r = insertBadge.run(uid, badge.id, 100);
-        if (r.changes > 0) unlocked.push(badge);
+        const changes = await prisma.$executeRaw`INSERT OR IGNORE INTO user_badges (user_id, badge_id, progress) VALUES (${uid}, ${badge.id}, 100)`;
+        if (changes > 0) unlocked.push(badge);
       }
     }
 

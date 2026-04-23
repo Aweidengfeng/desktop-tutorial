@@ -2,7 +2,7 @@ const express = require('express');
 const https = require('https');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const weatherCache = require('../utils/weatherCache');
 
 const summitWindowLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
@@ -550,8 +550,9 @@ router.get('/popular-peaks', async (req, res) => {
 });
 
 // GET /api/weather/summit-window/:peakId
-router.get('/summit-window/:peakId', summitWindowLimiter, (req, res) => {
-  const peak = db.prepare('SELECT * FROM peaks WHERE id = ?').get(req.params.peakId);
+router.get('/summit-window/:peakId', summitWindowLimiter, async (req, res) => {
+  const peakId = parseInt(req.params.peakId);
+  const [peak] = await prisma.$queryRaw`SELECT latitude, longitude FROM peaks WHERE id = ${peakId}`;
   if (!peak) return res.status(404).json({ error: '山峰不存在' });
 
   const lat = peak.latitude || 27.98;
