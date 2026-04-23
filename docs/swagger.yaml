@@ -4977,3 +4977,3325 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.13 山峰探索模块 ──────────
+  /api/mountains/categories:
+    get:
+      tags: [Peaks]
+      summary: 获取山峰分类列表
+      description: 返回所有山峰分类（如8000ers、七大洲最高峰等）。
+      responses:
+        '200':
+          description: 分类列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: 8000ers
+                    name:
+                      type: string
+                      example: 八千米级雪山
+                    peaks:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Peak'
+
+  /api/mountains/{id}/detail:
+    get:
+      tags: [Peaks]
+      summary: 获取山峰详情（含营地、路线信息）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 山峰详情
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Peak'
+                  - type: object
+                    properties:
+                      camps:
+                        type: array
+                        items:
+                          type: object
+                      routes:
+                        type: array
+                        items:
+                          type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/mountains/{id}/wishlist:
+    post:
+      tags: [Peaks]
+      summary: 添加到心愿单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Peaks]
+      summary: 从心愿单移除（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/mountains/{id}/footprint:
+    post:
+      tags: [Peaks]
+      summary: 记录登顶足迹（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 足迹记录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/mountains/{id}/footprints:
+    get:
+      tags: [Peaks]
+      summary: 获取登顶者列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 登顶者列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    userId:
+                      type: integer
+                    name:
+                      type: string
+                    avatar:
+                      type: string
+                      format: uri
+                    created_at:
+                      type: string
+                      format: date-time
+
+  # ────────── 5.14 文章模块 ──────────
+  /api/articles:
+    get:
+      tags: [Posts]
+      summary: 获取文章列表
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 文章列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    title:
+                      type: string
+                      example: 珠峰攀登全纪录
+                    cover:
+                      type: string
+                      format: uri
+                    author:
+                      type: string
+                      example: 张三
+                    likes:
+                      type: integer
+                      example: 128
+                    created_at:
+                      type: string
+                      format: date-time
+    post:
+      tags: [Posts]
+      summary: 发布文章（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title:
+                  type: string
+                  example: 珠峰攀登全纪录
+                content:
+                  type: string
+                  example: "本文记录了..."
+                cover:
+                  type: string
+                  format: uri
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/articles/featured:
+    get:
+      tags: [Posts]
+      summary: 获取精选文章列表
+      responses:
+        '200':
+          description: 精选文章列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/articles/{id}:
+    get:
+      tags: [Posts]
+      summary: 获取文章详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 文章详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  content:
+                    type: string
+                  author:
+                    type: string
+                  likes:
+                    type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/articles/{id}/like:
+    post:
+      tags: [Posts]
+      summary: 点赞/取消点赞文章（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.15 后台管理模块 ──────────
+  /api/admin/login:
+    post:
+      tags: [Stats]
+      summary: 管理员登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, password]
+              properties:
+                phone:
+                  type: string
+                  example: "13800000099"
+                password:
+                  type: string
+                  example: admin123
+      responses:
+        '200':
+          description: 登录成功，返回 token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/logout:
+    post:
+      tags: [Stats]
+      summary: 管理员登出
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 登出成功
+
+  /api/admin/check:
+    get:
+      tags: [Stats]
+      summary: 检查 admin 登录状态
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 已登录
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/admin/users:
+    get:
+      tags: [Stats]
+      summary: 管理员获取用户列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: 搜索关键词（用户名/手机号）
+      responses:
+        '200':
+          description: 用户列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/users/{id}/ban:
+    put:
+      tags: [Stats]
+      summary: 封禁/解封用户（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [ban, unban]
+                  example: ban
+      responses:
+        '200':
+          description: 操作成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/posts:
+    get:
+      tags: [Stats]
+      summary: 管理员获取帖子列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 帖子列表（含隐藏帖）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/posts/{id}/approve:
+    put:
+      tags: [Stats]
+      summary: 通过/恢复帖子（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/posts/{id}/reject:
+    put:
+      tags: [Stats]
+      summary: 隐藏/屏蔽帖子（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/guides:
+    get:
+      tags: [Stats]
+      summary: 管理员获取向导申请列表（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - $ref: '#/components/parameters/PageParam'
+      responses:
+        '200':
+          description: 向导申请列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  guides:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Guide'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/guides/{id}/approve:
+    put:
+      tags: [Stats]
+      summary: 审批通过向导申请（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 审批成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/guides/{id}/reject:
+    put:
+      tags: [Stats]
+      summary: 拒绝向导申请（需 admin 权限）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: 资质不符合要求
+      responses:
+        '200':
+          description: 操作成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────── 5.16 预约/委托模块 ──────────
+  /api/bookings/my:
+    get:
+      tags: [Guides]
+      summary: 获取我发出的预约列表（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 我的预约列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    guide_id:
+                      type: integer
+                    status:
+                      type: string
+                      example: pending
+                    start_date:
+                      type: string
+                      format: date
+                    end_date:
+                      type: string
+                      format: date
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/bookings/incoming:
+    get:
+      tags: [Guides]
+      summary: 获取收到的预约（向导用，需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 收到的预约列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/bookings/pool:
+    get:
+      tags: [Guides]
+      summary: 获取公开委托池
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 委托池列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/bookings:
+    post:
+      tags: [Guides]
+      summary: 创建预约/发布委托（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guide_id, start_date, end_date]
+              properties:
+                guide_id:
+                  type: integer
+                  example: 1
+                start_date:
+                  type: string
+                  format: date
+                  example: "2026-05-01"
+                end_date:
+                  type: string
+                  format: date
+                  example: "2026-05-10"
+                notes:
+                  type: string
+                  example: 需要提供高空靴
+                is_pool:
+                  type: boolean
+                  description: true 表示发布到公开委托池
+                  example: false
+      responses:
+        '200':
+          description: 预约创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/bookings/{id}:
+    get:
+      tags: [Guides]
+      summary: 获取预约详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 预约详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/bookings/{id}/confirm:
+    put:
+      tags: [Guides]
+      summary: 向导确认预约（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 确认成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/bookings/{id}/reject:
+    put:
+      tags: [Guides]
+      summary: 向导拒绝预约（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 拒绝成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/bookings/{id}/claim:
+    post:
+      tags: [Guides]
+      summary: 向导认领委托池中的委托（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 认领成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.17 订单模块 ──────────
+  /api/orders:
+    get:
+      tags: [Activities]
+      summary: 获取我的订单列表（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: 订单类型筛选
+          schema:
+            type: string
+            enum: [activity, guide_service, gear]
+        - $ref: '#/components/parameters/PageParam'
+      responses:
+        '200':
+          description: 订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    amount:
+                      type: number
+                    created_at:
+                      type: string
+                      format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/orders/{id}:
+    get:
+      tags: [Activities]
+      summary: 获取订单详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 订单详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/orders/{id}/pay:
+    post:
+      tags: [Activities]
+      summary: 支付订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 支付成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/orders/{id}/cancel:
+    post:
+      tags: [Activities]
+      summary: 取消订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/orders/{id}/refund-request:
+    post:
+      tags: [Activities]
+      summary: 申请退款（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: 行程取消
+      responses:
+        '200':
+          description: 退款申请成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.18 支付模块 ──────────
+  /api/pay/create:
+    post:
+      tags: [Activities]
+      summary: 创建支付订单
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, subject]
+              properties:
+                amount:
+                  type: number
+                  example: 9800
+                subject:
+                  type: string
+                  example: 珠峰南坡攀登服务
+                order_id:
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: 支付订单创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_no:
+                    type: string
+                    example: "PAY20260501001"
+                  qr_url:
+                    type: string
+                    format: uri
+
+  /api/pay/status/{orderNo}:
+    get:
+      tags: [Activities]
+      summary: 查询支付状态
+      parameters:
+        - name: orderNo
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 支付状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [pending, paid, failed]
+                    example: paid
+
+  /api/pay/transactions:
+    get:
+      tags: [Activities]
+      summary: 获取交易流水（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+      responses:
+        '200':
+          description: 交易流水列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    amount:
+                      type: number
+                    type:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+
+  # ────────── 5.19 紧急救援模块 ──────────
+  /api/rescue/contacts:
+    get:
+      tags: [SOS]
+      summary: 获取紧急联系人列表（救援机构）
+      responses:
+        '200':
+          description: 紧急联系人列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: 西藏登山协会救援队
+                    phone:
+                      type: string
+                      example: "0891-6334453"
+                    region:
+                      type: string
+                      example: 西藏
+
+  /api/rescue/config:
+    get:
+      tags: [SOS]
+      summary: 获取救援配置（联系方式、流程等）
+      responses:
+        '200':
+          description: 救援配置信息
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/rescue/sos:
+    post:
+      tags: [SOS]
+      summary: 发起 SOS 救援请求（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location, message]
+              properties:
+                location:
+                  type: string
+                  example: "28.0000,86.9250"
+                message:
+                  type: string
+                  example: 受伤无法行走，需要紧急救援
+      responses:
+        '200':
+          description: SOS 请求已提交
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SOS'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/rescue/sos/history:
+    get:
+      tags: [SOS]
+      summary: 获取我的 SOS 历史记录（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: SOS 历史列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SOS'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.20 保险模块 ──────────
+  /api/insurance/plans:
+    get:
+      tags: [Activities]
+      summary: 获取保险产品列表
+      responses:
+        '200':
+          description: 保险产品列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: 登山专项保险（基础版）
+                    price:
+                      type: number
+                      example: 299
+                    coverage:
+                      type: string
+                      example: 意外身故/残疾50万
+                    duration:
+                      type: integer
+                      description: 保障天数
+                      example: 30
+
+  /api/insurance/plans/{id}:
+    get:
+      tags: [Activities]
+      summary: 获取保险产品详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 保险产品详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/insurance/inquire:
+    post:
+      tags: [Activities]
+      summary: 投保询价（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, start_date, end_date]
+              properties:
+                plan_id:
+                  type: integer
+                  example: 1
+                start_date:
+                  type: string
+                  format: date
+                  example: "2026-05-01"
+                end_date:
+                  type: string
+                  format: date
+                  example: "2026-05-31"
+      responses:
+        '200':
+          description: 询价结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  premium:
+                    type: number
+                    example: 299
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.21 活动订单模块 ──────────
+  /api/activity-orders/my:
+    get:
+      tags: [Activities]
+      summary: 获取我的活动订单（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 活动订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    activity_id:
+                      type: integer
+                    status:
+                      type: string
+                    amount:
+                      type: number
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/activity-orders/{id}/pay:
+    post:
+      tags: [Activities]
+      summary: 支付活动订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 支付成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/activity-orders/{id}/cancel:
+    post:
+      tags: [Activities]
+      summary: 取消活动订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/activity-orders/{id}/refund-request:
+    post:
+      tags: [Activities]
+      summary: 申请活动订单退款（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 退款申请成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.22 向导服务订单模块 ──────────
+  /api/guide-service-orders/my:
+    get:
+      tags: [Guides]
+      summary: 获取我的向导服务订单（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 向导服务订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    guide_id:
+                      type: integer
+                    status:
+                      type: string
+                    amount:
+                      type: number
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-service-orders/{id}/pay:
+    post:
+      tags: [Guides]
+      summary: 支付向导服务订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 支付成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-service-orders/{id}/cancel:
+    post:
+      tags: [Guides]
+      summary: 取消向导服务订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-service-orders/{id}/refund-request:
+    post:
+      tags: [Guides]
+      summary: 申请向导服务退款（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 退款申请成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.23 远征队活动模块 ──────────
+  /api/expeditions:
+    get:
+      tags: [Activities]
+      summary: 获取远征队/商业攀登活动列表
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: 远征队列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    peak:
+                      type: string
+                    price:
+                      type: number
+                    start_date:
+                      type: string
+                      format: date
+                    status:
+                      type: string
+    post:
+      tags: [Activities]
+      summary: 创建远征队活动（需登录，向导/俱乐部）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, peak, start_date, price]
+              properties:
+                title:
+                  type: string
+                  example: 2026年珠峰南坡商业攀登
+                peak:
+                  type: string
+                  example: 珠穆朗玛峰
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+                price:
+                  type: number
+                  example: 380000
+                max_participants:
+                  type: integer
+                  example: 8
+      responses:
+        '200':
+          description: 创建成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/expeditions/orders/my:
+    get:
+      tags: [Activities]
+      summary: 获取我的远征队订单（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 远征队订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/expeditions/{id}:
+    get:
+      tags: [Activities]
+      summary: 获取远征队活动详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 活动详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Activities]
+      summary: 更新远征队活动（需登录，创建者）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 更新成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/expeditions/{id}/order:
+    post:
+      tags: [Activities]
+      summary: 报名参加远征队活动（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 报名成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/expeditions/{id}/moments:
+    get:
+      tags: [Activities]
+      summary: 获取远征队动态（公开）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 动态列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/expeditions/{id}/export.gpx:
+    get:
+      tags: [Activities]
+      summary: 导出远征队路线 GPX
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: GPX 文件
+          content:
+            application/gpx+xml:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.24 攀登日志模块 ──────────
+  /api/climbing-log:
+    get:
+      tags: [Tracks]
+      summary: 获取我的攀登日志（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 攀登日志列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    peak_name:
+                      type: string
+                    date:
+                      type: string
+                      format: date
+                    notes:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/climbing-log/stats:
+    get:
+      tags: [Tracks]
+      summary: 获取攀登统计数据（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 攀登统计
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_ascents:
+                    type: integer
+                    example: 15
+                  total_elevation:
+                    type: integer
+                    example: 45000
+                  total_distance_km:
+                    type: number
+                    example: 320.5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/climbing-log/gear-list:
+    post:
+      tags: [Tracks]
+      summary: 创建装备清单（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: 珠峰2026装备清单
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      category:
+                        type: string
+                      checked:
+                        type: boolean
+      responses:
+        '200':
+          description: 清单创建成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/climbing-log/gear-list/{id}:
+    get:
+      tags: [Tracks]
+      summary: 获取装备清单详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 装备清单详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Tracks]
+      summary: 更新装备清单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 更新成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/climbing-log/gear-list/{id}/export-pdf:
+    post:
+      tags: [Tracks]
+      summary: 导出装备清单 PDF（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PDF 文件
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.25 群聊模块 ──────────
+  /api/group-chats:
+    get:
+      tags: [Chats]
+      summary: 获取我加入的群聊列表（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 群聊列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    avatar:
+                      type: string
+                      format: uri
+                    team_id:
+                      type: integer
+                    member_count:
+                      type: integer
+                    last_message:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/group-chats/{id}:
+    get:
+      tags: [Chats]
+      summary: 获取群聊详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 群聊详情（含成员列表）
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/group-chats/{id}/messages:
+    get:
+      tags: [Chats]
+      summary: 获取群聊消息列表（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 群聊消息列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrivateMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Chats]
+      summary: 发送群聊消息（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  example: 大家明天8点集合！
+                type:
+                  type: string
+                  enum: [text, image]
+                  example: text
+      responses:
+        '200':
+          description: 消息发送成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/group-chats/{id}/messages/poll:
+    get:
+      tags: [Chats]
+      summary: 长轮询获取群聊新消息（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: after
+          in: query
+          description: 上一条已知消息 id
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 新消息列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrivateMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.26 位置分享模块 ──────────
+  /api/location-share:
+    post:
+      tags: [SOS]
+      summary: 创建位置分享链接（需登录）
+      description: 生成一个实时位置分享链接，有效期内他人可通过 token 查看。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lon]
+              properties:
+                lat:
+                  type: number
+                  example: 27.98
+                lon:
+                  type: number
+                  example: 86.92
+                altitude:
+                  type: number
+                  example: 8300
+                expires_in:
+                  type: integer
+                  description: 有效时长（秒），默认 3600
+                  example: 3600
+      responses:
+        '200':
+          description: 分享链接创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: abc123xyz
+                  share_url:
+                    type: string
+                    format: uri
+                    example: https://example.com/location/abc123xyz
+                  expires_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/location-share/{token}:
+    get:
+      tags: [SOS]
+      summary: 获取分享位置信息（公开）
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 位置信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lat:
+                    type: number
+                  lon:
+                    type: number
+                  altitude:
+                    type: number
+                  user_name:
+                    type: string
+                  updated_at:
+                    type: string
+                    format: date-time
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.27 线下远征（离线模式）模块 ──────────
+  /api/offline-expeditions:
+    post:
+      tags: [Tracks]
+      summary: 创建线下远征记录（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peak_name, start_date]
+              properties:
+                peak_name:
+                  type: string
+                  example: 珠穆朗玛峰
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+                  nullable: true
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: 远征记录创建成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/offline-expeditions/my:
+    get:
+      tags: [Tracks]
+      summary: 获取我的线下远征记录（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 线下远征列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/offline-expeditions/public/{userId}:
+    get:
+      tags: [Tracks]
+      summary: 获取指定用户的公开远征记录
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 用户公开远征列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/offline-expeditions/{id}:
+    get:
+      tags: [Tracks]
+      summary: 获取线下远征详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 远征详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/offline-expeditions/{id}/moments:
+    post:
+      tags: [Tracks]
+      summary: 添加远征动态（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+      responses:
+        '200':
+          description: 动态添加成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [Tracks]
+      summary: 获取远征动态列表（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 动态列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/offline-expeditions/{id}/finalize:
+    post:
+      tags: [Tracks]
+      summary: 完成远征记录（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 远征已标记为完成
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/offline-expeditions/{id}/subscribe:
+    post:
+      tags: [Tracks]
+      summary: 订阅/关注远征动态（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 操作成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.28 AI 教练模块 ──────────
+  /api/ai-coach/assessment:
+    post:
+      tags: [Users]
+      summary: 提交体能评估（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_hr:
+                  type: integer
+                  example: 185
+                resting_hr:
+                  type: integer
+                  example: 55
+                vo2max:
+                  type: number
+                  example: 55.0
+                experience_years:
+                  type: integer
+                  example: 5
+                target_peak:
+                  type: string
+                  example: 珠穆朗玛峰
+      responses:
+        '200':
+          description: 评估结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: integer
+                    example: 82
+                  level:
+                    type: string
+                    example: 进阶
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [Users]
+      summary: 获取最新体能评估结果（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 评估结果
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai-coach/roadmap:
+    get:
+      tags: [Users]
+      summary: 获取 AI 个性化训练路线图（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 训练路线图
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phases:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        duration_weeks:
+                          type: integer
+                        tasks:
+                          type: array
+                          items:
+                            type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/ai-coach/terms:
+    get:
+      tags: [Users]
+      summary: 获取 AI 教练服务条款（公开）
+      responses:
+        '200':
+          description: 服务条款文本
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  terms:
+                    type: string
+
+  /api/ai-coach/ask:
+    post:
+      tags: [Users]
+      summary: 向 AI 教练提问（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  example: 如何提高高海拔适应能力？
+      responses:
+        '200':
+          description: AI 教练回答
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+                    example: 建议通过阶梯式海拔适应训练...
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.29 AI 助手模块 ──────────
+  /api/assistant/chat:
+    post:
+      tags: [Users]
+      summary: 与 AI 登山助手对话（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  example: 珠峰最佳攀登时间是几月？
+                history:
+                  type: array
+                  description: 对话历史（可选，用于上下文）
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        type: string
+      responses:
+        '200':
+          description: AI 回复
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply:
+                    type: string
+                    example: 珠峰最佳攀登时间通常为4月下旬至5月底...
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.30 认证/资质申请模块 ──────────
+  /api/certification/levels:
+    get:
+      tags: [Guides]
+      summary: 获取认证等级体系说明（公开）
+      responses:
+        '200':
+          description: 认证等级列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    level:
+                      type: string
+                      example: 初级向导
+                    requirements:
+                      type: array
+                      items:
+                        type: string
+
+  /api/certification/guide/status:
+    get:
+      tags: [Guides]
+      summary: 获取当前用户向导认证状态（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 认证状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [none, pending, approved, rejected]
+                    example: pending
+                  applied_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/certification/club/status:
+    get:
+      tags: [Clubs]
+      summary: 获取当前用户俱乐部认证状态（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 俱乐部认证状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [none, pending, approved, rejected]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/certification/guide/apply:
+    post:
+      tags: [Guides]
+      summary: 申请向导认证（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, experience, certifications]
+              properties:
+                name:
+                  type: string
+                  example: 扎西
+                experience:
+                  type: integer
+                  description: 从业年限
+                  example: 8
+                certifications:
+                  type: array
+                  items:
+                    type: string
+                  example: [UIAGM, 国家登山教练]
+                bio:
+                  type: string
+                daily_rate:
+                  type: integer
+                  example: 800
+      responses:
+        '200':
+          description: 申请已提交
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/certification/club/apply:
+    post:
+      tags: [Clubs]
+      summary: 申请俱乐部认证（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, description]
+              properties:
+                name:
+                  type: string
+                  example: 雪域探险俱乐部
+                description:
+                  type: string
+                region:
+                  type: string
+                  example: 西藏
+                license_url:
+                  type: string
+                  format: uri
+                  description: 营业执照图片URL
+      responses:
+        '200':
+          description: 申请已提交
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.31 电子证书模块 ──────────
+  /api/certificates/{trackId}:
+    get:
+      tags: [Badges]
+      summary: 获取登顶电子证书（SVG，需登录）
+      description: 为指定 trackId 的登顶记录生成并返回 SVG 格式电子证书。
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: trackId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: SVG 证书
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ────────── 5.32 电子护照模块 ──────────
+  /api/passport/my:
+    get:
+      tags: [Badges]
+      summary: 获取我的电子护照信息（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 电子护照信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid:
+                    type: string
+                    example: abc123-def456
+                  user_id:
+                    type: integer
+                  stamped_peaks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        peak_name:
+                          type: string
+                        date:
+                          type: string
+                          format: date
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/passport/verify/{uuid}:
+    get:
+      tags: [Badges]
+      summary: 验证电子护照（公开）
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 护照信息（公开版）
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/passport/{id}/passport.pdf:
+    get:
+      tags: [Badges]
+      summary: 导出电子护照 PDF（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: PDF 文件
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.33 海拔查询模块 ──────────
+  /api/altitude:
+    get:
+      tags: [Weather]
+      summary: 查询指定经纬度的地面海拔（公开）
+      description: 通过 Open-Elevation API 查询给定坐标的地面海拔高度。
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            example: 27.98
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            example: 86.92
+      responses:
+        '200':
+          description: 海拔数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  elevation:
+                    type: integer
+                    example: 5364
+                  lat:
+                    type: number
+                  lon:
+                    type: number
+
+  # ────────── 5.34 定制委托模块 ──────────
+  /api/customs:
+    get:
+      tags: [Guides]
+      summary: 获取我的定制委托（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 委托列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Guides]
+      summary: 发布定制委托（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, budget]
+              properties:
+                title:
+                  type: string
+                  example: 需要一位珠峰向导
+                budget:
+                  type: number
+                  example: 50000
+                description:
+                  type: string
+                is_public:
+                  type: boolean
+                  example: true
+      responses:
+        '200':
+          description: 发布成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/customs/pool:
+    get:
+      tags: [Guides]
+      summary: 获取公开委托池（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 公开委托列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/customs/{id}:
+    get:
+      tags: [Guides]
+      summary: 获取委托详情（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 委托详情
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/customs/{id}/cancel:
+    put:
+      tags: [Guides]
+      summary: 取消委托（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/customs/{id}/claim:
+    post:
+      tags: [Guides]
+      summary: 向导认领公开委托（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 认领成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.35 投资人数据模块 ──────────
+  /api/investor/metrics:
+    get:
+      tags: [Stats]
+      summary: 投资人视图：核心指标（需 investor 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 核心运营指标
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dau:
+                    type: integer
+                    example: 1200
+                  mau:
+                    type: integer
+                    example: 15000
+                  total_users:
+                    type: integer
+                    example: 50000
+                  total_revenue:
+                    type: number
+                    example: 1280000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/investor/funnel:
+    get:
+      tags: [Stats]
+      summary: 投资人视图：用户转化漏斗（需 investor 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 转化漏斗数据
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/investor/top-guides:
+    get:
+      tags: [Stats]
+      summary: 投资人视图：收入最高向导（需 investor 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 向导收入榜
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/investor/top-peaks:
+    get:
+      tags: [Stats]
+      summary: 投资人视图：热门山峰（需 investor 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 热门山峰数据
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/investor/badges-stats:
+    get:
+      tags: [Stats]
+      summary: 投资人视图：徽章发放统计（需 investor 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 徽章统计
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/investor/regional:
+    get:
+      tags: [Stats]
+      summary: 投资人视图：地区分布数据（需 investor 权限）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 地区分布
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    region:
+                      type: string
+                    user_count:
+                      type: integer
+                    revenue:
+                      type: number
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────── 5.36 向导控制台模块 ──────────
+  /api/guide-console/dashboard:
+    get:
+      tags: [Guides]
+      summary: 向导控制台：数据总览（需登录，向导角色）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 向导数据总览
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_orders:
+                    type: integer
+                  pending_orders:
+                    type: integer
+                  total_earnings:
+                    type: number
+                  rating:
+                    type: number
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-console/orders:
+    get:
+      tags: [Guides]
+      summary: 向导控制台：订单列表（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, completed]
+      responses:
+        '200':
+          description: 向导订单列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-console/orders/{id}/approve:
+    put:
+      tags: [Guides]
+      summary: 向导确认订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 订单已确认
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-console/orders/{id}/reject:
+    put:
+      tags: [Guides]
+      summary: 向导拒绝订单（需登录）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 订单已拒绝
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-console/earnings:
+    get:
+      tags: [Guides]
+      summary: 向导控制台：收益明细（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 收益数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: number
+                    example: 128000
+                  withdrawable:
+                    type: number
+                    example: 98000
+                  history:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/guide-console/withdraw:
+    post:
+      tags: [Guides]
+      summary: 向导申请提现（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  example: 10000
+      responses:
+        '200':
+          description: 提现申请已提交
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.37 俱乐部控制台模块 ──────────
+  /api/club-console/dashboard:
+    get:
+      tags: [Clubs]
+      summary: 俱乐部控制台：数据总览（需登录，俱乐部管理员）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 俱乐部数据总览
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_members:
+                    type: integer
+                  active_activities:
+                    type: integer
+                  total_revenue:
+                    type: number
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/club-console/members:
+    get:
+      tags: [Clubs]
+      summary: 俱乐部控制台：成员列表（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成员列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/club-console/activities:
+    get:
+      tags: [Clubs]
+      summary: 俱乐部控制台：活动列表（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 活动列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Clubs]
+      summary: 俱乐部发布活动（需登录，俱乐部管理员）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, start_time]
+              properties:
+                title:
+                  type: string
+                  example: 珠峰大本营徒步活动
+                description:
+                  type: string
+                start_time:
+                  type: string
+                  format: date-time
+                max_participants:
+                  type: integer
+                  example: 20
+                fee:
+                  type: number
+                  example: 3800
+      responses:
+        '200':
+          description: 活动发布成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/club-console/finance:
+    get:
+      tags: [Clubs]
+      summary: 俱乐部控制台：财务数据（需登录）
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 财务数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_revenue:
+                    type: number
+                  total_expenses:
+                    type: number
+                  net_income:
+                    type: number
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────── 5.38 用户扩展接口 ──────────
+  /api/users/{id}/achievements:
+    get:
+      tags: [Users]
+      summary: 获取用户成就/徽章
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成就列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Badge'
+
+  /api/users/{id}/membership:
+    get:
+      tags: [Users]
+      summary: 获取用户会员信息
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 会员信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  level:
+                    type: string
+                    example: 黄金会员
+                  expires_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+
+  /api/users/{id}/summits:
+    get:
+      tags: [Users]
+      summary: 获取用户登顶记录
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 登顶记录列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Track'
+
+  /api/users/summits:
+    post:
+      tags: [Users]
+      summary: 新增登顶记录（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peak_name, date, max_elevation]
+              properties:
+                peak_name:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                max_elevation:
+                  type: integer
+      responses:
+        '200':
+          description: 登顶记录已添加
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/users/{id}/expeditions:
+    get:
+      tags: [Users]
+      summary: 获取用户远征记录
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 远征记录列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/users/expeditions:
+    post:
+      tags: [Users]
+      summary: 新增远征记录（需登录）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, peak_name]
+              properties:
+                title:
+                  type: string
+                peak_name:
+                  type: string
+      responses:
+        '200':
+          description: 记录已添加
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/users/{id}/followers:
+    get:
+      tags: [Users]
+      summary: 获取用户粉丝列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 粉丝列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    avatar:
+                      type: string
+                      format: uri
+
+  /api/users/{id}/following:
+    get:
+      tags: [Users]
+      summary: 获取用户关注列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 关注列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    avatar:
+                      type: string
+                      format: uri
+
+  /api/users/follow:
+    post:
+      tags: [Users]
+      summary: 关注用户（需登录，/api/users 版本）
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id:
+                  type: integer
+      responses:
+        '200':
+          description: 关注成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Users]
+      summary: 取消关注（需登录，/api/users 版本）
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_id]
+              properties:
+                target_id:
+                  type: integer
+      responses:
+        '200':
+          description: 取消成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
