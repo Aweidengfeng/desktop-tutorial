@@ -1,19 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 
-const notifLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
+const notifLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
 
 // GET /api/notifications（需要JWT）
-router.get('/', auth, (req, res) => {
+router.get('/', notifLimiter, auth, async (req, res) => {
   try {
-    const notifications = db.prepare(`
+    const notifications = await prisma.$queryRaw`
       SELECT id, type, content, title, body, link, related_id, is_read, read_at, created_at
-      FROM notifications WHERE user_id = ?
+      FROM notifications WHERE user_id = ${req.user.id}
       ORDER BY created_at DESC LIMIT 20
-    `).all(req.user.id);
+    `;
     res.json(notifications);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -21,19 +21,23 @@ router.get('/', auth, (req, res) => {
 });
 
 // GET /api/notifications/unread-count（未读通知数）
-router.get('/unread-count', auth, (req, res) => {
+router.get('/unread-count', notifLimiter, auth, async (req, res) => {
   try {
-    const result = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(req.user.id);
-    res.json({ count: result.count });
+    const [row] = await prisma.$queryRaw`
+      SELECT COUNT(*) as count FROM notifications WHERE user_id = ${req.user.id} AND is_read = 0
+    `;
+    res.json({ count: Number(row.count) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // PUT /api/notifications/read-all（全部标为已读，需要JWT）
-router.put('/read-all', notifLimiter, auth, (req, res) => {
+router.put('/read-all', notifLimiter, auth, async (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_read = 0').run(req.user.id);
+    await prisma.$executeRaw`
+      UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ${req.user.id} AND is_read = 0
+    `;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -41,9 +45,11 @@ router.put('/read-all', notifLimiter, auth, (req, res) => {
 });
 
 // POST /api/notifications/read-all (alias)
-router.post('/read-all', notifLimiter, auth, (req, res) => {
+router.post('/read-all', notifLimiter, auth, async (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ? AND is_read = 0').run(req.user.id);
+    await prisma.$executeRaw`
+      UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE user_id = ${req.user.id} AND is_read = 0
+    `;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -51,9 +57,12 @@ router.post('/read-all', notifLimiter, auth, (req, res) => {
 });
 
 // PUT /api/notifications/:id/read（单条已读，需要JWT）
-router.put('/:id/read', notifLimiter, auth, (req, res) => {
+router.put('/:id/read', notifLimiter, auth, async (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    const id = parseInt(req.params.id);
+    await prisma.$executeRaw`
+      UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ${id} AND user_id = ${req.user.id}
+    `;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -61,9 +70,12 @@ router.put('/:id/read', notifLimiter, auth, (req, res) => {
 });
 
 // POST /api/notifications/:id/read (alias)
-router.post('/:id/read', notifLimiter, auth, (req, res) => {
+router.post('/:id/read', notifLimiter, auth, async (req, res) => {
   try {
-    db.prepare('UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+    const id = parseInt(req.params.id);
+    await prisma.$executeRaw`
+      UPDATE notifications SET is_read = 1, read_at = CURRENT_TIMESTAMP WHERE id = ${id} AND user_id = ${req.user.id}
+    `;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

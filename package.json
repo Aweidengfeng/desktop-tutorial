@@ -2,7 +2,8 @@
   "name": "desktop-tutorial",
   "version": "1.0.0",
   "scripts": {
-    "build": "cd backend && npm install",
+    "prisma:generate": "DATABASE_URL=\"file:/tmp/dev.db\" prisma generate --schema=backend/prisma/schema.prisma",
+    "build": "npm run prisma:generate && cd backend && npm install",
     "start": "node backend/db/seed.js && node backend/app.js",
     "test:api": "node tests/api.test.js && npx jest tests/api-new-features.test.js --forceExit --no-coverage",
     "test:api:unit": "npx jest tests/api-new-features.test.js --forceExit --no-coverage",
@@ -13,6 +14,7 @@
     "db:seed": "node backend/db/seed.js"
   },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
@@ -21,6 +23,7 @@
     "express-rate-limit": "^8.3.2",
     "jsonwebtoken": "^9.0.3",
     "pdfkit": "^0.18.0",
+    "prisma": "^5.22.0",
     "uuid": "^14.0.0"
   },
   "devDependencies": {
