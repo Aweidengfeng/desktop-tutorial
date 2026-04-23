@@ -2,10 +2,14 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 
+const gsoReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const gsoWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
+
 // GET /api/guide-service-orders/my
-router.get('/my', auth, async (req, res) => {
+router.get('/my', gsoReadLimiter, auth, async (req, res) => {
   try {
     const orders = await prisma.$queryRaw`
       SELECT gso.*, gs.title as service_title, gs.cover as service_cover,
@@ -24,7 +28,7 @@ router.get('/my', auth, async (req, res) => {
 });
 
 // POST /api/guide-service-orders/:id/pay
-router.post('/:id/pay', auth, async (req, res) => {
+router.post('/:id/pay', gsoWriteLimiter, auth, async (req, res) => {
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM guide_service_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -50,7 +54,7 @@ router.post('/:id/pay', auth, async (req, res) => {
 });
 
 // POST /api/guide-service-orders/:id/cancel
-router.post('/:id/cancel', auth, async (req, res) => {
+router.post('/:id/cancel', gsoWriteLimiter, auth, async (req, res) => {
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM guide_service_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -67,7 +71,7 @@ router.post('/:id/cancel', auth, async (req, res) => {
 });
 
 // POST /api/guide-service-orders/:id/refund-request
-router.post('/:id/refund-request', auth, async (req, res) => {
+router.post('/:id/refund-request', gsoWriteLimiter, auth, async (req, res) => {
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM guide_service_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });

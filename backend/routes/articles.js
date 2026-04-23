@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const articlesReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const articlesWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
 
 // GET /api/articles?category=expedition|technical|hiking|gear
-router.get('/', async (req, res) => {
+router.get('/', articlesReadLimiter, async (req, res) => {
   try {
     const { category } = req.query;
     let sql = `
@@ -29,7 +33,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/articles/featured — 热门文章（必须在 /:id 之前）
-router.get('/featured', async (req, res) => {
+router.get('/featured', articlesReadLimiter, async (req, res) => {
   try {
     const rows = await prisma.$queryRaw`
       SELECT a.id, a.title, a.category, a.read_time_minutes, a.cover_image,
@@ -48,7 +52,7 @@ router.get('/featured', async (req, res) => {
 });
 
 // GET /api/articles/:id — 文章详情
-router.get('/:id', async (req, res) => {
+router.get('/:id', articlesReadLimiter, async (req, res) => {
   try {
     const article = (await prisma.$queryRaw`
       SELECT a.id, a.title, a.category, a.content, a.read_time_minutes,
@@ -70,7 +74,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/articles — 发布文章（需登录，提交后待审核）
-router.post('/', auth, async (req, res) => {
+router.post('/', articlesWriteLimiter, auth, async (req, res) => {
   try {
     const { title, category, content, read_time_minutes, cover_image } = req.body;
     if (!title || !category || !content) {
@@ -93,7 +97,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // POST /api/articles/:id/like — 点赞文章
-router.post('/:id/like', auth, async (req, res) => {
+router.post('/:id/like', articlesWriteLimiter, auth, async (req, res) => {
   try {
     const article = (await prisma.$queryRaw`SELECT id, like_count FROM articles WHERE id = ${Number(req.params.id)}`)[0];
     if (!article) return res.status(404).json({ error: '文章不存在' });

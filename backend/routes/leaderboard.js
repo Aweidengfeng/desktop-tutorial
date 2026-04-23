@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
+const rateLimit = require('express-rate-limit');
+
+const leaderboardLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
 
 function normalizeLeader(l) {
   return {
@@ -13,7 +16,7 @@ function normalizeLeader(l) {
 }
 
 // GET /api/leaderboard — 多维度攀登榜单
-router.get('/', async (req, res) => {
+router.get('/', leaderboardLimiter, async (req, res) => {
   try {
     const { sort = 'count', period = 'month', month, peak_type, scope = 'user' } = req.query;
 
@@ -113,7 +116,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/leaderboard/monthly — 兼容旧版月榜（只保留一份）
-router.get('/monthly', async (req, res) => {
+router.get('/monthly', leaderboardLimiter, async (req, res) => {
   try {
     const targetMonth = new Date().toISOString().slice(0, 7);
     const rawLeaders = await prisma.$queryRawUnsafe(`

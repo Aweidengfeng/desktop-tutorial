@@ -13,10 +13,14 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 
+const activityOrdersReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const activityOrdersWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
+
 // GET /api/activity-orders/my — 我的活动订单
-router.get('/my', auth, async (req, res) => {
+router.get('/my', activityOrdersReadLimiter, auth, async (req, res) => {
   try {
     const orders = await prisma.$queryRaw`
       SELECT ao.*, ca.title as activity_title, ca.cover as activity_cover,
@@ -35,7 +39,7 @@ router.get('/my', auth, async (req, res) => {
 });
 
 // POST /api/activity-orders/:id/pay — 模拟支付
-router.post('/:id/pay', auth, async (req, res) => {
+router.post('/:id/pay', activityOrdersWriteLimiter, auth, async (req, res) => {
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM activity_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -58,7 +62,7 @@ router.post('/:id/pay', auth, async (req, res) => {
 });
 
 // POST /api/activity-orders/:id/cancel — 取消订单
-router.post('/:id/cancel', auth, async (req, res) => {
+router.post('/:id/cancel', activityOrdersWriteLimiter, auth, async (req, res) => {
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM activity_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });
@@ -83,7 +87,7 @@ router.post('/:id/cancel', auth, async (req, res) => {
 });
 
 // POST /api/activity-orders/:id/refund-request — 申请退款
-router.post('/:id/refund-request', auth, async (req, res) => {
+router.post('/:id/refund-request', activityOrdersWriteLimiter, auth, async (req, res) => {
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM activity_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });

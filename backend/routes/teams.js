@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const teamsReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const teamsWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
 
 // GET /api/teams
-router.get('/', async (req, res) => {
+router.get('/', teamsReadLimiter, async (req, res) => {
   try {
     const teams = await prisma.$queryRaw`
       SELECT id, name, peak, date, spots, total_spots as totalSpots,
@@ -20,7 +24,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/teams/:id — 组队详情
-router.get('/:id', async (req, res) => {
+router.get('/:id', teamsReadLimiter, async (req, res) => {
   try {
     const team = (await prisma.$queryRaw`
       SELECT id, name, peak, date, spots, total_spots as totalSpots,
@@ -43,7 +47,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/teams（需要JWT）
-router.post('/', auth, async (req, res) => {
+router.post('/', teamsWriteLimiter, auth, async (req, res) => {
   try {
     const { name, peak, date, totalSpots, level, description, equipment_required, notes, difficulty, fee } = req.body;
     const user = (await prisma.$queryRaw`SELECT * FROM users WHERE id = ${req.user.id}`)[0];
@@ -81,7 +85,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // POST /api/teams/:id/join（需要JWT）
-router.post('/:id/join', auth, async (req, res) => {
+router.post('/:id/join', teamsWriteLimiter, auth, async (req, res) => {
   try {
     const team = (await prisma.$queryRaw`SELECT * FROM teams WHERE id = ${Number(req.params.id)}`)[0];
     if (!team) return res.status(404).json({ error: '队伍不存在' });
@@ -108,7 +112,7 @@ router.post('/:id/join', auth, async (req, res) => {
 });
 
 // PUT /api/teams/:id/members/:memberId/approve — 队长审批成员加入（需要JWT）
-router.put('/:id/members/:memberId/approve', auth, async (req, res) => {
+router.put('/:id/members/:memberId/approve', teamsWriteLimiter, auth, async (req, res) => {
   try {
     const team = (await prisma.$queryRaw`SELECT * FROM teams WHERE id = ${Number(req.params.id)}`)[0];
     if (!team) return res.status(404).json({ error: '队伍不存在' });
@@ -140,7 +144,7 @@ router.put('/:id/members/:memberId/approve', auth, async (req, res) => {
 });
 
 // PUT /api/teams/:id/members/:memberId/reject — 队长拒绝成员（需要JWT）
-router.put('/:id/members/:memberId/reject', auth, async (req, res) => {
+router.put('/:id/members/:memberId/reject', teamsWriteLimiter, auth, async (req, res) => {
   try {
     const team = (await prisma.$queryRaw`SELECT * FROM teams WHERE id = ${Number(req.params.id)}`)[0];
     if (!team) return res.status(404).json({ error: '队伍不存在' });

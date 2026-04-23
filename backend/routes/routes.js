@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const routesReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const routesWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
 
 // GET /api/routes — 所有线路列表
-router.get('/', async (req, res) => {
+router.get('/', routesReadLimiter, async (req, res) => {
   try {
     const routes = await prisma.$queryRaw`
       SELECT id, name, peak, difficulty, cover, description,
@@ -18,7 +22,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/routes/:id — 线路详情
-router.get('/:id', async (req, res) => {
+router.get('/:id', routesReadLimiter, async (req, res) => {
   try {
     const route = (await prisma.$queryRaw`
       SELECT id, name, peak, difficulty, cover, description,
@@ -33,7 +37,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // GET /api/routes/:id/clubs — 该线路下所有报价俱乐部
-router.get('/:id/clubs', async (req, res) => {
+router.get('/:id/clubs', routesReadLimiter, async (req, res) => {
   try {
     const items = await prisma.$queryRaw`
       SELECT crp.id as pricing_id, crp.club_id, crp.route_id, crp.price, crp.includes,
@@ -54,7 +58,7 @@ router.get('/:id/clubs', async (req, res) => {
 });
 
 // POST /api/routes — 创建线路（管理员）
-router.post('/', auth, async (req, res) => {
+router.post('/', routesWriteLimiter, auth, async (req, res) => {
   try {
     const user = (await prisma.$queryRaw`SELECT is_admin FROM users WHERE id = ${req.user.id}`)[0];
     if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });
@@ -74,7 +78,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // PUT /api/routes/:id — 更新线路
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', routesWriteLimiter, auth, async (req, res) => {
   try {
     const user = (await prisma.$queryRaw`SELECT is_admin FROM users WHERE id = ${req.user.id}`)[0];
     if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });
@@ -96,7 +100,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // POST /api/routes/pricing — 设置俱乐部报价
-router.post('/pricing', auth, async (req, res) => {
+router.post('/pricing', routesWriteLimiter, auth, async (req, res) => {
   try {
     const { club_id, route_id, price, includes, duration, max_people } = req.body;
     if (!club_id || !route_id || !price) return res.status(400).json({ error: '俱乐部、线路和价格不能为空' });
@@ -120,7 +124,7 @@ router.post('/pricing', auth, async (req, res) => {
 });
 
 // DELETE /api/routes/:id — 删除线路（管理员）
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', routesWriteLimiter, auth, async (req, res) => {
   try {
     const user = (await prisma.$queryRaw`SELECT is_admin FROM users WHERE id = ${req.user.id}`)[0];
     if (!user || !user.is_admin) return res.status(403).json({ error: '无权操作' });

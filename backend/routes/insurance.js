@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const insuranceReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const insuranceWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
 
 // GET /api/insurance/plans
-router.get('/plans', async (req, res) => {
+router.get('/plans', insuranceReadLimiter, async (req, res) => {
   try {
     const plans = await prisma.$queryRaw`SELECT * FROM insurance_plans ORDER BY price_cny ASC`;
     res.json(plans);
@@ -14,7 +18,7 @@ router.get('/plans', async (req, res) => {
 });
 
 // GET /api/insurance/plans/:id
-router.get('/plans/:id', async (req, res) => {
+router.get('/plans/:id', insuranceReadLimiter, async (req, res) => {
   try {
     const plan = (await prisma.$queryRaw`SELECT * FROM insurance_plans WHERE id = ${Number(req.params.id)}`)[0];
     if (!plan) return res.status(404).json({ error: '保险方案不存在' });
@@ -25,7 +29,7 @@ router.get('/plans/:id', async (req, res) => {
 });
 
 // POST /api/insurance/inquire — 提交购买询价
-router.post('/inquire', auth, async (req, res) => {
+router.post('/inquire', insuranceWriteLimiter, auth, async (req, res) => {
   try {
     const { name, phone, plan_id, peak_name, departure_date } = req.body;
     if (!name || !phone || !plan_id) {

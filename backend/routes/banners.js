@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
+const rateLimit = require('express-rate-limit');
+
+const bannersReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const bannersWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
 
 // GET /api/banners — 获取激活的Banner列表（按sort_order排序）
-router.get('/', async (req, res) => {
+router.get('/', bannersReadLimiter, async (req, res) => {
   try {
     const banners = await prisma.$queryRaw`SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order ASC`;
     res.json(banners);
@@ -14,7 +18,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/banners — 创建Banner（admin only）
-router.post('/', adminAuth, async (req, res) => {
+router.post('/', bannersWriteLimiter, adminAuth, async (req, res) => {
   try {
     const { title, subtitle, image_url, link_type, link_target, gradient_from, gradient_to, sort_order, is_active } = req.body;
     if (!title || !image_url) return res.status(400).json({ error: '请填写标题和图片URL' });
@@ -36,7 +40,7 @@ router.post('/', adminAuth, async (req, res) => {
 });
 
 // PUT /api/banners/:id — 更新Banner（admin only）
-router.put('/:id', adminAuth, async (req, res) => {
+router.put('/:id', bannersWriteLimiter, adminAuth, async (req, res) => {
   try {
     const banner = (await prisma.$queryRaw`SELECT * FROM banners WHERE id = ${Number(req.params.id)}`)[0];
     if (!banner) return res.status(404).json({ error: 'Banner不存在' });
@@ -63,7 +67,7 @@ router.put('/:id', adminAuth, async (req, res) => {
 });
 
 // DELETE /api/banners/:id — 删除Banner（admin only）
-router.delete('/:id', adminAuth, async (req, res) => {
+router.delete('/:id', bannersWriteLimiter, adminAuth, async (req, res) => {
   try {
     const changes = await prisma.$executeRaw`DELETE FROM banners WHERE id = ${Number(req.params.id)}`;
     if (changes === 0) return res.status(404).json({ error: 'Banner不存在' });
