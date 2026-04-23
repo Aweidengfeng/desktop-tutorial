@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 
 const writeLimiter = rateLimit({
@@ -135,13 +135,13 @@ const GLOSSARY = [
 ];
 
 // POST /api/ai-coach/assessment - save user assessment
-router.post('/assessment', writeLimiter, auth, (req, res) => {
+router.post('/assessment', writeLimiter, auth, async (req, res) => {
   try {
     const { max_altitude, gear_skill, fitness, technical_skill, goal_peak } = req.body;
     const now = new Date().toISOString();
-    db.prepare(`
+    await prisma.$executeRaw`
       INSERT INTO coach_assessments (user_id, max_altitude, gear_skill, fitness, technical_skill, goal_peak, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (${req.user.id}, ${max_altitude || 0}, ${gear_skill || 'beginner'}, ${fitness || 'moderate'}, ${technical_skill || 'beginner'}, ${goal_peak || null}, ${now}, ${now})
       ON CONFLICT(user_id) DO UPDATE SET
         max_altitude = excluded.max_altitude,
         gear_skill = excluded.gear_skill,
@@ -149,8 +149,8 @@ router.post('/assessment', writeLimiter, auth, (req, res) => {
         technical_skill = excluded.technical_skill,
         goal_peak = excluded.goal_peak,
         updated_at = excluded.updated_at
-    `).run(req.user.id, max_altitude || 0, gear_skill || 'beginner', fitness || 'moderate', technical_skill || 'beginner', goal_peak || null, now, now);
-    const assessment = db.prepare('SELECT * FROM coach_assessments WHERE user_id = ?').get(req.user.id);
+    `;
+    const assessment = (await prisma.$queryRaw`SELECT * FROM coach_assessments WHERE user_id = ${req.user.id}`)[0];
     res.json(assessment);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -158,9 +158,9 @@ router.post('/assessment', writeLimiter, auth, (req, res) => {
 });
 
 // GET /api/ai-coach/assessment - get user's assessment
-router.get('/assessment', auth, (req, res) => {
+router.get('/assessment', auth, async (req, res) => {
   try {
-    const assessment = db.prepare('SELECT * FROM coach_assessments WHERE user_id = ?').get(req.user.id);
+    const assessment = (await prisma.$queryRaw`SELECT * FROM coach_assessments WHERE user_id = ${req.user.id}`)[0];
     if (!assessment) return res.status(404).json({ error: '未找到评估记录，请先完成评估' });
     res.json(assessment);
   } catch (e) {
@@ -169,9 +169,9 @@ router.get('/assessment', auth, (req, res) => {
 });
 
 // GET /api/ai-coach/roadmap - get personalized climbing roadmap
-router.get('/roadmap', auth, (req, res) => {
+router.get('/roadmap', auth, async (req, res) => {
   try {
-    const assessment = db.prepare('SELECT * FROM coach_assessments WHERE user_id = ?').get(req.user.id);
+    const assessment = (await prisma.$queryRaw`SELECT * FROM coach_assessments WHERE user_id = ${req.user.id}`)[0];
     let level = 'beginner';
     if (assessment) {
       if (assessment.max_altitude >= 7000 || assessment.technical_skill === 'advanced') level = 'advanced';
