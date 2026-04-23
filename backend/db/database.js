@@ -1902,49 +1902,10 @@ if (!existingBookingColsPool.includes('pool')) {
   }
 }
 
-// ── 内置俱乐部数据（首次启动时自动填充）──────────────────────────────────
-{
-  const clubSeed = db.prepare('SELECT COUNT(*) as cnt FROM clubs').get();
-  if (clubSeed.cnt === 0) {
-    const insertBuiltinClub = db.prepare(`
-      INSERT OR IGNORE INTO clubs (name, description, cover, specialty, region, type, contact, verified, members_count, expeditions, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'active')
-    `);
-    insertBuiltinClub.run('珠峰探险公司', '专注于喜马拉雅8000米峰商业远征，拥有15年运营经验，成功率高达90%', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', '8000m峰', '尼泊尔', '专业', '+977-1-4416388', 320, 18);
-    insertBuiltinClub.run('高山探险服务公司', '国内最大的商业攀登服务商，覆盖喜马拉雅、喀喇昆仑等区域', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', '综合攀登', '中国', '专业', '010-88881234', 560, 42);
-    insertBuiltinClub.run('成都川西登山学校', '专注于四川境内技术攀登和培训，幺妹峰、四姑娘山等线路专家', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', '技术攀登', '四川', '综合', '028-88886666', 430, 67);
-    insertBuiltinClub.run('喜马拉雅探险队', '专业的喜马拉雅远征组织，曾多次带队登顶8000米峰', 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', '喜马拉雅', '尼泊尔/中国', '专业', '+977-1-4001234', 890, 28);
-    insertBuiltinClub.run('北京户外探险队', '以休闲户外和中低海拔攀登为主，适合初学者', 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', '中低海拔', '北京', '休闲', '010-66661234', 1280, 120);
-    insertBuiltinClub.run('成都山地俱乐部', '专注于川西高原和横断山脉攀登的本地俱乐部', 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', '川西高原', '四川', '区域', '028-66662345', 450, 35);
-    insertBuiltinClub.run('西藏高山探险协会', '专注于西藏高原攀登活动，持有西藏自治区探险资质，专业本地向导团队', 'https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=400', '西藏高原', '西藏', '专业', '0891-6321456', 210, 15);
-    insertBuiltinClub.run('云南雪山俱乐部', '专注于云南滇西北雪山攀登，梅里雪山、哈巴雪山等区域深度资源', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', '云南雪山', '云南', '区域', '0872-2345678', 380, 52);
-    insertBuiltinClub.run('丝路登山协会', '西北地区攀登爱好者的聚集地，专注昆仑山、天山攀登及慕士塔格远征', 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', '昆仑/天山', '新疆', '区域', '0991-2356789', 290, 22);
-    console.log('✅ 内置俱乐部数据填充完成');
-  }
-}
+// ── 内置俱乐部数据已移除：俱乐部须通过平台申请流程入驻 ──────────────────────────────────
 
-// ── 内置向导数据（首次启动时自动填充）──────────────────────────────────
-{
-  const guideSeed = db.prepare('SELECT COUNT(*) as cnt FROM guides').get();
-  if (guideSeed.cnt === 0) {
-    const insertBuiltinGuide = db.prepare(`
-      INSERT OR IGNORE INTO guides (name, avatar, flag, nationality, rating, reviews, specialty, day_rate, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'approved')
-    `);
-    insertBuiltinGuide.run('扎西旺堆', 'https://i.pravatar.cc/150?u=guide1', '🇨🇳', '中国', 4.9, 87, '珠峰/洛子峰', 3500);
-    insertBuiltinGuide.run('Ang Dorji', 'https://i.pravatar.cc/150?u=guide2', '🇳🇵', '尼泊尔', 4.8, 143, 'K2/南迦帕尔巴特', 4200);
-    insertBuiltinGuide.run('Marc Dubois', 'https://i.pravatar.cc/150?u=guide3', '🇫🇷', '法国', 4.7, 62, '阿尔卑斯技术攀登', 2800);
-    insertBuiltinGuide.run('Ibrahim Dağ', 'https://i.pravatar.cc/150?u=guide4', '🇹🇷', '土耳其', 4.6, 38, '安纳托利亚/高加索', 2200);
-    insertBuiltinGuide.run('索南仁增', 'https://i.pravatar.cc/150?u=guide5', '🇨🇳', '中国', 4.9, 115, '西藏8000米峰', 3800);
-    insertBuiltinGuide.run('Pemba Sherpa', 'https://i.pravatar.cc/150?u=guide6', '🇳🇵', '尼泊尔', 5.0, 201, '全喜马拉雅', 5000);
-    insertBuiltinGuide.run('Carlos Moya', 'https://i.pravatar.cc/150?u=guide7', '🇪🇸', '西班牙', 4.7, 55, '巴塔哥尼亚技术攀登', 3200);
-    insertBuiltinGuide.run('Dorje Khatri', 'https://i.pravatar.cc/150?u=guide8', '🇳🇵', '尼泊尔', 4.8, 178, '干城章嘉/马卡鲁', 4500);
-    insertBuiltinGuide.run('李明辉', 'https://i.pravatar.cc/150?u=guide9', '🇨🇳', '中国', 4.6, 43, '四川技术攀登/幺妹峰', 2600);
-    insertBuiltinGuide.run('Valentina Rossi', 'https://i.pravatar.cc/150?u=guide10', '🇮🇹', '意大利', 4.8, 89, '多洛米蒂/马特洪峰', 3100);
-    insertBuiltinGuide.run('Nasim Akhtar', 'https://i.pravatar.cc/150?u=guide11', '🇵🇰', '巴基斯坦', 4.9, 134, 'K2/南迦帕尔巴特/喀喇昆仑', 5200);
-    console.log('✅ 内置向导数据填充完成');
-  }
-}
+// ── 内置向导数据已移除：向导须通过平台申请流程入驻 ──────────────────────────────────
+
 
 // ── 内置装备数据（首次启动时自动填充）──────────────────────────────────
 {
@@ -2108,11 +2069,68 @@ const existingGuideAppColsCert = db.pragma('table_info(guide_applications)').map
 if (!existingGuideAppColsCert.includes('cert_level')) {
   db.exec("ALTER TABLE guide_applications ADD COLUMN cert_level TEXT DEFAULT 'basic'");
 }
+if (!existingGuideAppColsCert.includes('id_card_url')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN id_card_url TEXT');
+}
+if (!existingGuideAppColsCert.includes('climbing_cert_url')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN climbing_cert_url TEXT');
+}
+if (!existingGuideAppColsCert.includes('insurance_cert_url')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN insurance_cert_url TEXT');
+}
+if (!existingGuideAppColsCert.includes('health_cert_url')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN health_cert_url TEXT');
+}
+if (!existingGuideAppColsCert.includes('passport_url')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN passport_url TEXT');
+}
+if (!existingGuideAppColsCert.includes('is_international')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN is_international INTEGER DEFAULT 0');
+}
+if (!existingGuideAppColsCert.includes('nationality')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN nationality TEXT');
+}
+if (!existingGuideAppColsCert.includes('listing_fee_paid')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN listing_fee_paid INTEGER DEFAULT 0');
+}
+if (!existingGuideAppColsCert.includes('listing_fee_paid_at')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN listing_fee_paid_at DATETIME');
+}
+if (!existingGuideAppColsCert.includes('note')) {
+  db.exec('ALTER TABLE guide_applications ADD COLUMN note TEXT');
+}
 
 // 迁移：club_applications 表补充 cert_level 字段
 const existingClubAppColsCert = db.pragma('table_info(club_applications)').map(c => c.name);
 if (!existingClubAppColsCert.includes('cert_level')) {
   db.exec("ALTER TABLE club_applications ADD COLUMN cert_level TEXT DEFAULT 'standard'");
+}
+if (!existingClubAppColsCert.includes('listing_fee_paid')) {
+  db.exec('ALTER TABLE club_applications ADD COLUMN listing_fee_paid INTEGER DEFAULT 0');
+}
+if (!existingClubAppColsCert.includes('listing_fee_paid_at')) {
+  db.exec('ALTER TABLE club_applications ADD COLUMN listing_fee_paid_at DATETIME');
+}
+if (!existingClubAppColsCert.includes('note')) {
+  db.exec('ALTER TABLE club_applications ADD COLUMN note TEXT');
+}
+
+// 迁移：guides 表补充国际向导字段
+const existingGuideCols4 = db.pragma('table_info(guides)').map(c => c.name);
+if (!existingGuideCols4.includes('passport_url')) {
+  db.exec('ALTER TABLE guides ADD COLUMN passport_url TEXT');
+}
+if (!existingGuideCols4.includes('is_international')) {
+  db.exec('ALTER TABLE guides ADD COLUMN is_international INTEGER DEFAULT 0');
+}
+if (!existingGuideCols4.includes('listing_fee_paid_at')) {
+  db.exec('ALTER TABLE guides ADD COLUMN listing_fee_paid_at DATETIME');
+}
+
+// 迁移：clubs 表补充 listing_fee_paid_at 字段
+const existingClubCols4 = db.pragma('table_info(clubs)').map(c => c.name);
+if (!existingClubCols4.includes('listing_fee_paid_at')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN listing_fee_paid_at DATETIME');
 }
 
 // 新增表：结算账户、提现申请、平台资金流水

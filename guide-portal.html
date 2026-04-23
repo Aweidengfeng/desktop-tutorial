@@ -142,8 +142,17 @@
         </div>
       </template>
 
+      <!-- 待付费展示 -->
+      <template x-if="!certStatus.certified && certStatus.guide && certStatus.guide.status === 'approved_pending_payment'">
+        <div class="text-slate-300 text-sm py-2">
+          <p class="text-green-400 font-semibold mb-2">🎉 审核已通过！</p>
+          <p>请完成入驻费支付，即可正式上线接单。</p>
+          <button @click="page='pay'" class="mt-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-xl font-semibold text-sm transition hover:opacity-90">💳 立即付费激活</button>
+        </div>
+      </template>
+
       <!-- 未认证展示 -->
-      <template x-if="!certStatus.certified && (!certStatus.application || certStatus.application.status === 'rejected')">
+      <template x-if="!certStatus.certified && !certStatus.guide && (!certStatus.application || certStatus.application.status === 'rejected')">
         <div class="text-slate-400 text-sm py-2">
           <p>您尚未完成向导认证，请选择认证等级并提交申请。</p>
           <button @click="page='apply'" class="mt-3 text-blue-400 hover:text-blue-300 font-semibold transition-colors">立即申请认证 →</button>
@@ -351,6 +360,46 @@
                      class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
             </div>
           </div>
+
+          <!-- 证件上传 -->
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">身份证扫描件（必须）</label>
+            <input type="file" accept="image/*,.pdf" @change="applyFileFields.id_card = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+            <p x-show="applyForm.id_card_url" class="text-xs text-green-400 mt-1">✓ 已上传</p>
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">攀登资质证书</label>
+            <input type="file" accept="image/*,.pdf" @change="applyFileFields.climbing_cert = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+            <p x-show="applyForm.climbing_cert_url" class="text-xs text-green-400 mt-1">✓ 已上传</p>
+          </div>
+
+          <!-- 国际向导开关 -->
+          <div class="flex items-center gap-3 glass-dark rounded-xl p-3">
+            <input type="checkbox" id="isInternational" x-model="applyForm.is_international" class="w-4 h-4 accent-blue-500">
+            <label for="isInternational" class="text-sm text-slate-300 cursor-pointer">🌐 我是国际向导（持外国国籍或需要护照入境的向导）</label>
+          </div>
+          <div x-show="applyForm.is_international" class="space-y-3">
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">国籍</label>
+              <input x-model="applyForm.nationality" type="text" placeholder="如：尼泊尔、法国"
+                     class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+            </div>
+            <div>
+              <label class="text-sm text-slate-400 mb-1 block">护照扫描件</label>
+              <input type="file" accept="image/*,.pdf" @change="applyFileFields.passport = $event.target.files[0]"
+                     class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+              <p x-show="applyForm.passport_url" class="text-xs text-green-400 mt-1">✓ 已上传</p>
+            </div>
+          </div>
+
+          <!-- 上传进度提示 -->
+          <div x-show="uploadingFiles" class="glass-dark rounded-xl p-3 text-sm text-yellow-400 flex items-center gap-2">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            正在上传文件，请稍候…
+          </div>
+
           <div class="glass-dark rounded-xl p-4 text-sm text-slate-300">
             <p class="font-semibold text-yellow-400 mb-1">🎉 冷启动优惠</p>
             <p>首批认证向导享受 <strong class="text-white">6折年费</strong>，前3个月 <strong class="text-white">零抽成</strong>。名额有限！</p>
@@ -358,9 +407,83 @@
               <strong class="text-green-400" x-text="'¥' + (certLevels.guide[applyForm.certLevel]?.yearFee || 299)"></strong>
             </p>
           </div>
-          <button type="submit" :disabled="applyLoading"
+          <button type="submit" :disabled="applyLoading || uploadingFiles"
                   class="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 disabled:opacity-50 rounded-xl py-3 font-semibold transition">
-            <span x-text="applyLoading ? '提交中…' : '提交认证申请'"></span>
+            <span x-text="applyLoading ? '提交中…' : uploadingFiles ? '上传中…' : '提交认证申请'"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 待付费引导页 -->
+    <div x-show="page === 'pay'">
+      <div class="glass rounded-2xl p-6 text-center">
+        <div class="text-5xl mb-4">🎉</div>
+        <h2 class="text-xl font-bold mb-2">审核通过！完成付费即可入驻</h2>
+        <p class="text-slate-400 text-sm mb-6">您的向导申请已通过审核，请完成入驻费支付后正式在平台上线接单。</p>
+        <div class="glass-dark rounded-xl p-4 mb-6 text-left space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">认证等级</span>
+            <span class="text-white font-semibold" x-text="(certStatus.guide?.cert_level || 'basic').toUpperCase()"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">入驻年费</span>
+            <span class="text-green-400 font-bold" x-text="'¥' + (certLevels.guide?.[certStatus.guide?.cert_level]?.yearFee || 299)"></span>
+          </div>
+        </div>
+        <button @click="payListingFee()" :disabled="payLoading"
+                class="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90 disabled:opacity-50 rounded-xl py-3 font-bold transition text-lg">
+          <span x-text="payLoading ? '处理中…' : '💳 立即支付入驻费'"></span>
+        </button>
+        <p class="text-xs text-slate-500 mt-3">支持微信支付、支付宝 · 安全加密</p>
+      </div>
+    </div>
+
+    <!-- 商业资质申请页 -->
+    <div x-show="page === 'commercial' && certStatus.certified">
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-bold mb-5">🏆 商业资质申请</h2>
+        <p class="text-slate-400 text-sm mb-5">上传商业运营所需的资质证件，审核通过后可发布收费服务。</p>
+        <form @submit.prevent="submitCommercialApply()" class="space-y-4">
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">身份证扫描件 *</label>
+            <input type="file" accept="image/*,.pdf" @change="commercialFiles.id_card = $event.target.files[0]" required
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+            <p x-show="commercialForm.id_card_url" class="text-xs text-green-400 mt-1">✓ 已上传</p>
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">攀登资质证书</label>
+            <input type="file" accept="image/*,.pdf" @change="commercialFiles.climbing_cert = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">保险证明</label>
+            <input type="file" accept="image/*,.pdf" @change="commercialFiles.insurance_cert = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">健康证明</label>
+            <input type="file" accept="image/*,.pdf" @change="commercialFiles.health_cert = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">护照扫描件（国际向导）</label>
+            <input type="file" accept="image/*,.pdf" @change="commercialFiles.passport = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+          </div>
+          <div x-show="commercialUploading" class="glass-dark rounded-xl p-3 text-sm text-yellow-400 flex items-center gap-2">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            正在上传文件，请稍候…
+          </div>
+          <div x-show="certStatus.guide?.commercial_status === 'pending'" class="glass-dark rounded-xl p-3 text-sm text-yellow-400">
+            ⏳ 您的商业资质申请正在审核中
+          </div>
+          <div x-show="certStatus.guide?.commercial_status === 'approved'" class="glass-dark rounded-xl p-3 text-sm text-green-400">
+            ✅ 商业资质已审核通过
+          </div>
+          <button type="submit" :disabled="commercialLoading || commercialUploading || certStatus.guide?.commercial_status === 'pending' || certStatus.guide?.commercial_status === 'approved'"
+                  class="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 disabled:opacity-50 rounded-xl py-3 font-semibold transition">
+            <span x-text="commercialLoading ? '提交中…' : commercialUploading ? '上传中…' : '提交商业资质申请'"></span>
           </button>
         </form>
       </div>
@@ -380,6 +503,7 @@
         { id: 'activities', icon: '📋', label: '已发布服务' },
         { id: 'publish',    icon: '➕', label: '发布服务' },
         { id: 'orders',     icon: '📦', label: '订单管理' },
+        { id: 'commercial', icon: '🏆', label: '商业资质' },
       ],
       activities: [],
       activitiesLoading: false,
@@ -387,8 +511,15 @@
       ordersLoading: false,
       newActivity: { title: '', mountain: '', difficulty: '', maxMembers: 8, startDate: '', price: 0, description: '' },
       publishLoading: false,
-      applyForm: { certLevel: 'basic', name: '', cert: '', specialty: '', region: '', dayRate: 0 },
+      applyForm: { certLevel: 'basic', name: '', cert: '', specialty: '', region: '', dayRate: 0, is_international: false, nationality: '', id_card_url: '', climbing_cert_url: '', passport_url: '' },
+      applyFileFields: { id_card: null, climbing_cert: null, passport: null },
       applyLoading: false,
+      uploadingFiles: false,
+      payLoading: false,
+      commercialForm: { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '', passport_url: '' },
+      commercialFiles: { id_card: null, climbing_cert: null, insurance_cert: null, health_cert: null, passport: null },
+      commercialLoading: false,
+      commercialUploading: false,
       showPromoBanner: true,
       toasts: [],
 
@@ -430,6 +561,8 @@
             if (this.certStatus.certified) {
               this.loadActivities(token);
               this.loadOrders(token);
+            } else if (this.certStatus.guide && this.certStatus.guide.status === 'approved_pending_payment') {
+              this.page = 'pay';
             } else if (!this.certStatus.application) {
               this.page = 'apply';
             }
@@ -510,15 +643,55 @@
         this.publishLoading = false;
       },
 
+      async uploadFile(file) {
+        const token = this.getAuthToken();
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: fd,
+        });
+        if (!r.ok) throw new Error('上传失败');
+        const d = await r.json();
+        return d.url;
+      },
+
       async submitApplication() {
         const token = this.getAuthToken();
         if (!token) return;
         this.applyLoading = true;
         try {
-          const r = await fetch('/api/certification/guide/apply', {
+          // Upload files first
+          this.uploadingFiles = true;
+          if (this.applyFileFields.id_card) {
+            try { this.applyForm.id_card_url = await this.uploadFile(this.applyFileFields.id_card); } catch(e) { this.toast('身份证上传失败：' + e.message, 'error'); this.applyLoading = false; this.uploadingFiles = false; return; }
+          }
+          if (this.applyFileFields.climbing_cert) {
+            try { this.applyForm.climbing_cert_url = await this.uploadFile(this.applyFileFields.climbing_cert); } catch(e) { this.toast('资质证书上传失败：' + e.message, 'error'); this.applyLoading = false; this.uploadingFiles = false; return; }
+          }
+          if (this.applyForm.is_international && this.applyFileFields.passport) {
+            try { this.applyForm.passport_url = await this.uploadFile(this.applyFileFields.passport); } catch(e) { this.toast('护照上传失败：' + e.message, 'error'); this.applyLoading = false; this.uploadingFiles = false; return; }
+          }
+          this.uploadingFiles = false;
+
+          const r = await fetch('/api/guides/apply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify(this.applyForm),
+            body: JSON.stringify({
+              name: this.applyForm.name,
+              cert: this.applyForm.cert,
+              specialty: this.applyForm.specialty,
+              languages: this.applyForm.languages,
+              dayRate: this.applyForm.dayRate,
+              region: this.applyForm.region,
+              cert_level: this.applyForm.certLevel,
+              id_card_url: this.applyForm.id_card_url || null,
+              climbing_cert_url: this.applyForm.climbing_cert_url || null,
+              is_international: this.applyForm.is_international ? 1 : 0,
+              nationality: this.applyForm.nationality || null,
+              passport_url: this.applyForm.passport_url || null,
+            }),
           });
           const d = await r.json();
           if (r.ok) {
@@ -531,7 +704,79 @@
         } catch(e) {
           this.toast('网络错误，请重试', 'error');
         }
+        this.uploadingFiles = false;
         this.applyLoading = false;
+      },
+
+      async payListingFee() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        this.payLoading = true;
+        try {
+          const r = await fetch('/api/guides/pay-listing-fee', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({}),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast('🎉 支付成功！向导资质已激活');
+            await this.loadCertStatus(token);
+            this.loadActivities(token);
+            this.loadOrders(token);
+            this.page = 'activities';
+          } else {
+            this.toast(d.error || '支付失败，请重试', 'error');
+          }
+        } catch(e) {
+          this.toast('网络错误，请重试', 'error');
+        }
+        this.payLoading = false;
+      },
+
+      async submitCommercialApply() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        const guide = this.certStatus.guide;
+        if (!guide) { this.toast('未找到向导信息', 'error'); return; }
+        this.commercialLoading = true;
+        this.commercialUploading = true;
+        try {
+          const fileMap = [
+            ['id_card', 'id_card_url'],
+            ['climbing_cert', 'climbing_cert_url'],
+            ['insurance_cert', 'insurance_cert_url'],
+            ['health_cert', 'health_cert_url'],
+            ['passport', 'passport_url'],
+          ];
+          for (const [fileKey, urlKey] of fileMap) {
+            if (this.commercialFiles[fileKey]) {
+              try {
+                this.commercialForm[urlKey] = await this.uploadFile(this.commercialFiles[fileKey]);
+              } catch(e) {
+                this.toast(`${fileKey} 上传失败：` + e.message, 'error');
+                this.commercialLoading = false; this.commercialUploading = false; return;
+              }
+            }
+          }
+          this.commercialUploading = false;
+          const r = await fetch(`/api/guides/${guide.id}/commercial-apply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(this.commercialForm),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast('商业资质申请已提交！');
+            await this.loadCertStatus(token);
+          } else {
+            this.toast(d.error || '提交失败', 'error');
+          }
+        } catch(e) {
+          this.toast('网络错误，请重试', 'error');
+        }
+        this.commercialUploading = false;
+        this.commercialLoading = false;
       },
 
       toast(msg, type = 'success') {
