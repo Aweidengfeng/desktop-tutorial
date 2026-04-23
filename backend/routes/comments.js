@@ -5,7 +5,8 @@ const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
 const rateLimit = require('express-rate-limit');
 
-const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' } });
+const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' }, standardHeaders: true, legacyHeaders: false });
+const commentPollLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, message: { error: '请求过于频繁，请稍后再试' }, standardHeaders: true, legacyHeaders: false });
 
 // GET /api/comments?post_id=X
 router.get('/', (req, res) => {
@@ -18,6 +19,24 @@ router.get('/', (req, res) => {
              reply_to_user_name as replyToUserName, likes, created_at as createdAt
       FROM comments WHERE post_id = ? ORDER BY created_at ASC
     `).all(post_id);
+    const parsed = comments.map(c => ({ ...c, images: c.images ? JSON.parse(c.images) : [] }));
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/comments/poll?post_id=X&after=<lastCommentId> — 增量拉取新评论（前端轮询用，每分钟最多 120 次）
+router.get('/poll', commentPollLimiter, (req, res) => {
+  try {
+    const { post_id, after = 0 } = req.query;
+    if (!post_id) return res.status(400).json({ error: '请提供帖子ID' });
+    const comments = db.prepare(`
+      SELECT id, post_id, user_id, author_name as authorName, author_avatar as authorAvatar,
+             content, images, parent_comment_id as parentCommentId, reply_to_user_id as replyToUserId,
+             reply_to_user_name as replyToUserName, likes, created_at as createdAt
+      FROM comments WHERE post_id = ? AND id > ? ORDER BY created_at ASC LIMIT 50
+    `).all(post_id, parseInt(after) || 0);
     const parsed = comments.map(c => ({ ...c, images: c.images ? JSON.parse(c.images) : [] }));
     res.json(parsed);
   } catch (e) {
