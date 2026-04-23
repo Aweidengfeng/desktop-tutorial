@@ -1720,7 +1720,7 @@
           <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-2">专业入口</p>
           <!-- 向导工作台 — 仅已认证向导显示 -->
           <template x-if="currentUser && currentUser.is_guide">
-            <a href="/guide-console" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
+            <a @click.prevent="window.open(API_BASE + '/guide-portal?token=' + encodeURIComponent(authToken || ''), '_blank')" href="#" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
               <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
                 <span class="text-lg">🧭</span>
               </div>
@@ -1733,7 +1733,7 @@
           </template>
           <!-- 俱乐部工作台 — 仅俱乐部管理员显示 -->
           <template x-if="currentUser && currentUser.is_club_admin">
-            <a href="/club-console" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
+            <a @click.prevent="window.open(API_BASE + '/club-portal?token=' + encodeURIComponent(authToken || ''), '_blank')" href="#" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
               <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
                 <span class="text-lg">🏛️</span>
               </div>

@@ -414,7 +414,8 @@
       },
 
       async checkAuth() {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const urlToken = new URLSearchParams(window.location.search).get('token');
+        const token = urlToken || localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token) return;
         try {
           const r = await fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } });
@@ -467,7 +468,7 @@
       },
 
       async publishActivity() {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token) return;
         this.publishLoading = true;
         try {
@@ -504,7 +505,7 @@
       },
 
       async submitApplication() {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token) return;
         this.applyLoading = true;
         try {
