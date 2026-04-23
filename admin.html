@@ -409,7 +409,7 @@
                 <th class="text-left px-4 py-3">地区</th>
                 <th class="text-left px-4 py-3">专长</th>
                 <th class="text-left px-4 py-3">成员数</th>
-                <th class="text-left px-4 py-3">认证状态</th>
+                <th class="text-left px-4 py-3">状态</th>
                 <th class="text-left px-4 py-3">操作</th>
               </tr>
             </thead>
@@ -421,16 +421,22 @@
                   <td class="px-4 py-3 text-white/60" x-text="c.specialty || '-'"></td>
                   <td class="px-4 py-3 text-white/60" x-text="c.members_count || 0"></td>
                   <td class="px-4 py-3">
-                    <span :class="c.verified ? 'bg-green-500/20 text-green-400' : 'bg-slate-500/20 text-slate-400'"
-                          class="px-2 py-0.5 rounded-full text-xs font-medium"
-                          x-text="c.verified ? '✓ 已认证' : '未认证'"></span>
+                    <span :class="{
+                      'bg-green-500/20 text-green-400': c.status==='active',
+                      'bg-orange-500/20 text-orange-300': c.status==='approved_pending_payment',
+                      'bg-yellow-500/20 text-yellow-300': c.status==='pending',
+                      'bg-red-500/20 text-red-400': c.status==='deleted'||c.status==='revoked',
+                      'bg-slate-500/20 text-slate-400': !c.status||c.status==='inactive'
+                    }" class="px-2 py-0.5 rounded-full text-xs font-medium"
+                    x-text="{'active':'✓ 活跃','approved_pending_payment':'待付费','pending':'待审核','deleted':'已删除','revoked':'已撤销'}[c.status]||c.status||'未知'"></span>
                   </td>
-                  <td class="px-4 py-3 flex gap-2">
+                  <td class="px-4 py-3 flex gap-2 flex-wrap">
                     <button @click="editClub(c)" class="text-blue-400 hover:text-blue-300 text-xs transition">编辑</button>
                     <button @click="verifyClub(c)"
-                            :class="c.verified ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
+                            :class="c.verified ? 'text-yellow-400 hover:text-yellow-300' : 'text-green-400 hover:text-green-300'"
                             class="text-xs transition"
                             x-text="c.verified ? '取消认证' : '认证'"></button>
+                    <button x-show="c.status==='active'" @click="revokeClubCert(c)" class="text-orange-400 hover:text-orange-300 text-xs transition">撤销认证</button>
                     <button @click="deleteClub(c)" class="text-red-400 hover:text-red-300 text-xs transition">删除</button>
                   </td>
                 </tr>
@@ -941,7 +947,7 @@
                     }" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved':'已通过','approved_pending_payment':'待付费','rejected':'已驳回','need_info':'需补充'}[app.status]||app.status"></span>
                   </td>
                   <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(app.created_at||'').slice(0,10)"></td>
-                  <td class="py-2"><button @click="reviewDrawer={open:true,type:'club',item:app,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button></td>
+                  <td class="py-2 flex gap-1"><button @click="reviewDrawer={open:true,type:'club',item:app,action:'',note:''}" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs text-white">审核</button><button x-show="app.cert_url||app.business_license_url" @click="viewClubDocs(app)" class="px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs text-white">查看证件</button></td>
                 </tr>
               </template>
             </tbody></table>
@@ -949,9 +955,40 @@
         </div>
         <!-- Review Drawer -->
         <div x-show="reviewDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="reviewDrawer.open=false">
-          <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
+          <div class="glass rounded-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
             <h3 class="font-bold text-lg mb-4">审核申请</h3>
             <div class="space-y-3">
+              <!-- 申请摘要 -->
+              <div class="glass-dark rounded-xl p-3 text-sm space-y-1">
+                <div class="flex justify-between"><span class="text-slate-400">类型</span><span class="text-white" x-text="reviewDrawer.type==='guide'?'向导申请':'俱乐部申请'"></span></div>
+                <div class="flex justify-between"><span class="text-slate-400">名称</span><span class="text-white" x-text="reviewDrawer.item?.name||reviewDrawer.item?.club_name||'-'"></span></div>
+                <div x-show="reviewDrawer.type==='guide'" class="flex justify-between"><span class="text-slate-400">专长</span><span class="text-white" x-text="reviewDrawer.item?.specialty||'-'"></span></div>
+                <div x-show="reviewDrawer.type==='guide'" class="flex justify-between"><span class="text-slate-400">认证等级</span><span class="text-white" x-text="reviewDrawer.item?.cert_level||'-'"></span></div>
+                <div x-show="reviewDrawer.type==='club'" class="flex justify-between"><span class="text-slate-400">联系方式</span><span class="text-white" x-text="reviewDrawer.item?.contact||'-'"></span></div>
+                <!-- 证件快速预览 -->
+                <template x-if="reviewDrawer.type==='guide'">
+                  <div class="pt-1 space-y-1">
+                    <template x-for="[label, url] in [['身份证',reviewDrawer.item?.id_card_url],['攀登资质',reviewDrawer.item?.climbing_cert_url],['保险证明',reviewDrawer.item?.insurance_cert_url],['健康证明',reviewDrawer.item?.health_cert_url],['护照',reviewDrawer.item?.passport_url]]" :key="label">
+                      <div class="flex gap-2 items-center">
+                        <span class="text-slate-400 w-20 shrink-0 text-xs" x-text="label"></span>
+                        <template x-if="url"><a :href="url" target="_blank" class="text-blue-400 hover:underline text-xs truncate max-w-[180px]" x-text="url.split('/').pop()||'查看'"></a></template>
+                        <template x-if="!url"><span class="text-slate-600 text-xs">未上传</span></template>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+                <template x-if="reviewDrawer.type==='club'">
+                  <div class="pt-1 space-y-1">
+                    <template x-for="[label, url] in [['营业执照',reviewDrawer.item?.cert_url||reviewDrawer.item?.business_license_url],['保险证明',reviewDrawer.item?.insurance_cert_url]]" :key="label">
+                      <div class="flex gap-2 items-center">
+                        <span class="text-slate-400 w-20 shrink-0 text-xs" x-text="label"></span>
+                        <template x-if="url"><a :href="url" target="_blank" class="text-blue-400 hover:underline text-xs truncate max-w-[180px]" x-text="url.split('/').pop()||'查看'"></a></template>
+                        <template x-if="!url"><span class="text-slate-600 text-xs">未上传</span></template>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
               <div class="flex gap-2">
                 <button @click="reviewDrawer.action='approve'" :class="reviewDrawer.action==='approve'?'bg-emerald-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">✅ 通过</button>
                 <button @click="reviewDrawer.action='reject'" :class="reviewDrawer.action==='reject'?'bg-red-600':'glass'" class="flex-1 py-2 rounded-lg text-sm font-medium">❌ 驳回</button>
@@ -962,6 +999,28 @@
                 <button @click="reviewDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
                 <button @click="reviewApplication(reviewDrawer.type, reviewDrawer.item?.id)" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">确认</button>
               </div>
+            </div>
+          </div>
+        </div>
+        <!-- Club Docs Viewer Modal -->
+        <div x-show="clubDocsModal.open" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" @click.self="clubDocsModal.open=false">
+          <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4 max-h-screen overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-lg">俱乐部证件查看</h3>
+              <button @click="clubDocsModal.open=false" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-3">
+              <template x-for="[label, url] in [['营业执照', clubDocsModal.cert_url||clubDocsModal.business_license_url], ['保险证明', clubDocsModal.insurance_cert_url]]" :key="label">
+                <div class="flex gap-2 items-center text-sm">
+                  <span class="text-slate-400 w-24 shrink-0" x-text="label"></span>
+                  <template x-if="url">
+                    <a :href="url" target="_blank" class="text-blue-400 hover:underline truncate" x-text="url.split('/').pop() || '查看文件'"></a>
+                  </template>
+                  <template x-if="!url">
+                    <span class="text-slate-600">未上传</span>
+                  </template>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -1307,6 +1366,7 @@
         applicationsSubTab: 'guide',
         reviewDrawer: { open: false, type: '', item: null, action: '', note: '' },
         certsModal: { open: false, id_card_url: null, climbing_cert_url: null, insurance_cert_url: null, health_cert_url: null, passport_url: null, is_international: 0, nationality: null },
+        clubDocsModal: { open: false, cert_url: null, business_license_url: null, insurance_cert_url: null },
 
         // Suspicious Tracks
         suspiciousTracks: [], suspiciousTracksLoading: false,
@@ -1560,12 +1620,29 @@
           } catch (e) { this.showToast(e.message, 'error'); }
         },
         async deleteClub(c) {
-          if (!confirm('确认删除俱乐部"' + c.name + '"？')) return;
+          if (!confirm('确认删除俱乐部"' + c.name + '"？此操作不可逆。')) return;
           try {
             await this.api('DELETE', `/clubs/${c.id}`);
             this.clubs = this.clubs.filter(x => x.id !== c.id);
             this.showToast('俱乐部已删除');
           } catch (e) { this.showToast(e.message, 'error'); }
+        },
+        async revokeClubCert(c) {
+          const reason = prompt('请输入撤销原因（可选）') || '';
+          if (!confirm('确认撤销俱乐部"' + c.name + '"的认证？')) return;
+          try {
+            await this.api('POST', `/clubs/${c.id}/revoke-certification`, { reason });
+            c.status = 'revoked'; c.verified = 0;
+            this.showToast('俱乐部认证已撤销');
+          } catch (e) { this.showToast(e.message, 'error'); }
+        },
+        viewClubDocs(app) {
+          this.clubDocsModal = {
+            open: true,
+            cert_url: app.cert_url || null,
+            business_license_url: app.business_license_url || null,
+            insurance_cert_url: app.insurance_cert_url || null,
+          };
         },
         async loadRoutes(p) {
           this.routesLoading = true; this.routesPage = p;
@@ -1761,14 +1838,14 @@
           this.clubCommercialLoading = true;
           try {
             const d = await this.api('GET', '/clubs/commercial');
-            this.clubCommercial = d.items || d; this.clubCommercialTotal = d.total || this.clubCommercial.length;
+            this.clubCommercial = d.clubs || (Array.isArray(d) ? d : []); this.clubCommercialTotal = d.total || this.clubCommercial.length;
           } catch(e) { this.showToast(e.message,'error'); } finally { this.clubCommercialLoading = false; }
         },
         async loadGuideCommercial() {
           this.guideCommercialLoading = true;
           try {
             const d = await this.api('GET', '/guides/commercial');
-            this.guideCommercial = d.items || d; this.guideCommercialTotal = d.total || this.guideCommercial.length;
+            this.guideCommercial = d.guides || (Array.isArray(d) ? d : []); this.guideCommercialTotal = d.total || this.guideCommercial.length;
           } catch(e) { this.showToast(e.message,'error'); } finally { this.guideCommercialLoading = false; }
         },
         async reviewCommercial() {

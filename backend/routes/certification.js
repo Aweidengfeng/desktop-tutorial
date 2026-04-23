@@ -60,7 +60,7 @@ router.get('/club/status', certReadLimiter, auth, (req, res) => {
   try {
     const club = db.prepare(`
       SELECT id, name, cert_level, cert_expires_at, cert_year_fee, listing_fee_paid,
-             verified, specialty, region, rating, created_at
+             verified, status, specialty, region, rating, created_at
       FROM clubs WHERE creator_id = ?
     `).get(req.user.id);
     if (!club) {
