@@ -52,12 +52,38 @@ router.get('/incoming', auth, (req, res) => {
   }
 });
 
+// GET /api/bookings/pool — 向导/俱乐部查看公共池（未选向导或俱乐部）预约
+router.get('/pool', auth, (req, res) => {
+  try {
+    const { page = 1, limit = 20, mountain } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    let sql = `
+      SELECT b.*, u.name as requester_name, u.avatar as requester_avatar
+      FROM bookings b LEFT JOIN users u ON u.id = b.user_id
+      WHERE b.pool = 1 AND b.status = 'pending'
+    `;
+    const params = [];
+    if (mountain) {
+      sql += ' AND b.mountain LIKE ?';
+      params.push(`%${mountain}%`);
+    }
+    sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+    const bookings = db.prepare(sql).all(...params);
+    const total = db.prepare(
+      `SELECT COUNT(*) as cnt FROM bookings WHERE pool = 1 AND status = 'pending'${mountain ? ' AND mountain LIKE ?' : ''}`
+    ).get(...(mountain ? [`%${mountain}%`] : [])).cnt;
+    res.json({ bookings, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // POST /api/bookings（需要JWT）
 router.post('/', auth, (req, res) => {
   try {
     const { mountain, guide_id, guide_name, club_id, club_name, date, members, notes, type } = req.body;
     if (!mountain || !date) return res.status(400).json({ error: '请填写山峰和日期' });
-    if (!guide_id && !club_id) return res.status(400).json({ error: '请选择向导或俱乐部' });
     // 验证日期必须是未来
     if (new Date(date) <= new Date()) return res.status(400).json({ error: '日期必须是未来日期' });
     // 同一用户对同一向导同一日期不能重复预约
@@ -67,11 +93,13 @@ router.post('/', auth, (req, res) => {
     }
     const memberCount = parseInt(members) || 1;
     const amount = memberCount * 3000;
-    const bookingType = type || (guide_id ? 'guide' : 'club');
+    // 未选向导/俱乐部则进入公共池
+    const isPool = !guide_id && !club_id ? 1 : 0;
+    const bookingType = type || (guide_id ? 'guide' : club_id ? 'club' : 'pool');
     const result = db.prepare(`
-      INSERT INTO bookings (user_id, mountain, guide_id, guide_name, club_id, club_name, type, date, members, notes, amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(req.user.id, mountain, guide_id || null, guide_name || '', club_id || null, club_name || '', bookingType, date, memberCount, notes || '', amount);
+      INSERT INTO bookings (user_id, mountain, guide_id, guide_name, club_id, club_name, type, date, members, notes, amount, pool)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(req.user.id, mountain, guide_id || null, guide_name || '', club_id || null, club_name || '', bookingType, date, memberCount, notes || '', amount, isPool);
     const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid);
 
     // 发送通知给向导或俱乐部创建者
@@ -160,13 +188,46 @@ router.put('/:id/reject', auth, (req, res) => {
   }
 });
 
+// POST /api/bookings/:id/claim — 向导/俱乐部认领公共池预约
+router.post('/:id/claim', auth, (req, res) => {
+  try {
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    if (!booking) return res.status(404).json({ error: '预约不存在' });
+    if (!booking.pool) return res.status(400).json({ error: '该预约不在公共池中' });
+    if (booking.status !== 'pending') return res.status(400).json({ error: '该预约已被认领或关闭' });
+
+    // 确认操作者是向导或俱乐部创建者
+    const guide = db.prepare('SELECT id, name FROM guides WHERE user_id = ? AND status = ?').get(req.user.id, 'approved');
+    const club = db.prepare('SELECT id, name FROM clubs WHERE creator_id = ?').get(req.user.id);
+    if (!guide && !club) return res.status(403).json({ error: '只有向导或俱乐部可以认领预约' });
+
+    if (guide) {
+      db.prepare(`UPDATE bookings SET pool = 0, guide_id = ?, guide_name = ?, type = 'guide' WHERE id = ?`)
+        .run(guide.id, guide.name, req.params.id);
+      // 通知客户
+      db.prepare(`INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'booking_claimed', ?, ?)`)
+        .run(booking.user_id, `向导 ${guide.name} 主动联系了您关于 [${booking.mountain}] 的预约，请查看消息`, booking.id);
+    } else {
+      db.prepare(`UPDATE bookings SET pool = 0, club_id = ?, club_name = ?, type = 'club' WHERE id = ?`)
+        .run(club.id, club.name, req.params.id);
+      db.prepare(`INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'booking_claimed', ?, ?)`)
+        .run(booking.user_id, `俱乐部 ${club.name} 主动联系了您关于 [${booking.mountain}] 的预约，请查看消息`, booking.id);
+    }
+
+    const updated = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/bookings/:id（需要JWT）
 router.get('/:id', auth, (req, res) => {
   try {
     const booking = db.prepare(`
       SELECT b.*, u.name as requester_name, u.avatar as requester_avatar
       FROM bookings b LEFT JOIN users u ON u.id = b.user_id
-      WHERE b.id = ? AND (b.user_id = ? OR EXISTS (
+      WHERE b.id = ? AND (b.user_id = ? OR b.pool = 1 OR EXISTS (
         SELECT 1 FROM guides g WHERE g.id = b.guide_id AND g.user_id = ?
       ) OR EXISTS (
         SELECT 1 FROM clubs c WHERE c.id = b.club_id AND c.creator_id = ?

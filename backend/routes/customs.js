@@ -3,6 +3,60 @@ const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
 
+// GET /api/customs/pool — 向导/俱乐部查看平台定制订单公共池（需登录）
+router.get('/pool', auth, (req, res) => {
+  try {
+    const guide = db.prepare('SELECT id, name FROM guides WHERE user_id = ? AND status = ?').get(req.user.id, 'approved');
+    const club = db.prepare('SELECT id, name FROM clubs WHERE creator_id = ?').get(req.user.id);
+    if (!guide && !club) return res.status(403).json({ error: '只有向导或俱乐部可以查看定制池' });
+
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const orders = db.prepare(`
+      SELECT co.*, u.name as user_name, u.avatar as user_avatar
+      FROM custom_orders co
+      LEFT JOIN users u ON u.id = co.user_id
+      WHERE co.receiver_type = 'platform' AND co.status = 'pending'
+      ORDER BY co.created_at DESC LIMIT ? OFFSET ?
+    `).all(parseInt(limit), offset);
+    const total = db.prepare(
+      "SELECT COUNT(*) as cnt FROM custom_orders WHERE receiver_type = 'platform' AND status = 'pending'"
+    ).get().cnt;
+    res.json({ orders, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/customs/:id/claim — 向导/俱乐部认领平台定制订单
+router.post('/:id/claim', auth, (req, res) => {
+  try {
+    const order = db.prepare('SELECT * FROM custom_orders WHERE id = ?').get(req.params.id);
+    if (!order) return res.status(404).json({ error: '申请不存在' });
+    if (order.receiver_type !== 'platform') return res.status(400).json({ error: '该订单不在公共池中' });
+    if (order.status !== 'pending') return res.status(400).json({ error: '该订单已被认领或关闭' });
+
+    const guide = db.prepare('SELECT id, name FROM guides WHERE user_id = ? AND status = ?').get(req.user.id, 'approved');
+    const club = db.prepare('SELECT id, name FROM clubs WHERE creator_id = ?').get(req.user.id);
+    if (!guide && !club) return res.status(403).json({ error: '只有向导或俱乐部可以认领定制订单' });
+
+    const rType = guide ? 'guide' : 'club';
+    const rId = guide ? guide.id : club.id;
+    const rName = guide ? guide.name : club.name;
+    db.prepare('UPDATE custom_orders SET receiver_type = ?, receiver_id = ?, receiver_name = ? WHERE id = ?')
+      .run(rType, rId, rName, req.params.id);
+
+    // 通知客户
+    db.prepare(`INSERT INTO notifications (user_id, type, content, related_id) VALUES (?, 'custom_claimed', ?, ?)`)
+      .run(order.user_id, `${rName} 接受了您关于 [${order.peak_name}] 的定制申请，请查看消息`, order.id);
+
+    const updated = db.prepare('SELECT * FROM custom_orders WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/customs/admin/all — 管理员查看所有定制申请（需要JWT + is_admin）
 router.get('/admin/all', auth, (req, res) => {
   try {

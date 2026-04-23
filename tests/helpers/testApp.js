@@ -49,6 +49,9 @@ function createApp() {
   app.use('/api/messages',      require('../../backend/routes/messages'));
   app.use('/api/mountains',     require('../../backend/routes/mountains'));
   app.use('/api/badges',        require('../../backend/routes/badges'));
+  app.use('/api/bookings',      require('../../backend/routes/bookings'));
+  app.use('/api/customs',       require('../../backend/routes/customs'));
+  app.use('/api/group-chats',   require('../../backend/routes/groupChats'));
   app.use('/api/activity-orders',       require('../../backend/routes/activityOrders'));
   app.use('/api/guide-service-orders',  require('../../backend/routes/guideServiceOrders'));
 

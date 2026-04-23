@@ -89,6 +89,52 @@ function initChatGateway(server) {
         socket.emit('chat:error', { error: 'db_error' });
       }
     });
+
+    // ── 群聊 ──────────────────────────────────────────────────────────────
+
+    socket.on('group:join', ({ chat_id }) => {
+      if (!chat_id) return;
+      // 验证成员身份
+      const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(chat_id, uid);
+      if (!member) { socket.emit('chat:error', { error: 'not_member' }); return; }
+      socket.join(`group:${chat_id}`);
+    });
+
+    socket.on('group:leave', ({ chat_id }) => {
+      if (!chat_id) return;
+      socket.leave(`group:${chat_id}`);
+    });
+
+    socket.on('group:message', ({ chat_id, content, type = 'text', images }) => {
+      if (!chat_id || (!content && (!images || images.length === 0))) return;
+      const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(chat_id, uid);
+      if (!member) { socket.emit('chat:error', { error: 'not_member' }); return; }
+      if (content) {
+        const check = checkText(content);
+        if (!check.ok) { socket.emit('chat:error', { error: 'content_blocked', reason: check.reason }); return; }
+      }
+      try {
+        const imagesArr = Array.isArray(images) ? images : [];
+        const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
+        const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
+        const result = db.prepare(
+          'INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (?, ?, ?, ?, ?)'
+        ).run(chat_id, uid, content || '', msgType, imagesStr);
+        const user = db.prepare('SELECT name, avatar FROM users WHERE id = ?').get(uid);
+        const msg = db.prepare('SELECT id, sender_id, content, type, images, created_at FROM group_messages WHERE id = ?').get(result.lastInsertRowid);
+        msg.images = msg.images ? JSON.parse(msg.images) : [];
+        msg.senderName = user ? user.name : '';
+        msg.senderAvatar = user ? user.avatar : '';
+        io.to(`group:${chat_id}`).emit('group:message', msg);
+      } catch (e) {
+        socket.emit('chat:error', { error: 'db_error' });
+      }
+    });
+
+    socket.on('group:typing', ({ chat_id, is_typing }) => {
+      if (!chat_id) return;
+      socket.to(`group:${chat_id}`).emit('group:typing', { userId: uid, is_typing });
+    });
   });
 
   return io;

@@ -25,6 +25,24 @@ router.get('/', (req, res) => {
   }
 });
 
+// GET /api/comments/poll?post_id=X&after=<lastCommentId> — 增量拉取新评论（前端轮询用）
+router.get('/poll', (req, res) => {
+  try {
+    const { post_id, after = 0 } = req.query;
+    if (!post_id) return res.status(400).json({ error: '请提供帖子ID' });
+    const comments = db.prepare(`
+      SELECT id, post_id, user_id, author_name as authorName, author_avatar as authorAvatar,
+             content, images, parent_comment_id as parentCommentId, reply_to_user_id as replyToUserId,
+             reply_to_user_name as replyToUserName, likes, created_at as createdAt
+      FROM comments WHERE post_id = ? AND id > ? ORDER BY created_at ASC LIMIT 50
+    `).all(post_id, parseInt(after) || 0);
+    const parsed = comments.map(c => ({ ...c, images: c.images ? JSON.parse(c.images) : [] }));
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // POST /api/comments（需要JWT）
 router.post('/', commentWriteLimiter, auth, (req, res) => {
   try {

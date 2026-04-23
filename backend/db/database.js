@@ -1780,6 +1780,52 @@ if (!existingTeamColsChat.includes('group_chat_id')) {
   db.exec('ALTER TABLE teams ADD COLUMN group_chat_id INTEGER DEFAULT NULL');
 }
 
+// ── 私信系统增强：reply_to_id / content_json / recalled_at / last_msg_at ──
+const existingMsgColsExt = db.pragma('table_info(messages)').map(c => c.name);
+if (!existingMsgColsExt.includes('reply_to_id')) {
+  db.exec('ALTER TABLE messages ADD COLUMN reply_to_id INTEGER DEFAULT NULL');
+}
+if (!existingMsgColsExt.includes('content_json')) {
+  db.exec('ALTER TABLE messages ADD COLUMN content_json TEXT DEFAULT NULL');
+}
+if (!existingMsgColsExt.includes('recalled_at')) {
+  db.exec('ALTER TABLE messages ADD COLUMN recalled_at DATETIME DEFAULT NULL');
+}
+
+const existingConvColsExt = db.pragma('table_info(conversations)').map(c => c.name);
+if (!existingConvColsExt.includes('last_msg_at')) {
+  db.exec('ALTER TABLE conversations ADD COLUMN last_msg_at DATETIME DEFAULT NULL');
+}
+
+// message_reads 表（消息已读回执，供 chat.gateway 使用）
+db.exec(`
+CREATE TABLE IF NOT EXISTS message_reads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  msg_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(msg_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_message_reads_msg ON message_reads(msg_id);
+
+CREATE TABLE IF NOT EXISTS conversation_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conv_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  last_read_msg_id INTEGER DEFAULT 0,
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(conv_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_conv_members_conv ON conversation_members(conv_id);
+CREATE INDEX IF NOT EXISTS idx_conv_members_user ON conversation_members(user_id);
+`);
+
+// bookings 表：支持无向导/无俱乐部的"公共池"预约
+const existingBookingColsPool = db.pragma('table_info(bookings)').map(c => c.name);
+if (!existingBookingColsPool.includes('pool')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN pool INTEGER DEFAULT 0');
+}
+
 // ── 内置山峰数据（首次启动时自动填充，无需 SEED_ON_START）──────────────────
 {
   const peakSeedCount = db.prepare('SELECT COUNT(*) as cnt FROM peaks').get();
