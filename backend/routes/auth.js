@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
@@ -147,7 +148,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', auth, async (req, res) => {
+router.get('/me', authReadLimiter, auth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: '用户不存在' });
@@ -158,7 +159,7 @@ router.get('/me', auth, async (req, res) => {
 });
 
 // PUT /api/auth/profile
-router.put('/profile', auth, async (req, res) => {
+router.put('/profile', authWriteLimiter, auth, async (req, res) => {
   try {
     const { name, avatar } = req.body;
     const user = await prisma.user.update({
@@ -175,7 +176,7 @@ router.put('/profile', auth, async (req, res) => {
 });
 
 // PUT /api/auth/settings — 保存用户设置（单位、语言等）
-router.put('/settings', auth, async (req, res) => {
+router.put('/settings', authWriteLimiter, auth, async (req, res) => {
   try {
     const settings = JSON.stringify(req.body || {});
     await prisma.user.update({ where: { id: req.user.id }, data: { settings } });
@@ -186,7 +187,7 @@ router.put('/settings', auth, async (req, res) => {
 });
 
 // PUT /api/auth/privacy — 保存隐私设置
-router.put('/privacy', auth, async (req, res) => {
+router.put('/privacy', authWriteLimiter, auth, async (req, res) => {
   try {
     const privacy = JSON.stringify(req.body || {});
     await prisma.user.update({ where: { id: req.user.id }, data: { privacy } });
@@ -197,7 +198,7 @@ router.put('/privacy', auth, async (req, res) => {
 });
 
 // GET /api/auth/settings — 读取用户设置
-router.get('/settings', auth, async (req, res) => {
+router.get('/settings', authReadLimiter, auth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { settings: true } });
     let settings = {};
@@ -209,7 +210,7 @@ router.get('/settings', auth, async (req, res) => {
 });
 
 // GET /api/auth/privacy — 读取隐私设置
-router.get('/privacy', auth, async (req, res) => {
+router.get('/privacy', authReadLimiter, auth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { privacy: true } });
     let privacy = {};
@@ -303,8 +304,8 @@ router.post('/sms/send', async (req, res) => {
       const wait = Math.ceil((60 * 1000 - (Date.now() - lastSent)) / 1000);
       return res.status(429).json({ error: `请等待 ${wait} 秒后再次获取验证码` });
     }
-    // 生成6位验证码
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    // 生成6位验证码（使用 crypto.randomInt 避免伪随机）
+    const code = String(crypto.randomInt(100000, 999999));
     const expiresAt = Date.now() + 5 * 60 * 1000;
     // 使旧验证码失效
     await prisma.smsCode.updateMany({ where: { phone, used: false }, data: { used: true } });
@@ -371,17 +372,18 @@ router.post('/wechat', async (req, res) => {
   try {
     const { code } = req.body;
     if (!code) return res.status(400).json({ error: '缺少 code 参数' });
-    const fakeOpenid = 'wx_mock_' + code + '_' + Date.now();
+    const fakeOpenid = 'wx_mock_' + code + '_' + crypto.randomBytes(8).toString('hex');
     let user = await prisma.user.findFirst({ where: { wechatOpenid: fakeOpenid } });
     if (!user) {
-      const name = '微信用户' + Math.floor(Math.random() * 9999);
+      const suffix = crypto.randomBytes(4).toString('hex');
+      const name = '微信用户' + suffix.slice(0, 4);
       const avatar = 'https://i.pravatar.cc/150?u=wx' + fakeOpenid;
       try {
-        const username = '@wx' + Date.now().toString(36);
+        const username = '@wx' + Date.now().toString(36) + suffix;
         user = await prisma.user.create({ data: { name, username, avatar, wechatOpenid: fakeOpenid } });
       } catch (e) {
         if (e.code === 'P2002') {
-          const username2 = '@wx' + Math.random().toString(36).slice(2);
+          const username2 = '@wx' + crypto.randomBytes(6).toString('hex');
           user = await prisma.user.create({ data: { name, username: username2, avatar, wechatOpenid: fakeOpenid } });
         } else throw e;
       }
@@ -397,17 +399,18 @@ router.post('/apple', async (req, res) => {
   try {
     const { identityToken } = req.body;
     if (!identityToken) return res.status(400).json({ error: '缺少 identityToken 参数' });
-    const fakeSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + Date.now();
+    const fakeSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + crypto.randomBytes(8).toString('hex');
     let user = await prisma.user.findFirst({ where: { appleSub: fakeSub } });
     if (!user) {
-      const name = 'Apple用户' + Math.floor(Math.random() * 9999);
+      const suffix = crypto.randomBytes(4).toString('hex');
+      const name = 'Apple用户' + suffix.slice(0, 4);
       const avatar = 'https://i.pravatar.cc/150?u=ap' + fakeSub;
       try {
-        const username = '@apple' + Date.now().toString(36);
+        const username = '@apple' + Date.now().toString(36) + suffix;
         user = await prisma.user.create({ data: { name, username, avatar, appleSub: fakeSub } });
       } catch (e) {
         if (e.code === 'P2002') {
-          const username2 = '@apple' + Math.random().toString(36).slice(2);
+          const username2 = '@apple' + crypto.randomBytes(6).toString('hex');
           user = await prisma.user.create({ data: { name, username: username2, avatar, appleSub: fakeSub } });
         } else throw e;
       }
