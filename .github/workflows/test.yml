@@ -31,13 +31,13 @@ jobs:
       - name: Install root dependencies
         run: npm install
 
-      # ── 生成 Prisma Client ────────────────────────────────────────────────────
-      - name: Generate Prisma Client
-        run: DATABASE_URL="file:/tmp/ci.db" npx prisma generate --schema=backend/prisma/schema.prisma
-
       # ── 安装后端依赖（pino, express-rate-limit, multer 等）──────────────────
       - name: Install backend dependencies
         run: cd backend && npm install
+
+      # ── 生成 Prisma Client ────────────────────────────────────────────────────
+      - name: Generate Prisma Client
+        run: DATABASE_URL="file:/tmp/ci.db" npx prisma generate --schema=backend/prisma/schema.prisma
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "prisma:generate": "DATABASE_URL=\"file:/tmp/dev.db\" prisma generate --schema=backend/prisma/schema.prisma",
-    "build": "npm run prisma:generate && cd backend && npm install",
+    "build": "cd backend && npm install && cd .. && npm run prisma:generate",
     "start": "node backend/db/seed.js && node backend/app.js",
     "test:api": "node tests/api.test.js && npx jest --forceExit --no-coverage --runInBand",
     "test:api:unit": "npx jest --forceExit --no-coverage --runInBand",
@@ -14,7 +14,7 @@
     "db:seed": "node backend/db/seed.js"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.6.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
@@ -24,7 +24,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "pdfkit": "^0.18.0",
-    "prisma": "^5.22.0",
+    "prisma": "^6.6.0",
     "uuid": "^14.0.0"
   },
   "devDependencies": {
