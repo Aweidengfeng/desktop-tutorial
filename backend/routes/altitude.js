@@ -6,7 +6,6 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
 
 const altitudeLimiter = rateLimit({
   windowMs: 60 * 1000,
