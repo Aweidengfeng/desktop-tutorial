@@ -106,7 +106,10 @@ function initChatGateway(server) {
     });
 
     socket.on('group:message', ({ chat_id, content, type = 'text', images }) => {
-      if (!chat_id || (!content && (!images || images.length === 0))) return;
+      if (!chat_id || (!content && (!images || images.length === 0))) {
+        socket.emit('chat:error', { error: 'empty_message' });
+        return;
+      }
       const member = db.prepare('SELECT id FROM group_chat_members WHERE chat_id = ? AND user_id = ?').get(chat_id, uid);
       if (!member) { socket.emit('chat:error', { error: 'not_member' }); return; }
       if (content) {

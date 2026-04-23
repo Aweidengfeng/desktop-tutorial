@@ -5,7 +5,8 @@ const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
 const rateLimit = require('express-rate-limit');
 
-const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' } });
+const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' }, standardHeaders: true, legacyHeaders: false });
+const commentPollLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, message: { error: '请求过于频繁，请稍后再试' }, standardHeaders: true, legacyHeaders: false });
 
 // GET /api/comments?post_id=X
 router.get('/', (req, res) => {
@@ -25,8 +26,8 @@ router.get('/', (req, res) => {
   }
 });
 
-// GET /api/comments/poll?post_id=X&after=<lastCommentId> — 增量拉取新评论（前端轮询用）
-router.get('/poll', (req, res) => {
+// GET /api/comments/poll?post_id=X&after=<lastCommentId> — 增量拉取新评论（前端轮询用，每分钟最多 120 次）
+router.get('/poll', commentPollLimiter, (req, res) => {
   try {
     const { post_id, after = 0 } = req.query;
     if (!post_id) return res.status(400).json({ error: '请提供帖子ID' });

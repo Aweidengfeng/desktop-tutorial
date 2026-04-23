@@ -2,6 +2,23 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const poolReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const claimLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: '操作过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // GET /api/bookings/my（需要JWT）
 router.get('/my', auth, (req, res) => {
@@ -53,12 +70,14 @@ router.get('/incoming', auth, (req, res) => {
 });
 
 // GET /api/bookings/pool — 向导/俱乐部查看公共池（未选向导或俱乐部）预约
-router.get('/pool', auth, (req, res) => {
+router.get('/pool', poolReadLimiter, auth, (req, res) => {
   try {
     const { page = 1, limit = 20, mountain } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
+    // 仅返回非敏感字段（notes 不对外暴露，id 保留供认领）
     let sql = `
-      SELECT b.*, u.name as requester_name, u.avatar as requester_avatar
+      SELECT b.id, b.mountain, b.type, b.date, b.members, b.amount, b.created_at,
+             u.name as requester_name, u.avatar as requester_avatar
       FROM bookings b LEFT JOIN users u ON u.id = b.user_id
       WHERE b.pool = 1 AND b.status = 'pending'
     `;
@@ -189,7 +208,7 @@ router.put('/:id/reject', auth, (req, res) => {
 });
 
 // POST /api/bookings/:id/claim — 向导/俱乐部认领公共池预约
-router.post('/:id/claim', auth, (req, res) => {
+router.post('/:id/claim', claimLimiter, auth, (req, res) => {
   try {
     const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
     if (!booking) return res.status(404).json({ error: '预约不存在' });

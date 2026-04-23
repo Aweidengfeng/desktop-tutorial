@@ -2,9 +2,26 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/database');
 const auth = require('../middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+const poolReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const claimLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: '操作过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // GET /api/customs/pool — 向导/俱乐部查看平台定制订单公共池（需登录）
-router.get('/pool', auth, (req, res) => {
+router.get('/pool', poolReadLimiter, auth, (req, res) => {
   try {
     const guide = db.prepare('SELECT id, name FROM guides WHERE user_id = ? AND status = ?').get(req.user.id, 'approved');
     const club = db.prepare('SELECT id, name FROM clubs WHERE creator_id = ?').get(req.user.id);
@@ -29,7 +46,7 @@ router.get('/pool', auth, (req, res) => {
 });
 
 // POST /api/customs/:id/claim — 向导/俱乐部认领平台定制订单
-router.post('/:id/claim', auth, (req, res) => {
+router.post('/:id/claim', claimLimiter, auth, (req, res) => {
   try {
     const order = db.prepare('SELECT * FROM custom_orders WHERE id = ?').get(req.params.id);
     if (!order) return res.status(404).json({ error: '申请不存在' });
