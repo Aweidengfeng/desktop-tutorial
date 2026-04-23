@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
-const db = require('../db/database');
+const prisma = require('../db/prisma');
 
 const certLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
@@ -14,21 +14,21 @@ function generateCertNo() {
 }
 
 // GET /api/certificates/:trackId  (or :trackId.png)
-router.get('/:trackId', certLimiter, auth, (req, res) => {
+router.get('/:trackId', certLimiter, auth, async (req, res) => {
   try {
     const trackId = req.params.trackId.replace('.png', '');
-    const track = db.prepare('SELECT * FROM tracks WHERE id = ? AND user_id = ?').get(trackId, req.user.id);
+    const track = (await prisma.$queryRaw`SELECT * FROM tracks WHERE id = ${Number(trackId)} AND user_id = ${req.user.id}`)[0];
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
 
     let certNo = track.certificate_no;
     if (!certNo) {
       certNo = generateCertNo();
       try {
-        db.prepare('UPDATE tracks SET certificate_no = ? WHERE id = ?').run(certNo, track.id);
+        await prisma.$executeRaw`UPDATE tracks SET certificate_no = ${certNo} WHERE id = ${track.id}`;
       } catch(e) {}
     }
 
-    const user = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+    const user = (await prisma.$queryRaw`SELECT name FROM users WHERE id = ${req.user.id}`)[0];
     const userName = user?.name || '攀登者';
 
     const peakName = track.peak_name || track.name || '未知山峰';
