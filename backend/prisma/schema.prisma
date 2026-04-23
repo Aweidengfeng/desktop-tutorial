@@ -122,18 +122,24 @@ model Peak {
   continent        String?
   difficulty       String?
   image            String?
+  coverImage       String?  @map("cover_image")
   type             String?
   category         String?
+  categories       String?  // JSON array
   description      String?
+  region           String?
   bestSeason       String?  @map("best_season")
   successRate      String?  @map("success_rate")
   firstAscent      String?  @map("first_ascent")
+  firstAscentYear  Int?     @map("first_ascent_year")
+  firstAscentBy    String?  @map("first_ascent_by")
   deaths           Int      @default(0)
   latitude         Float?
   longitude        Float?
   routeDetails     String?  @map("routes")  // JSON
   campsData        String?  @map("camps")   // JSON
   technicalGrade   String?  @map("technical_grade")
+  technicalNotes   String?  @map("technical_notes")
   permitRequired   Boolean  @default(false) @map("permit_required")
   permitFee        String?  @map("permit_fee")
   annualClimbers   Int      @default(0) @map("annual_climbers")
@@ -143,6 +149,7 @@ model Peak {
   mainRoute        String?  @map("main_route")
   operatingCompany String?  @map("operating_company")
   dataSource       String   @default("内部参考数据") @map("data_source")
+  gallery          String?  // JSON array
 
   routes          ClimbingRoute[]
   expeditionsLog  UserExpeditionLog[]
@@ -1115,7 +1122,17 @@ model PeakSuggestion {
   userId      Int      @map("user_id")
   peakId      Int?     @map("peak_id")
   name        String?
+  nameEn      String?  @map("name_en")
+  altitude    Int?
+  country     String?
+  continent   String?
+  difficulty  String?
   description String?
+  bestSeason  String?  @map("best_season")
+  routes      String?  // JSON
+  latitude    Float?
+  longitude   Float?
+  image       String?
   status      String   @default("pending")
   createdAt   DateTime @default(now()) @map("created_at")
 
