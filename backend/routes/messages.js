@@ -31,7 +31,7 @@ router.get('/conversations', auth, async (req, res) => {
       WHERE c.user1_id = ${uid} OR c.user2_id = ${uid}
       ORDER BY c.updated_at DESC
     `;
-    res.json(convs);
+    res.json(convs.map(c => ({ ...c, id: Number(c.id), otherId: Number(c.otherId), unread: Number(c.unread) })));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

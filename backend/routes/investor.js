@@ -88,7 +88,7 @@ router.get('/top-guides', investorLimiter, investorAuth, async (req, res) => {
   try {
     let guides = [];
     try {
-      guides = await prisma.$queryRaw`
+      const rawGuides = await prisma.$queryRaw`
         SELECT g.id, g.name, g.rating, COUNT(eo.id) as order_count,
                COALESCE(SUM(eo.total),0) as gmv,
                COALESCE(SUM(eo.publisher_income),0) as net_income
@@ -97,6 +97,7 @@ router.get('/top-guides', investorLimiter, investorAuth, async (req, res) => {
         LEFT JOIN expedition_orders eo ON eo.expedition_id=e.id AND eo.status='paid'
         GROUP BY g.id ORDER BY gmv DESC LIMIT 10
       `;
+      guides = rawGuides.map(g => ({ ...g, order_count: Number(g.order_count), gmv: Number(g.gmv), net_income: Number(g.net_income) }));
     } catch (_) {
       guides = await prisma.$queryRaw`SELECT id, name, rating FROM guides LIMIT 10`;
     }
@@ -111,7 +112,7 @@ router.get('/top-peaks', investorLimiter, investorAuth, async (req, res) => {
   try {
     let peaks = [];
     try {
-      peaks = await prisma.$queryRaw`
+      const rawPeaks = await prisma.$queryRaw`
         SELECT p.id, p.name, p.altitude, COUNT(eo.id) as order_count,
                COALESCE(SUM(eo.total),0) as gmv
         FROM peaks p
@@ -119,6 +120,7 @@ router.get('/top-peaks', investorLimiter, investorAuth, async (req, res) => {
         LEFT JOIN expedition_orders eo ON eo.expedition_id=e.id AND eo.status='paid'
         GROUP BY p.id ORDER BY order_count DESC LIMIT 10
       `;
+      peaks = rawPeaks.map(p => ({ ...p, order_count: Number(p.order_count), gmv: Number(p.gmv) }));
     } catch (_) {
       peaks = await prisma.$queryRaw`SELECT id, name, altitude FROM peaks LIMIT 10`;
     }
