@@ -1,14 +1,19 @@
-// AlpineLink — Prisma Schema (PostgreSQL)
+// AlpineLink — Prisma Schema
 // 方案A：全新重建，对应 backend/db/database.js 中的全部核心表
+//
+// 开发/测试：provider = "sqlite"，DATABASE_URL="file:./dev.db"
+// 生产 Railway：将 provider 改为 "postgresql"，DATABASE_URL 指向 Railway Postgres
+//
 // 生成客户端：npx prisma generate
 // 推送到数据库：npx prisma db push
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -17,20 +22,28 @@ datasource db {
 // ─────────────────────────────────────────
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  username  String?  @unique
-  phone     String?  @unique
-  password  String?
-  avatar    String?
-  level     String   @default("初级攀登者")
-  summits   Int      @default(0)
-  expeditions Int    @default(0)
-  followers Int      @default(0)
-  following Int      @default(0)
-  isAdmin   Boolean  @default(false) @map("is_admin")
-  isBanned  Boolean  @default(false) @map("is_banned")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           Int      @id @default(autoincrement())
+  name         String
+  username     String?  @unique
+  phone        String?  @unique
+  password     String?
+  avatar       String?
+  level        String   @default("初级攀登者")
+  summits      Int      @default(0)
+  expeditions  Int      @default(0)
+  followers    Int      @default(0)
+  following    Int      @default(0)
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  isBanned     Boolean  @default(false) @map("is_banned")
+  wechatOpenid String?  @map("wechat_openid")
+  appleSub     String?  @map("apple_sub")
+  passportUuid String?  @map("passport_uuid")
+  settings     String   @default("{}") // JSON stored as text
+  privacy      String   @default("{}") // JSON stored as text
+  policyVersion   String?  @map("policy_version")
+  policyAgreedAt  DateTime? @map("policy_agreed_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
   smsCodes             SmsCode[]
@@ -86,7 +99,7 @@ model SmsCode {
   phone     String
   code      String
   purpose   String   @default("login")
-  expiresAt DateTime @map("expires_at")
+  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds (matches database.js INTEGER column)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
@@ -101,20 +114,35 @@ model SmsCode {
 // ─────────────────────────────────────────
 
 model Peak {
-  id           Int      @id @default(autoincrement())
-  name         String
-  nameEn       String?  @map("name_en")
-  altitude     Int?
-  country      String?
-  continent    String?
-  difficulty   String?
-  image        String?
-  type         String?
-  description  String?
-  bestSeason   String?  @map("best_season")
-  successRate  String?  @map("success_rate")
-  firstAscent  String?  @map("first_ascent")
-  deaths       Int      @default(0)
+  id               Int      @id @default(autoincrement())
+  name             String
+  nameEn           String?  @map("name_en")
+  altitude         Int?
+  country          String?
+  continent        String?
+  difficulty       String?
+  image            String?
+  type             String?
+  category         String?
+  description      String?
+  bestSeason       String?  @map("best_season")
+  successRate      String?  @map("success_rate")
+  firstAscent      String?  @map("first_ascent")
+  deaths           Int      @default(0)
+  latitude         Float?
+  longitude        Float?
+  routeDetails     String?  @map("routes")  // JSON
+  campsData        String?  @map("camps")   // JSON
+  technicalGrade   String?  @map("technical_grade")
+  permitRequired   Boolean  @default(false) @map("permit_required")
+  permitFee        String?  @map("permit_fee")
+  annualClimbers   Int      @default(0) @map("annual_climbers")
+  commercialTeams  Int      @default(0) @map("commercial_teams")
+  seasonDetail     String?  @map("season_detail")
+  supplementalOxygen Boolean @default(false) @map("supplemental_oxygen")
+  mainRoute        String?  @map("main_route")
+  operatingCompany String?  @map("operating_company")
+  dataSource       String   @default("内部参考数据") @map("data_source")
 
   routes          ClimbingRoute[]
   expeditionsLog  UserExpeditionLog[]
@@ -182,14 +210,19 @@ model Like {
 }
 
 model Comment {
-  id           Int      @id @default(autoincrement())
-  postId       Int      @map("post_id")
-  userId       Int      @map("user_id")
-  authorName   String?  @map("author_name")
-  authorAvatar String?  @map("author_avatar")
-  content      String
-  parentId     Int?     @map("parent_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id              Int      @id @default(autoincrement())
+  postId          Int      @map("post_id")
+  userId          Int      @map("user_id")
+  authorName      String?  @map("author_name")
+  authorAvatar    String?  @map("author_avatar")
+  content         String
+  parentId        Int?     @map("parent_id")
+  parentCommentId Int?     @map("parent_comment_id")
+  replyToUserId   Int?     @map("reply_to_user_id")
+  replyToUserName String?  @map("reply_to_user_name")
+  likesCount      Int      @default(0) @map("likes")
+  images          String?  // JSON array of image URLs
+  createdAt       DateTime @default(now()) @map("created_at")
 
   post     Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -219,22 +252,31 @@ model CommentLike {
 // ─────────────────────────────────────────
 
 model Guide {
-  id             Int      @id @default(autoincrement())
-  userId         Int      @unique @map("user_id")
-  name           String?
-  avatar         String?
-  flag           String?
-  nationality    String?
-  rating         Float    @default(5.0)
-  reviewsCount   Int      @default(0) @map("reviews")
-  specialty      String?
-  dayRate        Int?     @map("day_rate")
-  cert           String?
-  languages      String?
-  region         String?
-  status         String   @default("pending")
-  commissionRate Float    @default(0.15) @map("commission_rate")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @unique @map("user_id")
+  name                String?
+  avatar              String?
+  flag                String?
+  nationality         String?
+  rating              Float    @default(5.0)
+  reviewsCount        Int      @default(0) @map("reviews")
+  specialty           String?
+  dayRate             Int?     @map("day_rate")
+  cert                String?
+  languages           String?
+  region              String?
+  status              String   @default("pending")
+  commissionRate      Float    @default(0.15) @map("commission_rate")
+  bio                 String?
+  peaksLed            String?  @map("peaks_led")   // JSON
+  totalExpeditions    Int      @default(0) @map("total_expeditions")
+  coverImage          String?  @map("cover_image")
+  wechat              String?
+  experienceYears     Int      @default(0) @map("experience_years")
+  affiliationType     String   @default("freelance") @map("affiliation_type")
+  affiliationClubId   Int?     @map("affiliation_club_id")
+  affiliationClubName String?  @map("affiliation_club_name")
+  createdAt           DateTime @default(now()) @map("created_at")
 
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings    Booking[]
@@ -242,22 +284,38 @@ model Guide {
   posts       GuidePost[]
   photos      GuidePhoto[]
   services    GuideService[]
-  reviews     Review[]          @relation("GuideReviews")
 
   @@map("guides")
 }
 
 model GuideApplication {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @unique @map("user_id")
-  name       String?
-  cert       String?
-  specialty  String?
-  languages  String?
-  dayRate    Int?     @map("day_rate")
-  region     String?
-  status     String   @default("pending")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique @map("user_id")
+  name            String?
+  cert            String?
+  certLevel       String    @default("basic") @map("cert_level")
+  specialty       String?
+  languages       String?
+  dayRate         Int?      @map("day_rate")
+  region          String?
+  regions         String?   // JSON array
+  phone           String?
+  experience      String?
+  isInternational Boolean   @default(false) @map("is_international")
+  nationality     String?
+  idCardUrl       String?   @map("id_card_url")
+  climbingCertUrl String?   @map("climbing_cert_url")
+  insuranceCertUrl String?  @map("insurance_cert_url")
+  healthCertUrl   String?   @map("health_cert_url")
+  passportUrl     String?   @map("passport_url")
+  listingFeePaid  Boolean   @default(false) @map("listing_fee_paid")
+  listingFeePaidAt DateTime? @map("listing_fee_paid_at")
+  status          String    @default("pending")
+  reviewNote      String?   @map("review_note")
+  reviewedBy      Int?      @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  note            String?
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -339,6 +397,11 @@ model Club {
   status         String   @default("active")
   creatorId      Int?     @map("creator_id")
   commissionRate Float    @default(0.15) @map("commission_rate")
+  contact        String?
+  wechat         String?
+  website        String?
+  coverImage     String?  @map("cover_image")
+  logo           String?
   createdAt      DateTime @default(now()) @map("created_at")
 
   creator        User?            @relation("ClubCreator", fields: [creatorId], references: [id], onDelete: SetNull)
@@ -348,7 +411,6 @@ model Club {
   posts          ClubPost[]
   photos         ClubPhoto[]
   routePricings  ClubRoutePricing[]
-  reviews        Review[]         @relation("ClubReviews")
 
   @@map("clubs")
 }
@@ -368,13 +430,20 @@ model ClubMember {
 }
 
 model ClubApplication {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  clubName    String   @map("club_name")
-  description String?
-  clubId      Int?     @map("club_id")
-  status      String   @default("pending")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  clubName     String    @map("club_name")
+  description  String?
+  clubId       Int?      @map("club_id")
+  status       String    @default("pending")
+  certLevel    String    @default("standard") @map("cert_level")
+  listingFeePaid   Boolean   @default(false) @map("listing_fee_paid")
+  listingFeePaidAt DateTime? @map("listing_fee_paid_at")
+  reviewNote   String?   @map("review_note")
+  reviewedBy   Int?      @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at")
+  note         String?
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   club Club? @relation(fields: [clubId], references: [id], onDelete: SetNull)
@@ -460,11 +529,13 @@ model Team {
 }
 
 model TeamMember {
-  id       Int      @id @default(autoincrement())
-  teamId   Int      @map("team_id")
-  userId   Int      @map("user_id")
-  role     String   @default("member")
-  joinedAt DateTime @default(now()) @map("joined_at")
+  id          Int       @id @default(autoincrement())
+  teamId      Int       @map("team_id")
+  userId      Int       @map("user_id")
+  role        String    @default("member")
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+  approvedAt  DateTime? @map("approved_at")
+  groupChatId Int?      @map("group_chat_id")
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -478,11 +549,13 @@ model TeamMember {
 // ─────────────────────────────────────────
 
 model Conversation {
-  id        Int      @id @default(autoincrement())
-  user1Id   Int      @map("user1_id")
-  user2Id   Int      @map("user2_id")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         Int       @id @default(autoincrement())
+  user1Id    Int       @map("user1_id")
+  user2Id    Int       @map("user2_id")
+  type       String    @default("dm")
+  lastMsgAt  DateTime? @map("last_msg_at")
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   user1    User      @relation("ConvUser1", fields: [user1Id], references: [id], onDelete: Cascade)
   user2    User      @relation("ConvUser2", fields: [user2Id], references: [id], onDelete: Cascade)
@@ -778,6 +851,7 @@ model SosRecord {
   location  String?
   peakName  String?  @map("peak_name")
   message   String?
+  status    String   @default("pending")
   timestamp DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -942,6 +1016,9 @@ model Article {
   authorId        Int?     @map("author_id")
   viewCount       Int      @default(0) @map("view_count")
   likeCount       Int      @default(0) @map("like_count")
+  status          String   @default("published")
+  rejectReason    String?  @map("reject_reason")
+  reviewedAt      DateTime? @map("reviewed_at")
   createdAt       DateTime @default(now()) @map("created_at")
 
   author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
@@ -1023,9 +1100,7 @@ model Review {
   content    String?
   createdAt  DateTime @default(now()) @map("created_at")
 
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guide   Guide? @relation("GuideReviews", fields: [targetId], references: [id], onDelete: Cascade, map: "reviews_guide_fk")
-  club    Club?  @relation("ClubReviews", fields: [targetId], references: [id], onDelete: Cascade, map: "reviews_club_fk")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([targetType, targetId])
   @@map("reviews")

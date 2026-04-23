@@ -2,7 +2,8 @@
  * API 2026 Features Test Suite
  * Tests for: chat REST API, mountains wishlist/footprint, badges, feed, post saves
  */
-process.env.DATABASE_PATH  = ':memory:';
+process.env.DATABASE_PATH  = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
+process.env.DATABASE_URL   = process.env.DATABASE_URL || `file:${process.env.DATABASE_PATH}`;
 process.env.JWT_SECRET     = 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD = 'test-admin-password';
 process.env.NODE_ENV       = 'test';

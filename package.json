@@ -31,6 +31,7 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "globalSetup": "./tests/helpers/prismaGlobalSetup.js",
     "testMatch": [
       "**/tests/api-new-features.test.js",
       "**/tests/api-commerce.test.js",
