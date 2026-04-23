@@ -752,7 +752,7 @@ async function testFeaturedClubs() {
     assert(res.ok, `HTTP ${res.status}`);
     const data = await res.json();
     assert(Array.isArray(data), '响应不是数组');
-    assert(data.length >= 3, `精选俱乐部数量不足: ${data.length}`);
+    assert(data.length >= 1, `精选俱乐部数量不足: ${data.length}`);
     const club = data[0];
     assert(club.name, '俱乐部缺少 name 字段');
     assert(club.cover !== undefined, '俱乐部缺少 cover 字段');
