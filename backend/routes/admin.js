@@ -37,7 +37,7 @@ function timingSafeEqual(a, b) {
 // POST /api/admin/login
 router.post('/login', adminLoginLimiter, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password } = req.body || {};
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminPassword) {
