@@ -1336,6 +1336,27 @@ if (!existingUserColsPolicy.includes('passport_uuid')) {
 if (!existingUserColsPolicy.includes('deleted_at')) {
   db.exec('ALTER TABLE users ADD COLUMN deleted_at DATETIME DEFAULT NULL');
 }
+// users table: email field for email-based login/registration
+if (!existingUserColsPolicy.includes('email')) {
+  db.exec('ALTER TABLE users ADD COLUMN email TEXT DEFAULT NULL');
+  // Create unique index after column is added (SQLite cannot add UNIQUE in ALTER TABLE)
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
+}
+
+// 新增表：邮箱验证码临时存储
+db.exec(`
+CREATE TABLE IF NOT EXISTS email_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  code TEXT NOT NULL,
+  purpose TEXT DEFAULT 'login',
+  expires_at INTEGER NOT NULL,
+  used INTEGER DEFAULT 0,
+  user_id INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_email_codes_email ON email_codes(email);
+`);
 
 // tracks table: moderation + certificate + GPS points
 const existingTrackColsNew = db.pragma('table_info(tracks)').map(c => c.name);

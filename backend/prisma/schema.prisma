@@ -43,10 +43,12 @@ model User {
   policyVersion   String?  @map("policy_version")
   policyAgreedAt  DateTime? @map("policy_agreed_at")
   deletedAt    DateTime? @map("deleted_at")
+  email        String?  @unique
   createdAt    DateTime @default(now()) @map("created_at")
 
   // Relations
   smsCodes             SmsCode[]
+  emailCodes           EmailCode[]
   posts                Post[]
   comments             Comment[]
   commentLikes         CommentLike[]
@@ -107,6 +109,21 @@ model SmsCode {
 
   @@index([phone])
   @@map("sms_codes")
+}
+
+model EmailCode {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  purpose   String   @default("login")
+  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@map("email_codes")
 }
 
 // ─────────────────────────────────────────
