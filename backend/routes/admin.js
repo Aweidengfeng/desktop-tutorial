@@ -37,7 +37,7 @@ function timingSafeEqual(a, b) {
 // POST /api/admin/login
 router.post('/login', adminLoginLimiter, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password } = req.body || {};
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminPassword) {
@@ -251,6 +251,53 @@ router.get('/clubs', adminAuth, async (req, res) => {
     const clubs = await prisma.$queryRaw`SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${offset}`;
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM clubs`)[0].c);
     res.json({ clubs, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/clubs — 管理员新建俱乐部
+router.post('/clubs', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { name, region, specialty, description, contact, verified } = req.body;
+    if (!name) return res.status(400).json({ error: '俱乐部名称不能为空' });
+    const verifiedVal = verified ? 1 : 0;
+    await prisma.$executeRaw`
+      INSERT INTO clubs (name, region, specialty, description, contact, verified, status)
+      VALUES (${name}, ${region || null}, ${specialty || null}, ${description || null}, ${contact || null}, ${verifiedVal}, 'active')
+    `;
+    const club = (await prisma.$queryRaw`SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs WHERE id = (SELECT last_insert_rowid())`)[0];
+    res.json(club);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/clubs/:id — 管理员编辑俱乐部信息
+router.put('/clubs/:id', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const club = (await prisma.$queryRaw`SELECT id, name, region, specialty, description, contact, verified FROM clubs WHERE id = ${req.params.id}`)[0];
+    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
+    const body = req.body;
+    const name = 'name' in body ? (body.name || null) : club.name;
+    if ('name' in body && !body.name) return res.status(400).json({ error: '俱乐部名称不能为空' });
+    const region = 'region' in body ? (body.region || null) : club.region;
+    const specialty = 'specialty' in body ? (body.specialty || null) : club.specialty;
+    const description = 'description' in body ? (body.description || null) : club.description;
+    const contact = 'contact' in body ? (body.contact || null) : club.contact;
+    const verifiedVal = 'verified' in body ? (body.verified ? 1 : 0) : club.verified;
+    await prisma.$executeRaw`
+      UPDATE clubs SET
+        name = ${name},
+        region = ${region},
+        specialty = ${specialty},
+        description = ${description},
+        contact = ${contact},
+        verified = ${verifiedVal}
+      WHERE id = ${req.params.id}
+    `;
+    const updated = (await prisma.$queryRaw`SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs WHERE id = ${req.params.id}`)[0];
+    res.json(updated);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -1080,6 +1127,88 @@ router.put('/peaks/suggestions/:id/approve', adminWriteLimiter, adminAuth, async
     } else {
       res.status(400).json({ error: 'action 必须为 approve 或 reject' });
     }
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ── 攀登线路管理 ─────────────────────────────────────────────────────────────
+
+// GET /api/admin/routes — 攀登线路列表
+router.get('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { page = 1, limit = 50 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const routes = await prisma.$queryRaw`
+      SELECT id, name, peak, difficulty, region, altitude, duration_days, best_season, status, created_at
+      FROM climbing_routes ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${offset}
+    `;
+    const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM climbing_routes`)[0].c);
+    res.json({ routes, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/routes — 新建攀登线路
+router.post('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { name, peak, difficulty, region, altitude, duration_days, best_season, description } = req.body;
+    if (!name) return res.status(400).json({ error: '线路名称不能为空' });
+    await prisma.$executeRaw`
+      INSERT INTO climbing_routes (name, peak, difficulty, region, altitude, duration_days, best_season, description, status)
+      VALUES (${name}, ${peak || null}, ${difficulty || null}, ${region || null},
+              ${altitude ? parseInt(altitude) : null}, ${duration_days ? parseInt(duration_days) : null},
+              ${best_season || null}, ${description || null}, 'active')
+    `;
+    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = (SELECT last_insert_rowid())`)[0];
+    res.json(route);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/routes/:id — 编辑攀登线路
+router.put('/routes/:id', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${req.params.id}`)[0];
+    if (!route) return res.status(404).json({ error: '线路不存在' });
+    const body = req.body;
+    const name = 'name' in body ? (body.name || null) : route.name;
+    if ('name' in body && !body.name) return res.status(400).json({ error: '线路名称不能为空' });
+    const peak = 'peak' in body ? (body.peak || null) : route.peak;
+    const difficulty = 'difficulty' in body ? (body.difficulty || null) : route.difficulty;
+    const region = 'region' in body ? (body.region || null) : route.region;
+    const altitude = 'altitude' in body ? (body.altitude ? parseInt(body.altitude) : null) : route.altitude;
+    const duration_days = 'duration_days' in body ? (body.duration_days ? parseInt(body.duration_days) : null) : route.duration_days;
+    const best_season = 'best_season' in body ? (body.best_season || null) : route.best_season;
+    const description = 'description' in body ? (body.description || null) : route.description;
+    await prisma.$executeRaw`
+      UPDATE climbing_routes SET
+        name = ${name},
+        peak = ${peak},
+        difficulty = ${difficulty},
+        region = ${region},
+        altitude = ${altitude},
+        duration_days = ${duration_days},
+        best_season = ${best_season},
+        description = ${description}
+      WHERE id = ${req.params.id}
+    `;
+    const updated = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${req.params.id}`)[0];
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/routes/:id — 删除攀登线路
+router.delete('/routes/:id', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const route = (await prisma.$queryRaw`SELECT id, name FROM climbing_routes WHERE id = ${req.params.id}`)[0];
+    if (!route) return res.status(404).json({ error: '线路不存在' });
+    await prisma.$executeRaw`DELETE FROM climbing_routes WHERE id = ${req.params.id}`;
+    res.json({ success: true, deleted: route.name });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
