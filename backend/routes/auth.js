@@ -488,11 +488,21 @@ router.post('/sms/verify', async (req, res) => {
   }
 });
 
+/** 简单邮箱格式校验（长度限制 + 基本结构检查，避免 ReDoS） */
+function isValidEmail(email) {
+  if (typeof email !== 'string' || email.length > 254 || email.length < 6) return false;
+  const atIndex = email.indexOf('@');
+  if (atIndex < 1 || atIndex !== email.lastIndexOf('@')) return false;
+  const domain = email.slice(atIndex + 1);
+  const dotIndex = domain.lastIndexOf('.');
+  return dotIndex > 0 && dotIndex < domain.length - 1;
+}
+
 // POST /api/auth/email/send — 发送邮箱验证码
 router.post('/email/send', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!email || !isValidEmail(email)) {
       return res.status(400).json({ error: '邮箱格式不正确' });
     }
     // 60 秒冷却检查
@@ -570,7 +580,7 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
   try {
     const { email, code } = req.body;
     if (!email || !code) return res.status(400).json({ error: '请填写新邮箱和验证码' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: '邮箱格式不正确' });
+    if (!isValidEmail(email)) return res.status(400).json({ error: '邮箱格式不正确' });
     const existing = await prisma.user.findFirst({ where: { email } });
     if (existing && existing.id !== req.user.id) return res.status(400).json({ error: '该邮箱已被其他账号使用' });
     const record = await prisma.emailCode.findFirst({

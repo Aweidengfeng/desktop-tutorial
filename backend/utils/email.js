@@ -61,6 +61,8 @@ class SmtpEmailProvider extends EmailProvider {
   }
 
   async send(email, code) {
+    // Sanitize code to digits only before embedding in HTML
+    const safeCode = String(code).replace(/[^0-9]/g, '');
     await this._transporter.sendMail({
       from: this._from,
       to: email,
@@ -70,13 +72,13 @@ class SmtpEmailProvider extends EmailProvider {
           <h2 style="color:#10b981;margin-bottom:8px;">SummitLink 邮箱验证</h2>
           <p style="color:#94a3b8;margin-bottom:24px;">您正在进行邮箱验证，请使用以下验证码：</p>
           <div style="background:#1e293b;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-            <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#10b981;">${code}</span>
+            <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#10b981;">${safeCode}</span>
           </div>
           <p style="color:#64748b;font-size:13px;">验证码 5 分钟内有效，请勿泄露给他人。</p>
           <p style="color:#475569;font-size:12px;margin-top:16px;">如非本人操作，请忽略此邮件。</p>
         </div>
       `,
-      text: `您的 SummitLink 邮箱验证码为：${code}，5 分钟内有效，请勿泄露给他人。`,
+      text: `您的 SummitLink 邮箱验证码为：${safeCode}，5 分钟内有效，请勿泄露给他人。`,
     });
     console.log(`📧 [SMTP Email] ${email} → 验证码已发送`);
     return { ok: true };
