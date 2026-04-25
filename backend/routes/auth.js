@@ -145,7 +145,7 @@ async function safeUser(user) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body;
+    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body || {};
     if (!name || !phone || !password) {
       return res.status(400).json({ error: '请填写姓名、手机号和密码' });
     }
@@ -226,7 +226,7 @@ router.post('/register', registerLimiter, async (req, res) => {
  */
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { phone, password } = req.body || {};
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       return res.status(400).json({ error: '手机号格式不正确' });
     }
@@ -276,7 +276,7 @@ router.get('/me', authReadLimiter, auth, async (req, res) => {
 // PUT /api/auth/profile
 router.put('/profile', authWriteLimiter, auth, async (req, res) => {
   try {
-    const { name, avatar } = req.body;
+    const { name, avatar } = req.body || {};
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
@@ -339,7 +339,7 @@ router.get('/privacy', authReadLimiter, auth, async (req, res) => {
 // PUT /api/auth/change-password — 修改密码（需登录 + 旧密码验证）
 router.put('/change-password', authWriteLimiter, auth, async (req, res) => {
   try {
-    const { oldPassword, newPassword } = req.body;
+    const { oldPassword, newPassword } = req.body || {};
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ error: '请填写旧密码和新密码' });
     }
@@ -361,7 +361,7 @@ router.put('/change-password', authWriteLimiter, auth, async (req, res) => {
 // PUT /api/auth/change-phone — 更换手机号（需登录 + 新手机短信验证码）
 router.put('/change-phone', authWriteLimiter, auth, async (req, res) => {
   try {
-    const { phone, code } = req.body;
+    const { phone, code } = req.body || {};
     if (!phone || !code) return res.status(400).json({ error: '请填写新手机号和验证码' });
     if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ error: '手机号格式不正确' });
     const existing = await prisma.user.findUnique({ where: { phone } });
@@ -414,7 +414,7 @@ const emailFailCount = new Map(); // email → {count, lockedUntil}
 
 router.post('/sms/send', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone } = req.body || {};
     if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
       return res.status(400).json({ error: '手机号格式不正确' });
     }
@@ -444,7 +444,7 @@ router.post('/sms/send', async (req, res) => {
 // POST /api/auth/sms/verify — 验证码登录/注册
 router.post('/sms/verify', async (req, res) => {
   try {
-    const { phone, code } = req.body;
+    const { phone, code } = req.body || {};
     if (!phone || !code) return res.status(400).json({ error: '请填写手机号和验证码' });
     // 锁定检查（失败三次锁定10分钟）
     const failInfo = smsFailCount.get(phone);
@@ -501,7 +501,7 @@ function isValidEmail(email) {
 // POST /api/auth/email/send — 发送邮箱验证码
 router.post('/email/send', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body || {};
     if (!email || !isValidEmail(email)) {
       return res.status(400).json({ error: '邮箱格式不正确' });
     }
@@ -531,7 +531,7 @@ router.post('/email/send', async (req, res) => {
 // POST /api/auth/email/verify — 邮箱验证码登录/注册
 router.post('/email/verify', async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { email, code } = req.body || {};
     if (!email || !code) return res.status(400).json({ error: '请填写邮箱和验证码' });
     // 锁定检查（失败三次锁定10分钟）
     const failInfo = emailFailCount.get(email);
@@ -578,7 +578,7 @@ router.post('/email/verify', async (req, res) => {
 // PUT /api/auth/change-email — 更换绑定邮箱（需登录 + 新邮箱验证码）
 router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { email, code } = req.body || {};
     if (!email || !code) return res.status(400).json({ error: '请填写新邮箱和验证码' });
     if (!isValidEmail(email)) return res.status(400).json({ error: '邮箱格式不正确' });
     const existing = await prisma.user.findFirst({ where: { email } });
@@ -599,7 +599,7 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
 // POST /api/auth/wechat — 微信登录（mock）
 router.post('/wechat', async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code } = req.body || {};
     if (!code) return res.status(400).json({ error: '缺少 code 参数' });
     const fakeOpenid = 'wx_mock_' + code + '_' + crypto.randomBytes(8).toString('hex');
     let user = await prisma.user.findFirst({ where: { wechatOpenid: fakeOpenid } });
@@ -626,7 +626,7 @@ router.post('/wechat', async (req, res) => {
 // POST /api/auth/apple — Apple 登录（mock）
 router.post('/apple', async (req, res) => {
   try {
-    const { identityToken } = req.body;
+    const { identityToken } = req.body || {};
     if (!identityToken) return res.status(400).json({ error: '缺少 identityToken 参数' });
     const fakeSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + crypto.randomBytes(8).toString('hex');
     let user = await prisma.user.findFirst({ where: { appleSub: fakeSub } });

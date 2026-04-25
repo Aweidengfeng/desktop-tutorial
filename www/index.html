@@ -5928,7 +5928,8 @@
 </div>
 
 <script>
-const API_BASE = window.__API_BASE__ || 'https://precious-miracle-production.up.railway.app';
+const API_BASE = window.__API_BASE__ ||
+  (/^https?:/.test(window.location.protocol) ? window.location.origin : '');
 // 全球热门商业向导带队攀登雪山统计数据
 const COMMERCIAL_PEAKS = [
   { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Furtenbach Adventures', 'Himex', 'Madison Mountaineering'], routes: '东南山脊(南坡)/东北山脊(北坡)', oxygen: true, annualClimbers: 800, annualTeams: 35, isEstimated: true, campKey: '珠穆朗玛峰' },
