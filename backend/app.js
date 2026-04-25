@@ -103,6 +103,9 @@ app.use(pinoHttp({
 const rootPath = path.join(__dirname, '..');
 console.log('📁 根目录:', rootPath);
 console.log('📁 __dirname:', __dirname);
+if (!process.env.API_BASE) {
+  console.warn('⚠️  API_BASE 环境变量未设置，移动端(Capacitor)将无法正确访问API。请在 Railway 中设置 API_BASE=https://你的服务URL');
+}
 
 // 静态文件服务 - 根目录
 app.use(express.static(rootPath));

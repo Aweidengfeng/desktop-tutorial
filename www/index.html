@@ -1977,6 +1977,7 @@
     <div class="flex bg-slate-700 rounded-xl p-1 mb-4">
       <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">密码登录</button>
       <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">短信验证码</button>
+      <button @click="loginType='email'" :class="loginType==='email' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">邮箱验证码</button>
     </div>
     <!-- Password Login -->
     <div x-show="loginType==='password'" class="space-y-4">
@@ -2011,6 +2012,26 @@
       <button @click="doSmsLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
         <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
         <span x-text="loginLoading ? '验证中…' : '验证码登录'"></span>
+      </button>
+    </div>
+    <!-- Email Login -->
+    <div x-show="loginType==='email'" class="space-y-4">
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">邮箱地址</label>
+        <input x-model="loginForm.email" type="email" placeholder="请输入邮箱地址" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+      </div>
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">验证码</label>
+        <div class="flex gap-2">
+          <input x-model="emailCode" type="text" placeholder="6位验证码" maxlength="6" class="flex-1 bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+          <button @click="sendEmailCode()" :disabled="emailCountdown>0" class="flex-shrink-0 bg-primary hover:bg-primary-light disabled:bg-slate-600 text-white font-semibold px-3 py-3 rounded-xl text-xs transition-colors disabled:cursor-not-allowed">
+            <span x-text="emailCountdown > 0 ? emailCountdown + 's' : '发送'"></span>
+          </button>
+        </div>
+      </div>
+      <button @click="doEmailLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+        <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
+        <span x-text="loginLoading ? '验证中…' : '邮箱登录'"></span>
       </button>
     </div>
     <!-- Third Party Login -->
@@ -5907,7 +5928,8 @@
 </div>
 
 <script>
-const API_BASE = window.__API_BASE__ || 'https://precious-miracle-production.up.railway.app';
+const API_BASE = window.__API_BASE__ ||
+  (/^https?:/.test(window.location.protocol) ? window.location.origin : '');
 // 全球热门商业向导带队攀登雪山统计数据
 const COMMERCIAL_PEAKS = [
   { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Furtenbach Adventures', 'Himex', 'Madison Mountaineering'], routes: '东南山脊(南坡)/东北山脊(北坡)', oxygen: true, annualClimbers: 800, annualTeams: 35, isEstimated: true, campKey: '珠穆朗玛峰' },
@@ -5973,8 +5995,11 @@ function alpineLink() {
     // Location sharing modal
     showLocationShareModal: false,
     locationShareRecipients: [],
-    loginForm: { phone: '', password: '' },
+    loginForm: { phone: '', password: '', email: '' },
     registerForm: { name: '', phone: '', password: '' },
+    emailCode: '',
+    emailCountdown: 0,
+    emailTimer: null,
     agreedPrivacy: false,
     agreedTerms: false,
     POLICY_VERSION: '2026-04-20',
@@ -8532,6 +8557,42 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
       finally { this.loginLoading = false; }
     },
+    // Email login
+    _isValidEmail(email) {
+      if (!email || email.length > 254 || email.length < 6) return false;
+      const at = email.indexOf('@');
+      if (at < 1 || at !== email.lastIndexOf('@')) return false;
+      const domain = email.slice(at + 1);
+      const dot = domain.lastIndexOf('.');
+      return dot > 0 && dot < domain.length - 1;
+    },
+    async sendEmailCode() {
+      if (!this._isValidEmail(this.loginForm.email)) { this.showToast('邮箱格式不正确', 'error'); return; }
+      if (this.emailCountdown > 0) return;
+      try {
+        const res = await fetch(API_BASE + '/api/auth/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: this.loginForm.email }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
+        this.showToast(data.message || '验证码已发送');
+        this.emailCountdown = 60;
+        this.emailTimer = setInterval(() => {
+          this.emailCountdown--;
+          if (this.emailCountdown <= 0) { clearInterval(this.emailTimer); this.emailTimer = null; }
+        }, 1000);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async doEmailLogin() {
+      if (!this._isValidEmail(this.loginForm.email)) { this.showToast('邮箱格式不正确', 'error'); return; }
+      if (!this.emailCode || this.emailCode.length !== 6) { this.showToast('请输入6位验证码', 'error'); return; }
+      this.loginLoading = true;
+      try {
+        const res = await fetch(API_BASE + '/api/auth/email/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: this.loginForm.email, code: this.emailCode }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '验证失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.loginLoading = false; }
+    },
     async doWechatLogin() {
       // Mock: generate a fake code
       const fakeCode = 'wx_' + Date.now();
@@ -8558,8 +8619,9 @@ function alpineLink() {
       localStorage.setItem('summitlink_token', data.token);
       this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
       this.showLogin = false;
-      this.loginForm = { phone: '', password: '' };
+      this.loginForm = { phone: '', password: '', email: '' };
       this.smsCode = '';
+      this.emailCode = '';
       this.showToast('登录成功，欢迎 ' + data.user.name + '！');
       // Initialize Socket.IO for real-time features
       this._initSocket(data.token);
