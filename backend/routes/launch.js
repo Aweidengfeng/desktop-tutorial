@@ -119,7 +119,8 @@ router.post('/applications', applicationLimiter, async (req, res) => {
     `;
     res.status(201).json({ success: true, application: { type, status: 'received', createdAt } });
   } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
+    console.error('Global launch application submission failed:', e);
+    res.status(500).json({ error: '启动计划申请提交失败' });
   }
 });
 

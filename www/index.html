@@ -8919,7 +8919,16 @@ function alpineLink() {
     openLaunchApplication(mode) {
       this.launchApplicationMode = mode === 'provider' ? 'provider' : 'climber';
       this.showLaunchApplication = true;
-      this.launchApplication = { name: '', contact: '', nationality: '', experience: '', target: this.launchApplicationMode === 'climber' ? 'Seven Summits 2026' : 'Seven Summits provider', notes: '', agreedRisk: this.launchApplicationMode === 'provider', budgetConfirmed: false };
+      this.launchApplication = {
+        name: '',
+        contact: '',
+        nationality: '',
+        experience: '',
+        target: this.launchApplicationMode === 'climber' ? 'Seven Summits 2026' : 'Seven Summits provider',
+        notes: '',
+        agreedRisk: this.launchApplicationMode === 'provider',
+        budgetConfirmed: false,
+      };
     },
     async submitLaunchApplication() {
       if (!this.launchApplication.name.trim() || !this.launchApplication.contact.trim()) {
@@ -8945,10 +8954,14 @@ function alpineLink() {
             notes: this.launchApplication.notes,
             agreedRisk: this.launchApplication.agreedRisk,
             budgetConfirmed: this.launchApplication.budgetConfirmed,
-            services: this.launchApplicationMode === 'provider' ? ['Seven Summits', '8000ers', 'Commercial climbs'] : [],
           }),
         });
-        const data = await res.json().catch(() => ({}));
+        let data = {};
+        try {
+          data = await res.json();
+        } catch(e) {
+          data = { error: '响应解析失败，请稍后重试' };
+        }
         if (!res.ok) {
           this.showToast(data.error || '提交失败，请稍后重试', 'error');
           return;
