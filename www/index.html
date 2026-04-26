@@ -8663,29 +8663,44 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async doGoogleLogin() {
-      // 若 Google Identity Services 已加载，使用 One Tap；否则使用 mock 模式
-      if (typeof google !== 'undefined' && google.accounts && window.__GOOGLE_CLIENT_ID__) {
+      // 若 Google Identity Services 已完全加载，使用 One Tap；否则使用 mock 模式
+      const isGisReady = typeof google !== 'undefined' &&
+        google.accounts &&
+        typeof google.accounts.id === 'object' &&
+        typeof google.accounts.id.initialize === 'function' &&
+        window.__GOOGLE_CLIENT_ID__;
+      if (isGisReady) {
         const self = this;
-        google.accounts.id.initialize({
-          client_id: window.__GOOGLE_CLIENT_ID__,
-          callback: async (response) => {
-            try {
-              const res = await fetch(API_BASE + '/api/auth/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: response.credential })
-              });
-              const data = await res.json();
-              if (!res.ok) { self.showToast(data.error || 'Google 登录失败', 'error'); return; }
-              self._handleLoginSuccess(data);
-            } catch(e) { self.showToast('网络错误', 'error'); }
-          },
-          auto_select: false,
-        });
-        google.accounts.id.prompt();
+        try {
+          google.accounts.id.initialize({
+            client_id: window.__GOOGLE_CLIENT_ID__,
+            callback: async (response) => {
+              try {
+                const res = await fetch(API_BASE + '/api/auth/google', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ idToken: response.credential })
+                });
+                const data = await res.json();
+                if (!res.ok) { self.showToast(data.error || 'Google 登录失败', 'error'); return; }
+                self._handleLoginSuccess(data);
+              } catch(e) { self.showToast('网络错误', 'error'); }
+            },
+            auto_select: false,
+          });
+          google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              self.showToast('Google 登录提示未显示，请检查 GOOGLE_CLIENT_ID 配置或浏览器弹窗设置', 'error');
+            }
+          });
+        } catch(e) {
+          self.showToast('Google Identity Services 初始化失败，请刷新后重试', 'error');
+          console.error('[Google] GIS init error:', e);
+        }
       } else {
-        // Mock 模式（开发/测试专用；或 Capacitor 原生环境应使用 @codetrix-studio/capacitor-google-auth 获取 idToken）
-        const mockToken = 'google_mock_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        // Mock 模式（开发/测试专用）
+        // 在 Capacitor iOS/Android 原生环境中，应使用 @codetrix-studio/capacitor-google-auth 获取 idToken
+        const mockToken = 'google_mock_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
         try {
           const res = await fetch(API_BASE + '/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: mockToken }) });
           const data = await res.json();

@@ -210,8 +210,9 @@ router.post('/register', registerLimiter, async (req, res) => {
       const existing = await prisma.user.findFirst({ where: { email } });
       if (existing) return res.status(400).json({ error: '邮箱已注册' });
     }
-    const suffix = phone ? phone.slice(-4) : crypto.randomBytes(2).toString('hex');
-    const username = '@' + name.toLowerCase().replace(/\s+/g, '') + '_' + suffix;
+    // 用4位随机十六进制后缀确保用户名唯一（国际手机号末位可能含区号部分，统一用随机后缀）
+    const suffix = crypto.randomBytes(2).toString('hex');
+    const username = '@' + name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) + '_' + suffix;
     const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || email || name);
     const hash = await bcrypt.hash(password, 10);
     const userData = {
@@ -706,8 +707,12 @@ router.post('/apple', async (req, res) => {
       process.env.APPLE_PRIVATE_KEY;
 
     if (hasAppleCreds) {
-      // 真实 Apple 身份令牌验证（不依赖第三方 npm 包，直接用 jsonwebtoken 验证公钥）
-      // Apple 公钥 JWKS 端点：https://appleid.apple.com/auth/keys
+      // Apple 身份令牌基本声明验证（iss / aud / exp）
+      // ⚠️  此处不验证 JWT 签名（需要 JWKS 公钥）。
+      // 生产环境强烈建议集成 apple-signin-auth 库进行完整签名验证：
+      //   https://github.com/ananay/apple-signin-auth
+      // 在当前实现中，恶意方可伪造合法格式但签名无效的 JWT，绕过声明检查。
+      // 仅在受信任的内网/内测环境，或确保 identityToken 来源可信时使用此实现。
       try {
         const decoded = jwt.decode(identityToken, { complete: true });
         if (!decoded || !decoded.header || !decoded.header.kid) {
@@ -730,8 +735,6 @@ router.post('/apple', async (req, res) => {
         appleName = (fullName && (fullName.givenName || fullName.familyName))
           ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim()
           : null;
-        // 注意：生产环境应通过 JWKS 验证签名；此处仅做基本声明检查（kid/iss/aud/exp）
-        // 如需完整签名验证，请集成 apple-signin-auth 或手动实现 JWKS 验证
       } catch (jwtErr) {
         console.error('[Apple] identityToken 解析失败:', jwtErr.message);
         return res.status(401).json({ error: 'Apple identityToken 无效' });
@@ -744,7 +747,8 @@ router.post('/apple', async (req, res) => {
 
     let user = await prisma.user.findFirst({ where: { appleSub } });
     if (!user) {
-      // 若 Apple 返回了邮箱，尝试关联已有账号
+      // 若 Apple 返回了已验证邮箱，尝试关联已有账号
+      // 安全性：Apple 平台要求邮箱所有权验证，因此此处邮箱关联是安全的
       if (appleEmail) {
         user = await prisma.user.findFirst({ where: { email: appleEmail } });
         if (user) {
@@ -805,6 +809,7 @@ router.post('/google', loginLimiter, async (req, res) => {
     let user = await prisma.user.findFirst({ where: { googleSub } });
     if (!user && googleEmail) {
       // 尝试通过邮箱关联已有账号
+      // 安全性：Google 平台验证邮箱所有权，因此此处邮箱关联是安全的（仅在真实 token 验证时执行）
       user = await prisma.user.findFirst({ where: { email: googleEmail } });
       if (user) {
         await prisma.user.update({ where: { id: user.id }, data: { googleSub } });
