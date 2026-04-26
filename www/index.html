@@ -154,6 +154,18 @@
     }
   })();
   </script>
+  <!-- Google Identity Services — 仅当 window.__GOOGLE_CLIENT_ID__ 配置时加载 -->
+  <script>
+  (function() {
+    if (window.__GOOGLE_CLIENT_ID__) {
+      var s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.defer = true;
+      document.head.appendChild(s);
+    }
+  })();
+  </script>
 </head>
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
 <div class="app-container relative min-h-screen overflow-hidden" :class="darkMode ? 'bg-slate-900' : 'bg-slate-50'">
@@ -1982,8 +1994,8 @@
     <!-- Password Login -->
     <div x-show="loginType==='password'" class="space-y-4">
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="loginForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label class="text-slate-400 text-xs mb-1.5 block">手机号 / 邮箱</label>
+        <input x-model="loginForm.phone" type="text" placeholder="手机号或邮箱地址" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
@@ -1997,8 +2009,8 @@
     <!-- SMS Login -->
     <div x-show="loginType==='sms'" class="space-y-4">
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="loginForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label class="text-slate-400 text-xs mb-1.5 block">手机号（中国大陆或国际 +区号格式）</label>
+        <input x-model="loginForm.phone" type="tel" placeholder="如 13812345678 或 +1234567890" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">验证码</label>
@@ -2046,6 +2058,10 @@
           <span class="text-2xl">💬</span>
           <span class="text-slate-300 text-xs">微信</span>
         </button>
+        <button @click="doGoogleLogin()" class="flex flex-col items-center gap-1 p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 transition-colors">
+          <span class="text-2xl">🔵</span>
+          <span class="text-slate-300 text-xs">Google</span>
+        </button>
         <button @click="doAppleLogin()" class="flex flex-col items-center gap-1 p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 transition-colors">
           <span class="text-2xl">🍎</span>
           <span class="text-slate-300 text-xs">Apple</span>
@@ -2078,8 +2094,12 @@
         <input x-model="registerForm.name" type="text" placeholder="请输入您的姓名" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="registerForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label class="text-slate-400 text-xs mb-1.5 block">手机号 <span class="text-slate-500">（可选，填手机号或邮箱其一即可）</span></label>
+        <input x-model="registerForm.phone" type="tel" placeholder="中国大陆格式或国际 +区号格式" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+      </div>
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">邮箱 <span class="text-slate-500">（可选）</span></label>
+        <input x-model="registerForm.email" type="email" placeholder="全球用户推荐使用邮箱注册" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
@@ -5996,7 +6016,7 @@ function alpineLink() {
     showLocationShareModal: false,
     locationShareRecipients: [],
     loginForm: { phone: '', password: '', email: '' },
-    registerForm: { name: '', phone: '', password: '' },
+    registerForm: { name: '', phone: '', email: '', password: '' },
     emailCode: '',
     emailCountdown: 0,
     emailTimer: null,
@@ -8471,20 +8491,31 @@ function alpineLink() {
       return h;
     },
     async doLogin() {
-      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      // 支持手机号（中国大陆/国际E.164）或邮箱登录
+      const input = (this.loginForm.phone || '').trim();
+      const isEmail = this._isValidEmail(input);
+      const isChinaPhone = /^1[3-9]\d{9}$/.test(input);
+      const isIntlPhone = /^\+[1-9]\d{6,14}$/.test(input);
+      if (!isEmail && !isChinaPhone && !isIntlPhone) {
+        this.showToast('请输入有效的手机号（中国大陆格式或 +区号格式）或邮箱地址', 'error');
+        return;
+      }
       this.loginLoading = true;
       try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 15000);
+        const body = isEmail
+          ? { email: input, password: this.loginForm.password }
+          : { phone: input, password: this.loginForm.password };
         const res = await fetch(API_BASE + '/api/auth/login', {
           method: 'POST', headers: this.getAuthHeaders(),
-          body: JSON.stringify(this.loginForm), signal: controller.signal
+          body: JSON.stringify(body), signal: controller.signal
         });
         clearTimeout(timer);
         let data = {};
         try { data = await res.json(); } catch(jsonErr) { console.debug('[SummitLink] 登录响应非JSON:', jsonErr); }
         if (!res.ok) {
-          if (res.status === 401) { this.showToast('手机号或密码错误，请重试', 'error'); }
+          if (res.status === 401) { this.showToast(data.error || '账号或密码错误，请重试', 'error'); }
           else if (res.status === 404) { this.showToast('接口不存在(404)，请联系开发者', 'error'); }
           else if (res.status >= 500) { this.showToast('服务器错误(' + res.status + ')，请稍后重试', 'error'); }
           else { this.showToast(data.error || '登录失败(' + res.status + ')', 'error'); }
@@ -8502,18 +8533,29 @@ function alpineLink() {
       finally { this.loginLoading = false; }
     },
     async doRegister() {
-      if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      const phone = (this.registerForm.phone || '').trim();
+      const email = (this.registerForm.email || '').trim();
+      if (!phone && !email) { this.showToast('请填写手机号或邮箱地址', 'error'); return; }
+      if (phone) {
+        const isChinaPhone = /^1[3-9]\d{9}$/.test(phone);
+        const isIntlPhone = /^\+[1-9]\d{6,14}$/.test(phone);
+        if (!isChinaPhone && !isIntlPhone) { this.showToast('手机号格式不正确（中国大陆格式或国际 +区号格式）', 'error'); return; }
+      }
+      if (email && !this._isValidEmail(email)) { this.showToast('邮箱格式不正确', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
-        const res = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION }) });
+        const payload = { ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION };
+        if (!phone) delete payload.phone;
+        if (!email) delete payload.email;
+        const res = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '注册失败', 'error'); return; }
         this.authToken = data.token;
         this.currentUser = data.user;
         localStorage.setItem('summitlink_token', data.token);
-        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
+        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
         this.showRegister = false;
-        this.registerForm = { name: '', phone: '', password: '' };
+        this.registerForm = { name: '', phone: '', email: '', password: '' };
         this.agreedPrivacy = false;
         this.agreedTerms = false;
         this.showToast('注册成功，欢迎加入 ' + data.user.name + '！');
@@ -8531,13 +8573,16 @@ function alpineLink() {
     },
     // SMS login
     async sendSmsCode() {
-      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      const phone = (this.loginForm.phone || '').trim();
+      const isChinaPhone = /^1[3-9]\d{9}$/.test(phone);
+      const isIntlPhone = /^\+[1-9]\d{6,14}$/.test(phone);
+      if (!isChinaPhone && !isIntlPhone) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.smsCountdown > 0) return;
       try {
-        const res = await fetch(API_BASE + '/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone }) });
+        const res = await fetch(API_BASE + '/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
-        this.showToast('验证码已发送（开发模式：查看服务器控制台）');
+        this.showToast(data.message || '验证码已发送');
         this.smsCountdown = 60;
         this.smsTimer = setInterval(() => {
           this.smsCountdown--;
@@ -8546,11 +8591,14 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async doSmsLogin() {
-      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      const phone = (this.loginForm.phone || '').trim();
+      const isChinaPhone = /^1[3-9]\d{9}$/.test(phone);
+      const isIntlPhone = /^\+[1-9]\d{6,14}$/.test(phone);
+      if (!isChinaPhone && !isIntlPhone) { this.showToast('手机号格式不正确', 'error'); return; }
       if (!this.smsCode || this.smsCode.length !== 6) { this.showToast('请输入6位验证码', 'error'); return; }
       this.loginLoading = true;
       try {
-        const res = await fetch(API_BASE + '/api/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone, code: this.smsCode }) });
+        const res = await fetch(API_BASE + '/api/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, code: this.smsCode }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '验证失败', 'error'); return; }
         this._handleLoginSuccess(data);
@@ -8604,7 +8652,8 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async doAppleLogin() {
-      // Mock: generate a fake identity token
+      // Mock mode: generate a fake identity token (for dev/testing)
+      // In production iOS app, use Capacitor Sign In With Apple plugin to get real identityToken
       const fakeToken = 'apple_mock_' + Date.now();
       try {
         const res = await fetch(API_BASE + '/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: fakeToken }) });
@@ -8612,6 +8661,38 @@ function alpineLink() {
         if (!res.ok) { this.showToast(data.error || 'Apple 登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
       } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async doGoogleLogin() {
+      // 若 Google Identity Services 已加载，使用 One Tap；否则使用 mock 模式
+      if (typeof google !== 'undefined' && google.accounts && window.__GOOGLE_CLIENT_ID__) {
+        const self = this;
+        google.accounts.id.initialize({
+          client_id: window.__GOOGLE_CLIENT_ID__,
+          callback: async (response) => {
+            try {
+              const res = await fetch(API_BASE + '/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: response.credential })
+              });
+              const data = await res.json();
+              if (!res.ok) { self.showToast(data.error || 'Google 登录失败', 'error'); return; }
+              self._handleLoginSuccess(data);
+            } catch(e) { self.showToast('网络错误', 'error'); }
+          },
+          auto_select: false,
+        });
+        google.accounts.id.prompt();
+      } else {
+        // Mock 模式（开发/测试专用；或 Capacitor 原生环境应使用 @codetrix-studio/capacitor-google-auth 获取 idToken）
+        const mockToken = 'google_mock_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        try {
+          const res = await fetch(API_BASE + '/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: mockToken }) });
+          const data = await res.json();
+          if (!res.ok) { this.showToast(data.error || 'Google 登录失败', 'error'); return; }
+          this._handleLoginSuccess(data);
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      }
     },
     _handleLoginSuccess(data) {
       this.authToken = data.token;

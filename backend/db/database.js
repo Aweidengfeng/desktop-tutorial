@@ -1342,6 +1342,11 @@ if (!existingUserColsPolicy.includes('email')) {
   // Create unique index after column is added (SQLite cannot add UNIQUE in ALTER TABLE)
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
 }
+// users table: Google OAuth sub field
+if (!existingUserColsPolicy.includes('google_sub')) {
+  db.exec('ALTER TABLE users ADD COLUMN google_sub TEXT DEFAULT NULL');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub) WHERE google_sub IS NOT NULL');
+}
 
 // 新增表：邮箱验证码临时存储
 db.exec(`

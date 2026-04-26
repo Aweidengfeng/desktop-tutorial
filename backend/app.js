@@ -135,7 +135,8 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
     // 注入 SENTRY_DSN 和 API_BASE 到前端
     const sentryDsn = process.env.SENTRY_DSN || '';
     const apiBase = process.env.API_BASE || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}</script>`;
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}</script>`;
     result = result.replace('</head>', sentryScript + '\n</head>');
     // 若 Key 或安全密钥未配置，注入提示脚本
     if (!amapKey || !amapSecurityCode) {
