@@ -20,7 +20,8 @@ if (!SECRET) {
 }
 const JWT_SECRET = SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
-// Google OAuth client（仅当 GOOGLE_CLIENT_ID 配置时启用）
+// ── Google OAuth ─────────────────────────────────────────────────────────────
+// 仅当 GOOGLE_CLIENT_ID 配置时加载 google-auth-library
 let googleOAuthClient = null;
 if (process.env.GOOGLE_CLIENT_ID) {
   try {
@@ -43,6 +44,117 @@ async function verifyGoogleToken(idToken) {
     return ticket.getPayload();
   } catch (e) {
     console.error('[Google] verifyIdToken 失败:', e.message);
+    return null;
+  }
+}
+
+// ── Apple Sign In JWKS 验证 ──────────────────────────────────────────────────
+// 缓存 Apple 公钥集合，避免每次请求都调用 Apple API（TTL 1 小时）
+let _appleJwks = null;
+let _appleJwksCachedAt = 0;
+const APPLE_JWKS_TTL_MS = 60 * 60 * 1000; // 1h
+
+/**
+ * 从 Apple JWKS 端点取出与 kid 匹配的 Node.js KeyObject。
+ * 内置简单缓存；kid 不命中时自动刷新一次缓存。
+ */
+async function getApplePublicKey(kid) {
+  const needRefresh = !_appleJwks || Date.now() - _appleJwksCachedAt > APPLE_JWKS_TTL_MS;
+  if (needRefresh) {
+    const res = await fetch('https://appleid.apple.com/auth/keys');
+    if (!res.ok) throw new Error('获取 Apple JWKS 失败，HTTP ' + res.status);
+    _appleJwks = await res.json();
+    _appleJwksCachedAt = Date.now();
+  }
+  let keyData = _appleJwks.keys.find(k => k.kid === kid);
+  if (!keyData) {
+    // kid 可能是新轮换的，强制刷新缓存再试一次
+    const res = await fetch('https://appleid.apple.com/auth/keys');
+    if (!res.ok) throw new Error('获取 Apple JWKS 失败，HTTP ' + res.status);
+    _appleJwks = await res.json();
+    _appleJwksCachedAt = Date.now();
+    keyData = _appleJwks.keys.find(k => k.kid === kid);
+    if (!keyData) throw new Error('Apple JWKS 中未找到 kid: ' + kid);
+  }
+  return crypto.createPublicKey({ key: keyData, format: 'jwk' });
+}
+
+/**
+ * 完整验证 Apple identityToken：
+ *   1. 从 Apple JWKS 端点获取对应公钥
+ *   2. 用 jsonwebtoken.verify() 验证 RS256 签名、iss、aud、exp
+ * @param {string} identityToken - Apple Sign In 返回的 JWT
+ * @returns {Promise<object>} 已验证的 payload（含 sub / email 等）
+ * @throws 验证失败时抛出错误
+ */
+async function verifyAppleToken(identityToken) {
+  const decoded = jwt.decode(identityToken, { complete: true });
+  if (!decoded || !decoded.header || !decoded.header.kid) {
+    throw new Error('identityToken 格式无效（缺少 header.kid）');
+  }
+  const publicKey = await getApplePublicKey(decoded.header.kid);
+  // jwt.verify 同时验证：RS256 签名 + iss + aud + exp
+  const payload = jwt.verify(identityToken, publicKey, {
+    algorithms: ['RS256'],
+    issuer: 'https://appleid.apple.com',
+    audience: process.env.APPLE_CLIENT_ID,
+  });
+  return payload;
+}
+
+// ── WeChat OAuth ─────────────────────────────────────────────────────────────
+/**
+ * 用微信 code 换取 openid（及可选 unionid）。
+ * 支持两种模式：
+ *   - 普通 OAuth（移动/网页）：https://api.weixin.qq.com/sns/oauth2/access_token
+ *   - 小程序：通过 WECHAT_MINI_APP=true 切换为 jscode2session
+ *
+ * @param {string} code - 客户端微信 SDK 返回的临时授权 code
+ * @returns {Promise<{ openid: string, accessToken?: string, unionid?: string }>}
+ * @throws 换取失败时抛出携带微信 errcode 的 Error
+ */
+async function exchangeWechatCode(code) {
+  const appid  = process.env.WECHAT_APPID;
+  const secret = process.env.WECHAT_SECRET;
+  if (!appid || !secret) throw new Error('未配置 WECHAT_APPID / WECHAT_SECRET');
+
+  const isMiniApp = process.env.WECHAT_MINI_APP === 'true';
+  const url = isMiniApp
+    ? `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`
+    : `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appid}&secret=${secret}&code=${code}&grant_type=authorization_code`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('微信 API 请求失败，HTTP ' + res.status);
+  const data = await res.json();
+  if (data.errcode) throw new Error(`微信 OAuth 错误 ${data.errcode}: ${data.errmsg}`);
+  return {
+    openid:      data.openid,
+    unionid:     data.unionid || null,
+    accessToken: data.access_token || null,
+  };
+}
+
+/**
+ * 获取微信用户基本信息（昵称/头像）。
+ * 小程序模式下无法直接获取（需调用前端 getUserProfile），返回 null。
+ * @param {string} accessToken
+ * @param {string} openid
+ * @returns {Promise<{ name: string, avatar: string } | null>}
+ */
+async function getWechatUserInfo(accessToken, openid) {
+  if (!accessToken) return null;
+  try {
+    const res = await fetch(
+      `https://api.weixin.qq.com/sns/userinfo?access_token=${accessToken}&openid=${openid}&lang=zh_CN`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.errcode) return null;
+    return {
+      name:   data.nickname  || null,
+      avatar: data.headimgurl || null,
+    };
+  } catch {
     return null;
   }
 }
@@ -662,87 +774,96 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
   }
 });
 
-// POST /api/auth/wechat — 微信登录（mock）
+// POST /api/auth/wechat — 微信登录
+// 若已配置 WECHAT_APPID + WECHAT_SECRET，则通过微信 OAuth 换取真实 openid；
+// 否则回退到 mock 模式（仅适用于开发/测试）
 router.post('/wechat', async (req, res) => {
   try {
     const { code } = req.body || {};
     if (!code) return res.status(400).json({ error: '缺少 code 参数' });
-    const fakeOpenid = 'wx_mock_' + code + '_' + crypto.randomBytes(8).toString('hex');
-    let user = await prisma.user.findFirst({ where: { wechatOpenid: fakeOpenid } });
+
+    let wechatOpenid = null;
+    let wechatName   = null;
+    let wechatAvatar = null;
+
+    const hasWechatCreds = process.env.WECHAT_APPID && process.env.WECHAT_SECRET;
+    if (hasWechatCreds) {
+      // 真实微信 OAuth：code → openid
+      let wxData;
+      try {
+        wxData = await exchangeWechatCode(code);
+      } catch (wxErr) {
+        console.error('[WeChat] code 换取失败:', wxErr.message);
+        return res.status(401).json({ error: '微信登录失败：' + wxErr.message });
+      }
+      wechatOpenid = wxData.openid;
+      // 尝试获取微信用户昵称和头像（仅 OAuth 模式有 access_token；小程序模式跳过）
+      if (wxData.accessToken) {
+        const info = await getWechatUserInfo(wxData.accessToken, wechatOpenid);
+        if (info) {
+          wechatName   = info.name;
+          wechatAvatar = info.avatar;
+        }
+      }
+      console.log('[WeChat] 登录成功，openid:', wechatOpenid.slice(0, 8) + '***');
+    } else {
+      // Mock 模式：开发/测试专用
+      wechatOpenid = 'wx_mock_' + crypto.createHash('sha256').update(code).digest('hex').slice(0, 24);
+      console.warn('[WeChat] 使用 mock 模式，配置 WECHAT_APPID + WECHAT_SECRET 启用真实验证');
+    }
+
+    let user = await prisma.user.findFirst({ where: { wechatOpenid } });
     if (!user) {
       const suffix = crypto.randomBytes(4).toString('hex');
-      const name = '微信用户' + suffix.slice(0, 4);
-      const avatar = 'https://i.pravatar.cc/150?u=wx' + fakeOpenid;
+      const name   = wechatName || ('微信用户' + suffix.slice(0, 4));
+      const avatar = wechatAvatar || ('https://i.pravatar.cc/150?u=wx' + wechatOpenid);
       try {
         const username = '@wx' + Date.now().toString(36) + suffix;
-        user = await prisma.user.create({ data: { name, username, avatar, wechatOpenid: fakeOpenid } });
+        user = await prisma.user.create({ data: { name, username, avatar, wechatOpenid } });
       } catch (e) {
         if (e.code === 'P2002') {
           const username2 = '@wx' + crypto.randomBytes(6).toString('hex');
-          user = await prisma.user.create({ data: { name, username: username2, avatar, wechatOpenid: fakeOpenid } });
+          user = await prisma.user.create({ data: { name, username: username2, avatar, wechatOpenid } });
         } else throw e;
       }
     }
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
+    console.error('[wechat]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // POST /api/auth/apple — Apple 登录
-// 若已配置 APPLE_CLIENT_ID、APPLE_TEAM_ID、APPLE_KEY_ID、APPLE_PRIVATE_KEY，则进行真实 JWT 验证；
+// 若已配置 APPLE_CLIENT_ID，则通过 Apple JWKS 完整验证 identityToken（RS256 签名 + iss + aud + exp）；
 // 否则回退到 mock 模式（仅适用于开发/测试）
 router.post('/apple', async (req, res) => {
   try {
     const { identityToken, fullName } = req.body || {};
     if (!identityToken) return res.status(400).json({ error: '缺少 identityToken 参数' });
 
-    let appleSub = null;
+    let appleSub   = null;
     let appleEmail = null;
-    let appleName = null;
+    let appleName  = null;
 
-    const hasAppleCreds = process.env.APPLE_CLIENT_ID &&
-      process.env.APPLE_TEAM_ID &&
-      process.env.APPLE_KEY_ID &&
-      process.env.APPLE_PRIVATE_KEY;
-
-    if (hasAppleCreds) {
-      // Apple 身份令牌基本声明验证（iss / aud / exp）
-      // ⚠️  此处不验证 JWT 签名（需要 JWKS 公钥）。
-      // 生产环境强烈建议集成 apple-signin-auth 库进行完整签名验证：
-      //   https://github.com/ananay/apple-signin-auth
-      // 在当前实现中，恶意方可伪造合法格式但签名无效的 JWT，绕过声明检查。
-      // 仅在受信任的内网/内测环境，或确保 identityToken 来源可信时使用此实现。
+    if (process.env.APPLE_CLIENT_ID) {
+      // 真实验证：从 Apple JWKS 端点获取公钥，完整验证 RS256 签名 + iss + aud + exp
       try {
-        const decoded = jwt.decode(identityToken, { complete: true });
-        if (!decoded || !decoded.header || !decoded.header.kid) {
-          return res.status(401).json({ error: 'Apple identityToken 格式无效' });
-        }
-        const appleIss = decoded.payload && decoded.payload.iss;
-        if (appleIss !== 'https://appleid.apple.com') {
-          return res.status(401).json({ error: 'Apple identityToken 签发方无效' });
-        }
-        const appleAud = decoded.payload && decoded.payload.aud;
-        if (appleAud !== process.env.APPLE_CLIENT_ID) {
-          return res.status(401).json({ error: 'Apple identityToken audience 不匹配' });
-        }
-        const appleExp = decoded.payload && decoded.payload.exp;
-        if (!appleExp || Date.now() / 1000 > appleExp) {
-          return res.status(401).json({ error: 'Apple identityToken 已过期' });
-        }
-        appleSub = decoded.payload.sub;
-        appleEmail = decoded.payload.email;
-        appleName = (fullName && (fullName.givenName || fullName.familyName))
+        const payload = await verifyAppleToken(identityToken);
+        appleSub   = payload.sub;
+        appleEmail = payload.email;
+        appleName  = (fullName && (fullName.givenName || fullName.familyName))
           ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim()
           : null;
-      } catch (jwtErr) {
-        console.error('[Apple] identityToken 解析失败:', jwtErr.message);
-        return res.status(401).json({ error: 'Apple identityToken 无效' });
+        console.log('[Apple] 验证成功，sub:', appleSub.slice(0, 8) + '***');
+      } catch (appleErr) {
+        console.error('[Apple] identityToken 验证失败:', appleErr.message);
+        return res.status(401).json({ error: 'Apple identityToken 无效：' + appleErr.message });
       }
     } else {
       // Mock 模式：开发/测试专用
       appleSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + identityToken.length;
-      console.warn('[Apple] 使用 mock 模式，配置 APPLE_CLIENT_ID/APPLE_TEAM_ID/APPLE_KEY_ID/APPLE_PRIVATE_KEY 启用真实验证');
+      console.warn('[Apple] 使用 mock 模式，配置 APPLE_CLIENT_ID 启用真实 JWKS 验证');
     }
 
     let user = await prisma.user.findFirst({ where: { appleSub } });
@@ -758,7 +879,7 @@ router.post('/apple', async (req, res) => {
     }
     if (!user) {
       const suffix = crypto.randomBytes(4).toString('hex');
-      const name = appleName || ('Apple用户' + suffix.slice(0, 4));
+      const name   = appleName || ('Apple用户' + suffix.slice(0, 4));
       const avatar = 'https://i.pravatar.cc/150?u=ap' + appleSub;
       const userData = { name, avatar, appleSub };
       if (appleEmail) userData.email = appleEmail;
