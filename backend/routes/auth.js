@@ -78,12 +78,14 @@ function _fetchAppleJwks() {
 async function getApplePublicKey(kid) {
   const needRefresh = !_appleJwks || Date.now() - _appleJwksCachedAt > APPLE_JWKS_TTL_MS;
   if (needRefresh) await _fetchAppleJwks();
-  let keyData = _appleJwks && _appleJwks.keys.find(k => k.kid === kid);
+  if (!_appleJwks) throw new Error('Apple JWKS 数据不可用');
+  let keyData = _appleJwks.keys.find(k => k.kid === kid);
   if (!keyData) {
     // kid 可能是新轮换的，强制刷新缓存再试一次
     _appleJwksCachedAt = 0; // 让下次 _fetchAppleJwks 重新拉取
     await _fetchAppleJwks();
-    keyData = _appleJwks && _appleJwks.keys.find(k => k.kid === kid);
+    if (!_appleJwks) throw new Error('Apple JWKS 数据不可用');
+    keyData = _appleJwks.keys.find(k => k.kid === kid);
     if (!keyData) throw new Error('Apple JWKS 中未找到 kid: ' + kid);
   }
   return crypto.createPublicKey({ key: keyData, format: 'jwk' });
@@ -335,7 +337,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     // 用4位随机十六进制后缀确保用户名唯一
     const suffix = crypto.randomBytes(2).toString('hex');
     const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
-    const username = '@' + (sanitizedName || crypto.randomBytes(4).toString('hex')) + '_' + suffix;
+    const username = '@' + (sanitizedName || ('user' + crypto.randomBytes(4).toString('hex'))) + '_' + suffix;
     const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || email || name);
     const hash = await bcrypt.hash(password, 10);
     const userData = {
