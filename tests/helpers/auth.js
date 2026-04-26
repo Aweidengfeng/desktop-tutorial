@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-summitlink';
+let userSeq = 0;
 
 /**
  * 在数据库中创建一个普通测试用户
@@ -15,9 +16,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-summitlink';
  * @returns {{ id, token }} 用户 ID 和 JWT token
  */
 function createTestUser(db, opts = {}) {
-  const phone = opts.phone || '138' + String(Date.now()).slice(-8);
+  userSeq += 1;
+  const uniqueSuffix = String(userSeq).padStart(8, '0');
+  const phone = opts.phone || `138${uniqueSuffix}`;
   const name  = opts.name  || '测试用户_' + phone.slice(-4);
-  const username = '@testuser_' + phone.slice(-4);
+  const username = opts.username || `@testuser_${phone.slice(-4)}_${uniqueSuffix}`;
   const password = opts.password || 'test123456';
   const hash = bcrypt.hashSync(password, 1); // 低 cost，加快测试
   const policyVersion = '2026-04-20';

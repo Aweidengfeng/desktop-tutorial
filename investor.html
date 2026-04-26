@@ -32,6 +32,63 @@
         <button @click="loadAll()" class="text-xs text-gray-400 hover:text-yellow-400 transition">🔄 刷新数据</button>
       </div>
 
+      <!-- Investor Narrative -->
+      <div class="bg-gradient-to-br from-gray-900 to-gray-950 rounded-xl p-5 border border-yellow-900/40 mb-8">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-5">
+          <div>
+            <div class="text-xs text-yellow-500 mb-1">项目一句话定位</div>
+            <h2 class="text-xl font-bold text-white" x-text="narrative.positioning || '-'"></h2>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="p in personas" :key="p.id">
+              <button @click="selectPersona(p.id)"
+                class="text-xs px-3 py-1.5 rounded-full border transition"
+                :class="selectedPersona === p.id ? 'bg-yellow-400 text-gray-950 border-yellow-400 font-bold' : 'border-gray-700 text-gray-300 hover:border-yellow-500'">
+                <span x-text="p.name"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-4 mb-5">
+          <div class="md:col-span-2 bg-gray-950/60 rounded-lg p-4 border border-gray-800">
+            <div class="text-xs text-gray-500 mb-1">当前投资人视角</div>
+            <h3 class="font-bold text-yellow-300 mb-2" x-text="narrative.persona?.headline || '-'"></h3>
+            <p class="text-sm text-gray-300 leading-6" x-text="narrative.persona?.narrative || '请选择投资人类型查看叙事'"></p>
+          </div>
+          <div class="bg-gray-950/60 rounded-lg p-4 border border-gray-800">
+            <div class="text-xs text-gray-500 mb-2">重点指标</div>
+            <div class="flex flex-wrap gap-2">
+              <template x-for="metric in (narrative.persona?.focus_metrics || [])" :key="metric">
+                <span class="text-xs bg-gray-800 text-blue-300 px-2 py-1 rounded" x-text="metric"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="bg-gray-950/50 rounded-lg p-4 border border-gray-800">
+            <h3 class="font-bold text-sm mb-3">核心价值主张</h3>
+            <ul class="space-y-2 text-sm text-gray-300">
+              <template x-for="item in narrative.value_proposition || []" :key="item">
+                <li class="flex gap-2"><span class="text-green-400">✓</span><span x-text="item"></span></li>
+              </template>
+            </ul>
+          </div>
+          <div class="bg-gray-950/50 rounded-lg p-4 border border-gray-800">
+            <h3 class="font-bold text-sm mb-3">风险与应对</h3>
+            <ul class="space-y-2 text-sm text-gray-300">
+              <template x-for="item in narrative.risks || []" :key="item.risk">
+                <li>
+                  <div class="text-red-300" x-text="item.risk"></div>
+                  <div class="text-gray-500 text-xs mt-1" x-text="item.mitigation"></div>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <!-- Key Metrics -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
@@ -142,6 +199,9 @@
         metrics: {},
         funnel: {},
         topGuides: [],
+        personas: [],
+        selectedPersona: 'vc',
+        narrative: {},
         get funnelItems() {
           return [
             { label: '注册用户', value: this.funnel.registered || 0 },
@@ -162,14 +222,25 @@
         },
         async loadAll() {
           const h = { 'x-investor-token': this.token };
-          const [mRes, fRes, gRes] = await Promise.all([
+          const [mRes, fRes, gRes, pRes, nRes] = await Promise.all([
             fetch('/api/investor/metrics', { headers: h }),
             fetch('/api/investor/funnel', { headers: h }),
             fetch('/api/investor/top-guides', { headers: h }),
+            fetch('/api/investor/personas', { headers: h }),
+            fetch(`/api/investor/narrative?persona=${encodeURIComponent(this.selectedPersona)}`, { headers: h }),
           ]);
           if (mRes.ok) this.metrics = await mRes.json();
           if (fRes.ok) this.funnel = await fRes.json();
           if (gRes.ok) this.topGuides = await gRes.json();
+          if (pRes.ok) this.personas = await pRes.json();
+          if (nRes.ok) this.narrative = await nRes.json();
+        },
+        async selectPersona(personaId) {
+          this.selectedPersona = personaId;
+          const res = await fetch(`/api/investor/narrative?persona=${encodeURIComponent(personaId)}`, {
+            headers: { 'x-investor-token': this.token },
+          });
+          if (res.ok) this.narrative = await res.json();
         },
         init() {
           if (this.token) this.authenticate();
