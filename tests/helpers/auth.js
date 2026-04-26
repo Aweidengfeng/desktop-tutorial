@@ -17,9 +17,10 @@ let userSeq = 0;
  */
 function createTestUser(db, opts = {}) {
   userSeq += 1;
-  const phone = opts.phone || '138' + String(Date.now()).slice(-7) + String(userSeq % 10);
+  const uniqueSuffix = String(userSeq).padStart(3, '0');
+  const phone = opts.phone || `138${String(Date.now()).slice(-5)}${uniqueSuffix}`;
   const name  = opts.name  || '测试用户_' + phone.slice(-4);
-  const username = opts.username || `@testuser_${phone.slice(-4)}_${String(userSeq).padStart(4, '0')}`;
+  const username = opts.username || `@testuser_${phone.slice(-4)}_${uniqueSuffix}`;
   const password = opts.password || 'test123456';
   const hash = bcrypt.hashSync(password, 1); // 低 cost，加快测试
   const policyVersion = '2026-04-20';
