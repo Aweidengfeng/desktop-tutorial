@@ -329,4 +329,43 @@ describe('Module F: Investor Metrics', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('regions');
   });
+
+  test('31. GET /api/investor/personas - no token → 401', async () => {
+    const res = await request(app).get('/api/investor/personas');
+    expect(res.status).toBe(401);
+  });
+
+  test('32. GET /api/investor/personas - with valid token returns investor views', async () => {
+    const res = await request(app)
+      .get('/api/investor/personas')
+      .set('x-investor-token', 'test-investor-token');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.map(p => p.id)).toEqual(['angel', 'vc', 'strategic', 'government', 'pe']);
+    for (const persona of res.body) {
+      expect(persona).toHaveProperty('name');
+      expect(persona).toHaveProperty('headline');
+      expect(persona).toHaveProperty('narrative');
+      expect(Array.isArray(persona.focus_metrics)).toBe(true);
+    }
+  });
+
+  test('33. GET /api/investor/narrative - returns selected persona with risks and milestones', async () => {
+    const res = await request(app)
+      .get('/api/investor/narrative?persona=strategic')
+      .set('x-investor-token', 'test-investor-token');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('positioning');
+    expect(res.body).toHaveProperty('value_proposition');
+    expect(res.body).toHaveProperty('highlights');
+    expect(res.body).toHaveProperty('risks');
+    expect(res.body).toHaveProperty('milestones');
+    expect(res.body.persona.id).toBe('strategic');
+    expect(res.body.persona).toHaveProperty('narrative');
+    expect(res.body.persona).toHaveProperty('focus_metrics');
+    expect(res.body.persona).toHaveProperty('risk_control');
+    expect(Array.isArray(res.body.risks)).toBe(true);
+    expect(res.body.risks[0]).toHaveProperty('risk');
+    expect(res.body.risks[0]).toHaveProperty('mitigation');
+  });
 });
