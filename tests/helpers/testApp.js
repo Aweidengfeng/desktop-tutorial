@@ -49,6 +49,7 @@ function createApp() {
   app.use('/api/notifications', require('../../backend/routes/notifications'));
   app.use('/api/admin',         require('../../backend/routes/admin'));
   app.use('/api/expeditions',   require('../../backend/routes/expeditions'));
+  app.use('/api/launch',        require('../../backend/routes/launch'));
   app.use('/api/search',        require('../../backend/routes/search'));
   app.use('/api/certificates',  require('../../backend/routes/certificates'));
   app.use('/api/certification', require('../../backend/routes/certification'));

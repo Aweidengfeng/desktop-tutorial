@@ -199,6 +199,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/expeditions', require('./routes/expeditions'));
+app.use('/api/launch', require('./routes/launch'));
 app.use('/legal', require('./routes/legal'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/search', require('./routes/search'));

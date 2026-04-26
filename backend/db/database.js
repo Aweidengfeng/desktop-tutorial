@@ -1518,6 +1518,20 @@ CREATE TABLE IF NOT EXISTS expedition_orders (
   confirmed_at DATETIME,
   cancelled_at DATETIME
 );
+
+CREATE TABLE IF NOT EXISTS global_launch_applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  contact TEXT NOT NULL,
+  nationality TEXT,
+  experience TEXT,
+  target TEXT,
+  notes TEXT,
+  payload TEXT,
+  status TEXT DEFAULT 'received',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // expedition_orders table: state machine fields (must run after CREATE TABLE)
@@ -1698,6 +1712,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_status      ON bookings(status);
   CREATE INDEX IF NOT EXISTS idx_expedition_orders_user   ON expedition_orders(user_id);
   CREATE INDEX IF NOT EXISTS idx_expedition_orders_status ON expedition_orders(status);
+  CREATE INDEX IF NOT EXISTS idx_global_launch_app_type    ON global_launch_applications(type);
+  CREATE INDEX IF NOT EXISTS idx_global_launch_app_status  ON global_launch_applications(status);
   CREATE INDEX IF NOT EXISTS idx_activity_orders_user     ON activity_orders(user_id);
   CREATE INDEX IF NOT EXISTS idx_activity_orders_status   ON activity_orders(status);
   CREATE INDEX IF NOT EXISTS idx_guide_service_orders_user   ON guide_service_orders(user_id);
