@@ -14,16 +14,39 @@ const { PrismaClient } = require('@prisma/client');
 
 let prisma;
 
-if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient({
-    log: ['warn', 'error'],
+function createPrismaClient() {
+  const client = new PrismaClient({
+    log: process.env.NODE_ENV === 'production'
+      ? ['warn', 'error']
+      : process.env.NODE_ENV === 'test'
+        ? []
+        : ['query', 'warn', 'error'],
   });
+
+  // Verify the connection is usable and log a clear message on failure.
+  // This runs asynchronously so it never blocks module load or crashes the process.
+  client.$connect()
+    .then(() => {
+      console.log('✅ Prisma connected to database');
+    })
+    .catch((err) => {
+      console.error(
+        '⚠️  Prisma failed to connect to database (will retry on first query):',
+        err.message
+      );
+      // Prisma will automatically retry on the next query — no process.exit here
+      // so the app can still start and serve non-database routes (e.g. /health).
+    });
+
+  return client;
+}
+
+if (process.env.NODE_ENV === 'production') {
+  prisma = createPrismaClient();
 } else {
   // 开发/测试环境：复用全局单例，避免热重载时连接泄漏
   if (!global.__prisma) {
-    global.__prisma = new PrismaClient({
-      log: process.env.NODE_ENV === 'test' ? [] : ['query', 'warn', 'error'],
-    });
+    global.__prisma = createPrismaClient();
   }
   prisma = global.__prisma;
 }
