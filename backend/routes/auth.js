@@ -52,28 +52,38 @@ async function verifyGoogleToken(idToken) {
 // 缓存 Apple 公钥集合，避免每次请求都调用 Apple API（TTL 1 小时）
 let _appleJwks = null;
 let _appleJwksCachedAt = 0;
+let _appleJwksFetchPromise = null; // 防止并发重复 fetch
 const APPLE_JWKS_TTL_MS = 60 * 60 * 1000; // 1h
 
 /**
+ * 内部辅助：发起一次 Apple JWKS fetch（并发安全，多个请求共享同一个 Promise）。
+ */
+function _fetchAppleJwks() {
+  if (_appleJwksFetchPromise) return _appleJwksFetchPromise;
+  _appleJwksFetchPromise = fetch('https://appleid.apple.com/auth/keys')
+    .then(r => { if (!r.ok) throw new Error('获取 Apple JWKS 失败，HTTP ' + r.status); return r.json(); })
+    .then(data => {
+      _appleJwks = data;
+      _appleJwksCachedAt = Date.now();
+    })
+    .finally(() => { _appleJwksFetchPromise = null; });
+  return _appleJwksFetchPromise;
+}
+
+/**
  * 从 Apple JWKS 端点取出与 kid 匹配的 Node.js KeyObject。
- * 内置简单缓存；kid 不命中时自动刷新一次缓存。
+ * 内置并发安全缓存：多个并发请求共享同一个 fetch Promise，避免重复调用 Apple API。
+ * kid 不命中时自动刷新一次缓存。
  */
 async function getApplePublicKey(kid) {
   const needRefresh = !_appleJwks || Date.now() - _appleJwksCachedAt > APPLE_JWKS_TTL_MS;
-  if (needRefresh) {
-    const res = await fetch('https://appleid.apple.com/auth/keys');
-    if (!res.ok) throw new Error('获取 Apple JWKS 失败，HTTP ' + res.status);
-    _appleJwks = await res.json();
-    _appleJwksCachedAt = Date.now();
-  }
-  let keyData = _appleJwks.keys.find(k => k.kid === kid);
+  if (needRefresh) await _fetchAppleJwks();
+  let keyData = _appleJwks && _appleJwks.keys.find(k => k.kid === kid);
   if (!keyData) {
     // kid 可能是新轮换的，强制刷新缓存再试一次
-    const res = await fetch('https://appleid.apple.com/auth/keys');
-    if (!res.ok) throw new Error('获取 Apple JWKS 失败，HTTP ' + res.status);
-    _appleJwks = await res.json();
-    _appleJwksCachedAt = Date.now();
-    keyData = _appleJwks.keys.find(k => k.kid === kid);
+    _appleJwksCachedAt = 0; // 让下次 _fetchAppleJwks 重新拉取
+    await _fetchAppleJwks();
+    keyData = _appleJwks && _appleJwks.keys.find(k => k.kid === kid);
     if (!keyData) throw new Error('Apple JWKS 中未找到 kid: ' + kid);
   }
   return crypto.createPublicKey({ key: keyData, format: 'jwk' });
@@ -322,9 +332,10 @@ router.post('/register', registerLimiter, async (req, res) => {
       const existing = await prisma.user.findFirst({ where: { email } });
       if (existing) return res.status(400).json({ error: '邮箱已注册' });
     }
-    // 用4位随机十六进制后缀确保用户名唯一（国际手机号末位可能含区号部分，统一用随机后缀）
+    // 用4位随机十六进制后缀确保用户名唯一
     const suffix = crypto.randomBytes(2).toString('hex');
-    const username = '@' + name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) + '_' + suffix;
+    const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+    const username = '@' + (sanitizedName || crypto.randomBytes(4).toString('hex')) + '_' + suffix;
     const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || email || name);
     const hash = await bcrypt.hash(password, 10);
     const userData = {
@@ -777,7 +788,7 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
 // POST /api/auth/wechat — 微信登录
 // 若已配置 WECHAT_APPID + WECHAT_SECRET，则通过微信 OAuth 换取真实 openid；
 // 否则回退到 mock 模式（仅适用于开发/测试）
-router.post('/wechat', async (req, res) => {
+router.post('/wechat', loginLimiter, async (req, res) => {
   try {
     const { code } = req.body || {};
     if (!code) return res.status(400).json({ error: '缺少 code 参数' });
@@ -808,7 +819,7 @@ router.post('/wechat', async (req, res) => {
       console.log('[WeChat] 登录成功，openid:', wechatOpenid.slice(0, 8) + '***');
     } else {
       // Mock 模式：开发/测试专用
-      wechatOpenid = 'wx_mock_' + crypto.createHash('sha256').update(code).digest('hex').slice(0, 24);
+      wechatOpenid = 'wx_mock_' + crypto.randomBytes(12).toString('hex');
       console.warn('[WeChat] 使用 mock 模式，配置 WECHAT_APPID + WECHAT_SECRET 启用真实验证');
     }
 
@@ -837,7 +848,7 @@ router.post('/wechat', async (req, res) => {
 // POST /api/auth/apple — Apple 登录
 // 若已配置 APPLE_CLIENT_ID，则通过 Apple JWKS 完整验证 identityToken（RS256 签名 + iss + aud + exp）；
 // 否则回退到 mock 模式（仅适用于开发/测试）
-router.post('/apple', async (req, res) => {
+router.post('/apple', loginLimiter, async (req, res) => {
   try {
     const { identityToken, fullName } = req.body || {};
     if (!identityToken) return res.status(400).json({ error: '缺少 identityToken 参数' });
@@ -921,8 +932,8 @@ router.post('/google', loginLimiter, async (req, res) => {
       googleName = payload.name;
       googleAvatar = payload.picture;
     } else {
-      // Mock 模式：开发/测试专用（idToken 作为唯一标识）
-      googleSub = 'google_mock_' + crypto.createHash('sha256').update(idToken).digest('hex').slice(0, 20);
+      // Mock 模式：开发/测试专用（每次调用创建一个新的随机 sub；如需持久化测试账号，请配置 GOOGLE_CLIENT_ID）
+      googleSub = 'google_mock_' + crypto.randomBytes(12).toString('hex');
       console.warn('[Google] 使用 mock 模式，配置 GOOGLE_CLIENT_ID 启用真实验证');
     }
 

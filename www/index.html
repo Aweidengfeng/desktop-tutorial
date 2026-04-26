@@ -8700,7 +8700,7 @@ function alpineLink() {
       } else {
         // Mock 模式（开发/测试专用）
         // 在 Capacitor iOS/Android 原生环境中，应使用 @codetrix-studio/capacitor-google-auth 获取 idToken
-        const mockToken = 'google_mock_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        const mockToken = 'google_mock_' + Date.now() + '_' + Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => b.toString(16).padStart(2,'0')).join('');
         try {
           const res = await fetch(API_BASE + '/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: mockToken }) });
           const data = await res.json();
