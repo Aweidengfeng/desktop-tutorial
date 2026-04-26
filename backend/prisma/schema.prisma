@@ -37,6 +37,7 @@ model User {
   isBanned     Boolean  @default(false) @map("is_banned")
   wechatOpenid String?  @map("wechat_openid")
   appleSub     String?  @map("apple_sub")
+  googleSub    String?  @unique @map("google_sub")
   passportUuid String?  @map("passport_uuid")
   settings     String   @default("{}") // JSON stored as text
   privacy      String   @default("{}") // JSON stored as text

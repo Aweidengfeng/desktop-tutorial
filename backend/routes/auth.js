@@ -20,6 +20,167 @@ if (!SECRET) {
 }
 const JWT_SECRET = SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
+// ── Google OAuth ─────────────────────────────────────────────────────────────
+// 仅当 GOOGLE_CLIENT_ID 配置时加载 google-auth-library
+let googleOAuthClient = null;
+if (process.env.GOOGLE_CLIENT_ID) {
+  try {
+    const { OAuth2Client } = require('google-auth-library');
+    googleOAuthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    console.log('✅ Google OAuth 已启用');
+  } catch (e) {
+    console.warn('⚠️  google-auth-library 加载失败，Google 登录将使用 mock 模式:', e.message);
+  }
+}
+
+/** 验证 Google ID token，返回 payload（含 sub/email/name）；失败返回 null */
+async function verifyGoogleToken(idToken) {
+  if (!googleOAuthClient) return null;
+  try {
+    const ticket = await googleOAuthClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    return ticket.getPayload();
+  } catch (e) {
+    console.error('[Google] verifyIdToken 失败:', e.message);
+    return null;
+  }
+}
+
+// ── Apple Sign In JWKS 验证 ──────────────────────────────────────────────────
+// 缓存 Apple 公钥集合，避免每次请求都调用 Apple API（TTL 1 小时）
+let _appleJwks = null;
+let _appleJwksCachedAt = 0;
+let _appleJwksFetchPromise = null; // 防止并发重复 fetch
+const APPLE_JWKS_TTL_MS = 60 * 60 * 1000; // 1h
+
+/**
+ * 内部辅助：发起一次 Apple JWKS fetch（并发安全，多个请求共享同一个 Promise）。
+ */
+function _fetchAppleJwks() {
+  if (_appleJwksFetchPromise) return _appleJwksFetchPromise;
+  _appleJwksFetchPromise = fetch('https://appleid.apple.com/auth/keys')
+    .then(r => { if (!r.ok) throw new Error('获取 Apple JWKS 失败，HTTP ' + r.status); return r.json(); })
+    .then(data => {
+      _appleJwks = data;
+      _appleJwksCachedAt = Date.now();
+    })
+    .finally(() => { _appleJwksFetchPromise = null; });
+  return _appleJwksFetchPromise;
+}
+
+/**
+ * 从 Apple JWKS 端点取出与 kid 匹配的 Node.js KeyObject。
+ * 内置并发安全缓存：多个并发请求共享同一个 fetch Promise，避免重复调用 Apple API。
+ * kid 不命中时自动刷新一次缓存。
+ */
+async function getApplePublicKey(kid) {
+  const needRefresh = !_appleJwks || Date.now() - _appleJwksCachedAt > APPLE_JWKS_TTL_MS;
+  if (needRefresh) await _fetchAppleJwks();
+  if (!_appleJwks) throw new Error('Apple JWKS 数据不可用');
+  let keyData = _appleJwks.keys.find(k => k.kid === kid);
+  if (!keyData) {
+    // kid 可能是新轮换的，强制刷新缓存再试一次
+    _appleJwksCachedAt = 0; // 让下次 _fetchAppleJwks 重新拉取
+    await _fetchAppleJwks();
+    if (!_appleJwks) throw new Error('Apple JWKS 数据不可用');
+    keyData = _appleJwks.keys.find(k => k.kid === kid);
+    if (!keyData) throw new Error('Apple JWKS 中未找到 kid: ' + kid);
+  }
+  return crypto.createPublicKey({ key: keyData, format: 'jwk' });
+}
+
+/**
+ * 完整验证 Apple identityToken：
+ *   1. 从 Apple JWKS 端点获取对应公钥
+ *   2. 用 jsonwebtoken.verify() 验证 RS256 签名、iss、aud、exp
+ * @param {string} identityToken - Apple Sign In 返回的 JWT
+ * @returns {Promise<object>} 已验证的 payload（含 sub / email 等）
+ * @throws 验证失败时抛出错误
+ */
+async function verifyAppleToken(identityToken) {
+  const decoded = jwt.decode(identityToken, { complete: true });
+  if (!decoded || !decoded.header || !decoded.header.kid) {
+    throw new Error('identityToken 格式无效（缺少 header.kid）');
+  }
+  const publicKey = await getApplePublicKey(decoded.header.kid);
+  // jwt.verify 同时验证：RS256 签名 + iss + aud + exp
+  const payload = jwt.verify(identityToken, publicKey, {
+    algorithms: ['RS256'],
+    issuer: 'https://appleid.apple.com',
+    audience: process.env.APPLE_CLIENT_ID,
+  });
+  return payload;
+}
+
+// ── WeChat OAuth ─────────────────────────────────────────────────────────────
+/**
+ * 用微信 code 换取 openid（及可选 unionid）。
+ * 支持两种模式：
+ *   - 普通 OAuth（移动/网页）：https://api.weixin.qq.com/sns/oauth2/access_token
+ *   - 小程序：通过 WECHAT_MINI_APP=true 切换为 jscode2session
+ *
+ * @param {string} code - 客户端微信 SDK 返回的临时授权 code
+ * @returns {Promise<{ openid: string, accessToken?: string, unionid?: string }>}
+ * @throws 换取失败时抛出携带微信 errcode 的 Error
+ */
+async function exchangeWechatCode(code) {
+  const appid  = process.env.WECHAT_APPID;
+  const secret = process.env.WECHAT_SECRET;
+  if (!appid || !secret) throw new Error('未配置 WECHAT_APPID / WECHAT_SECRET');
+
+  const isMiniApp = process.env.WECHAT_MINI_APP === 'true';
+  const url = isMiniApp
+    ? `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`
+    : `https://api.weixin.qq.com/sns/oauth2/access_token?appid=${appid}&secret=${secret}&code=${code}&grant_type=authorization_code`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('微信 API 请求失败，HTTP ' + res.status);
+  const data = await res.json();
+  if (data.errcode) throw new Error(`微信 OAuth 错误 ${data.errcode}: ${data.errmsg}`);
+  return {
+    openid:      data.openid,
+    unionid:     data.unionid || null,
+    accessToken: data.access_token || null,
+  };
+}
+
+/**
+ * 获取微信用户基本信息（昵称/头像）。
+ * 小程序模式下无法直接获取（需调用前端 getUserProfile），返回 null。
+ * @param {string} accessToken
+ * @param {string} openid
+ * @returns {Promise<{ name: string, avatar: string } | null>}
+ */
+async function getWechatUserInfo(accessToken, openid) {
+  if (!accessToken) return null;
+  try {
+    const res = await fetch(
+      `https://api.weixin.qq.com/sns/userinfo?access_token=${accessToken}&openid=${openid}&lang=zh_CN`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.errcode) return null;
+    return {
+      name:   data.nickname  || null,
+      avatar: data.headimgurl || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** 简单手机号校验：接受中国大陆格式或国际 E.164 格式（+[国家码][号码]）*/
+function isValidPhone(phone) {
+  if (!phone || typeof phone !== 'string') return false;
+  // 中国大陆：1[3-9]XXXXXXXXX
+  if (/^1[3-9]\d{9}$/.test(phone)) return true;
+  // 国际 E.164：+[1-9][0-9]{6,14}（7-15 位数字）
+  if (/^\+[1-9]\d{6,14}$/.test(phone)) return true;
+  return false;
+}
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -145,12 +306,18 @@ async function safeUser(user) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms } = req.body || {};
-    if (!name || !phone || !password) {
-      return res.status(400).json({ error: '请填写姓名、手机号和密码' });
+    const { name, phone, email, password, policyVersion, agreedPrivacy, agreedTerms } = req.body || {};
+    if (!name || !password) {
+      return res.status(400).json({ error: '请填写姓名和密码' });
     }
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      return res.status(400).json({ error: '手机号格式不正确' });
+    if (!phone && !email) {
+      return res.status(400).json({ error: '请填写手机号或邮箱地址' });
+    }
+    if (phone && !isValidPhone(phone)) {
+      return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
+    }
+    if (email && !isValidEmail(email)) {
+      return res.status(400).json({ error: '邮箱格式不正确' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
@@ -158,31 +325,42 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (!agreedPrivacy || !agreedTerms || !policyVersion || policyVersion !== POLICY_VERSION) {
       return res.status(422).json({ error: '请阅读并同意最新版隐私政策和用户协议' });
     }
-    const existingUser = await prisma.user.findUnique({ where: { phone } });
-    if (existingUser) {
-      return res.status(400).json({ error: '手机号已注册' });
+    // 检查手机号/邮箱是否已注册
+    if (phone) {
+      const existing = await prisma.user.findUnique({ where: { phone } });
+      if (existing) return res.status(400).json({ error: '手机号已注册' });
     }
-    const username = '@' + name.toLowerCase().replace(/\s+/g, '') + '_' + phone.slice(-4);
-    const avatar = 'https://i.pravatar.cc/150?u=' + phone;
+    if (email) {
+      const existing = await prisma.user.findFirst({ where: { email } });
+      if (existing) return res.status(400).json({ error: '邮箱已注册' });
+    }
+    // 用4位随机十六进制后缀确保用户名唯一
+    const suffix = crypto.randomBytes(2).toString('hex');
+    const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+    const username = '@' + (sanitizedName || ('user' + crypto.randomBytes(4).toString('hex'))) + '_' + suffix;
+    const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || email || name);
     const hash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: {
-        name,
-        username,
-        phone,
-        password: hash,
-        avatar,
-        policyVersion,
-        policyAgreedAt: new Date(),
-      },
-    });
+    const userData = {
+      name,
+      username,
+      password: hash,
+      avatar,
+      policyVersion,
+      policyAgreedAt: new Date(),
+    };
+    if (phone) userData.phone = phone;
+    if (email) userData.email = email;
+    const user = await prisma.user.create({ data: userData });
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
     if (e.code === 'P2002') {
-      const field = e.meta?.target?.includes('phone') ? 'phone' : 'other';
-      if (field === 'phone') return res.status(400).json({ error: '手机号已注册' });
+      const target = e.meta?.target || '';
+      if (target.includes('phone')) return res.status(400).json({ error: '手机号已注册' });
+      if (target.includes('email')) return res.status(400).json({ error: '邮箱已注册' });
+      if (target.includes('username')) return res.status(400).json({ error: '用户名冲突，请重试' });
       return res.status(400).json({ error: '注册失败，请稍后重试' });
     }
+    console.error('[register]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -226,16 +404,29 @@ router.post('/register', registerLimiter, async (req, res) => {
  */
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { phone, password } = req.body || {};
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      return res.status(400).json({ error: '手机号格式不正确' });
+    const { phone, email, password } = req.body || {};
+    if (!password) return res.status(400).json({ error: '请输入密码' });
+    let user = null;
+    if (email && isValidEmail(email)) {
+      user = await prisma.user.findFirst({ where: { email } });
+      if (!user) return res.status(401).json({ error: '邮箱或密码错误' });
+    } else if (phone) {
+      if (!isValidPhone(phone)) {
+        return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
+      }
+      user = await prisma.user.findUnique({ where: { phone } });
+      if (!user) return res.status(401).json({ error: '手机号或密码错误' });
+    } else {
+      return res.status(400).json({ error: '请填写手机号或邮箱' });
     }
-    const user = await prisma.user.findUnique({ where: { phone } });
-    if (!user) return res.status(401).json({ error: '手机号或密码错误' });
+    if (!user.password) {
+      return res.status(401).json({ error: '此账号未设置密码，请使用验证码或第三方账号登录' });
+    }
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ error: '手机号或密码错误' });
+    if (!ok) return res.status(401).json({ error: email ? '邮箱或密码错误' : '手机号或密码错误' });
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
+    console.error('[login]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -363,7 +554,7 @@ router.put('/change-phone', authWriteLimiter, auth, async (req, res) => {
   try {
     const { phone, code } = req.body || {};
     if (!phone || !code) return res.status(400).json({ error: '请填写新手机号和验证码' });
-    if (!/^1[3-9]\d{9}$/.test(phone)) return res.status(400).json({ error: '手机号格式不正确' });
+    if (!isValidPhone(phone)) return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
     const existing = await prisma.user.findUnique({ where: { phone } });
     if (existing && existing.id !== req.user.id) return res.status(400).json({ error: '该手机号已被其他账号使用' });
     const record = await prisma.smsCode.findFirst({
@@ -415,8 +606,8 @@ const emailFailCount = new Map(); // email → {count, lockedUntil}
 router.post('/sms/send', async (req, res) => {
   try {
     const { phone } = req.body || {};
-    if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
-      return res.status(400).json({ error: '手机号格式不正确' });
+    if (!phone || !isValidPhone(phone)) {
+      return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
     }
     // 60 秒冷却检查
     const lastSent = smsSendCooldown.get(phone);
@@ -596,56 +787,187 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
   }
 });
 
-// POST /api/auth/wechat — 微信登录（mock）
-router.post('/wechat', async (req, res) => {
+// POST /api/auth/wechat — 微信登录
+// 若已配置 WECHAT_APPID + WECHAT_SECRET，则通过微信 OAuth 换取真实 openid；
+// 否则回退到 mock 模式（仅适用于开发/测试）
+router.post('/wechat', loginLimiter, async (req, res) => {
   try {
     const { code } = req.body || {};
     if (!code) return res.status(400).json({ error: '缺少 code 参数' });
-    const fakeOpenid = 'wx_mock_' + code + '_' + crypto.randomBytes(8).toString('hex');
-    let user = await prisma.user.findFirst({ where: { wechatOpenid: fakeOpenid } });
+
+    let wechatOpenid = null;
+    let wechatName   = null;
+    let wechatAvatar = null;
+
+    const hasWechatCreds = process.env.WECHAT_APPID && process.env.WECHAT_SECRET;
+    if (hasWechatCreds) {
+      // 真实微信 OAuth：code → openid
+      let wxData;
+      try {
+        wxData = await exchangeWechatCode(code);
+      } catch (wxErr) {
+        console.error('[WeChat] code 换取失败:', wxErr.message);
+        return res.status(401).json({ error: '微信登录失败：' + wxErr.message });
+      }
+      wechatOpenid = wxData.openid;
+      // 尝试获取微信用户昵称和头像（仅 OAuth 模式有 access_token；小程序模式跳过）
+      if (wxData.accessToken) {
+        const info = await getWechatUserInfo(wxData.accessToken, wechatOpenid);
+        if (info) {
+          wechatName   = info.name;
+          wechatAvatar = info.avatar;
+        }
+      }
+      console.log('[WeChat] 登录成功，openid:', wechatOpenid.slice(0, 8) + '***');
+    } else {
+      // Mock 模式：开发/测试专用
+      wechatOpenid = 'wx_mock_' + crypto.randomBytes(12).toString('hex');
+      console.warn('[WeChat] 使用 mock 模式，配置 WECHAT_APPID + WECHAT_SECRET 启用真实验证');
+    }
+
+    let user = await prisma.user.findFirst({ where: { wechatOpenid } });
     if (!user) {
       const suffix = crypto.randomBytes(4).toString('hex');
-      const name = '微信用户' + suffix.slice(0, 4);
-      const avatar = 'https://i.pravatar.cc/150?u=wx' + fakeOpenid;
+      const name   = wechatName || ('微信用户' + suffix.slice(0, 4));
+      const avatar = wechatAvatar || ('https://i.pravatar.cc/150?u=wx' + wechatOpenid);
       try {
         const username = '@wx' + Date.now().toString(36) + suffix;
-        user = await prisma.user.create({ data: { name, username, avatar, wechatOpenid: fakeOpenid } });
+        user = await prisma.user.create({ data: { name, username, avatar, wechatOpenid } });
       } catch (e) {
         if (e.code === 'P2002') {
           const username2 = '@wx' + crypto.randomBytes(6).toString('hex');
-          user = await prisma.user.create({ data: { name, username: username2, avatar, wechatOpenid: fakeOpenid } });
+          user = await prisma.user.create({ data: { name, username: username2, avatar, wechatOpenid } });
         } else throw e;
       }
     }
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
+    console.error('[wechat]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
-// POST /api/auth/apple — Apple 登录（mock）
-router.post('/apple', async (req, res) => {
+// POST /api/auth/apple — Apple 登录
+// 若已配置 APPLE_CLIENT_ID，则通过 Apple JWKS 完整验证 identityToken（RS256 签名 + iss + aud + exp）；
+// 否则回退到 mock 模式（仅适用于开发/测试）
+router.post('/apple', loginLimiter, async (req, res) => {
   try {
-    const { identityToken } = req.body || {};
+    const { identityToken, fullName } = req.body || {};
     if (!identityToken) return res.status(400).json({ error: '缺少 identityToken 参数' });
-    const fakeSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + crypto.randomBytes(8).toString('hex');
-    let user = await prisma.user.findFirst({ where: { appleSub: fakeSub } });
+
+    let appleSub   = null;
+    let appleEmail = null;
+    let appleName  = null;
+
+    if (process.env.APPLE_CLIENT_ID) {
+      // 真实验证：从 Apple JWKS 端点获取公钥，完整验证 RS256 签名 + iss + aud + exp
+      try {
+        const payload = await verifyAppleToken(identityToken);
+        appleSub   = payload.sub;
+        appleEmail = payload.email;
+        appleName  = (fullName && (fullName.givenName || fullName.familyName))
+          ? `${fullName.givenName || ''} ${fullName.familyName || ''}`.trim()
+          : null;
+        console.log('[Apple] 验证成功，sub:', appleSub.slice(0, 8) + '***');
+      } catch (appleErr) {
+        console.error('[Apple] identityToken 验证失败:', appleErr.message);
+        return res.status(401).json({ error: 'Apple identityToken 无效：' + appleErr.message });
+      }
+    } else {
+      // Mock 模式：开发/测试专用
+      appleSub = 'apple_mock_' + identityToken.slice(0, 16) + '_' + identityToken.length;
+      console.warn('[Apple] 使用 mock 模式，配置 APPLE_CLIENT_ID 启用真实 JWKS 验证');
+    }
+
+    let user = await prisma.user.findFirst({ where: { appleSub } });
+    if (!user) {
+      // 若 Apple 返回了已验证邮箱，尝试关联已有账号
+      // 安全性：Apple 平台要求邮箱所有权验证，因此此处邮箱关联是安全的
+      if (appleEmail) {
+        user = await prisma.user.findFirst({ where: { email: appleEmail } });
+        if (user) {
+          await prisma.user.update({ where: { id: user.id }, data: { appleSub } });
+        }
+      }
+    }
     if (!user) {
       const suffix = crypto.randomBytes(4).toString('hex');
-      const name = 'Apple用户' + suffix.slice(0, 4);
-      const avatar = 'https://i.pravatar.cc/150?u=ap' + fakeSub;
+      const name   = appleName || ('Apple用户' + suffix.slice(0, 4));
+      const avatar = 'https://i.pravatar.cc/150?u=ap' + appleSub;
+      const userData = { name, avatar, appleSub };
+      if (appleEmail) userData.email = appleEmail;
       try {
         const username = '@apple' + Date.now().toString(36) + suffix;
-        user = await prisma.user.create({ data: { name, username, avatar, appleSub: fakeSub } });
+        user = await prisma.user.create({ data: { ...userData, username } });
       } catch (e) {
         if (e.code === 'P2002') {
           const username2 = '@apple' + crypto.randomBytes(6).toString('hex');
-          user = await prisma.user.create({ data: { name, username: username2, avatar, appleSub: fakeSub } });
+          user = await prisma.user.create({ data: { ...userData, username: username2 } });
         } else throw e;
       }
     }
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
+    console.error('[apple]', e);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/google — Google 登录
+// 若已配置 GOOGLE_CLIENT_ID，则验证 Google ID token；否则使用 mock 模式（仅开发/测试）
+router.post('/google', loginLimiter, async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+    if (!idToken) return res.status(400).json({ error: '缺少 idToken 参数' });
+
+    let googleSub = null;
+    let googleEmail = null;
+    let googleName = null;
+    let googleAvatar = null;
+
+    if (googleOAuthClient) {
+      // 真实 Google ID token 验证
+      const payload = await verifyGoogleToken(idToken);
+      if (!payload) return res.status(401).json({ error: 'Google ID token 验证失败，请重新登录' });
+      googleSub = payload.sub;
+      googleEmail = payload.email;
+      googleName = payload.name;
+      googleAvatar = payload.picture;
+    } else {
+      // Mock 模式：开发/测试专用（每次调用创建一个新的随机 sub；如需持久化测试账号，请配置 GOOGLE_CLIENT_ID）
+      googleSub = 'google_mock_' + crypto.randomBytes(12).toString('hex');
+      console.warn('[Google] 使用 mock 模式，配置 GOOGLE_CLIENT_ID 启用真实验证');
+    }
+
+    // 查找已绑定此 Google 账号的用户
+    let user = await prisma.user.findFirst({ where: { googleSub } });
+    if (!user && googleEmail) {
+      // 尝试通过邮箱关联已有账号
+      // 安全性：Google 平台验证邮箱所有权，因此此处邮箱关联是安全的（仅在真实 token 验证时执行）
+      user = await prisma.user.findFirst({ where: { email: googleEmail } });
+      if (user) {
+        await prisma.user.update({ where: { id: user.id }, data: { googleSub } });
+      }
+    }
+    if (!user) {
+      const suffix = crypto.randomBytes(4).toString('hex');
+      const name = googleName || ('Google用户' + suffix.slice(0, 4));
+      const avatar = googleAvatar || ('https://i.pravatar.cc/150?u=g' + googleSub);
+      const userData = { name, avatar, googleSub };
+      if (googleEmail) userData.email = googleEmail;
+      try {
+        const username = '@g' + Date.now().toString(36) + suffix;
+        user = await prisma.user.create({ data: { ...userData, username } });
+      } catch (e) {
+        if (e.code === 'P2002') {
+          const username2 = '@google' + crypto.randomBytes(6).toString('hex');
+          user = await prisma.user.create({ data: { ...userData, username: username2 } });
+        } else throw e;
+      }
+    }
+    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+  } catch (e) {
+    console.error('[google]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });

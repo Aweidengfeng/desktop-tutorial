@@ -69,12 +69,16 @@ if (Sentry) {
 const corsOrigins = process.env.CORS_ORIGINS;
 // Capacitor App 使用的固定 origin（移动端 WebView）
 const CAPACITOR_ORIGINS = ['capacitor://localhost', 'ionic://localhost', 'http://localhost'];
+// API_BASE（服务本身的对外 URL），去掉末尾斜杠后用于识别同源请求（admin 后台访问 /api/*）
+const selfOrigin = process.env.API_BASE ? process.env.API_BASE.replace(/\/$/, '') : null;
 app.use(cors({
   origin: (origin, callback) => {
     // 无 Origin 头（如移动端 / curl）直接放行
     if (!origin) return callback(null, true);
     // Capacitor/Ionic App 的 WebView origin 始终放行
     if (CAPACITOR_ORIGINS.includes(origin)) return callback(null, true);
+    // 同源请求（admin.html 从服务自身域名发出的请求）始终放行，避免管理后台被自身 CORS 拦截
+    if (selfOrigin && origin === selfOrigin) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
     if (!corsOrigins) return callback(new Error('生产环境未配置 CORS_ORIGINS'), false);
     const whitelist = corsOrigins.split(',').map(o => o.trim());
@@ -135,7 +139,8 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
     // 注入 SENTRY_DSN 和 API_BASE 到前端
     const sentryDsn = process.env.SENTRY_DSN || '';
     const apiBase = process.env.API_BASE || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}</script>`;
+    const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}</script>`;
     result = result.replace('</head>', sentryScript + '\n</head>');
     // 若 Key 或安全密钥未配置，注入提示脚本
     if (!amapKey || !amapSecurityCode) {
