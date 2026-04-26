@@ -17,8 +17,8 @@ let userSeq = 0;
  */
 function createTestUser(db, opts = {}) {
   userSeq += 1;
-  const uniqueSuffix = String(userSeq).padStart(3, '0');
-  const phone = opts.phone || `138${String(Date.now()).slice(-5)}${uniqueSuffix}`;
+  const uniqueSuffix = String(userSeq).padStart(8, '0');
+  const phone = opts.phone || `138${uniqueSuffix}`;
   const name  = opts.name  || '测试用户_' + phone.slice(-4);
   const username = opts.username || `@testuser_${phone.slice(-4)}_${uniqueSuffix}`;
   const password = opts.password || 'test123456';

@@ -131,7 +131,8 @@ router.get('/personas', investorLimiter, investorAuth, (req, res) => {
 // GET /api/investor/narrative?persona=vc
 router.get('/narrative', investorLimiter, investorAuth, (req, res) => {
   const personaId = req.query.persona || 'vc';
-  const selectedPersona = INVESTOR_NARRATIVE.personas.find(p => p.id === personaId) || INVESTOR_NARRATIVE.personas[1];
+  const defaultPersona = INVESTOR_NARRATIVE.personas.find(p => p.id === 'vc') || INVESTOR_NARRATIVE.personas[0];
+  const selectedPersona = INVESTOR_NARRATIVE.personas.find(p => p.id === personaId) || defaultPersona;
   res.json({
     positioning: INVESTOR_NARRATIVE.positioning,
     value_proposition: INVESTOR_NARRATIVE.value_proposition,
