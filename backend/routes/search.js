@@ -5,68 +5,45 @@ const prisma = require('../db/prisma');
 
 const searchLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
 
-// Track whether FTS5 is available in this environment
-let fts5Available = false;
-
-// Initialize FTS5 search index — gracefully degrades if FTS5 is unavailable
+// Initialize FTS5 search index
 (async () => {
   try {
-    // First, verify FTS5 is compiled into SQLite by attempting to create the virtual table
     await prisma.$executeRawUnsafe(`
       CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
         name, description, type UNINDEXED, ref_id UNINDEXED
       );
     `);
-
-    // FTS5 is available — populate the index if empty
     const rows = await prisma.$queryRawUnsafe('SELECT COUNT(*) as cnt FROM search_index');
     if (Number(rows[0].cnt) === 0) {
-      try {
-        const peaks = await prisma.$queryRawUnsafe('SELECT id, name, description FROM peaks');
-        for (const item of peaks) {
-          await prisma.$executeRawUnsafe(
-            'INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'peak', String(item.id)
-          );
-        }
-      } catch(e) { console.warn('FTS5 peak seed failed:', e.message); }
-
+      const peaks = await prisma.$queryRawUnsafe('SELECT id, name, description FROM peaks');
+      for (const item of peaks) {
+        await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
+          item.name || '', item.description || '', 'peak', String(item.id));
+      }
       try {
         const guides = await prisma.$queryRawUnsafe('SELECT id, name, bio as description FROM guides');
         for (const item of guides) {
-          await prisma.$executeRawUnsafe(
-            'INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'guide', String(item.id)
-          );
+          await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
+            item.name || '', item.description || '', 'guide', String(item.id));
         }
       } catch(e) {}
-
       try {
         const clubs = await prisma.$queryRawUnsafe('SELECT id, name, description FROM clubs');
         for (const item of clubs) {
-          await prisma.$executeRawUnsafe(
-            'INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'club', String(item.id)
-          );
+          await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
+            item.name || '', item.description || '', 'club', String(item.id));
         }
       } catch(e) {}
-
       try {
         const articles = await prisma.$queryRawUnsafe('SELECT id, title as name, content as description FROM articles');
         for (const item of articles) {
-          await prisma.$executeRawUnsafe(
-            'INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'article', String(item.id)
-          );
+          await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
+            item.name || '', item.description || '', 'article', String(item.id));
         }
       } catch(e) {}
     }
-
-    fts5Available = true;
-    console.log('✅ FTS5 search index initialized');
   } catch(e) {
-    fts5Available = false;
-    console.warn('⚠️  FTS5 unavailable, falling back to LIKE-based search:', e.message);
+    console.warn('FTS5 index init failed:', e.message);
   }
 })();
 
@@ -118,69 +95,24 @@ router.get('/', searchLimiter, async (req, res) => {
     const safeLimit = Math.min(Number(limit) || 20, 100);
     let results = [];
 
-    if (fts5Available) {
-      try {
-        // FTS5 path: try MATCH first, fall back to LIKE on the search_index table
-        const safeQ = q.replace(/['\"*]/g, '') + '*';
-        let sql = 'SELECT name, description, type, ref_id FROM search_index WHERE search_index MATCH ?';
-        const params = [safeQ];
-        if (type !== 'all') { sql += ' AND type = ?'; params.push(type); }
-        sql += ' LIMIT ?';
-        params.push(safeLimit);
-        results = await prisma.$queryRawUnsafe(sql, ...params);
-      } catch(ftsErr) {
-        // MATCH failed (e.g. special chars in query) — fall back to LIKE on search_index
-        const likeQ = `%${q.replace(/[%_]/g, '')}%`;
-        let sql = 'SELECT name, description, type, ref_id FROM search_index WHERE name LIKE ?';
-        const params = [likeQ];
-        if (type !== 'all') { sql += ' AND type = ?'; params.push(type); }
-        sql += ' LIMIT ?';
-        params.push(safeLimit);
-        results = await prisma.$queryRawUnsafe(sql, ...params);
-      }
-    } else {
-      // FTS5 not available — query source tables directly with LIKE
+    try {
+      // Try FTS5 first (works well for ASCII/English queries)
+      const safeQ = q.replace(/['"*]/g, '') + '*';
+      let sql = 'SELECT name, description, type, ref_id FROM search_index WHERE search_index MATCH ?';
+      const params = [safeQ];
+      if (type !== 'all') { sql += ' AND type = ?'; params.push(type); }
+      sql += ' LIMIT ?';
+      params.push(safeLimit);
+      results = await prisma.$queryRawUnsafe(sql, ...params);
+    } catch(ftsErr) {
+      // Fallback: LIKE query for CJK and other non-ASCII characters
       const likeQ = `%${q.replace(/[%_]/g, '')}%`;
-      const perTypeLimit = Math.ceil(safeLimit / 4);
-
-      if (type === 'all' || type === 'peak') {
-        try {
-          const rows = await prisma.$queryRawUnsafe(
-            `SELECT id, name, description, 'peak' as type, CAST(id AS TEXT) as ref_id FROM peaks WHERE name LIKE ? OR description LIKE ? LIMIT ?`,
-            likeQ, likeQ, perTypeLimit
-          );
-          results = results.concat(rows);
-        } catch(e) {}
-      }
-      if (type === 'all' || type === 'guide') {
-        try {
-          const rows = await prisma.$queryRawUnsafe(
-            `SELECT id, name, bio as description, 'guide' as type, CAST(id AS TEXT) as ref_id FROM guides WHERE name LIKE ? OR bio LIKE ? LIMIT ?`,
-            likeQ, likeQ, perTypeLimit
-          );
-          results = results.concat(rows);
-        } catch(e) {}
-      }
-      if (type === 'all' || type === 'club') {
-        try {
-          const rows = await prisma.$queryRawUnsafe(
-            `SELECT id, name, description, 'club' as type, CAST(id AS TEXT) as ref_id FROM clubs WHERE name LIKE ? OR description LIKE ? LIMIT ?`,
-            likeQ, likeQ, perTypeLimit
-          );
-          results = results.concat(rows);
-        } catch(e) {}
-      }
-      if (type === 'all' || type === 'article') {
-        try {
-          const rows = await prisma.$queryRawUnsafe(
-            `SELECT id, title as name, content as description, 'article' as type, CAST(id AS TEXT) as ref_id FROM articles WHERE title LIKE ? OR content LIKE ? LIMIT ?`,
-            likeQ, likeQ, perTypeLimit
-          );
-          results = results.concat(rows);
-        } catch(e) {}
-      }
-      // Trim to requested limit
-      results = results.slice(0, safeLimit);
+      let sql = 'SELECT name, description, type, ref_id FROM search_index WHERE name LIKE ?';
+      const params = [likeQ];
+      if (type !== 'all') { sql += ' AND type = ?'; params.push(type); }
+      sql += ' LIMIT ?';
+      params.push(safeLimit);
+      results = await prisma.$queryRawUnsafe(sql, ...params);
     }
 
     res.json(results);
