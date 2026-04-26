@@ -426,7 +426,13 @@
               <input x-model="launchApplication.name" type="text" :placeholder="launchApplicationMode === 'climber' ? '姓名 / Name' : '机构或向导名称'" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none">
               <input x-model="launchApplication.contact" type="text" placeholder="联系方式：邮箱 / 手机 / WhatsApp / 微信" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none">
               <input x-model="launchApplication.nationality" type="text" placeholder="国家/地区" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none">
+              <input x-model="launchApplication.target" type="text" :placeholder="launchApplicationMode === 'climber' ? '目标：七大洲最高峰 / 8000米 / 马年转山' : '可服务目标：珠峰 / 阿空加瓜 / 乞力马扎罗等'" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none">
               <textarea x-model="launchApplication.experience" rows="2" :placeholder="launchApplicationMode === 'climber' ? '攀登/徒步经验、目标山峰、预算确认情况' : '可服务山峰、资质、保险、救援和历史成功率'" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none resize-none"></textarea>
+              <textarea x-model="launchApplication.notes" rows="2" placeholder="补充说明：时间窗口、预算、语言、服务报价或合作诉求" class="w-full bg-slate-800 text-white rounded-xl px-3 py-2.5 text-sm outline-none resize-none"></textarea>
+              <label x-show="launchApplicationMode === 'climber'" class="flex items-start gap-2 text-xs text-slate-300">
+                <input x-model="launchApplication.budgetConfirmed" type="checkbox" class="mt-0.5 accent-primary">
+                <span>我已了解七大洲最高峰需要较长周期、签证/保险准备和明确预算。</span>
+              </label>
               <label class="flex items-start gap-2 text-xs text-slate-300">
                 <input x-model="launchApplication.agreedRisk" type="checkbox" class="mt-0.5 accent-primary">
                 <span>我理解高海拔攀登存在风险，平台负责招募、展示和服务商筛选，实际攀登由合规服务商执行。</span>

@@ -100,7 +100,8 @@ router.post('/applications', applicationLimiter, async (req, res) => {
       language: trimString(req.body.language, 40) || 'zh-CN',
     };
 
-    const result = await prisma.$executeRaw`
+    const createdAt = new Date().toISOString();
+    await prisma.$executeRaw`
       INSERT INTO global_launch_applications (
         type, name, contact, nationality, experience, target, notes, payload, status, created_at
       ) VALUES (
@@ -113,11 +114,10 @@ router.post('/applications', applicationLimiter, async (req, res) => {
         ${trimString(req.body.notes, 1000) || null},
         ${JSON.stringify(payload)},
         'received',
-        ${new Date().toISOString()}
+        ${createdAt}
       )
     `;
-    const [created] = await prisma.$queryRaw`SELECT id, type, status, created_at as "createdAt" FROM global_launch_applications WHERE id = last_insert_rowid()`;
-    res.status(201).json({ success: true, application: created, changed: Number(result) });
+    res.status(201).json({ success: true, application: { type, status: 'received', createdAt } });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
