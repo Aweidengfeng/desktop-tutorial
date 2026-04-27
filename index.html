@@ -6744,8 +6744,11 @@ function alpineLink() {
       if (navigator.geolocation) {
         this._geoWatch = navigator.geolocation.watchPosition(
           (pos) => {
-            const { latitude: lat, longitude: lng, altitude: ele } = pos.coords;
-            this.trackRecordedPoints.push({ lat, lng, ele: ele || 0, ts: Date.now() });
+            const { latitude, longitude, altitude } = pos.coords;
+            const lat = parseFloat(latitude.toFixed(6));
+            const lng = parseFloat(longitude.toFixed(6));
+            const ele = altitude != null ? parseFloat(altitude.toFixed(1)) : 0;
+            this.trackRecordedPoints.push({ lat, lng, ele, ts: Date.now() });
             const activeMap = this.recordingMap || this.trackMap;
             if (activeMap && typeof AMap !== 'undefined') {
               const lnglat = new AMap.LngLat(lng, lat);

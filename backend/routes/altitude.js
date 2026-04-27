@@ -100,7 +100,7 @@ router.get('/', altitudeLimiter, async (req, res) => {
         if (data.status === '1' && data.elevations && data.elevations[0]) {
           const alt = parseFloat(data.elevations[0]);
           if (!isNaN(alt)) {
-            return res.json({ altitude: Math.round(alt), source: 'amap', lat, lng });
+            return res.json({ altitude: parseFloat(alt.toFixed(1)), source: 'amap', lat, lng });
           }
         }
       }
