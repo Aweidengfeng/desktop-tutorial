@@ -29,7 +29,7 @@
 - [ ] SQLite不得用于生产环境，必须迁移PostgreSQL
 
 ### 🟡 上线前修复项
-- [ ] 文件名含中文（`攀登4-20260416-summitlink.html`）必须重命名（Linux路径/CDN编码问题）— **Phase 0.1 进行中**
+- [x] 文件名含中文（`攀登4-20260416-summitlink.html`）必须重命名 ✅ 2026-04-27（已重命名为 index.html）
 - [ ] 图片上传目录（`uploads/`）禁止目录浏览，需配置Nginx
 - [ ] 轨迹坐标精度提升至6位小数
 - [ ] 向导 `rejected` 状态需支持重新申请流程
@@ -53,7 +53,7 @@
 ### Phase 0：基础稳定（2026-04 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
-| 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | 🔄 进行中 | |
+| 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | ✅ 已完成 | ✅ 2026-04-27 — `攀登4-20260416-summitlink.html` → `index.html`，同步更新 app.js 路径引用及文档 |
 | 0.2 | 关闭/保护mock-pay和sms-codes生产接口 | P0 | ✅ 已完成 | ✅ 2026-04-27 — `devOnly` 中间件加入 `mock-pay` 路由，生产环境返回404 |
 | 0.3 | 高德Key迁移至后端代理（AMAP_SECURITY_CODE安全密钥方案） | P0 | ✅ 已完成 | ✅ 2026-04-27 — AMAP_KEY通过replaceAll注入；AMAP_SECURITY_CODE改为后端在AMap script前动态注入 `window._AMapSecurityConfig`，HTML中不再有占位符 |
 | 0.4 | 前端图片上传前端预校验（5MB/类型） | P1 | 待做 | |
@@ -166,6 +166,7 @@
 | 2026-04-26 | 6专业视角全方位评审 | 本文档建立；确认SQLite迁移为最高优先；确认Phase 0安全问题清单 |
 | 2026-04-27 | Phase 0.2 执行 | mock-pay 接口加 devOnly 保护，PR 已合并 |
 | 2026-04-27 | Phase 0.3 执行 | 高德 AMAP_SECURITY_CODE 改为后端动态注入 `window._AMapSecurityConfig`，HTML无占位符，PR 已合并；启动 Phase 0.1 HTML文件重命名 |
+| 2026-04-27 | Phase 0.1 执行 | `攀登4-20260416-summitlink.html` 重命名为 `index.html`，app.js 路径同步更新，PR 已合并 |
 
 > **注**：每次重要对话后在此追加一行记录，保持项目知识连续性
 

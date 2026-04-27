@@ -81,7 +81,7 @@ npm start
 
 ```
 desktop-tutorial/
-├── 攀登4-20260416-summitlink.html  # 主前端页面（Alpine.js + Tailwind CSS）
+├── index.html                       # 主前端页面（Alpine.js + Tailwind CSS）
 ├── admin.html                       # 后台管理面板
 ├── backend/                         # Node.js / Express 后端
 │   ├── app.js                       # 服务入口
@@ -150,7 +150,7 @@ Write your name on line 6, save it, and then head back to GitHub Desktop.
 > ⚠️ **上线前必须替换 AMap Key**：
 >
 > 1. 前往 [https://console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) 注册并申请一个 **Web 端（JS API）** 类型的 Key（个人认证免费）。
-> 2. 打开 `攀登4-20260416-summitlink.html`，将文件顶部中的 `YOUR_AMAP_KEY` 替换为你的真实 Key：
+> 2. 打开 `index.html`，将文件顶部中的 `YOUR_AMAP_KEY` 替换为你的真实 Key：
 >    ```html
 >    <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
 >    ```
@@ -204,7 +204,7 @@ Write your name on line 6, save it, and then head back to GitHub Desktop.
 
 | 文件 | 变更说明 |
 |------|---------|
-| `攀登4-20260416-summitlink.html` | AMap 替换 Leaflet、探索去预约、聊天/帖子/评论图片上传与渲染、Lightbox、AMap工具函数 |
+| `index.html` | AMap 替换 Leaflet、探索去预约、聊天/帖子/评论图片上传与渲染、Lightbox、AMap工具函数 |
 | `backend/routes/upload.js` | JWT 鉴权、`crypto.randomUUID()` 安全文件名、5MB 限制 |
 | `backend/routes/messages.js` | 消息接口支持 `type` 和 `images` 字段，30次/分钟限流 |
 | `backend/routes/posts.js` | 帖子接口支持 `images` 字段 |

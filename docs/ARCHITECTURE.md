@@ -9,7 +9,7 @@
 ```mermaid
 graph TB
     subgraph 客户端
-        FE["前端页面<br/>攀登4-20260416-summitlink.html<br/>（Alpine.js + Tailwind CSS）"]
+        FE["前端页面<br/>index.html<br/>（Alpine.js + Tailwind CSS）"]
         ADMIN["管理后台<br/>admin.html<br/>（Alpine.js + Tailwind CSS）"]
     end
 
@@ -94,7 +94,7 @@ graph TB
 
 | 文件 | 说明 |
 |------|------|
-| `攀登4-20260416-summitlink.html` | 主前端单页应用（SPA）。使用 Alpine.js 管理状态，Tailwind CSS 样式，内嵌高德地图 SDK。包含：首页、探索、社区聊天、装备、个人中心五大 Tab |
+| `index.html` | 主前端单页应用（SPA）。使用 Alpine.js 管理状态，Tailwind CSS 样式，内嵌高德地图 SDK。包含：首页、探索、社区聊天、装备、个人中心五大 Tab |
 | `admin.html` | 后台管理面板。含向导/俱乐部审核、商业攀登审核、用户管理、内容管理等功能 |
 
 ### 后端入口与中间件
