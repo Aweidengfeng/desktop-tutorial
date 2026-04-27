@@ -49,6 +49,8 @@ router.post('/conversations', auth, async (req, res) => {
     let conv = (await prisma.$queryRaw`SELECT * FROM conversations WHERE user1_id = ${u1} AND user2_id = ${u2}`)[0];
     if (!conv) {
       await prisma.$executeRaw`INSERT INTO conversations (user1_id, user2_id) VALUES (${u1}, ${u2})`;
+      // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+      // 参考：INSERT INTO conversations (...) VALUES (...) RETURNING id
       const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
       conv = (await prisma.$queryRaw`SELECT * FROM conversations WHERE id = ${Number(idRow.id)}`)[0];
     }
@@ -97,6 +99,8 @@ router.post('/conversations/:id/messages', msgRateLimit, auth, async (req, res) 
     await prisma.$executeRaw`
       INSERT INTO messages (conversation_id, sender_id, content, type, images) VALUES (${Number(req.params.id)}, ${req.user.id}, ${content || ''}, ${msgType}, ${imagesStr})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO messages (...) VALUES (...) RETURNING id
     const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
     await prisma.$executeRaw`UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ${Number(req.params.id)}`;
     const message = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE id = ${Number(idRow.id)}`)[0];

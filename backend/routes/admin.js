@@ -266,6 +266,8 @@ router.post('/clubs', adminWriteLimiter, adminAuth, async (req, res) => {
       INSERT INTO clubs (name, region, specialty, description, contact, verified, status)
       VALUES (${name}, ${region || null}, ${specialty || null}, ${description || null}, ${contact || null}, ${verifiedVal}, 'active')
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO clubs (...) VALUES (...) RETURNING id
     const club = (await prisma.$queryRaw`SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs WHERE id = (SELECT last_insert_rowid())`)[0];
     res.json(club);
   } catch (e) {
@@ -584,6 +586,8 @@ router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, asyn
       await prisma.$executeRaw`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, business_license_url, creator_id, status, approved_at, approved_by)
                   VALUES (${clubName}, ${app.description}, ${app.specialty}, ${app.region}, ${clubType},
                          ${app.contact}, ${app.wechat}, ${app.website}, ${certUrl}, ${app.user_id}, 'approved_pending_payment', ${now}, 'admin')`;
+      // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+      // 参考：INSERT INTO clubs (...) VALUES (...) RETURNING id
       const ins = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
       await prisma.$executeRaw`UPDATE club_applications SET club_id = ${ins.id} WHERE id = ${app.id}`;
     }
@@ -1009,6 +1013,8 @@ router.post('/peaks', adminWriteLimiter, adminAuth, async (req, res) => {
              ${supplemental_oxygen || 0}, ${season_detail || null},
              ${operating_company || null}, ${data_source || '管理员录入'}, ${permit_fee || null})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO peaks (...) VALUES (...) RETURNING id
     const peak = (await prisma.$queryRaw`SELECT * FROM peaks WHERE id = (SELECT last_insert_rowid())`)[0];
     res.json(peak);
   } catch (e) {
@@ -1161,6 +1167,8 @@ router.post('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
               ${altitude ? parseInt(altitude) : null}, ${duration_days ? parseInt(duration_days) : null},
               ${best_season || null}, ${description || null}, 'active')
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO climbing_routes (...) VALUES (...) RETURNING id
     const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = (SELECT last_insert_rowid())`)[0];
     res.json(route);
   } catch (e) {

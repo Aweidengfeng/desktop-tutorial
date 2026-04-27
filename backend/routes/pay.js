@@ -70,6 +70,8 @@ router.post('/escrow', payLimiter, async (req, res) => {
       INSERT INTO platform_transactions (order_type, order_id, order_no, owner_type, owner_id, total_amount, platform_fee, owner_income, commission_rate, status)
       VALUES (${order_type}, ${order_id}, ${order_no || null}, ${owner_type || null}, ${owner_id || null}, ${total_amount}, ${platform_fee}, ${owner_income}, ${commission_rate}, 'held')
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO platform_transactions (...) VALUES (...) RETURNING id
     const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
     const transaction_id = Number(idRow.id);
 
@@ -126,6 +128,8 @@ router.post('/withdraw', payLimiter, async (req, res) => {
       INSERT INTO withdrawal_requests (owner_type, owner_id, amount, fee, actual_amount, account_type, account_info, status)
       VALUES (${owner_type}, ${owner_id}, ${amount}, ${fee}, ${actual_amount}, ${account_type}, ${JSON.stringify(account_info || {})}, 'pending')
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO withdrawal_requests (...) VALUES (...) RETURNING id
     const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
     const request_id = Number(idRow.id);
 

@@ -148,6 +148,8 @@ router.post('/', auth, async (req, res) => {
         ${early_bird_price || null}, ${early_bird_deadline || null},
         ${gdStr}, ${psStr}, ${cancel_policy || null}, ${commission_rate}, 'pending', ${now}, ${now})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO expeditions (...) VALUES (...) RETURNING id
     const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = last_insert_rowid()`;
     res.json(expedition);
   } catch (e) {
@@ -270,6 +272,8 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
         'pending_payment', ${contact_name || null}, ${contact_phone || null},
         ${emergency_contact || null}, ${emergency_phone || null}, ${notes || null}, ${now})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO expedition_orders (...) VALUES (...) RETURNING id
     const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = last_insert_rowid()`;
     res.json(order);
   } catch (e) {

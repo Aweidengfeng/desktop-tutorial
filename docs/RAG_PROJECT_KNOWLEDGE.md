@@ -69,7 +69,7 @@
 | 1.1 | SQLite → PostgreSQL 迁移（Railway PostgreSQL） | P0 | 待做 | |
 | 1.2 | 轨迹points字段迁移（TEXT JSON → JSONB/PostGIS） | P0 | 待做 | |
 | 1.3 | 独立images表设计与迁移 | P1 | 待做 | |
-| 1.4 | 数据库迁移脚本编写与回滚方案 | P0 | 待做 | |
+| 1.4 | 数据库迁移脚本编写与回滚方案 | P0 | 🔄 已准备 | ✅ 2026-04-27 — Prisma schema支持env provider；创建迁移指南POSTGRESQL_MIGRATION.md；创建SQLite导出脚本 |
 | 1.5 | 压测验证PostgreSQL下50并发无500错误 | P0 | 待做 | |
 
 ### Phase 2：前端架构升级（2026-05~06 目标）
@@ -305,7 +305,8 @@
 |------|---------|---------|
 | 2026-04-26 | 项目初始化，建立RAG文档框架 | 文档创建 |
 | 2026-04-27 | Phase 0.1重命名，Phase 0.2 mock-pay安全修复，Phase 0.3高德Key安全迁移 | 0.1✅ 0.2✅ 0.3✅ |
-| 2026-04-27 | 6专业视角完整深度评审，Phase 0.4图片预校验，RAG文档全量更新 | 0.4✅ 评审沉淀 |
+| 2026-04-27 | Phase 0.5 JWT过期前端检测，Phase 0.6 轨迹坐标精度，Phase 1 PostgreSQL迁移准备 | 0.5✅ 0.6✅ Phase 1准备✅ |
+| 2026-04-27 | Phase 1 PostgreSQL迁移准备 | Prisma schema支持env provider；创建迁移指南POSTGRESQL_MIGRATION.md；创建SQLite导出脚本 |
 
 ---
 

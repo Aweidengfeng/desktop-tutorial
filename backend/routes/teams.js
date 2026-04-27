@@ -57,6 +57,8 @@ router.post('/', teamsWriteLimiter, auth, async (req, res) => {
               ${user.name}, ${user.avatar}, ${req.user.id}, ${description || ''},
               ${equipment_required || null}, ${notes || null}, ${difficulty || null}, ${fee || null})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO teams (...) VALUES (...) RETURNING id
     const [{ id: teamId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     // 创建者自动加入 team_members（leader）
     await prisma.$executeRaw`
@@ -66,6 +68,8 @@ router.post('/', teamsWriteLimiter, auth, async (req, res) => {
     await prisma.$executeRaw`
       INSERT INTO group_chats (team_id, name, avatar, created_by) VALUES (${teamId}, ${name}, ${user.avatar || ''}, ${req.user.id})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO group_chats (...) VALUES (...) RETURNING id
     const [{ id: chatId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     await prisma.$executeRaw`UPDATE teams SET group_chat_id = ${chatId} WHERE id = ${teamId}`;
     // 队长加入群聊
