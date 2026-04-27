@@ -3,11 +3,9 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
-const rateLimit = require('express-rate-limit');
+const { writeLimiter, commentPollLimiter } = require('../middleware/rateLimits');
 
-const commentWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: '评论过于频繁，请稍后再试' }, standardHeaders: true, legacyHeaders: false });
-const commentPollLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, message: { error: '请求过于频繁，请稍后再试' }, standardHeaders: true, legacyHeaders: false });
-const commentLikeLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '操作过于频繁' }, standardHeaders: true, legacyHeaders: false });
+const commentLikeLimiter = require('express-rate-limit')({ windowMs: 60 * 1000, max: 60, message: { error: '操作过于频繁' }, standardHeaders: true, legacyHeaders: false });
 
 // GET /api/comments?post_id=X
 router.get('/', commentPollLimiter, async (req, res) => {
@@ -47,7 +45,7 @@ router.get('/poll', commentPollLimiter, async (req, res) => {
 });
 
 // POST /api/comments（需要JWT）
-router.post('/', commentWriteLimiter, auth, async (req, res) => {
+router.post('/', writeLimiter, auth, async (req, res) => {
   try {
     const { post_id, content, images, parent_comment_id, reply_to_user_id } = req.body;
     const postId = parseInt(post_id);

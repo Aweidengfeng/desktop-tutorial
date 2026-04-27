@@ -2,16 +2,8 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
-const rateLimit = require('express-rate-limit');
 const moderation = require('../utils/moderation');
-
-const msgRateLimit = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,
-  message: { error: '发送太频繁，请稍候再试' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+const { messageLimiter } = require('../middleware/rateLimits');
 
 // GET /api/messages/conversations
 router.get('/conversations', auth, async (req, res) => {
@@ -79,7 +71,7 @@ router.get('/conversations/:id/messages', auth, async (req, res) => {
 });
 
 // POST /api/messages/conversations/:id/messages
-router.post('/conversations/:id/messages', msgRateLimit, auth, async (req, res) => {
+router.post('/conversations/:id/messages', messageLimiter, auth, async (req, res) => {
   try {
     const { content, type, images } = req.body;
     const imagesArr = Array.isArray(images) ? images : [];

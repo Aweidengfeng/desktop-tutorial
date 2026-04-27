@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
-
-const searchLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
+const { searchLimiter } = require('../middleware/rateLimits');
 
 // Initialize FTS5 search index
 (async () => {

@@ -1,11 +1,11 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
-const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const weatherCache = require('../utils/weatherCache');
+const { externalApiLimiter } = require('../middleware/rateLimits');
 
-const summitWindowLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
+const summitWindowLimiter = externalApiLimiter;
 
 // 山峰坐标映射（用坐标查询更准确）
 const peakCoords = {
@@ -383,7 +383,7 @@ router.get('/', summitWindowLimiter, async (req, res) => {
 
 // GET /api/weather/forecast?location=珠穆朗玛峰
 // GET /api/weather/forecast?lat=27.98&lon=86.92
-router.get('/forecast', async (req, res) => {
+router.get('/forecast', externalApiLimiter, async (req, res) => {
   try {
     const { location, lat, lon } = req.query;
     const resolved = resolveParams(location, lat, lon);
@@ -432,7 +432,7 @@ router.get('/forecast', async (req, res) => {
 });
 
 // GET /api/weather/camps?peak=山峰名称
-router.get('/camps', async (req, res) => {
+router.get('/camps', externalApiLimiter, async (req, res) => {
   const { peak } = req.query;
   const camps = PEAK_CAMPS[peak];
   if (!camps) {
@@ -520,7 +520,7 @@ function getConditionIconFromOwm(icon) {
   return '🌡️';
 }
 
-router.get('/popular-peaks', async (req, res) => {
+router.get('/popular-peaks', externalApiLimiter, async (req, res) => {
   const apiKey = process.env.OPENWEATHER_API_KEY;
   if (!apiKey) {
     return res.json(POPULAR_PEAKS_MOCK);
@@ -636,7 +636,7 @@ router.get('/summit-window/:peakId', summitWindowLimiter, async (req, res) => {
 });
 
 // GET /api/weather/camps/:peakId - segmented weather per camp
-router.get('/camps/:peakId', (req, res) => {
+router.get('/camps/:peakId', externalApiLimiter, (req, res) => {
   try {
     const peakId = parseInt(req.params.peakId);
     const camps = [
@@ -652,7 +652,7 @@ router.get('/camps/:peakId', (req, res) => {
 });
 
 // GET /api/weather/summit-window/:peakId - 7-day summit window score
-router.get('/summit-window/:peakId', (req, res) => {
+router.get('/summit-window/:peakId', externalApiLimiter, (req, res) => {
   try {
     const peakId = parseInt(req.params.peakId);
     const days = [];
@@ -675,7 +675,7 @@ router.get('/summit-window/:peakId', (req, res) => {
 });
 
 // GET /api/weather/avalanche-risk/:peakId - avalanche/altitude sickness risk
-router.get('/avalanche-risk/:peakId', (req, res) => {
+router.get('/avalanche-risk/:peakId', externalApiLimiter, (req, res) => {
   try {
     const peakId = parseInt(req.params.peakId);
     const levels = ['low', 'moderate', 'considerable', 'high', 'extreme'];
