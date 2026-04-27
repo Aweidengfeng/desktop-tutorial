@@ -6,6 +6,13 @@ const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { validateTrack } = require('../utils/trackValidator');
 
+// 坐标精度规范化（统一保留6位小数）
+function normalizeCoord(v, decimals = 6) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return null;
+  return parseFloat(n.toFixed(decimals));
+}
+
 // 导出限流：每分钟最多30次
 const exportLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -138,7 +145,13 @@ router.post('/', auth, async (req, res) => {
   try {
     const { name, peak_name, date, distance, distance_km, elevation, elevation_gain,
             max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points } = req.body;
-    const pointsArr = Array.isArray(points) ? points : [];
+    const rawPoints = Array.isArray(points) ? points : [];
+    const pointsArr = rawPoints.map(p => ({
+      lat: normalizeCoord(p.lat),
+      lng: normalizeCoord(p.lng),
+      ele: p.ele != null ? normalizeCoord(p.ele, 1) : null,
+      ts: p.ts || null,
+    })).filter(p => p.lat !== null && p.lng !== null);
     const pointsStr = pointsArr.length > 0 ? JSON.stringify(pointsArr) : null;
     const check = validateTrack(pointsArr);
     const flagged = check.ok ? 0 : 1;
@@ -178,14 +191,23 @@ router.post('/import-gpx', auth, async (req, res) => {
     if (!points || !Array.isArray(points) || points.length < 2) {
       return res.status(400).json({ error: '轨迹点数据不足，至少需要2个点' });
     }
-    const pointsStr = JSON.stringify(points);
+    const normalizedPoints = points.map(p => ({
+      lat: normalizeCoord(p.lat),
+      lng: normalizeCoord(p.lng),
+      ele: p.ele != null ? normalizeCoord(p.ele, 1) : null,
+      ts: p.ts || null,
+    })).filter(p => p.lat !== null && p.lng !== null);
+    if (normalizedPoints.length < 2) {
+      return res.status(400).json({ error: '轨迹点数据不足，至少需要2个有效点' });
+    }
+    const pointsStr = JSON.stringify(normalizedPoints);
     // 计算距离（若未提供）
     let distKm = parseFloat(distance_km) || 0;
-    if (!distKm && points.length >= 2) {
+    if (!distKm && normalizedPoints.length >= 2) {
       let total = 0;
       // Pre-convert latitudes to radians for efficiency
-      const rads = points.map(p => ({ lat: p.lat * Math.PI / 180, lng: p.lng * Math.PI / 180 }));
-      for (let i = 1; i < points.length; i++) {
+      const rads = normalizedPoints.map(p => ({ lat: p.lat * Math.PI / 180, lng: p.lng * Math.PI / 180 }));
+      for (let i = 1; i < normalizedPoints.length; i++) {
         const a = rads[i - 1], b = rads[i];
         const dLat = b.lat - a.lat;
         const dLng = b.lng - a.lng;
@@ -197,13 +219,13 @@ router.post('/import-gpx', auth, async (req, res) => {
     // 计算爬升（若未提供）
     let eleGain = parseFloat(elevation_gain) || 0;
     if (!eleGain) {
-      for (let i = 1; i < points.length; i++) {
-        const diff = (points[i].ele || 0) - (points[i - 1].ele || 0);
+      for (let i = 1; i < normalizedPoints.length; i++) {
+        const diff = (normalizedPoints[i].ele || 0) - (normalizedPoints[i - 1].ele || 0);
         if (diff > 0) eleGain += diff;
       }
       eleGain = Math.round(eleGain);
     }
-    const check = validateTrack(points);
+    const check = validateTrack(normalizedPoints);
     const flagged = check.ok ? 0 : 1;
     const flagReason = check.ok ? null : check.reason;
     const trackDate = date || new Date().toISOString().split('T')[0];

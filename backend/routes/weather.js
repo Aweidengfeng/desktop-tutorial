@@ -443,8 +443,10 @@ router.get('/camps', async (req, res) => {
     camps.map(async (camp) => {
       let weather = null;
       let forecast = [];
+      const campLat = parseFloat(camp.lat.toFixed(6));
+      const campLon = parseFloat(camp.lon.toFixed(6));
       try {
-        const wData = await fetchWeather({ lat: camp.lat, lon: camp.lon });
+        const wData = await fetchWeather({ lat: campLat, lon: campLon });
         weather = {
           temp: Math.round((wData.main.temp - 273.15) * 10) / 10,
           wind: Math.round(wData.wind.speed * 3.6 * 10) / 10,
@@ -453,7 +455,7 @@ router.get('/camps', async (req, res) => {
         };
       } catch (e) {}
       try {
-        const fData = await fetchForecast({ lat: camp.lat, lon: camp.lon });
+        const fData = await fetchForecast({ lat: campLat, lon: campLon });
         const dayMap = {};
         for (const item of fData.list) {
           const date = item.dt_txt.slice(0, 10);
