@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimits');
 
 const POLICY_VERSION = '2026-04-20';
 
@@ -603,7 +604,7 @@ const emailSendCooldown = new Map(); // email → lastSentAt(ms)
 // 邮箱验证失败计数
 const emailFailCount = new Map(); // email → {count, lockedUntil}
 
-router.post('/sms/send', async (req, res) => {
+router.post('/sms/send', authLimiter, async (req, res) => {
   try {
     const { phone } = req.body || {};
     if (!phone || !isValidPhone(phone)) {

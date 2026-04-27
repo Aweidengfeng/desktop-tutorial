@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const { writeLimiter } = require('../middleware/rateLimits');
 
 const poolReadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -102,7 +103,7 @@ router.get('/pool', poolReadLimiter, auth, async (req, res) => {
 });
 
 // POST /api/bookings
-router.post('/', auth, async (req, res) => {
+router.post('/', writeLimiter, auth, async (req, res) => {
   try {
     const { mountain, guide_id, guide_name, club_id, club_name, date, members, notes, type } = req.body;
     if (!mountain || !date) return res.status(400).json({ error: '请填写山峰和日期' });

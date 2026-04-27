@@ -46,6 +46,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
+const { defaultLimiter } = require('./middleware/rateLimits');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
 const htmlPageLimiter = rateLimit({
@@ -173,6 +174,9 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
 // 确保 better-sqlite3 建表语句在 Prisma 路由初始化之前执行
 // （testApp.js 已采用相同策略：先 require database.js，再挂载路由）
 require('./db/database');
+
+// 全局速率限制兜底（仅对 /api 前缀，不影响静态文件服务）
+app.use('/api', defaultLimiter);
 
 // 挂载路由
 app.use('/api/auth', require('./routes/auth'));
