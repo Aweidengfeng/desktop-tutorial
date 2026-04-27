@@ -53,10 +53,10 @@
 ### Phase 0：基础稳定（2026-04 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
-| 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | ✅ 已完成 | ✅ 2026-04-27 — `攀登4-20260416-summitlink.html` → `index.html`，同步更新 app.js 路径引用及文档 |
+| 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | ✅ 已完成 | ✅ 2026-04-27 — `攀登4-20260416-summitlink.html` → `index.html`，backend/app.js 路径同步更新 |
 | 0.2 | 关闭/保护mock-pay和sms-codes生产接口 | P0 | ✅ 已完成 | ✅ 2026-04-27 — `devOnly` 中间件加入 `mock-pay` 路由，生产环境返回404 |
 | 0.3 | 高德Key迁移至后端代理（AMAP_SECURITY_CODE安全密钥方案） | P0 | ✅ 已完成 | ✅ 2026-04-27 — AMAP_KEY通过replaceAll注入；AMAP_SECURITY_CODE改为后端在AMap script前动态注入 `window._AMapSecurityConfig`，HTML中不再有占位符 |
-| 0.4 | 前端图片上传前端预校验（5MB/类型） | P1 | 待做 | |
+| 0.4 | 前端图片上传前端预校验（5MB/类型） | P1 | ✅ 已完成 | ✅ 2026-04-27 — 添加 validateImageFile/validateImageFiles 全局函数，覆盖所有上传入口 |
 | 0.5 | JWT过期前端检测与自动跳转登录 | P1 | 待做 | |
 | 0.6 | 轨迹坐标精度修复（6位小数） | P1 | 待做 | |
 
