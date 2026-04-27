@@ -95,6 +95,8 @@ router.post('/', routesWriteLimiter, auth, async (req, res) => {
       VALUES (${name}, ${peak || ''}, ${difficulty || ''}, ${cover || ''}, ${description || ''},
               ${altitude || 0}, ${duration_days || 0}, ${best_season || ''}, ${region || ''})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO climbing_routes (...) VALUES (...) RETURNING id
     const [{ id: newId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${newId}`)[0];
     res.json(route);
@@ -141,6 +143,8 @@ router.post('/pricing', routesWriteLimiter, auth, async (req, res) => {
       INSERT OR REPLACE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people)
       VALUES (${Number(club_id)}, ${Number(route_id)}, ${price}, ${includesStr}, ${duration || 0}, ${max_people || 10})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO club_route_pricing (...) VALUES (...) RETURNING id
     const [{ id: pricingId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     const pricing = (await prisma.$queryRaw`SELECT * FROM club_route_pricing WHERE id = ${pricingId}`)[0];
     res.json(pricing);

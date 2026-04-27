@@ -37,7 +37,7 @@ jobs:
 
       # ── 生成 Prisma Client ────────────────────────────────────────────────────
       - name: Generate Prisma Client
-        run: DATABASE_URL="file:/tmp/ci.db" npx prisma generate --schema=backend/prisma/schema.prisma
+        run: cd backend && DATABASE_PROVIDER=sqlite DATABASE_URL="file:/tmp/ci.db" node scripts/generate-prisma-client.js
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
@@ -56,6 +56,7 @@ jobs:
           JWT_SECRET: ci_test_secret_not_for_production
           ADMIN_PASSWORD: ci_test_admin_password
           API_BASE: http://localhost:8080
+          DATABASE_PROVIDER: sqlite
           DATABASE_URL: "file:/tmp/ci.db"
           DATABASE_PATH: "/tmp/ci.db"
 

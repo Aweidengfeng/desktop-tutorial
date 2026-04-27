@@ -1,11 +1,14 @@
 // AlpineLink — Prisma Schema
 // 方案A：全新重建，对应 backend/db/database.js 中的全部核心表
 //
-// 开发/测试：provider = "sqlite"，DATABASE_URL="file:./dev.db"
-// 生产 Railway：将 provider 改为 "postgresql"，DATABASE_URL 指向 Railway Postgres
+// 开发/测试：DATABASE_PROVIDER=sqlite，DATABASE_URL="file:./dev.db"
+// 生产 Railway：DATABASE_PROVIDER=postgresql，DATABASE_URL 指向 Railway Postgres
 //
-// 生成客户端：npx prisma generate
-// 推送到数据库：npx prisma db push
+// 生成客户端：node scripts/generate-prisma-client.js
+// 推送到数据库：node scripts/generate-prisma-client.js --push
+//
+// 注意：Prisma 不支持在 provider 字段使用 env()，因此通过
+//   scripts/generate-prisma-client.js 在运行时根据 DATABASE_PROVIDER 自动切换。
 
 generator client {
   provider = "prisma-client-js"

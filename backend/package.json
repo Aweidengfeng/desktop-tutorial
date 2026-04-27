@@ -4,7 +4,7 @@
   "description": "巅峰探索 SummitLink 后端服务",
   "main": "app.js",
   "scripts": {
-    "postinstall": "DATABASE_URL=\"file:/tmp/build.db\" prisma generate --schema=prisma/schema.prisma || true",
+    "postinstall": "DATABASE_URL=\"file:/tmp/build.db\" node scripts/generate-prisma-client.js || true",
     "start": "node db/seed.js && node app.js",
     "dev": "node db/seed.js && node app.js",
     "seed": "node db/seed.js"

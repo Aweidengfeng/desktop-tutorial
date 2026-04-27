@@ -7,8 +7,9 @@
 // 必须在 require 任何后端模块之前设置环境变量
 // Prisma 不支持 :memory:，因此使用临时文件同时让 better-sqlite3 和 Prisma 共用同一个数据库文件
 const testDbPath = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
-process.env.DATABASE_PATH   = process.env.DATABASE_PATH   || testDbPath;
-process.env.DATABASE_URL    = process.env.DATABASE_URL    || `file:${testDbPath}`;
+process.env.DATABASE_PATH     = process.env.DATABASE_PATH     || testDbPath;
+process.env.DATABASE_URL      = process.env.DATABASE_URL      || `file:${testDbPath}`;
+process.env.DATABASE_PROVIDER = process.env.DATABASE_PROVIDER || 'sqlite';
 process.env.JWT_SECRET      = process.env.JWT_SECRET      || 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD  = process.env.ADMIN_PASSWORD  || 'test-admin-password';
 process.env.ADMIN_USERNAME  = process.env.ADMIN_USERNAME  || 'admin';

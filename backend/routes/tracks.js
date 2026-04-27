@@ -169,6 +169,8 @@ router.post('/', auth, async (req, res) => {
               ${duration || ''}, ${duration_minutes || 0},
               ${weather || ''}, ${notes || ''}, ${image || ''}, ${pointsStr}, ${flagged}, ${flagReason})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO tracks (...) VALUES (...) RETURNING id
     const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
@@ -236,6 +238,8 @@ router.post('/import-gpx', auth, async (req, res) => {
               ${distKm}, ${distKm}, ${eleGain}, ${eleGain}, ${pointsStr},
               ${weather || ''}, ${notes || ''}, ${flagged}, ${flagReason})
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO tracks (...) VALUES (...) RETURNING id
     const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance_km, elevation_gain, points, created_at
       FROM tracks WHERE id = last_insert_rowid()
@@ -266,6 +270,8 @@ router.post('/manual', auth, async (req, res) => {
       VALUES (${req.user.id}, ${peak_name + ' 登顶记录'}, ${peak_name}, ${date},
               ${alt}, ${alt}, ${notes || ''}, ${proofArr[0] || ''}, 1, ${proofStr}, 0, NULL)
     `;
+    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
+    // 参考：INSERT INTO tracks (...) VALUES (...) RETURNING id
     const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, elevation, notes, image, is_manual, proof_images, created_at
       FROM tracks WHERE id = last_insert_rowid()
