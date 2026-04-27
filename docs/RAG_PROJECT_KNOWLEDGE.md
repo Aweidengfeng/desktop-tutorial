@@ -36,7 +36,7 @@
 - [ ] 轨迹坐标精度提升至6位小数（Phase 0.6）
 - [ ] 向导 `rejected` 状态需支持重新申请流程
 - [ ] 订单并发下单需加数据库事务+乐观锁（防超额）
-- [ ] JWT过期前端检测与自动跳转登录（Phase 0.5）
+- [x] JWT过期前端检测与自动跳转登录 ✅ 2026-04-27（apiFetch全局封装，session-expired事件，核心API路径已替换，Phase 0.5）
 
 ### 🟢 中期执行项
 - [ ] 离线地图缓存（PWA + Service Worker）（Phase 2.2）
@@ -60,7 +60,7 @@
 | 0.2 | 关闭/保护mock-pay和sms-codes生产接口 | P0 | ✅ 已完成 | ✅ 2026-04-27 — devOnly中间件加入mock-pay路由；sms-codes已有devOnly确认 |
 | 0.3 | 高德Key安全迁移至后端注入 | P0 | ✅ 已完成 | ✅ 2026-04-27 — AMAP_KEY后端replaceAll注入；AMAP_SECURITY_CODE改为后端动态写入script标签 |
 | 0.4 | 前端图片上传前端预校验（5MB/类型） | P1 | ✅ 已完成 | ✅ 2026-04-27 — validateImageFile/validateImageFiles全局函数，覆盖所有上传入口 |
-| 0.5 | JWT过期前端检测与自动跳转登录 | P1 | 🔄 进行中 | |
+| 0.5 | JWT过期前端检测与自动跳转登录 | P1 | ✅ 已完成 | ✅ 2026-04-27 — apiFetch全局封装，session-expired事件，核心API路径已替换 |
 | 0.6 | 轨迹坐标精度修复（6位小数） | P1 | 🔄 进行中 | |
 
 ### Phase 1：数据库迁移（2026-05 目标）

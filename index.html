@@ -5490,6 +5490,37 @@ function validateImageFiles(files) {
 }
 // ─────────────────────────────────────────────────────────────────────────
 
+// ─── API Fetch 封装：统一处理 401 过期跳转（Phase 0.5）─────────────────────
+async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem('summitlink_token');
+  const headers = {
+    ...(options.headers || {}),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  // 如果 body 是对象且没有设置 Content-Type，自动加 JSON 头
+  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    options = { ...options, body: JSON.stringify(options.body) };
+  }
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch (e) {
+    // 网络错误（断网/超时）
+    throw new Error('网络连接失败，请检查网络后重试');
+  }
+  if (res.status === 401) {
+    localStorage.removeItem('summitlink_token');
+    // 触发全局登出事件
+    window.dispatchEvent(new CustomEvent('alpinelink:session-expired'));
+    throw new Error('登录已过期，请重新登录');
+  }
+  return res;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function alpineLink() {
   return {
     currentPage: 'home',
@@ -6259,7 +6290,7 @@ function alpineLink() {
           notes: this.bookingData.notes || '',
           type: this.bookingData.club_id ? 'club' : 'guide',
         };
-        const res = await fetch('/api/bookings', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(body) });
+        const res = await apiFetch('/api/bookings', { method: 'POST', body });
         if (!res.ok) { const d = await res.json(); this.showToast(d.error || '预约创建失败', 'error'); return; }
         this.showToast('预约已提交，等待向导/俱乐部确认 🎉');
         this.loadUnreadCount();
@@ -6273,7 +6304,7 @@ function alpineLink() {
       post.isLiked = !wasLiked;
       post.likes += post.isLiked ? 1 : -1;
       try {
-        const res = await fetch('/api/posts/' + post.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
+        const res = await apiFetch('/api/posts/' + post.id + '/like', { method: 'POST' });
         if (res.ok) {
           const data = await res.json();
           post.isLiked = data.liked;
@@ -6304,9 +6335,9 @@ function alpineLink() {
           if (blobImages.length > 0) {
             imageUrls = await this.uploadImages(blobImages);
           }
-          const res = await fetch('/api/comments', {
-            method: 'POST', headers: this.getAuthHeaders(),
-            body: JSON.stringify({ post_id: this.selectedPostForComment.id, content: content || '', images: imageUrls })
+          const res = await apiFetch('/api/comments', {
+            method: 'POST',
+            body: { post_id: this.selectedPostForComment.id, content: content || '', images: imageUrls },
           });
           const data = await res.json();
           if (res.ok) {
@@ -6358,9 +6389,9 @@ function alpineLink() {
           const uploaded = await this.uploadImages(blobImages);
           imageUrls = [...imageUrls.filter(u => !u.startsWith('blob:')), ...uploaded];
         }
-        const res = await fetch('/api/posts', {
-          method: 'POST', headers: this.getAuthHeaders(),
-          body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl })
+        const res = await apiFetch('/api/posts', {
+          method: 'POST',
+          body: { content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl },
         });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
@@ -6797,10 +6828,9 @@ function alpineLink() {
       };
       if (this.authToken) {
         try {
-          await fetch('/api/tracks', {
+          await apiFetch('/api/tracks', {
             method: 'POST',
-            headers: this.getAuthHeaders(),
-            body: JSON.stringify({ name, points: this.trackRecordedPoints, distance: this.trackLiveStats.distance, elevation_gain: this.trackLiveStats.elevation, duration: this.formatTrackDuration(this.trackLiveStats.seconds) }),
+            body: { name, points: this.trackRecordedPoints, distance: this.trackLiveStats.distance, elevation_gain: this.trackLiveStats.elevation, duration: this.formatTrackDuration(this.trackLiveStats.seconds) },
           });
         } catch(e) {}
       }
@@ -7544,7 +7574,7 @@ function alpineLink() {
       }
       if (!this.requireAuth()) return;
       try {
-        const res = await fetch('/api/guides/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.guideApplyForm) });
+        const res = await apiFetch('/api/guides/apply', { method: 'POST', body: this.guideApplyForm });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showGuideApply = false;
@@ -7611,7 +7641,7 @@ function alpineLink() {
     async saveSettings() {
       if (this.settingsType === 'profile' && this.authToken) {
         try {
-          const res = await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.userProfile.name, avatar: this.userProfile.avatar }) });
+          const res = await apiFetch('/api/auth/profile', { method: 'PUT', body: { name: this.userProfile.name, avatar: this.userProfile.avatar } });
           if (res.ok) { const u = await res.json(); this.currentUser = u; this.showToast('资料已保存 ✅'); }
           else { this.showToast('保存失败', 'error'); }
         } catch(e) { this.showToast('网络错误', 'error'); }
@@ -8672,6 +8702,15 @@ function alpineLink() {
       setInterval(() => {
         this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
       }, 5000);
+      // 监听 JWT 过期事件，统一提示并跳转登录（Phase 0.5）
+      const onSessionExpired = () => {
+        this.showToast('登录已过期，请重新登录', 'warning');
+        this.authToken = null;
+        this.currentUser = null;
+        this.showLogin = true;
+      };
+      window.addEventListener('alpinelink:session-expired', onSessionExpired);
+      this.$cleanup(() => window.removeEventListener('alpinelink:session-expired', onSessionExpired));
       // Initialize public tracks
       this.filteredPublicTracks = this.publicTracks;
       // Verify token and load initial data
