@@ -122,6 +122,8 @@ router.post('/', auth, async (req, res) => {
     // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
     // 参考：INSERT INTO bookings (...) VALUES (...) RETURNING id
     const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
+    const id = Number(idRow.id);
+    const booking = (await prisma.$queryRaw`SELECT * FROM bookings WHERE id = ${id}`)[0];
 
     const requester = (await prisma.$queryRaw`SELECT name FROM users WHERE id = ${req.user.id}`)[0];
     const requesterName = requester ? requester.name : '用户';

@@ -103,6 +103,7 @@ router.post('/:id/messages', groupMsgLimiter, auth, async (req, res) => {
     // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
     // 参考：INSERT INTO group_messages (...) VALUES (...) RETURNING id
     const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
+    const insertedId = Number(idRow.id);
     const msg = (await prisma.$queryRaw`
       SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ${insertedId}
     `)[0];
