@@ -56,7 +56,7 @@
 ## 五、可观测性
 
 - [x] **Sentry 后端接入（代码）** — `backend/app.js` 已添加条件初始化、`requestHandler`、`errorHandler`；仅当 `SENTRY_DSN` 存在时启用，否则无副作用 ｜ 已完成（本次新增）
-- [x] **Sentry 前端接入（代码）** — `攀登4-20260416-summitlink.html` 和 `admin.html` 均已添加条件加载逻辑 ｜ 已完成（本次新增）
+- [x] **Sentry 前端接入（代码）** — `index.html` 和 `admin.html` 均已添加条件加载逻辑 ｜ 已完成（本次新增）
 - [ ] **Sentry DSN 配置** — 需在 Railway 环境变量中配置 `SENTRY_DSN`（先在 Sentry.io 创建项目）｜ 不依赖
 - [x] **健康检查 `/api/health`** — 返回 `{ status: 'ok', uptime, version }`，已挂载到 `/api/health` 和 `/health` ｜ 已完成（本次新增）
 - [x] **访问日志结构化** — 当前通过 `console.log` 输出，建议后续集成 morgan / pino 实现结构化日志 ｜ 不依赖

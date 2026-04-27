@@ -51,7 +51,7 @@ npm start
 
 ### 第6步：打开前端
 
-浏览器访问 [http://localhost:3000/攀登3-20260415-summitlink.html](http://localhost:3000/攀登3-20260415-summitlink.html)
+浏览器访问 [http://localhost:8080/summitlink](http://localhost:8080/summitlink)
 
 你会看到巅峰探索的页面，所有数据都来自后端！
 

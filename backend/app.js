@@ -122,7 +122,7 @@ if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
 app.use('/uploads', express.static(uploadsPath));
 
 // 专门处理HTML文件路由（避免中文文件名问题）
-const htmlFile = path.join(rootPath, '攀登4-20260416-summitlink.html');
+const htmlFile = path.join(rootPath, 'index.html');
 app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
   console.log('📄 请求HTML文件:', htmlFile);
   console.log('📄 文件存在:', fs.existsSync(htmlFile));
