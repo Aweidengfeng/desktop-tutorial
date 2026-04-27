@@ -134,14 +134,21 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
       return res.status(500).send('Internal Server Error');
     }
     let result = html
-      .replaceAll('YOUR_AMAP_KEY', amapKey)
-      .replaceAll('YOUR_AMAP_SECURITY_CODE', amapSecurityCode);
+      .replaceAll('YOUR_AMAP_KEY', amapKey);
     // 注入 SENTRY_DSN 和 API_BASE 到前端
     const sentryDsn = process.env.SENTRY_DSN || '';
     const apiBase = process.env.API_BASE || '';
     const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
     const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}</script>`;
     result = result.replace('</head>', sentryScript + '\n</head>');
+    // 在 AMap script 标签之前注入安全密钥配置（高德官方要求：必须先于 AMap JS 加载）
+    if (amapSecurityCode) {
+      const amapSecurityScript = `<script>window._AMapSecurityConfig = { securityJsCode: ${JSON.stringify(amapSecurityCode)} };</script>`;
+      result = result.replace(
+        /<script[^>]+webapi\.amap\.com\/maps[^>]*>/,
+        amapSecurityScript + '\n$&'
+      );
+    }
     // 若 Key 或安全密钥未配置，注入提示脚本
     if (!amapKey || !amapSecurityCode) {
       const missingVars = [!amapKey && 'AMAP_KEY', !amapSecurityCode && 'AMAP_SECURITY_CODE'].filter(Boolean).join(' / ');

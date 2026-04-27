@@ -24,7 +24,7 @@
 ### 🔴 生产禁止项（上线前必须解决）
 - [x] `mock-pay` 接口必须在生产环境关闭或删除 ✅ 2026-04-27（已加 devOnly 中间件）
 - [ ] `GET /api/admin/sms-codes` 明文验证码接口必须在生产环境关闭（已有 devOnly，再次确认）
-- [ ] 高德地图Key不得硬编码在前端HTML文件中（需迁移至后端代理）
+- [x] 高德地图Key不得硬编码在前端HTML文件中 ✅ 2026-04-27（AMAP_KEY通过后端replaceAll注入；AMAP_SECURITY_CODE改为后端动态注入，不再有HTML占位符）
 - [ ] `JWT_SECRET` 和 `ADMIN_PASSWORD` 不得使用默认值（已有启动校验逻辑，需确认生效）
 - [ ] SQLite不得用于生产环境，必须迁移PostgreSQL
 
@@ -55,7 +55,7 @@
 |---|------|--------|------|---------|
 | 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | 待做 | |
 | 0.2 | 关闭/保护mock-pay和sms-codes生产接口 | P0 | ✅ 已完成 | ✅ 2026-04-27 — `devOnly` 中间件加入 `mock-pay` 路由，生产环境返回404 |
-| 0.3 | 高德Key迁移至后端代理（AMAP_SECURITY_CODE安全密钥方案） | P0 | 进行中 | |
+| 0.3 | 高德Key迁移至后端代理（AMAP_SECURITY_CODE安全密钥方案） | P0 | ✅ 已完成 | ✅ 2026-04-27 — AMAP_KEY通过replaceAll注入；AMAP_SECURITY_CODE改为后端在AMap script前动态注入，HTML中不再有占位符 |
 | 0.4 | 前端图片上传前端预校验（5MB/类型） | P1 | 待做 | |
 | 0.5 | JWT过期前端检测与自动跳转登录 | P1 | 待做 | |
 | 0.6 | 轨迹坐标精度修复（6位小数） | P1 | 待做 | |
@@ -176,8 +176,8 @@
 |------|---------|------|
 | `JWT_SECRET` | ⚠️ 必须改 | 启动时已有校验 |
 | `ADMIN_PASSWORD` | ⚠️ 必须改 | 启动时已有校验 |
-| `AMAP_KEY` | ⚠️ 前端暴露 | Phase 0.3 解决中 |
-| `AMAP_SECURITY_CODE` | ⚠️ 前端暴露 | Phase 0.3 解决中 |
+| `AMAP_KEY` | ✅ 后端注入 | AMAP_KEY通过后端replaceAll注入，不暴露在前端源码 |
+| `AMAP_SECURITY_CODE` | ✅ 后端注入 | 改为后端在AMap script前动态注入，HTML中不再有占位符 |
 | `DATABASE_PATH` | ✅ 已配置 | Railway Volume挂载 |
 | `UPLOADS_DIR` | ⚠️ 需迁移OSS | 当前本地存储 |
 | `CORS_ORIGINS` | ✅ 已配置 | 生产白名单 |
