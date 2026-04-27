@@ -5466,6 +5466,30 @@ const COMMERCIAL_PEAKS = [
   { id: 34, name: '亚拉雪山', nameEn: 'Yala Snow Mountain', altitude: 5820, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-6月)/秋季(9-10月)', operators: ['四川高山探险', '康定山地向导', '蓝天户外'], routes: '南坡常规路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: '亚拉雪山' },
 ];
 
+// ─── 图片上传预校验工具函数（Phase 0.4）───────────────────────────────
+function validateImageFile(file) {
+  const MAX_SIZE = 5 * 1024 * 1024;
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { valid: false, error: `不支持的格式（${file.type || '未知'}），请上传 JPG/PNG/GIF/WebP` };
+  }
+  if (file.size > MAX_SIZE) {
+    return { valid: false, error: `图片 ${(file.size / (1024 * 1024)).toFixed(1)}MB 超过 5MB 限制，请压缩后重试` };
+  }
+  return { valid: true, error: null };
+}
+
+function validateImageFiles(files) {
+  const validFiles = [], errors = [];
+  Array.from(files).forEach(file => {
+    const r = validateImageFile(file);
+    if (r.valid) validFiles.push(file);
+    else errors.push(`${file.name}：${r.error}`);
+  });
+  return { validFiles, errors };
+}
+// ─────────────────────────────────────────────────────────────────────────
+
 function alpineLink() {
   return {
     currentPage: 'home',
@@ -6433,6 +6457,8 @@ function alpineLink() {
     async uploadGearImage(event) {
       const file = event.target.files[0];
       if (!file) return;
+      const { valid, error } = validateImageFile(file);
+      if (!valid) { alert(error); event.target.value = ''; return; }
       this.gearImageUploading = true;
       try {
         const formData = new FormData();
@@ -6451,6 +6477,8 @@ function alpineLink() {
     async uploadAvatar(event) {
       const file = event.target.files[0];
       if (!file) return;
+      const { valid, error } = validateImageFile(file);
+      if (!valid) { alert(error); event.target.value = ''; return; }
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -7177,6 +7205,10 @@ function alpineLink() {
     async uploadCommercialDoc(field, formRef, event) {
       const file = event.target.files[0];
       if (!file) return;
+      if (file.type.startsWith('image/')) {
+        const { valid, error } = validateImageFile(file);
+        if (!valid) { alert(error); event.target.value = ''; return; }
+      }
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -7984,22 +8016,28 @@ function alpineLink() {
 
     // 聊天选图
     handleChatImageSelect(event) {
-      const files = Array.from(event.target.files || []);
-      files.forEach(f => {
-        if (f.type.startsWith('image/')) {
-          this.chatImagePreviews.push(URL.createObjectURL(f));
-        }
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.chatImagePreviews.push(URL.createObjectURL(f));
       });
       event.target.value = '';
     },
 
     // 发帖选图
     handlePostImageSelect(event) {
-      const files = Array.from(event.target.files || []);
-      files.forEach(f => {
-        if (f.type.startsWith('image/')) {
-          this.newPost.images.push(URL.createObjectURL(f));
-        }
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.newPost.images.push(URL.createObjectURL(f));
       });
       event.target.value = '';
     },
@@ -8016,9 +8054,14 @@ function alpineLink() {
 
     // 手动登顶证明照片选择
     handleManualSummitImageSelect(event) {
-      const files = Array.from(event.target.files || []);
-      files.forEach(f => {
-        if (f.type.startsWith('image/')) this.manualSummit.proof_images.push(URL.createObjectURL(f));
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.manualSummit.proof_images.push(URL.createObjectURL(f));
       });
       event.target.value = '';
     },
@@ -8059,11 +8102,14 @@ function alpineLink() {
 
     // 评论选图
     handleCommentImageSelect(event) {
-      const files = Array.from(event.target.files || []);
-      files.forEach(f => {
-        if (f.type.startsWith('image/')) {
-          this.commentImagePreviews.push(URL.createObjectURL(f));
-        }
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.commentImagePreviews.push(URL.createObjectURL(f));
       });
       event.target.value = '';
     },
