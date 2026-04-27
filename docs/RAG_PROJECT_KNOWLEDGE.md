@@ -24,12 +24,12 @@
 ### 🔴 生产禁止项（上线前必须解决）
 - [x] `mock-pay` 接口必须在生产环境关闭或删除 ✅ 2026-04-27（已加 devOnly 中间件）
 - [ ] `GET /api/admin/sms-codes` 明文验证码接口必须在生产环境关闭（已有 devOnly，再次确认）
-- [x] 高德地图Key不得硬编码在前端HTML文件中 ✅ 2026-04-27（AMAP_KEY通过后端replaceAll注入；AMAP_SECURITY_CODE改为后端动态注入，不再有HTML占位符）
+- [x] 高德地图Key不得硬编码在前端HTML文件中 ✅ 2026-04-27（AMAP_KEY通过后端replaceAll注入；AMAP_SECURITY_CODE改为后端在AMap script前动态注入，HTML中不再有占位符）
 - [ ] `JWT_SECRET` 和 `ADMIN_PASSWORD` 不得使用默认值（已有启动校验逻辑，需确认生效）
 - [ ] SQLite不得用于生产环境，必须迁移PostgreSQL
 
 ### 🟡 上线前修复项
-- [ ] 文件名含中文（`攀登4-20260416-summitlink.html`）必须重命名（Linux路径/CDN编码问题）
+- [ ] 文件名含中文（`攀登4-20260416-summitlink.html`）必须重命名（Linux路径/CDN编码问题）— **Phase 0.1 进行中**
 - [ ] 图片上传目录（`uploads/`）禁止目录浏览，需配置Nginx
 - [ ] 轨迹坐标精度提升至6位小数
 - [ ] 向导 `rejected` 状态需支持重新申请流程
@@ -53,9 +53,9 @@
 ### Phase 0：基础稳定（2026-04 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
-| 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | 待做 | |
+| 0.1 | 重命名主前端HTML文件（移除中文和日期） | P0 | 🔄 进行中 | |
 | 0.2 | 关闭/保护mock-pay和sms-codes生产接口 | P0 | ✅ 已完成 | ✅ 2026-04-27 — `devOnly` 中间件加入 `mock-pay` 路由，生产环境返回404 |
-| 0.3 | 高德Key迁移至后端代理（AMAP_SECURITY_CODE安全密钥方案） | P0 | ✅ 已完成 | ✅ 2026-04-27 — AMAP_KEY通过replaceAll注入；AMAP_SECURITY_CODE改为后端在AMap script前动态注入，HTML中不再有占位符 |
+| 0.3 | 高德Key迁移至后端代理（AMAP_SECURITY_CODE安全密钥方案） | P0 | ✅ 已完成 | ✅ 2026-04-27 — AMAP_KEY通过replaceAll注入；AMAP_SECURITY_CODE改为后端在AMap script前动态注入 `window._AMapSecurityConfig`，HTML中不再有占位符 |
 | 0.4 | 前端图片上传前端预校验（5MB/类型） | P1 | 待做 | |
 | 0.5 | JWT过期前端检测与自动跳转登录 | P1 | 待做 | |
 | 0.6 | 轨迹坐标精度修复（6位小数） | P1 | 待做 | |
@@ -151,7 +151,7 @@
 | 数据库（SQLite） | 🔴 严重 | 必须在正式运营前迁移 |
 | 前端架构（单HTML） | 🟠 高 | B轮前必须重构 |
 | 地图引擎（仅高德） | 🟠 高 | 出海前必须双引擎 |
-| 安全防护（Key暴露等） | 🔴 严重 | Phase 0.3 进行中 |
+| 安全防护（Key暴露等） | 🟡 改善中 | Phase 0.2/0.3 已完成，0.1 进行中 |
 | 文件存储（本地uploads） | 🟠 高 | 正式运营前迁移OSS |
 | 合规（ICP/GDPR） | 🔴 严重 | 国内推广前必须完成 |
 | 测试覆盖率 | 🟡 中 | Playwright基础存在，需扩充 |
@@ -164,7 +164,8 @@
 | 日期 | 对话主题 | 关键决策/产出 |
 |------|---------|--------------|
 | 2026-04-26 | 6专业视角全方位评审 | 本文档建立；确认SQLite迁移为最高优先；确认Phase 0安全问题清单 |
-| 2026-04-27 | Phase 0.2 执行 | mock-pay 接口加 devOnly 保护，PR 已合并；启动 Phase 0.3 高德Key安全方案 |
+| 2026-04-27 | Phase 0.2 执行 | mock-pay 接口加 devOnly 保护，PR 已合并 |
+| 2026-04-27 | Phase 0.3 执行 | 高德 AMAP_SECURITY_CODE 改为后端动态注入 `window._AMapSecurityConfig`，HTML无占位符，PR 已合并；启动 Phase 0.1 HTML文件重命名 |
 
 > **注**：每次重要对话后在此追加一行记录，保持项目知识连续性
 
@@ -176,8 +177,8 @@
 |------|---------|------|
 | `JWT_SECRET` | ⚠️ 必须改 | 启动时已有校验 |
 | `ADMIN_PASSWORD` | ⚠️ 必须改 | 启动时已有校验 |
-| `AMAP_KEY` | ✅ 后端注入 | AMAP_KEY通过后端replaceAll注入，不暴露在前端源码 |
-| `AMAP_SECURITY_CODE` | ✅ 后端注入 | 改为后端在AMap script前动态注入，HTML中不再有占位符 |
+| `AMAP_KEY` | ✅ 后端注入 | 通过后端 replaceAll 注入，前端源码中不含真实值 |
+| `AMAP_SECURITY_CODE` | ✅ 后端注入 | 后端在 AMap script 前动态注入，HTML无占位符 |
 | `DATABASE_PATH` | ✅ 已配置 | Railway Volume挂载 |
 | `UPLOADS_DIR` | ⚠️ 需迁移OSS | 当前本地存储 |
 | `CORS_ORIGINS` | ✅ 已配置 | 生产白名单 |
@@ -187,4 +188,4 @@
 
 ---
 
-*文档版本：v1.1 | 最后更新：2026-04-27 | 维护人：@gaoshanyindi*
+*文档版本：v1.2 | 最后更新：2026-04-27 | 维护人：@gaoshanyindi*
