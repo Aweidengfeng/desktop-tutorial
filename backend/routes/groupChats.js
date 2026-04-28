@@ -101,9 +101,8 @@ router.post('/:id/messages', groupMsgLimiter, auth, async (req, res) => {
       INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (${Number(req.params.id)}, ${req.user.id}, ${content || ''}, ${msgType}, ${imagesStr})
       RETURNING id
     `;
-    const insertedId2 = Number(insertedId);
     const msg = (await prisma.$queryRaw`
-      SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ${insertedId2}
+      SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ${Number(insertedId)}
     `)[0];
     msg.images = msg.images ? JSON.parse(msg.images) : [];
     msg.senderName = user ? user.name : '';
