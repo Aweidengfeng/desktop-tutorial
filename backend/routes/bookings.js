@@ -116,14 +116,12 @@ router.post('/', writeLimiter, auth, async (req, res) => {
     const amount = memberCount * 3000;
     const isPool = !guide_id && !club_id ? 1 : 0;
     const bookingType = type || (guide_id ? 'guide' : club_id ? 'club' : 'pool');
-    await prisma.$executeRaw`
+    const [{ id: newBookingId }] = await prisma.$queryRaw`
       INSERT INTO bookings (user_id, mountain, guide_id, guide_name, club_id, club_name, type, date, members, notes, amount, pool)
       VALUES (${req.user.id}, ${mountain}, ${guide_id || null}, ${guide_name || ''}, ${club_id || null}, ${club_name || ''}, ${bookingType}, ${date}, ${memberCount}, ${notes || ''}, ${amount}, ${isPool})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO bookings (...) VALUES (...) RETURNING id
-    const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-    const id = Number(idRow.id);
+    const id = Number(newBookingId);
     const booking = (await prisma.$queryRaw`SELECT * FROM bookings WHERE id = ${id}`)[0];
 
     const requester = (await prisma.$queryRaw`SELECT name FROM users WHERE id = ${req.user.id}`)[0];

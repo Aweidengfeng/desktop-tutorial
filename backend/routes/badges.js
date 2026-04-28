@@ -73,7 +73,7 @@ router.post('/check', checkLimiter, auth, async (req, res) => {
           break;
       }
       if (eligible) {
-        const changes = await prisma.$executeRaw`INSERT OR IGNORE INTO user_badges (user_id, badge_id, progress) VALUES (${uid}, ${badge.id}, 100)`;
+        const changes = await prisma.$executeRaw`INSERT INTO user_badges (user_id, badge_id, progress) VALUES (${uid}, ${badge.id}, 100) ON CONFLICT DO NOTHING`;
         if (changes > 0) unlocked.push(badge);
       }
     }

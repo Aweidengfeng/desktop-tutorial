@@ -160,7 +160,7 @@ router.post('/', auth, async (req, res) => {
     const distKm = distance_km || distance || 0;
     const elev = elevation || elevation_gain || 0;
     const elevGain = elevation_gain || elevation || 0;
-    await prisma.$executeRaw`
+    const [{ id: newTrackId }] = await prisma.$queryRaw`
       INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
                           max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points, flagged, flag_reason)
       VALUES (${req.user.id}, ${name}, ${peak_name || name || ''}, ${date},
@@ -168,13 +168,12 @@ router.post('/', auth, async (req, res) => {
               ${max_elevation || 0}, ${start_elevation || 0},
               ${duration || ''}, ${duration_minutes || 0},
               ${weather || ''}, ${notes || ''}, ${image || ''}, ${pointsStr}, ${flagged}, ${flagReason})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO tracks (...) VALUES (...) RETURNING id
     const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
-      FROM tracks WHERE id = last_insert_rowid()
+      FROM tracks WHERE id = ${newTrackId}
     `;
     track.points = track.points ? JSON.parse(track.points) : [];
     res.json({ ...track, flagged, rewardGranted: !flagged, ...(flagReason ? { flagReason } : {}) });
@@ -231,18 +230,17 @@ router.post('/import-gpx', auth, async (req, res) => {
     const flagged = check.ok ? 0 : 1;
     const flagReason = check.ok ? null : check.reason;
     const trackDate = date || new Date().toISOString().split('T')[0];
-    const result2 = await prisma.$executeRaw`
+    const [{ id: newTrackId }] = await prisma.$queryRaw`
       INSERT INTO tracks (user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
                           points, weather, notes, flagged, flag_reason)
       VALUES (${req.user.id}, ${name || peak_name || '导入轨迹'}, ${peak_name || ''}, ${trackDate},
               ${distKm}, ${distKm}, ${eleGain}, ${eleGain}, ${pointsStr},
               ${weather || ''}, ${notes || ''}, ${flagged}, ${flagReason})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO tracks (...) VALUES (...) RETURNING id
     const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance_km, elevation_gain, points, created_at
-      FROM tracks WHERE id = last_insert_rowid()
+      FROM tracks WHERE id = ${newTrackId}
     `;
     track.points = track.points ? JSON.parse(track.points) : [];
     res.json({ ...track, imported: true, flagged, rewardGranted: !flagged });
@@ -264,17 +262,16 @@ router.post('/manual', auth, async (req, res) => {
     if (proofArr.length === 0) return res.status(400).json({ error: '请至少上传一张证明照片' });
     const proofStr = JSON.stringify(proofArr);
     const alt = altitude || 0;
-    await prisma.$executeRaw`
+    const [{ id: newTrackId }] = await prisma.$queryRaw`
       INSERT INTO tracks (user_id, name, peak_name, date, elevation, elevation_gain,
                           notes, image, is_manual, proof_images, flagged, flag_reason)
       VALUES (${req.user.id}, ${peak_name + ' 登顶记录'}, ${peak_name}, ${date},
               ${alt}, ${alt}, ${notes || ''}, ${proofArr[0] || ''}, 1, ${proofStr}, 0, NULL)
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO tracks (...) VALUES (...) RETURNING id
     const [track] = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, elevation, notes, image, is_manual, proof_images, created_at
-      FROM tracks WHERE id = last_insert_rowid()
+      FROM tracks WHERE id = ${newTrackId}
     `;
     track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
     // Also insert to summit_records for leaderboard

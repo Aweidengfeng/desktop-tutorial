@@ -97,15 +97,13 @@ router.post('/:id/messages', groupMsgLimiter, auth, async (req, res) => {
     }
     const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
     const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
-    await prisma.$executeRaw`
+    const [{ id: insertedId }] = await prisma.$queryRaw`
       INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (${Number(req.params.id)}, ${req.user.id}, ${content || ''}, ${msgType}, ${imagesStr})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO group_messages (...) VALUES (...) RETURNING id
-    const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-    const insertedId = Number(idRow.id);
+    const insertedId2 = Number(insertedId);
     const msg = (await prisma.$queryRaw`
-      SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ${insertedId}
+      SELECT id, sender_id as senderId, content, type, images, created_at as createdAt FROM group_messages WHERE id = ${insertedId2}
     `)[0];
     msg.images = msg.images ? JSON.parse(msg.images) : [];
     msg.senderName = user ? user.name : '';

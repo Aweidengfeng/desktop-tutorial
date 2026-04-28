@@ -182,7 +182,7 @@ router.post('/follow', usersWriteLimiter, auth, async (req, res) => {
     const followee_id = parseInt(req.body.followee_id);
     if (!followee_id) return res.status(400).json({ error: '关注目标不能为空' });
     if (followee_id === req.user.id) return res.status(400).json({ error: '不能关注自己' });
-    await prisma.$executeRaw`INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (${req.user.id}, ${followee_id})`;
+    await prisma.$executeRaw`INSERT INTO follows (follower_id, following_id) VALUES (${req.user.id}, ${followee_id}) ON CONFLICT DO NOTHING`;
     const [{ cnt: followingCnt }] = await prisma.$queryRaw`SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ${req.user.id}`;
     const [{ cnt: followersCnt }] = await prisma.$queryRaw`SELECT COUNT(*) as cnt FROM follows WHERE following_id = ${followee_id}`;
     await prisma.$executeRaw`UPDATE users SET following = ${Number(followingCnt)} WHERE id = ${req.user.id}`;

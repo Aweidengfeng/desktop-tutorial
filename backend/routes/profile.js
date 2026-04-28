@@ -173,7 +173,7 @@ router.post('/favorites', profileWriteLimiter, auth, async (req, res) => {
       return res.status(400).json({ error: '收藏类型不正确' });
     }
     const result = await prisma.$executeRaw`
-      INSERT OR IGNORE INTO favorites (user_id, type, item_id) VALUES (${req.user.id}, ${type}, ${item_id})
+      INSERT INTO favorites (user_id, type, item_id) VALUES (${req.user.id}, ${type}, ${item_id}) ON CONFLICT DO NOTHING
     `;
     if (result === 0) {
       return res.status(400).json({ error: '已经收藏过了' });

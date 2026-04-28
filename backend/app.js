@@ -1,14 +1,14 @@
 require('dotenv').config();
 
-// ── 数据库初始化（建表 + 内置种子数据）──────────────────────────────────────
-// database.js 使用 better-sqlite3 执行 CREATE TABLE IF NOT EXISTS，确保所有
-// 表在 Prisma 路由使用之前已存在。必须在任何路由 require 之前加载。
-// 用 try/catch 包裹：若 DATABASE_PATH 指向的目录在 Railway Volume 挂载前不存在，
-// database.js 内部已会自动创建目录，但极端情况下若仍失败则记录日志而不崩溃。
-try {
-  require('./db/database');
-} catch (e) {
-  console.error('⚠️  数据库初始化失败，将以无表状态运行（请检查 DATABASE_PATH）:', e.message);
+// ── 数据库初始化（仅 SQLite 模式）──────────────────────────────────────────
+// PostgreSQL 模式下，表由 `prisma db push` 在启动命令中创建，无需此步骤。
+// SQLite 模式（本地开发/测试）下，database.js 执行 CREATE TABLE IF NOT EXISTS。
+if (process.env.DATABASE_PROVIDER !== 'postgresql') {
+  try {
+    require('./db/database');
+  } catch (e) {
+    console.error('⚠️  数据库初始化失败，将以无表状态运行（请检查 DATABASE_PATH）:', e.message);
+  }
 }
 
 const pino = require('pino');
