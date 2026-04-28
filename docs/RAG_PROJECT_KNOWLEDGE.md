@@ -307,6 +307,7 @@
 | 2026-04-27 | Phase 0.1重命名，Phase 0.2 mock-pay安全修复，Phase 0.3高德Key安全迁移 | 0.1✅ 0.2✅ 0.3✅ |
 | 2026-04-27 | Phase 0.5 JWT过期前端检测，Phase 0.6 轨迹坐标精度，Phase 1 PostgreSQL迁移准备 | 0.5✅ 0.6✅ 1.4✅(已准备) |
 | 2026-04-27 | Phase 3.5 速率限制全覆盖 | 创建 middleware/rateLimits.js；全接口分级速率保护 |
+| 2026-04-28 | Phase 1 Railway 建表修复 | 修复 railway.toml startCommand，加入 generate-prisma-client.js --push，确保 PostgreSQL 建表 |
 
 ---
 

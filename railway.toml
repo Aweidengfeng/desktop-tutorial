@@ -3,6 +3,6 @@ builder = "RAILPACK"
 buildCommand = "cd backend && npm install && DATABASE_URL=\"file:/tmp/build.db\" npx prisma generate --schema=prisma/schema.prisma"
 
 [deploy]
-startCommand = "node backend/db/seed.js && node backend/app.js"
+startCommand = "cd backend && node scripts/generate-prisma-client.js --push && node db/seed.js && node app.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
