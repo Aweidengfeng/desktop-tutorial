@@ -14,7 +14,7 @@
 | 仓库地址 | https://github.com/gaoshanyindi/desktop-tutorial |
 | 项目定位 | 全球高海拔登山/户外徒步垂直APP，对标Strava+两步路，主打高海拔攀登社群+山峰数据库+高海拔安全服务+全球化出海 |
 | 核心业务 | 山峰资料库、户外轨迹记录、登山社群、向导/俱乐部认证、高海拔攀登保险、全球用户运营、海外多节点部署 |
-| 当前技术栈 | 前端：Alpine.js + Tailwind CSS（单HTML index.html）/ 后端：Node.js + Express + Prisma + SQLite / 部署：Railway |
+| 当前技术栈 | 前端：Alpine.js + Tailwind CSS（单HTML index.html）/ 后端：Node.js + Express + Prisma + PostgreSQL / 部署：Railway |
 | 当前版本 | B1-Alpha（2026-04-27） |
 | 评审版本状态 | 原型/早期开发阶段 |
 
@@ -27,7 +27,7 @@
 - [x] `GET /api/admin/sms-codes` 明文验证码接口已有 devOnly 中间件 ✅ 2026-04-27（已确认 devOnly 覆盖）
 - [x] 高德地图Key不得硬编码在前端HTML ✅ 2026-04-27（AMAP_KEY后端replaceAll注入；AMAP_SECURITY_CODE改为后端动态注入script标签）
 - [ ] `JWT_SECRET` 和 `ADMIN_PASSWORD` 不得使用默认值（已有启动校验逻辑，需测试生效）
-- [ ] SQLite不得用于生产环境，必须迁移PostgreSQL（Phase 1.1）
+- [x] SQLite不得用于生产环境，必须迁移PostgreSQL ✅ 2026-04-28（Phase 1.1 完成，所有路由已切换到 Prisma Client）
 
 ### 🟡 上线前修复项
 - [x] 文件名含中文 ✅ 2026-04-27（已重命名为 index.html）
@@ -66,7 +66,7 @@
 ### Phase 1：数据库迁移（2026-05 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
-| 1.1 | SQLite → PostgreSQL 迁移（Railway PostgreSQL） | P0 | 待做 | |
+| 1.1 | SQLite → PostgreSQL 迁移（Railway PostgreSQL） | P0 | ✅ 已完成 | ✅ 2026-04-28 — 所有路由从 better-sqlite3 迁移到 Prisma Client；prisma.js 单例；seed.js 迁移；app.js 移除 SQLite 初始化 |
 | 1.2 | 轨迹points字段迁移（TEXT JSON → JSONB/PostGIS） | P0 | 待做 | |
 | 1.3 | 独立images表设计与迁移 | P1 | 待做 | |
 | 1.4 | 数据库迁移脚本编写与回滚方案 | P0 | 🔄 已准备 | ✅ 2026-04-27 — Prisma schema支持env provider；创建迁移指南POSTGRESQL_MIGRATION.md；创建SQLite导出脚本 |
@@ -307,7 +307,7 @@
 | 2026-04-27 | Phase 0.1重命名，Phase 0.2 mock-pay安全修复，Phase 0.3高德Key安全迁移 | 0.1✅ 0.2✅ 0.3✅ |
 | 2026-04-27 | Phase 0.5 JWT过期前端检测，Phase 0.6 轨迹坐标精度，Phase 1 PostgreSQL迁移准备 | 0.5✅ 0.6✅ 1.4✅(已准备) |
 | 2026-04-27 | Phase 3.5 速率限制全覆盖 | 创建 middleware/rateLimits.js；全接口分级速率保护 |
-| 2026-04-28 | Phase 1 Railway 建表修复 | 修复 railway.toml startCommand，加入 generate-prisma-client.js --push，确保 PostgreSQL 建表 |
+| 2026-04-28 | Phase 1.1 完成 SQLite→PostgreSQL 全量迁移 | 1.1✅ |
 
 ---
 

@@ -22,21 +22,8 @@ router.post('/', shareLimiter, auth, async (req, res) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const shareUrl = `${process.env.APP_URL || ''}/share-location/${token}`;
 
-    // Try to save to DB (table may not exist, that's ok)
+    // Try to save to DB
     try {
-      await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS location_shares (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        token TEXT UNIQUE,
-        sender_id INTEGER NOT NULL,
-        recipient_id TEXT,
-        recipient_type TEXT,
-        lat REAL,
-        lng REAL,
-        share_url TEXT,
-        expires_at DATETIME,
-        viewed_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
       await prisma.$executeRaw`INSERT INTO location_shares (token, sender_id, recipient_id, recipient_type, lat, lng, share_url, expires_at)
         VALUES (${token}, ${req.user.id}, ${recipient_id ? String(recipient_id) : null}, ${recipient_type || 'unknown'}, ${parseFloat(lat)}, ${parseFloat(lng)}, ${shareUrl}, ${expiresAt})`;
     } catch(e) {}
