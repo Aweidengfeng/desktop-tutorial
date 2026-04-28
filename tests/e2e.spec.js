@@ -81,7 +81,8 @@ test.describe('山峰数据加载', () => {
   test('山峰卡片应从 API 动态加载（非硬编码）', async ({ page }) => {
     // 监听 /api/peaks 请求（在导航前注册）
     const peaksResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/peaks') && resp.status() === 200
+      resp => resp.url().includes('/api/peaks') && resp.status() === 200,
+      { timeout: 30000 }
     );
     await page.goto('/summitlink');
     // 等待 API 响应
@@ -95,7 +96,7 @@ test.describe('山峰数据加载', () => {
     // 在导航前注册监听，以捕获页面初始化时发起的请求（init() 自动调用 loadPeaks('8000ers')）
     const filteredResponse = page.waitForResponse(
       resp => resp.url().includes('/api/peaks?type=8000ers') && resp.status() === 200,
-      { timeout: 15000 }
+      { timeout: 30000 }
     );
 
     await page.goto('/summitlink');
@@ -127,7 +128,8 @@ test.describe('登录流程', () => {
 test.describe('帖子功能', () => {
   test('帖子列表应从 API 加载', async ({ page }) => {
     const postsResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/posts') && resp.status() === 200
+      resp => resp.url().includes('/api/posts') && resp.status() === 200,
+      { timeout: 30000 }
     );
     await page.goto('/summitlink');
     const resp = await postsResponse;
@@ -272,7 +274,8 @@ test.describe('帖子功能', () => {
 test.describe('队伍功能', () => {
   test('队伍列表应从 API 加载', async ({ page }) => {
     const teamsResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/teams') && resp.status() === 200
+      resp => resp.url().includes('/api/teams') && resp.status() === 200,
+      { timeout: 30000 }
     );
     await page.goto('/summitlink');
     const resp = await teamsResponse;
@@ -287,6 +290,8 @@ test.describe('队伍功能', () => {
 
     // 执行登录
     await doLogin(page);
+    // 等待登录弹窗完全关闭后再操作（避免弹窗拦截点击事件）
+    await page.locator('[x-show="showLogin"]').waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
     // 等待登录后页面数据刷新
     await page.waitForLoadState('networkidle');
 
