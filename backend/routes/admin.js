@@ -582,11 +582,11 @@ router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, asyn
       const clubName = app.club_name || app.name;
       const clubType = app.type || '综合';
       const certUrl = app.cert_url || null;
-      const [ins] = await prisma.$queryRaw`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, business_license_url, creator_id, status, approved_at, approved_by)
+      const [{ id: newClubId }] = await prisma.$queryRaw`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, business_license_url, creator_id, status, approved_at, approved_by)
                   VALUES (${clubName}, ${app.description}, ${app.specialty}, ${app.region}, ${clubType},
                          ${app.contact}, ${app.wechat}, ${app.website}, ${certUrl}, ${app.user_id}, 'approved_pending_payment', ${now}, 'admin')
                   RETURNING id`;
-      await prisma.$executeRaw`UPDATE club_applications SET club_id = ${ins.id} WHERE id = ${app.id}`;
+      await prisma.$executeRaw`UPDATE club_applications SET club_id = ${newClubId} WHERE id = ${app.id}`;
     }
     try { await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${app.user_id}, 'club_review', '俱乐部申请审核通过，请完成付费', '您的俱乐部申请已审核通过，请支付入驻费后正式入驻平台', '/club-portal')`; } catch(e) {}
     res.json({ success: true });
