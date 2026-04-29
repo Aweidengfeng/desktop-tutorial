@@ -41,7 +41,7 @@
 ### 🟢 中期执行项
 - [x] 离线地图缓存（PWA + Service Worker）✅ 2026-04-29（Phase 2.2）
 - [x] 海外用户切换Mapbox/MapLibre地图（Phase 2.5）✅ 2026-04-29
-- [ ] i18n多语言框架引入（Phase 2.4）
+- [x] i18n多语言框架引入（Phase 2.4）✅ 2026-04-29
 - [ ] PostgreSQL迁移（PostGIS轨迹查询）（Phase 1.1-1.2）
 - [ ] OSS文件存储替换本地uploads（Phase 4.1）
 - [ ] ICP备案（国内合规必须）（Phase 3.1）
@@ -75,12 +75,12 @@
 ### Phase 2：前端架构升级（2026-05~06 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
-| 2.1 | 引入Vite构建工具（代码分割+生产优化） | P1 | 待做 | |
+| 2.1 | 引入Vite构建工具（代码分割+生产优化） | P1 | ✅ 已完成 | ✅ 2026-04-29 — vite.config.js；build/preview脚本；terser压缩；dev proxy配置 |
 | 2.2 | PWA Service Worker（关键页面离线缓存） | P1 | ✅ 已完成 | ✅ 2026-04-29 — sw.js网络优先策略；index.html注册；API请求穿透 |
 | 2.3 | IndexedDB本地轨迹缓存（弱网断点续传） | P1 | ✅ 已完成 | ✅ 2026-04-29 — IndexedDB pending-tracks store；断点续传+自动重试；online事件触发同步；toast提示 |
-| 2.4 | 国际化框架引入（i18next） | P2 | 待做 | |
+| 2.4 | 国际化框架引入（i18next） | P2 | ✅ 已完成 | ✅ 2026-04-29 — 轻量级i18n模块；zh/en双语；data-i18n属性；localStorage持久化；语言切换按钮 |
 | 2.5 | 海外地图切换（Mapbox GL JS + MapLibre） | P1 | ✅ 已完成 | ✅ 2026-04-29 — /api/config/map接口；Mapbox GL JS懒加载；高德/Mapbox双引擎initMap封装；drawTrackOnMap适配 |
-| 2.6 | 深色模式支持 | P2 | 待做 | |
+| 2.6 | 深色模式支持 | P2 | ✅ 已完成 | ✅ 2026-04-29 — CSS变量深色模式；系统主题跟随；localStorage持久化；切换按钮 |
 
 ### Phase 3：安全与合规（2026-06 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
@@ -314,6 +314,7 @@
 | 2026-04-29 | Phase 5.2 弱网测试 + Phase 3.4 内容安全框架 + Phase 2.2 PWA SW | 5.2✅ 3.4✅ 2.2✅ |
 | 2026-04-29 | Phase 3.3 GDPR数据导出/账号删除，Phase 3.4 阿里云内容安全HTTPS实现（multer写盘后审核），Phase 5.2 test:weak-network脚本 | 3.3✅ 3.4✅(HTTPS实现) 5.2✅ |
 | 2026-04-29 | Phase 2.3 IndexedDB断点续传，Phase 2.5 地图双引擎 | 2.3✅ 2.5✅ |
+| 2026-04-29 | Phase 2.1 Vite构建，Phase 2.4 i18n多语言，Phase 2.6 深色模式 | 2.1✅ 2.4✅ 2.6✅ |
 
 ---
 
