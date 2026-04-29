@@ -6,6 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimits');
+const { checkImageSafety } = require('../middleware/contentSafety');
 const prisma = require('../db/prisma');
 
 // 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
@@ -68,7 +69,7 @@ const uploadGpx = multer({
 });
 
 // POST /api/upload — 单张图片上传（需要JWT）
-router.post('/', uploadLimiter, auth, (req, res, next) => {
+router.post('/', uploadLimiter, auth, checkImageSafety, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/gif/webp）' });
     if (!req.file) return res.status(400).json({ error: '未收到文件' });
@@ -82,7 +83,7 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
 });
 
 // POST /api/upload/multiple — 多张图片上传（最多9张，需要JWT）
-router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
+router.post('/multiple', uploadLimiter, auth, checkImageSafety, (req, res, next) => {
   upload.array('files', 9)(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/gif/webp）' });
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: '未收到文件' });

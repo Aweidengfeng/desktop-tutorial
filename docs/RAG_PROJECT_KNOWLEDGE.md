@@ -39,7 +39,7 @@
 - [x] JWT过期前端检测与自动跳转登录 ✅ 2026-04-27（apiFetch全局封装，session-expired事件，核心API路径已替换，Phase 0.5）
 
 ### 🟢 中期执行项
-- [ ] 离线地图缓存（PWA + Service Worker）（Phase 2.2）
+- [x] 离线地图缓存（PWA + Service Worker）✅ 2026-04-29（Phase 2.2）
 - [ ] 海外用户切换Mapbox/MapLibre地图（Phase 2.5）
 - [ ] i18n多语言框架引入（Phase 2.4）
 - [ ] PostgreSQL迁移（PostGIS轨迹查询）（Phase 1.1-1.2）
@@ -76,7 +76,7 @@
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
 | 2.1 | 引入Vite构建工具（代码分割+生产优化） | P1 | 待做 | |
-| 2.2 | PWA Service Worker（关键页面离线缓存） | P1 | 待做 | |
+| 2.2 | PWA Service Worker（关键页面离线缓存） | P1 | ✅ 已完成 | ✅ 2026-04-29 — sw.js网络优先策略；index.html注册；API请求穿透 |
 | 2.3 | IndexedDB本地轨迹缓存（弱网断点续传） | P1 | 待做 | |
 | 2.4 | 国际化框架引入（i18next） | P2 | 待做 | |
 | 2.5 | 海外地图切换（Mapbox GL JS + MapLibre） | P1 | 待做 | |
@@ -88,7 +88,7 @@
 | 3.1 | ICP备案申请（国内域名+服务器） | P0 | 待做 | |
 | 3.2 | 等保2.0二级安全评估 | P1 | 待做 | |
 | 3.3 | GDPR隐私政策完善+数据删除接口 | P1 | 待做 | |
-| 3.4 | 图片上传接入阿里云内容安全API | P1 | 待做 | |
+| 3.4 | 图片上传接入阿里云内容安全API | P1 | ✅ 已完成 | ✅ 2026-04-29 — middleware/contentSafety.js框架；生产环境可配置ALIYUN_ACCESS_KEY_ID启用；文档CONTENT_SAFETY_INTEGRATION.md |
 | 3.5 | 速率限制全接口覆盖（非仅聊天接口） | P1 | ✅ 已完成 | ✅ 2026-04-27 — 创建统一 rateLimits.js 中间件；全局 /api defaultLimiter；auth/write/upload/外部API分级保护 |
 | 3.6 | 向导rejected状态支持重新申请流程 | P1 | ✅ 已完成 | ✅ 2026-04-29 — PATCH /api/guides/reapply 接口；前端 rejected 状态显示拒因+重申请按钮 |
 | 3.7 | 订单并发下单加事务+乐观锁防超额 | P0 | ✅ 已完成 | ✅ 2026-04-29 — prisma.$transaction + SELECT FOR UPDATE 行锁；超额返回 409；current_participants 原子递增 |
@@ -107,7 +107,7 @@
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
 | 5.1 | 并发超额下单E2E测试（10并发同时下单同一活动） | P0 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/concurrency.test.js；10并发验证≤max_participants成功，超额返回409 |
-| 5.2 | 弱网轨迹上传模拟测试（2G/失联场景） | P1 | 待做 | |
+| 5.2 | 弱网轨迹上传模拟测试（2G/失联场景） | P1 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/weak-network.test.js；分块/重试/1000点三场景覆盖 |
 | 5.3 | JWT过期全链路测试 | P1 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/jwt.test.js；覆盖过期/无token/篡改/有效4个场景 |
 | 5.4 | 安全验收清单自动化（mock-pay/sms-codes/CORS） | P0 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/security.test.js 覆盖 6 项安全验收用例 |
 | 5.5 | 性能基准：50并发无500，轨迹上传<3s，天气<2s | P0 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/performance.test.js；50并发峰值列表无500；100点轨迹<3s |
@@ -311,6 +311,7 @@
 | 2026-04-29 | Phase 1.2 轨迹 JSONB 迁移 + Phase 3.7 订单并发乐观锁 | 1.2✅ 3.7✅ |
 | 2026-04-29 | Phase 3.6 向导重申请 + Phase 1.3 images 表 + Phase 5.4 安全验收自动化 | 3.6✅ 1.3✅ 5.4✅ |
 | 2026-04-29 | Phase 5.1 并发测试 + 5.3 JWT测试 + 5.5 性能基准 | 5.1✅ 5.3✅ 5.5✅ |
+| 2026-04-29 | Phase 5.2 弱网测试 + Phase 3.4 内容安全框架 + Phase 2.2 PWA SW | 5.2✅ 3.4✅ 2.2✅ |
 
 ---
 

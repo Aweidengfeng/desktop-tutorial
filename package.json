@@ -46,7 +46,8 @@
       "**/backend/tests/security.test.js",
       "**/backend/tests/concurrency.test.js",
       "**/backend/tests/jwt.test.js",
-      "**/backend/tests/performance.test.js"
+      "**/backend/tests/performance.test.js",
+      "**/backend/tests/weak-network.test.js"
     ],
     "testTimeout": 15000
   }
