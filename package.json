@@ -42,7 +42,8 @@
       "**/tests/api-2026-features.test.js",
       "**/tests/api-offline-expedition.test.js",
       "**/tests/api-routes-teams.test.js",
-      "**/tests/api-coverage.test.js"
+      "**/tests/api-coverage.test.js",
+      "**/backend/tests/security.test.js"
     ],
     "testTimeout": 15000
   }

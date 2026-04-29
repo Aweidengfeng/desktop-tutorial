@@ -6,6 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimits');
+const prisma = require('../db/prisma');
 
 // 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
 const uploadDir = process.env.UPLOADS_DIR
@@ -67,17 +68,33 @@ const uploadGpx = multer({
 });
 
 // POST /api/upload — 单张图片上传（需要JWT）
-router.post('/', uploadLimiter, auth, upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: '未收到文件' });
-  const url = '/uploads/' + req.file.filename;
-  res.json({ url, filename: req.file.filename });
+router.post('/', uploadLimiter, auth, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/gif/webp）' });
+    if (!req.file) return res.status(400).json({ error: '未收到文件' });
+    const url = '/uploads/' + req.file.filename;
+    prisma.$executeRaw`
+      INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
+      VALUES (${url}, ${req.file.filename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+    `.catch(() => {});
+    res.json({ url, filename: req.file.filename });
+  });
 });
 
 // POST /api/upload/multiple — 多张图片上传（最多9张，需要JWT）
-router.post('/multiple', uploadLimiter, auth, upload.array('files', 9), (req, res) => {
-  if (!req.files || req.files.length === 0) return res.status(400).json({ error: '未收到文件' });
-  const urls = req.files.map(f => '/uploads/' + f.filename);
-  res.json({ urls });
+router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
+  upload.array('files', 9)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/gif/webp）' });
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: '未收到文件' });
+    const urls = req.files.map(f => '/uploads/' + f.filename);
+    for (const f of req.files) {
+      prisma.$executeRaw`
+        INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
+        VALUES (${'/uploads/' + f.filename}, ${f.filename}, ${f.size || null}, ${f.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+      `.catch(() => {});
+    }
+    res.json({ urls });
+  });
 });
 
 // POST /api/upload/video — 视频上传（最多200MB，需要JWT）

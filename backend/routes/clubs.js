@@ -48,6 +48,38 @@ router.get('/apply/status', clubReadLimiter, auth, async (req, res) => {
   }
 });
 
+// PATCH /api/clubs/reapply — 俱乐部被拒后重新申请（需要JWT）
+router.patch('/reapply', clubWriteLimiter, auth, async (req, res) => {
+  try {
+    const [app] = await prisma.$queryRaw`
+      SELECT * FROM club_applications WHERE user_id = ${req.user.id} AND status = 'rejected' ORDER BY id DESC LIMIT 1
+    `;
+    if (!app) return res.status(404).json({ error: '未找到被拒绝的俱乐部申请' });
+
+    const { club_name, description, specialty, region, contact, wechat, website, cert_url } = req.body;
+
+    await prisma.$executeRaw`
+      UPDATE club_applications SET
+        status = 'pending',
+        reject_reason = NULL,
+        club_name = COALESCE(${club_name || null}, club_name),
+        description = COALESCE(${description || null}, description),
+        specialty = COALESCE(${specialty || null}, specialty),
+        region = COALESCE(${region || null}, region),
+        contact = COALESCE(${contact || null}, contact),
+        wechat = COALESCE(${wechat || null}, wechat),
+        website = COALESCE(${website || null}, website),
+        cert_url = COALESCE(${cert_url || null}, cert_url)
+      WHERE id = ${app.id}
+    `;
+
+    const [updated] = await prisma.$queryRaw`SELECT * FROM club_applications WHERE id = ${app.id}`;
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/clubs/me — 查看自己的俱乐部/申请状态（需要JWT）
 router.get('/me', clubReadLimiter, auth, async (req, res) => {
   try {

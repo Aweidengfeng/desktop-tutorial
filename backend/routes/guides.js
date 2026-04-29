@@ -270,6 +270,50 @@ router.post('/apply', applyRateLimit, auth, async (req, res) => {
   }
 });
 
+// PATCH /api/guides/reapply — 向导被拒后重新申请（需要JWT）
+router.patch('/reapply', guideWriteLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(404).json({ error: '未找到向导申请记录' });
+    if (guide.status !== 'rejected') return res.status(400).json({ error: '只有被拒绝的申请才能重新申请' });
+
+    const { name, cert, specialty, languages, dayRate, region,
+            id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url,
+            passport_url, is_international, nationality, cert_level } = req.body;
+
+    await prisma.$executeRaw`
+      UPDATE guides SET
+        status = 'pending',
+        reject_reason = NULL,
+        name = COALESCE(${name || null}, name),
+        cert = COALESCE(${cert || null}, cert),
+        specialty = COALESCE(${specialty || null}, specialty),
+        languages = COALESCE(${languages || null}, languages),
+        day_rate = COALESCE(${dayRate || null}, day_rate),
+        region = COALESCE(${region || null}, region),
+        cert_level = COALESCE(${cert_level || null}, cert_level),
+        id_card_url = COALESCE(${id_card_url || null}, id_card_url),
+        climbing_cert_url = COALESCE(${climbing_cert_url || null}, climbing_cert_url),
+        insurance_cert_url = COALESCE(${insurance_cert_url || null}, insurance_cert_url),
+        health_cert_url = COALESCE(${health_cert_url || null}, health_cert_url),
+        passport_url = COALESCE(${passport_url || null}, passport_url),
+        is_international = COALESCE(${typeof is_international === 'boolean' ? (is_international ? 1 : 0) : null}, is_international),
+        nationality = COALESCE(${nationality || null}, nationality)
+      WHERE user_id = ${req.user.id}
+    `;
+
+    // 同步更新申请记录
+    await prisma.$executeRaw`
+      UPDATE guide_applications SET status = 'pending' WHERE user_id = ${req.user.id} AND status = 'rejected'
+    `;
+
+    const [updated] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
+    res.json(parseGuide(updated));
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/guides/:id/posts — 向导动态帖子
 router.get('/:id/posts', async (req, res) => {
   try {
