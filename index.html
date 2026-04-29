@@ -33,10 +33,28 @@
     }
   </script>
   <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f4f6;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --card-bg: #ffffff;
+      --nav-bg: #1e40af;
+    }
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border-color: #334155;
+      --card-bg: #1e293b;
+      --nav-bg: #0f172a;
+    }
     .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
     [x-cloak] { display: none !important; }
     .app-container { max-width: 430px; margin: 0 auto; }
-    body { background: #0f172a; }
+    body { background: var(--bg-primary, #0f172a); }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
     .material-symbols-outlined.filled { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
     .scroll-hide::-webkit-scrollbar { display: none; }
@@ -78,9 +96,17 @@
     }
   })();
   </script>
+  <!-- Phase 2.6: 早期主题检测，防止浅色模式闪烁 -->
+  <script>
+  (function() {
+    var theme = localStorage.getItem('al_theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+  </script>
 </head>
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
-<div class="app-container relative min-h-screen bg-slate-900 overflow-hidden">
+<div class="app-container relative min-h-screen overflow-hidden" style="background: var(--bg-primary);">
 
   <!-- Toast Notifications -->
   <div class="fixed top-4 right-4 z-[200] flex flex-col gap-2" style="max-width: 300px;">
@@ -121,6 +147,8 @@
       </div>
       <div class="flex items-center gap-1">
         <button @click="showLangPicker=true" class="px-2 py-1 rounded-full text-xs font-bold glass text-slate-300 hover:text-white transition-colors uppercase" x-text="currentLang.toUpperCase()"></button>
+        <button id="lang-switch-btn" onclick="switchLang()" class="px-2 py-1 rounded-full text-xs font-bold glass text-slate-300 hover:text-white transition-colors" data-i18n="lang_switch">EN</button>
+        <button id="theme-toggle-btn" onclick="toggleTheme()" aria-label="切换深色/浅色模式" class="p-1.5 rounded-full hover:bg-white/10 transition-colors text-slate-300 text-base leading-none">🌙</button>
         <button @click="showSearch = !showSearch" class="p-2 rounded-full hover:bg-white/10 transition-colors">
           <span class="material-symbols-outlined text-slate-300 text-xl">search</span>
         </button>
@@ -9002,6 +9030,103 @@ function alpineLink() {
     },
   };
 }
+</script>
+<!-- Phase 2.4: 轻量级 i18n 模块 | Phase 2.6: 深色模式支持 -->
+<script>
+// ======== Phase 2.4: 轻量级 i18n 模块 ========
+window.__i18n = {
+  zh: {
+    nav_home: '首页',
+    nav_peaks: '山峰',
+    nav_tracks: '轨迹',
+    nav_community: '社区',
+    nav_profile: '我的',
+    login: '登录',
+    register: '注册',
+    logout: '退出登录',
+    upload_track: '上传轨迹',
+    pending_upload: '待上传',
+    track_saved_offline: '轨迹已保存到本地，联网后自动上传',
+    map_loading: '地图加载中...',
+    summit_record: '登顶记录',
+    guide_apply: '向导申请',
+    club_apply: '俱乐部认证',
+    lang_switch: 'EN',
+  },
+  en: {
+    nav_home: 'Home',
+    nav_peaks: 'Peaks',
+    nav_tracks: 'Tracks',
+    nav_community: 'Community',
+    nav_profile: 'Profile',
+    login: 'Login',
+    register: 'Register',
+    logout: 'Logout',
+    upload_track: 'Upload Track',
+    pending_upload: 'Pending',
+    track_saved_offline: 'Track saved locally, will upload when online',
+    map_loading: 'Loading map...',
+    summit_record: 'Summit Record',
+    guide_apply: 'Guide Application',
+    club_apply: 'Club Certification',
+    lang_switch: '中',
+  },
+};
+
+function getCurrentLang() {
+  return localStorage.getItem('al_lang') ||
+    (navigator.language.startsWith('zh') ? 'zh' : 'en');
+}
+
+function t(key) {
+  const lang = getCurrentLang();
+  return (window.__i18n[lang] && window.__i18n[lang][key]) ||
+    (window.__i18n['zh'] && window.__i18n['zh'][key]) || key;
+}
+
+function switchLang() {
+  const current = getCurrentLang();
+  const next = current === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('al_lang', next);
+  applyI18n();
+}
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  const btn = document.getElementById('lang-switch-btn');
+  if (btn) btn.textContent = t('lang_switch');
+}
+
+// ======== Phase 2.6: 深色模式支持 ========
+function getCurrentTheme() {
+  return localStorage.getItem('al_theme') ||
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const current = getCurrentTheme();
+  const next = current === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('al_theme', next);
+  applyTheme(next);
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function () {
+  applyI18n();
+  applyTheme(getCurrentTheme());
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+    if (!localStorage.getItem('al_theme')) applyTheme(e.matches ? 'dark' : 'light');
+  });
+});
 </script>
 <!-- Global Footer -->
 <footer class="w-full py-4 text-center text-slate-500 text-xs border-t border-white/5 mt-8" style="max-width:430px;margin:0 auto;">
