@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      # ── 检出代码 ────────────────────────────────────────────────────────────
+      # ── 检出代码 ────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -35,15 +35,16 @@ jobs:
       - name: Install backend dependencies
         run: cd backend && npm install
 
-      # ── 生成 Prisma Client ────────────────────────────────────────────────────
-      - name: Generate Prisma Client
-        run: cd backend && DATABASE_PROVIDER=sqlite DATABASE_URL="file:/tmp/ci.db" node scripts/generate-prisma-client.js
+      # ── 生成 Prisma Client 并推送 schema（建表）────────────────────────────
+      # 必须加 --push，否则 /tmp/ci.db 里没有表结构，所有接口返回 500
+      - name: Generate Prisma Client and push schema
+        run: cd backend && DATABASE_PROVIDER=sqlite DATABASE_URL="file:/tmp/ci.db" node scripts/generate-prisma-client.js --push
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      # ── 依赖安全扫描 ──────────────────────────────────────────────────────────
+      # ── 依赖安全扫描 ─────────────────────────────────────────────────────
       - name: Audit backend dependencies
         run: npm audit --audit-level=high --production --prefix backend || true
 
@@ -59,6 +60,7 @@ jobs:
           DATABASE_PROVIDER: sqlite
           DATABASE_URL: "file:/tmp/ci.db"
           DATABASE_PATH: "/tmp/ci.db"
+          SEED_ON_START: "true"
 
       # ── 等待服务器就绪 ────────────────────────────────────────────────────
       - name: Wait for backend to be ready
@@ -86,7 +88,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      # ── 上传失败截图 ─────────────────────────────────────────────────────────
+      # ── 上传失败截图 ─────────────────────────────────────────────────────
       - name: Upload test screenshots
         uses: actions/upload-artifact@v4
         if: always()
