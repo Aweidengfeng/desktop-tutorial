@@ -477,3 +477,37 @@ Sentry 通过 `SENTRY_DSN` 环境变量控制启用，**未设置时完全无副
 
 - 新错误出现时发送邮件通知
 - 错误发生频率超阈值时发送微信机器人 / 钉钉 Webhook 通知
+
+---
+
+## Phase 4.4 — 多地域健康检查与故障转移
+
+### 健康检查端点
+
+| 端点 | 用途 | 响应 |
+|------|------|------|
+| `GET /api/health` | 综合健康状态（含DB检查） | `{status, db, uptime, memory, latency}` |
+| `GET /api/health/ready` | K8s readiness probe | `{ready: true/false}` |
+| `GET /api/health/live` | K8s liveness probe | `{alive: true, pid, uptime}` |
+
+### 自动健康检查 CI
+
+`.github/workflows/health-check.yml` 每15分钟自动检查生产环境健康状态。
+
+在 GitHub Repo Settings → Variables 中设置：
+- `PRODUCTION_URL`: 生产环境 URL（如 `https://alpinelink.up.railway.app`）
+
+### 故障转移策略
+
+1. **Railway 自动重启**：`restart: always` 策略，崩溃后5秒内自动重启
+2. **Docker Swarm 滚动更新**：`docker-compose.prod.yml` 中配置 `order: start-first`，零宕机更新
+3. **数据库连接池**：Prisma 自动重连，最大重试5次
+4. **多副本**：`replicas: 2`，单副本故障不影响服务
+
+### 阿里云多地域部署（HK + SG）
+
+1. 在 HK/SG 各部署一套 Docker Compose 实例
+2. 通过阿里云 DNS 智能解析（GeoDNS）分流：
+   - 中国大陆 → 国内节点
+   - 海外 → HK/SG 节点
+3. 数据库使用 PostgreSQL 主从复制（主节点写，从节点读）

@@ -304,32 +304,8 @@ app.get('/investor', htmlPageLimiter, (req, res) => {
 });
 
 // 健康检查（/api/health 为标准路径，/health 保留兼容）
-const pkgVersion = (() => {
-  try { return require('../package.json').version; } catch (e) { return '1.0.0'; }
-})();
-/**
- * @swagger
- * /api/health:
- *   get:
- *     tags: [健康]
- *     summary: 服务健康检查
- *     description: 返回服务状态、运行时间和版本号
- *     security: []
- *     responses:
- *       200:
- *         description: 服务正常
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status: { type: string, example: ok }
- *                 uptime: { type: number, description: 运行时间（秒）}
- *                 version: { type: string }
- */
-app.get(['/api/health', '/health'], (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime(), version: pkgVersion });
-});
+app.use('/api/health', require('./routes/health'));
+app.use('/health', require('./routes/health'));
 
 // ── OpenAPI 文档（开发和测试环境下开放）──────────────────────────────
 if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true') {

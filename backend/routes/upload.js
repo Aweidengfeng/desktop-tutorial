@@ -8,6 +8,7 @@ const auth = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimits');
 const { checkImageSafety, reviewImageFile } = require('../middleware/contentSafety');
 const prisma = require('../db/prisma');
+const { ossUploadMiddleware, OSS_ENABLED } = require('../middleware/ossUpload');
 
 // 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
 const uploadDir = process.env.UPLOADS_DIR
@@ -51,7 +52,7 @@ const gpxFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: OSS_ENABLED ? multer.memoryStorage() : storage,
   fileFilter: imageFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 单文件上限（图片）
 });
@@ -86,12 +87,14 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
     } catch (e) {
       console.error('[contentSafety] 审核异常，放行：', e.message);
     }
-    const url = '/uploads/' + req.file.filename;
+    // OSS 上传
+    await ossUploadMiddleware(req, res, () => {});
+    const url = req.file.ossUrl || ('/uploads/' + req.file.filename);
     prisma.$executeRaw`
       INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
-      VALUES (${url}, ${req.file.filename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+      VALUES (${url}, ${req.file.filename || ''}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
     `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
-    res.json({ url, filename: req.file.filename });
+    res.json({ url, filename: req.file.filename || '' });
   });
 });
 
@@ -116,11 +119,14 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
         console.error('[contentSafety] 审核异常，放行：', e.message);
       }
     }
-    const urls = req.files.map(f => '/uploads/' + f.filename);
+    // OSS 上传
+    await ossUploadMiddleware(req, res, () => {});
+    const urls = req.files.map(f => f.ossUrl || ('/uploads/' + f.filename));
     for (const f of req.files) {
+      const fileUrl = f.ossUrl || ('/uploads/' + f.filename);
       prisma.$executeRaw`
         INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
-        VALUES (${'/uploads/' + f.filename}, ${f.filename}, ${f.size || null}, ${f.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+        VALUES (${fileUrl}, ${f.filename || ''}, ${f.size || null}, ${f.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
       `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
     }
     res.json({ urls });
