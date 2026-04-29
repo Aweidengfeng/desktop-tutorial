@@ -76,7 +76,7 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
     prisma.$executeRaw`
       INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
       VALUES (${url}, ${req.file.filename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
-    `.catch(() => {});
+    `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
     res.json({ url, filename: req.file.filename });
   });
 });
@@ -91,7 +91,7 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
       prisma.$executeRaw`
         INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
         VALUES (${'/uploads/' + f.filename}, ${f.filename}, ${f.size || null}, ${f.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
-      `.catch(() => {});
+      `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
     }
     res.json({ urls });
   });

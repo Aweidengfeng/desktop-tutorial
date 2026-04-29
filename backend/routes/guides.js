@@ -297,7 +297,7 @@ router.patch('/reapply', guideWriteLimiter, auth, async (req, res) => {
         insurance_cert_url = COALESCE(${insurance_cert_url || null}, insurance_cert_url),
         health_cert_url = COALESCE(${health_cert_url || null}, health_cert_url),
         passport_url = COALESCE(${passport_url || null}, passport_url),
-        is_international = COALESCE(${typeof is_international === 'boolean' ? (is_international ? 1 : 0) : null}, is_international),
+        is_international = COALESCE(${typeof is_international === 'boolean' ? Number(is_international) : null}, is_international),
         nationality = COALESCE(${nationality || null}, nationality)
       WHERE user_id = ${req.user.id}
     `;

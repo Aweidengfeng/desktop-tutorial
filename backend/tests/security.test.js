@@ -91,7 +91,7 @@ describe('安全测试 3 — 上传非图片格式返回 400', () => {
     const user = createTestUser(db, { phone: '13900001001' });
     userToken = user.token;
 
-    // 创建一个模拟的 exe 文件
+    // 创建一个模拟的 exe 文件（MZ 为 DOS/Windows 可执行文件的魔数标头）
     fs.writeFileSync(tmpExe, 'MZ\x90\x00 fake exe content');
   });
 
