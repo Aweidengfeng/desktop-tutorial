@@ -1221,7 +1221,12 @@
           <span class="material-symbols-outlined text-base">emoji_events</span>手动记录登顶（无轨迹）
         </button>
         <!-- Track History -->
-        <h3 class="font-display font-bold text-white mb-3">我的历史轨迹</h3>
+        <div class="flex items-center gap-2 mb-3">
+          <h3 class="font-display font-bold text-white">我的历史轨迹</h3>
+          <template x-if="pendingUploadCount > 0">
+            <span @click="syncPendingTracks()" class="cursor-pointer bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" x-text="pendingUploadCount + ' 待上传'"></span>
+          </template>
+        </div>
         <div class="space-y-3">
           <template x-for="track in tracks" :key="track.id">
             <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
@@ -5521,6 +5526,124 @@ async function apiFetch(url, options = {}) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Phase 2.3: IndexedDB 轨迹断点续传队列 ──────────────────────────────────
+const _IDB_NAME = 'alpinelink-db';
+const _IDB_VERSION = 1;
+const _IDB_STORE = 'pending-tracks';
+
+function _idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_IDB_NAME, _IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+        const store = db.createObjectStore(_IDB_STORE, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('status', 'status', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbSavePendingTrack(trackData) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(_IDB_STORE);
+    const record = {
+      name: trackData.name,
+      points: trackData.points || [],
+      gpxFile: trackData.gpxFile || null,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      retries: 0,
+    };
+    const req = store.add(record);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbGetPendingTracks() {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readonly');
+    const store = tx.objectStore(_IDB_STORE);
+    const req = store.getAll();
+    req.onsuccess = (e) => {
+      const all = e.target.result || [];
+      resolve(all.filter(t => t.status === 'pending' || t.status === 'failed'));
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbDeletePendingTrack(id) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(_IDB_STORE);
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbUpdateTrackStatus(id, status, retries) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(_IDB_STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = (e) => {
+      const record = e.target.result;
+      if (!record) return resolve();
+      record.status = status;
+      if (retries !== undefined) record.retries = retries;
+      const putReq = store.put(record);
+      putReq.onsuccess = () => resolve();
+      putReq.onerror = (ev) => reject(ev.target.error);
+    };
+    getReq.onerror = (e) => reject(e.target.error);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Phase 2.5: 地图引擎检测与 Mapbox 懒加载 ────────────────────────────────
+window.__activeMapProvider = 'amap';
+
+async function detectMapProvider() {
+  try {
+    const res = await fetch('/api/config/map');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.provider === 'mapbox' || !navigator.language.startsWith('zh')) {
+        window.__activeMapProvider = 'mapbox';
+        return { provider: 'mapbox', token: data.token || '' };
+      }
+    }
+  } catch (e) {}
+  window.__activeMapProvider = 'amap';
+  return { provider: 'amap' };
+}
+
+function loadMapboxGL(token) {
+  return new Promise((resolve, reject) => {
+    if (window.mapboxgl) { if (token) window.mapboxgl.accessToken = token; resolve(); return; }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css';
+    document.head.appendChild(link);
+    const script = document.createElement('script');
+    script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js';
+    script.onload = () => { if (token) window.mapboxgl.accessToken = token; resolve(); };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function alpineLink() {
   return {
     currentPage: 'home',
@@ -5662,6 +5785,7 @@ function alpineLink() {
     showLightbox: false,
     trackMap: null,
     amapAvailable: typeof AMap !== 'undefined',
+    pendingUploadCount: 0,
     recordingMap: null,
     selectedConversation: null,
     showChatDetail: false,
@@ -6594,6 +6718,77 @@ function alpineLink() {
       } catch(e) { return null; }
     },
 
+    // Phase 2.5: 统一地图初始化（高德 / Mapbox 双引擎）
+    async initMap(containerId, options = {}) {
+      if (window.__activeMapProvider === 'mapbox' && window.mapboxgl) {
+        try {
+          return new window.mapboxgl.Map({
+            container: containerId,
+            style: 'mapbox://styles/mapbox/outdoors-v12',
+            center: options.center || [86.925, 27.988],
+            zoom: options.zoom || 13,
+          });
+        } catch(e) { return null; }
+      }
+      return this.initAMap(containerId, options);
+    },
+
+    // Phase 2.5: 轨迹绘制双引擎适配
+    drawTrackOnMap(map, points) {
+      if (!map || !points || points.length < 2) return;
+      if (window.__activeMapProvider === 'mapbox' && window.mapboxgl && map.addSource) {
+        const geojson = {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: points.map(p => [p.lng, p.lat]) },
+        };
+        if (map.getSource('track-line')) {
+          map.getSource('track-line').setData(geojson);
+        } else {
+          map.addSource('track-line', { type: 'geojson', data: geojson });
+          map.addLayer({ id: 'track-layer', type: 'line', source: 'track-line',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#3d8a9e', 'line-width': 4 } });
+        }
+        return;
+      }
+      // 高德路径
+      if (typeof AMap !== 'undefined') {
+        const path = points.map(p => new AMap.LngLat(p.lng, p.lat));
+        new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map });
+      }
+    },
+
+    // Phase 2.3: 同步待上传轨迹（重试最多3次）
+    async syncPendingTracks() {
+      if (!this.authToken) return;
+      let pending;
+      try { pending = await idbGetPendingTracks(); } catch(e) { return; }
+      for (const track of pending) {
+        if (track.retries >= 3) {
+          await idbUpdateTrackStatus(track.id, 'failed', track.retries).catch(() => {});
+          continue;
+        }
+        await idbUpdateTrackStatus(track.id, 'uploading', track.retries).catch(() => {});
+        try {
+          const res = await apiFetch('/api/tracks', {
+            method: 'POST',
+            body: { name: track.name, points: track.points, distance: 0, elevation_gain: 0, duration: '00:00' },
+          });
+          if (res.ok) {
+            await idbDeletePendingTrack(track.id).catch(() => {});
+          } else {
+            await idbUpdateTrackStatus(track.id, 'failed', track.retries + 1).catch(() => {});
+          }
+        } catch(e) {
+          await idbUpdateTrackStatus(track.id, 'pending', track.retries + 1).catch(() => {});
+        }
+      }
+      this.pendingUploadCount = await idbGetPendingTracks().then(t => t.length).catch(() => 0);
+      if (this.pendingUploadCount === 0 && pending.length > 0) {
+        this.showToast('待上传轨迹已全部同步成功 ✅');
+      }
+    },
+
     // 初始化轨迹记录地图
     initTrackMap() {
       if (this.trackMap) {
@@ -6829,16 +7024,31 @@ function alpineLink() {
         image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
         points: this.trackRecordedPoints,
       };
+      this.tracks.unshift(newTrack);
       if (this.authToken) {
+        // Phase 2.3: 先存 IndexedDB，再尝试立即上传
+        let idbId = null;
+        try { idbId = await idbSavePendingTrack({ name, points: this.trackRecordedPoints }); } catch(e) {}
+        let uploadOk = false;
         try {
-          await apiFetch('/api/tracks', {
+          const res = await apiFetch('/api/tracks', {
             method: 'POST',
             body: { name, points: this.trackRecordedPoints, distance: this.trackLiveStats.distance, elevation_gain: this.trackLiveStats.elevation, duration: this.formatTrackDuration(this.trackLiveStats.seconds) },
           });
+          if (res.ok) {
+            uploadOk = true;
+            if (idbId !== null) await idbDeletePendingTrack(idbId).catch(() => {});
+          }
         } catch(e) {}
+        this.pendingUploadCount = await idbGetPendingTracks().then(t => t.length).catch(() => 0);
+        if (uploadOk) {
+          this.showToast('轨迹已保存：' + name + ' 🗺️');
+        } else {
+          this.showToast('轨迹已保存到本地，联网后自动上传 📡', 'warning');
+        }
+      } else {
+        this.showToast('轨迹已保存：' + name + ' 🗺️');
       }
-      this.tracks.unshift(newTrack);
-      this.showToast('轨迹已保存：' + name + ' 🗺️');
       this.trackRecordingState = 'idle';
       this.trackRecordedPoints = [];
       this.newTrackName = '';
@@ -8736,6 +8946,16 @@ function alpineLink() {
         if (val) { this.loadUnreadCount(); this.loadTracks(); }
       });
       if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
+      // Phase 2.3: 页面加载时同步待上传轨迹；网络恢复时也自动触发
+      idbGetPendingTracks().then(t => { this.pendingUploadCount = t.length; }).catch(() => {});
+      this.syncPendingTracks();
+      window.addEventListener('online', () => this.syncPendingTracks());
+      // Phase 2.5: 检测地图引擎，Mapbox 时懒加载 SDK
+      detectMapProvider().then(cfg => {
+        if (cfg.provider === 'mapbox' && cfg.token) {
+          loadMapboxGL(cfg.token).catch(() => {});
+        }
+      });
       // Watch gearMode changes to reload gear (reset category first to avoid double-call)
       this.$watch('gearMode', (val) => {
         if (this.gearCategory !== '全部') {

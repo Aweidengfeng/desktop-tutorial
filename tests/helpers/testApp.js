@@ -85,6 +85,7 @@ function createApp() {
   app.use('/api/orders',              require('../../backend/routes/orders'));
   app.use('/api/pay',                 require('../../backend/routes/pay'));
   app.use('/api/upload',              require('../../backend/routes/upload'));
+  app.use('/api/config',              require('../../backend/routes/config'));
 
   // AI 助手（仅当 ENABLE_ASSISTANT=true 时挂载）
   if (process.env.ENABLE_ASSISTANT === 'true') {
