@@ -38,14 +38,12 @@ router.post('/inquire', insuranceWriteLimiter, auth, async (req, res) => {
     const plan = (await prisma.$queryRaw`SELECT * FROM insurance_plans WHERE id = ${plan_id}`)[0];
     if (!plan) return res.status(404).json({ error: '保险方案不存在' });
 
-    await prisma.$executeRaw`
+    const [{ id: newInquiryId }] = await prisma.$queryRaw`
       INSERT INTO insurance_inquiries (user_id, plan_id, plan_name, name, phone, peak_name, departure_date)
       VALUES (${req.user.id}, ${plan_id}, ${plan.name}, ${name}, ${phone}, ${peak_name || ''}, ${departure_date || ''})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO insurance_inquiries (...) VALUES (...) RETURNING id
-    const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-    const id = Number(idRow.id);
+    const id = Number(newInquiryId);
 
     res.json({
       success: true,

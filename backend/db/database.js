@@ -2344,6 +2344,20 @@ CREATE TABLE IF NOT EXISTS feed_scores (
   score REAL DEFAULT 0,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS location_shares (
+  id INTEGER PRIMARY KEY,
+  token TEXT UNIQUE,
+  sender_id INTEGER NOT NULL,
+  recipient_id TEXT,
+  recipient_type TEXT,
+  lat REAL,
+  lng REAL,
+  share_url TEXT,
+  expires_at DATETIME,
+  viewed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // Seed badges

@@ -76,8 +76,8 @@ router.post('/:id/moments', writeLimiter, auth, async (req, res) => {
     for (const m of moments) {
       if (!m.client_uuid || !m.recorded_at) continue;
       await prisma.$executeRaw`
-        INSERT OR IGNORE INTO expedition_moments (client_uuid, expedition_id, recorded_at, altitude, lat, lng, type, media_url, content, created_at)
-        VALUES (${m.client_uuid}, ${expedition.id}, ${m.recorded_at}, ${m.altitude || 0}, ${m.lat || null}, ${m.lng || null}, ${m.type || 'text'}, ${m.media_url || null}, ${m.content || null}, ${now})
+        INSERT INTO expedition_moments (client_uuid, expedition_id, recorded_at, altitude, lat, lng, type, media_url, content, created_at)
+        VALUES (${m.client_uuid}, ${expedition.id}, ${m.recorded_at}, ${m.altitude || 0}, ${m.lat || null}, ${m.lng || null}, ${m.type || 'text'}, ${m.media_url || null}, ${m.content || null}, ${now}) ON CONFLICT DO NOTHING
       `;
     }
     const countRow = (await prisma.$queryRaw`SELECT COUNT(*) as c FROM expedition_moments WHERE expedition_id = ${expedition.id}`)[0];
@@ -134,7 +134,7 @@ router.post('/:id/subscribe', auth, async (req, res) => {
   try {
     const expedition = (await prisma.$queryRaw`SELECT id FROM user_expeditions_log WHERE id = ${Number(req.params.id)}`)[0];
     if (!expedition) return res.status(404).json({ error: '远征记录不存在' });
-    await prisma.$executeRaw`INSERT OR IGNORE INTO expedition_subscribers (expedition_id, user_id) VALUES (${expedition.id}, ${req.user.id})`;
+    await prisma.$executeRaw`INSERT INTO expedition_subscribers (expedition_id, user_id) VALUES (${expedition.id}, ${req.user.id}) ON CONFLICT DO NOTHING`;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

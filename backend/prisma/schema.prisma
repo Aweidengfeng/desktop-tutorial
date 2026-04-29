@@ -1176,3 +1176,19 @@ model ModerationLog {
 
   @@map("moderation_logs")
 }
+
+model LocationShare {
+  id            Int       @id @default(autoincrement())
+  token         String    @unique
+  senderId      Int       @map("sender_id")
+  recipientId   String?   @map("recipient_id")
+  recipientType String?   @map("recipient_type")
+  lat           Float?
+  lng           Float?
+  shareUrl      String?   @map("share_url")
+  expiresAt     DateTime? @map("expires_at")
+  viewedAt      DateTime? @map("viewed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("location_shares")
+}

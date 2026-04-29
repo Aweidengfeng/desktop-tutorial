@@ -1,16 +1,5 @@
 require('dotenv').config();
 
-// ── 数据库初始化（建表 + 内置种子数据）──────────────────────────────────────
-// database.js 使用 better-sqlite3 执行 CREATE TABLE IF NOT EXISTS，确保所有
-// 表在 Prisma 路由使用之前已存在。必须在任何路由 require 之前加载。
-// 用 try/catch 包裹：若 DATABASE_PATH 指向的目录在 Railway Volume 挂载前不存在，
-// database.js 内部已会自动创建目录，但极端情况下若仍失败则记录日志而不崩溃。
-try {
-  require('./db/database');
-} catch (e) {
-  console.error('⚠️  数据库初始化失败，将以无表状态运行（请检查 DATABASE_PATH）:', e.message);
-}
-
 const pino = require('pino');
 const pinoHttp = require('pino-http');
 const { randomUUID } = require('crypto');
@@ -171,9 +160,24 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
   });
 });
 
-// 确保 better-sqlite3 建表语句在 Prisma 路由初始化之前执行
-// （testApp.js 已采用相同策略：先 require database.js，再挂载路由）
-require('./db/database');
+// PostgreSQL 模式：在路由挂载前检查 Prisma 连接
+if (process.env.DATABASE_PROVIDER === 'postgresql') {
+  const prisma = require('./db/prisma');
+  prisma.$connect()
+    .then(() => console.log('✅ Prisma 已连接到 PostgreSQL'))
+    .catch(e => {
+      console.error('❌ Prisma 连接 PostgreSQL 失败，退出:', e.message);
+      process.exit(1);
+    });
+} else {
+  // SQLite 模式：确保 better-sqlite3 建表语句在 Prisma 路由初始化之前执行
+  // （testApp.js 已采用相同策略：先 require database.js，再挂载路由）
+  try {
+    require('./db/database');
+  } catch (e) {
+    console.error('⚠️  数据库初始化失败（SQLite）:', e.message);
+  }
+}
 
 // 全局速率限制兜底（仅对 /api 前缀，不影响静态文件服务）
 app.use('/api', defaultLimiter);

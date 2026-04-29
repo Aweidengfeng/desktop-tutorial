@@ -55,10 +55,10 @@ router.post('/sos', auth, async (req, res) => {
       for (const c of contacts) {
         if (c.contact_user_id) {
           await prisma.$executeRaw`
-            INSERT OR IGNORE INTO notifications (user_id, type, title, body, data, created_at)
+            INSERT INTO notifications (user_id, type, title, body, data, created_at)
             VALUES (${c.contact_user_id}, 'sos_alert', 'SOS 求救',
               ${`${user.name || '您的联系人'} 触发了 SOS 求救，位置：${locationStr || '未知'}`},
-              ${JSON.stringify({ sos_record_id: record.id, lat, lng })}, CURRENT_TIMESTAMP)
+              ${JSON.stringify({ sos_record_id: record.id, lat, lng })}, CURRENT_TIMESTAMP) ON CONFLICT DO NOTHING
           `;
         }
       }

@@ -130,7 +130,7 @@ router.post('/', auth, async (req, res) => {
     const addonsStr = addons ? JSON.stringify(addons) : null;
     const gdStr = group_discount ? JSON.stringify(group_discount) : null;
     const psStr = payment_stages ? JSON.stringify(payment_stages) : null;
-    await prisma.$executeRaw`
+    const [{ id: newExpeditionId }] = await prisma.$queryRaw`
       INSERT INTO expeditions (
         publisher_type, publisher_id, peak_id, title, cover_image, gallery,
         route_name, difficulty, start_date, end_date, total_days,
@@ -147,10 +147,9 @@ router.post('/', auth, async (req, res) => {
         ${base_price}, ${currency || 'CNY'}, ${addonsStr},
         ${early_bird_price || null}, ${early_bird_deadline || null},
         ${gdStr}, ${psStr}, ${cancel_policy || null}, ${commission_rate}, 'pending', ${now}, ${now})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO expeditions (...) VALUES (...) RETURNING id
-    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = last_insert_rowid()`;
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${newExpeditionId}`;
     res.json(expedition);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -262,7 +261,7 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
     const order_no = 'EX' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
     const now = new Date().toISOString();
     const addonsStr = selected_addons ? JSON.stringify(selected_addons) : null;
-    await prisma.$executeRaw`
+    const [{ id: newOrderId }] = await prisma.$queryRaw`
       INSERT INTO expedition_orders (
         order_no, expedition_id, user_id, participants, selected_addons,
         subtotal, discount, total, platform_fee, publisher_income,
@@ -271,10 +270,9 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
         ${subtotal}, ${discount}, ${total}, ${platform_fee}, ${publisher_income},
         'pending_payment', ${contact_name || null}, ${contact_phone || null},
         ${emergency_contact || null}, ${emergency_phone || null}, ${notes || null}, ${now})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO expedition_orders (...) VALUES (...) RETURNING id
-    const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = last_insert_rowid()`;
+    const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = ${newOrderId}`;
     res.json(order);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

@@ -51,29 +51,25 @@ router.post('/', teamsWriteLimiter, auth, async (req, res) => {
   try {
     const { name, peak, date, totalSpots, level, description, equipment_required, notes, difficulty, fee } = req.body;
     const user = (await prisma.$queryRaw`SELECT * FROM users WHERE id = ${req.user.id}`)[0];
-    await prisma.$executeRaw`
+    const [{ id: teamId }] = await prisma.$queryRaw`
       INSERT INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, equipment_required, notes, difficulty, fee)
       VALUES (${name}, ${peak}, ${date}, ${totalSpots}, ${totalSpots}, ${level},
               ${user.name}, ${user.avatar}, ${req.user.id}, ${description || ''},
               ${equipment_required || null}, ${notes || null}, ${difficulty || null}, ${fee || null})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO teams (...) VALUES (...) RETURNING id
-    const [{ id: teamId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     // 创建者自动加入 team_members（leader）
     await prisma.$executeRaw`
-      INSERT OR IGNORE INTO team_members (team_id, user_id, name, avatar, status) VALUES (${teamId}, ${req.user.id}, ${user.name}, ${user.avatar}, 'leader')
+      INSERT INTO team_members (team_id, user_id, name, avatar, status) VALUES (${teamId}, ${req.user.id}, ${user.name}, ${user.avatar}, 'leader') ON CONFLICT DO NOTHING
     `;
     // 自动为新队伍创建群聊
-    await prisma.$executeRaw`
+    const [{ id: chatId }] = await prisma.$queryRaw`
       INSERT INTO group_chats (team_id, name, avatar, created_by) VALUES (${teamId}, ${name}, ${user.avatar || ''}, ${req.user.id})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO group_chats (...) VALUES (...) RETURNING id
-    const [{ id: chatId }] = await prisma.$queryRaw`SELECT last_insert_rowid() as id`;
     await prisma.$executeRaw`UPDATE teams SET group_chat_id = ${chatId} WHERE id = ${teamId}`;
     // 队长加入群聊
-    await prisma.$executeRaw`INSERT OR IGNORE INTO group_chat_members (chat_id, user_id, role) VALUES (${chatId}, ${req.user.id}, 'owner')`;
+    await prisma.$executeRaw`INSERT INTO group_chat_members (chat_id, user_id, role) VALUES (${chatId}, ${req.user.id}, 'owner') ON CONFLICT DO NOTHING`;
 
     const team = (await prisma.$queryRaw`
       SELECT id, name, peak, date, spots, total_spots as totalSpots,
@@ -131,7 +127,7 @@ router.put('/:id/members/:memberId/approve', teamsWriteLimiter, auth, async (req
     // 将成员加入队伍群聊
     if (team.group_chat_id) {
       try {
-        await prisma.$executeRaw`INSERT OR IGNORE INTO group_chat_members (chat_id, user_id, role) VALUES (${team.group_chat_id}, ${member.user_id}, 'member')`;
+        await prisma.$executeRaw`INSERT INTO group_chat_members (chat_id, user_id, role) VALUES (${team.group_chat_id}, ${member.user_id}, 'member') ON CONFLICT DO NOTHING`;
       } catch(e) {}
     }
     // 通知申请人已被批准

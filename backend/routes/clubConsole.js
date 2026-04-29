@@ -84,14 +84,12 @@ router.post('/activities', writeLimiter, auth, async (req, res) => {
     const now = new Date().toISOString();
     let resultId = null;
     try {
-      await prisma.$executeRaw`
+      const [{ id: newExpeditionId }] = await prisma.$queryRaw`
         INSERT INTO expeditions (publisher_type, publisher_id, title, route_name, start_date, max_participants, base_price, currency, status, created_at, updated_at)
         VALUES ('club', ${club.id}, ${title}, ${description || null}, ${date}, ${max_participants || 20}, ${price || 0}, 'CNY', 'published', ${now}, ${now})
+        RETURNING id
       `;
-      // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-      // 参考：INSERT INTO expeditions (...) VALUES (...) RETURNING id
-      const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-      resultId = Number(idRow.id);
+      resultId = Number(newExpeditionId);
     } catch (_) {}
     res.json({ id: resultId, title, date, status: 'published' });
   } catch (e) {

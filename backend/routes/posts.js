@@ -192,7 +192,7 @@ router.post('/:id/save', saveLimiter, auth, async (req, res) => {
     const id = parseInt(req.params.id);
     const [post] = await prisma.$queryRaw`SELECT id FROM posts WHERE id = ${id}`;
     if (!post) return res.status(404).json({ error: '帖子不存在' });
-    await prisma.$executeRaw`INSERT OR IGNORE INTO post_saves (user_id, post_id) VALUES (${req.user.id}, ${id})`;
+    await prisma.$executeRaw`INSERT INTO post_saves (user_id, post_id) VALUES (${req.user.id}, ${id}) ON CONFLICT DO NOTHING`;
     const [row] = await prisma.$queryRaw`SELECT COUNT(*) as cnt FROM post_saves WHERE post_id = ${id}`;
     res.json({ success: true, saved: true, count: Number(row.cnt) });
   } catch (e) {

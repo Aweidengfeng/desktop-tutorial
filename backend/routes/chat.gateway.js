@@ -47,11 +47,8 @@ function initChatGateway(server) {
       }
       const isSOS = SOS_KEYWORDS.some(kw => content.includes(kw));
       try {
-        await prisma.$executeRaw`INSERT INTO messages (conversation_id, sender_id, content, type, reply_to_id, content_json) VALUES (${conv_id}, ${uid}, ${content}, ${type}, ${reply_to_id || null}, ${content_json ? JSON.stringify(content_json) : null})`;
-        // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-        // 参考：INSERT INTO messages (...) VALUES (...) RETURNING id
-        const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-        const msg = (await prisma.$queryRaw`SELECT * FROM messages WHERE id = ${Number(idRow.id)}`)[0];
+        const [{ id: newMsgId }] = await prisma.$queryRaw`INSERT INTO messages (conversation_id, sender_id, content, type, reply_to_id, content_json) VALUES (${conv_id}, ${uid}, ${content}, ${type}, ${reply_to_id || null}, ${content_json ? JSON.stringify(content_json) : null}) RETURNING id`;
+        const msg = (await prisma.$queryRaw`SELECT * FROM messages WHERE id = ${Number(newMsgId)}`)[0];
         await prisma.$executeRaw`UPDATE conversations SET updated_at = CURRENT_TIMESTAMP, last_msg_at = CURRENT_TIMESTAMP WHERE id = ${conv_id}`;
         io.to(`conv:${conv_id}`).emit('chat:message', msg);
         if (isSOS) {
@@ -70,7 +67,7 @@ function initChatGateway(server) {
     socket.on('chat:read', async ({ conv_id, msg_id }) => {
       if (!conv_id || !msg_id) return;
       try {
-        await prisma.$executeRaw`INSERT OR IGNORE INTO message_reads (msg_id, user_id) VALUES (${msg_id}, ${uid})`;
+        await prisma.$executeRaw`INSERT INTO message_reads (msg_id, user_id) VALUES (${msg_id}, ${uid}) ON CONFLICT DO NOTHING`;
         try {
           await prisma.$executeRaw`UPDATE conversation_members SET last_read_msg_id = ${msg_id} WHERE conv_id = ${conv_id} AND user_id = ${uid}`;
         } catch(e) {}
@@ -117,12 +114,9 @@ function initChatGateway(server) {
         const imagesArr = Array.isArray(images) ? images : [];
         const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
         const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
-        await prisma.$executeRaw`INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (${chat_id}, ${uid}, ${content || ''}, ${msgType}, ${imagesStr})`;
-        // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-        // 参考：INSERT INTO group_messages (...) VALUES (...) RETURNING id
-        const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
+        const [{ id: newGroupMsgId }] = await prisma.$queryRaw`INSERT INTO group_messages (chat_id, sender_id, content, type, images) VALUES (${chat_id}, ${uid}, ${content || ''}, ${msgType}, ${imagesStr}) RETURNING id`;
         const user = (await prisma.$queryRaw`SELECT name, avatar FROM users WHERE id = ${uid}`)[0];
-        const msg = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, created_at FROM group_messages WHERE id = ${Number(idRow.id)}`)[0];
+        const msg = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, created_at FROM group_messages WHERE id = ${Number(newGroupMsgId)}`)[0];
         msg.images = msg.images ? JSON.parse(msg.images) : [];
         msg.senderName = user ? user.name : '';
         msg.senderAvatar = user ? user.avatar : '';

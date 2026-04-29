@@ -85,7 +85,7 @@ router.post('/:id/wishlist', writeLimiter, auth, async (req, res) => {
     const [peak] = await prisma.$queryRaw`SELECT id FROM peaks WHERE id = ${id}`;
     if (!peak) return res.status(404).json({ error: '山峰不存在' });
     const { note } = req.body;
-    await prisma.$executeRaw`INSERT OR IGNORE INTO mountain_wishlists (user_id, peak_id, note) VALUES (${req.user.id}, ${id}, ${note || null})`;
+    await prisma.$executeRaw`INSERT INTO mountain_wishlists (user_id, peak_id, note) VALUES (${req.user.id}, ${id}, ${note || null}) ON CONFLICT DO NOTHING`;
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

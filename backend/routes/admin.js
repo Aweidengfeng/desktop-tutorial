@@ -262,13 +262,12 @@ router.post('/clubs', adminWriteLimiter, adminAuth, async (req, res) => {
     const { name, region, specialty, description, contact, verified } = req.body;
     if (!name) return res.status(400).json({ error: '俱乐部名称不能为空' });
     const verifiedVal = verified ? 1 : 0;
-    await prisma.$executeRaw`
+    const [{ id: newClubId }] = await prisma.$queryRaw`
       INSERT INTO clubs (name, region, specialty, description, contact, verified, status)
       VALUES (${name}, ${region || null}, ${specialty || null}, ${description || null}, ${contact || null}, ${verifiedVal}, 'active')
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO clubs (...) VALUES (...) RETURNING id
-    const club = (await prisma.$queryRaw`SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs WHERE id = (SELECT last_insert_rowid())`)[0];
+    const club = (await prisma.$queryRaw`SELECT id, name, description, specialty, region, members_count, expeditions, verified, status, created_at FROM clubs WHERE id = ${newClubId}`)[0];
     res.json(club);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -583,13 +582,11 @@ router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, asyn
       const clubName = app.club_name || app.name;
       const clubType = app.type || '综合';
       const certUrl = app.cert_url || null;
-      await prisma.$executeRaw`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, business_license_url, creator_id, status, approved_at, approved_by)
+      const [{ id: newClubId }] = await prisma.$queryRaw`INSERT INTO clubs (name, description, specialty, region, type, contact, wechat, website, business_license_url, creator_id, status, approved_at, approved_by)
                   VALUES (${clubName}, ${app.description}, ${app.specialty}, ${app.region}, ${clubType},
-                         ${app.contact}, ${app.wechat}, ${app.website}, ${certUrl}, ${app.user_id}, 'approved_pending_payment', ${now}, 'admin')`;
-      // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-      // 参考：INSERT INTO clubs (...) VALUES (...) RETURNING id
-      const ins = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-      await prisma.$executeRaw`UPDATE club_applications SET club_id = ${ins.id} WHERE id = ${app.id}`;
+                         ${app.contact}, ${app.wechat}, ${app.website}, ${certUrl}, ${app.user_id}, 'approved_pending_payment', ${now}, 'admin')
+                  RETURNING id`;
+      await prisma.$executeRaw`UPDATE club_applications SET club_id = ${newClubId} WHERE id = ${app.id}`;
     }
     try { await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${app.user_id}, 'club_review', '俱乐部申请审核通过，请完成付费', '您的俱乐部申请已审核通过，请支付入驻费后正式入驻平台', '/club-portal')`; } catch(e) {}
     res.json({ success: true });
@@ -997,7 +994,7 @@ router.post('/peaks', adminWriteLimiter, adminAuth, async (req, res) => {
     const categoriesStr = Array.isArray(categories) ? JSON.stringify(categories) : (categories || null);
     const routesStr = Array.isArray(routes) ? JSON.stringify(routes) : (routes || null);
     const campsStr = Array.isArray(camps) ? JSON.stringify(camps) : (camps || null);
-    await prisma.$executeRaw`
+    const [{ id: newPeakId }] = await prisma.$queryRaw`
       INSERT INTO peaks (name, name_en, altitude, country, continent, difficulty, image, cover_image,
                          type, category, categories, description, best_season, first_ascent, deaths,
                          success_rate, annual_climbers, commercial_teams, latitude, longitude, region,
@@ -1012,10 +1009,9 @@ router.post('/peaks', adminWriteLimiter, adminAuth, async (req, res) => {
              ${region || null}, ${routesStr}, ${campsStr}, ${main_route || null},
              ${supplemental_oxygen || 0}, ${season_detail || null},
              ${operating_company || null}, ${data_source || '管理员录入'}, ${permit_fee || null})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO peaks (...) VALUES (...) RETURNING id
-    const peak = (await prisma.$queryRaw`SELECT * FROM peaks WHERE id = (SELECT last_insert_rowid())`)[0];
+    const peak = (await prisma.$queryRaw`SELECT * FROM peaks WHERE id = ${newPeakId}`)[0];
     res.json(peak);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -1161,15 +1157,14 @@ router.post('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
     const { name, peak, difficulty, region, altitude, duration_days, best_season, description } = req.body;
     if (!name) return res.status(400).json({ error: '线路名称不能为空' });
-    await prisma.$executeRaw`
+    const [{ id: newRouteId }] = await prisma.$queryRaw`
       INSERT INTO climbing_routes (name, peak, difficulty, region, altitude, duration_days, best_season, description, status)
       VALUES (${name}, ${peak || null}, ${difficulty || null}, ${region || null},
               ${altitude ? parseInt(altitude) : null}, ${duration_days ? parseInt(duration_days) : null},
               ${best_season || null}, ${description || null}, 'active')
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO climbing_routes (...) VALUES (...) RETURNING id
-    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = (SELECT last_insert_rowid())`)[0];
+    const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${newRouteId}`)[0];
     res.json(route);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

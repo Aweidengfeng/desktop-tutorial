@@ -40,11 +40,8 @@ router.post('/conversations', auth, async (req, res) => {
     const u2 = Math.max(req.user.id, parseInt(target_user_id, 10));
     let conv = (await prisma.$queryRaw`SELECT * FROM conversations WHERE user1_id = ${u1} AND user2_id = ${u2}`)[0];
     if (!conv) {
-      await prisma.$executeRaw`INSERT INTO conversations (user1_id, user2_id) VALUES (${u1}, ${u2})`;
-      // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-      // 参考：INSERT INTO conversations (...) VALUES (...) RETURNING id
-      const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
-      conv = (await prisma.$queryRaw`SELECT * FROM conversations WHERE id = ${Number(idRow.id)}`)[0];
+      const [{ id: newConvId }] = await prisma.$queryRaw`INSERT INTO conversations (user1_id, user2_id) VALUES (${u1}, ${u2}) RETURNING id`;
+      conv = (await prisma.$queryRaw`SELECT * FROM conversations WHERE id = ${Number(newConvId)}`)[0];
     }
     res.json({ ...conv, otherId: targetUser.id, otherName: targetUser.name, otherAvatar: targetUser.avatar });
   } catch (e) {
@@ -88,14 +85,12 @@ router.post('/conversations/:id/messages', messageLimiter, auth, async (req, res
     if (!conv) return res.status(403).json({ error: '无权访问此会话' });
     const msgType = type || (imagesArr.length > 0 && content ? 'mixed' : imagesArr.length > 0 ? 'image' : 'text');
     const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
-    await prisma.$executeRaw`
+    const [{ id: newMsgId }] = await prisma.$queryRaw`
       INSERT INTO messages (conversation_id, sender_id, content, type, images) VALUES (${Number(req.params.id)}, ${req.user.id}, ${content || ''}, ${msgType}, ${imagesStr})
+      RETURNING id
     `;
-    // TODO(Phase1-PG): PostgreSQL迁移时替换为 RETURNING id 语法
-    // 参考：INSERT INTO messages (...) VALUES (...) RETURNING id
-    const idRow = (await prisma.$queryRaw`SELECT last_insert_rowid() as id`)[0];
     await prisma.$executeRaw`UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ${Number(req.params.id)}`;
-    const message = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE id = ${Number(idRow.id)}`)[0];
+    const message = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE id = ${Number(newMsgId)}`)[0];
     message.images = message.images ? JSON.parse(message.images) : [];
     res.json(message);
   } catch (e) {
