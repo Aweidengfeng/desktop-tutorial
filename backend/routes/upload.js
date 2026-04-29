@@ -77,7 +77,7 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
     try {
       const review = await reviewImageFile(req.file.path);
       if (review.suggestion === 'block') {
-        fs.unlink(req.file.path, () => {});
+        fs.unlink(path.join(uploadDir, req.file.filename), () => {});
         return res.status(400).json({ error: '图片内容违规，上传被拒绝' });
       }
       if (review.suggestion === 'review') {
@@ -105,8 +105,8 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
       try {
         const review = await reviewImageFile(f.path);
         if (review.suggestion === 'block') {
-          // 删除所有已上传文件
-          for (const rf of req.files) fs.unlink(rf.path, () => {});
+          // 删除所有已上传文件（使用受控路径而非 req.file.path）
+          for (const rf of req.files) fs.unlink(path.join(uploadDir, rf.filename), () => {});
           return res.status(400).json({ error: '图片内容违规，上传被拒绝' });
         }
         if (review.suggestion === 'review') {

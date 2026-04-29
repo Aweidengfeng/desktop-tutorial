@@ -12,6 +12,12 @@
 const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
+
+// Resolve the expected uploads directory for path validation
+const uploadsDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, '..', 'uploads');
 
 /**
  * 使用阿里云 API v3 签名规范构建 Authorization 头
@@ -57,9 +63,17 @@ async function reviewImageFile(filePath) {
   const host = `green-cip.${region}.aliyuncs.com`;
   const apiPath = '/api/v1/greenings/image';
 
+  // Validate that filePath is within the expected uploads directory (prevent path traversal)
+  const resolvedPath = path.resolve(filePath);
+  const resolvedUploadsDir = path.resolve(uploadsDir);
+  if (!resolvedPath.startsWith(resolvedUploadsDir + path.sep) && resolvedPath !== resolvedUploadsDir) {
+    console.error('[contentSafety] 非法文件路径，拒绝审核:', filePath);
+    return { suggestion: 'pass' };
+  }
+
   let imageBase64;
   try {
-    imageBase64 = fs.readFileSync(filePath).toString('base64');
+    imageBase64 = fs.readFileSync(resolvedPath).toString('base64');
   } catch (e) {
     console.error('[contentSafety] 读取文件失败，放行：', e.message);
     return { suggestion: 'pass' };
@@ -69,8 +83,7 @@ async function reviewImageFile(filePath) {
   const bodyStr = JSON.stringify({ service: 'baselineCheck', serviceParameters });
 
   const now = new Date();
-  const xAcsDate = now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[-:]/g, '').replace('T', 'T').slice(0, 16) + '00Z';
-  // ISO 8601 format: YYYYMMDDTHHmmssZ
+  // ISO 8601 format for x-acs-date header (e.g. 2026-04-29T12:00:00Z)
   const dateHeader = now.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
   const headers = {
