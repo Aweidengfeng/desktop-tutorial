@@ -1224,7 +1224,7 @@
         <div class="flex items-center gap-2 mb-3">
           <h3 class="font-display font-bold text-white">我的历史轨迹</h3>
           <template x-if="pendingUploadCount > 0">
-            <span @click="syncPendingTracks()" class="cursor-pointer bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" x-text="pendingUploadCount + ' 待上传'"></span>
+            <span @click="syncPendingTracks()" @keydown.enter="syncPendingTracks()" role="button" tabindex="0" class="cursor-pointer bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" x-text="pendingUploadCount + ' 待上传'"></span>
           </template>
         </div>
         <div class="space-y-3">
@@ -6762,25 +6762,25 @@ function alpineLink() {
     async syncPendingTracks() {
       if (!this.authToken) return;
       let pending;
-      try { pending = await idbGetPendingTracks(); } catch(e) { return; }
+      try { pending = await idbGetPendingTracks(); } catch(e) { console.warn('[IDB] 读取待上传轨迹失败', e); return; }
       for (const track of pending) {
         if (track.retries >= 3) {
-          await idbUpdateTrackStatus(track.id, 'failed', track.retries).catch(() => {});
+          await idbUpdateTrackStatus(track.id, 'failed', track.retries).catch(e => console.warn('[IDB] 更新状态失败', e));
           continue;
         }
-        await idbUpdateTrackStatus(track.id, 'uploading', track.retries).catch(() => {});
+        await idbUpdateTrackStatus(track.id, 'uploading', track.retries).catch(e => console.warn('[IDB] 更新状态失败', e));
         try {
           const res = await apiFetch('/api/tracks', {
             method: 'POST',
             body: { name: track.name, points: track.points, distance: 0, elevation_gain: 0, duration: '00:00' },
           });
           if (res.ok) {
-            await idbDeletePendingTrack(track.id).catch(() => {});
+            await idbDeletePendingTrack(track.id).catch(e => console.warn('[IDB] 删除记录失败', e));
           } else {
-            await idbUpdateTrackStatus(track.id, 'failed', track.retries + 1).catch(() => {});
+            await idbUpdateTrackStatus(track.id, 'failed', track.retries + 1).catch(e => console.warn('[IDB] 更新状态失败', e));
           }
         } catch(e) {
-          await idbUpdateTrackStatus(track.id, 'pending', track.retries + 1).catch(() => {});
+          await idbUpdateTrackStatus(track.id, 'pending', track.retries + 1).catch(err => console.warn('[IDB] 更新状态失败', err));
         }
       }
       this.pendingUploadCount = await idbGetPendingTracks().then(t => t.length).catch(() => 0);
