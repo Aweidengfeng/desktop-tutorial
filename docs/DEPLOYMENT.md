@@ -1,6 +1,6 @@
-# SummitLink 部署指南
+# AlpineLink 部署运维手册
 
-本文档涵盖本地开发环境搭建、生产环境部署（Railway 平台）、自检清单、数据库备份，以及监控与可观测性说明。
+本文档涵盖本地开发环境搭建、Railway 一键部署（当前生产）、Docker Compose 多节点部署、环境变量清单、PostgreSQL 备份策略、健康检查端点说明，以及回滚策略。
 
 ---
 
@@ -8,11 +8,13 @@
 
 1. [本地开发快速启动](#本地开发快速启动)
 2. [环境变量清单](#环境变量清单)
-3. [Railway 平台部署](#railway-平台部署)
-4. [生产环境启动前自检](#生产环境启动前自检)
-5. [数据库备份与恢复](#数据库备份与恢复)
-6. [域名 / HTTPS / 反向代理](#域名--https--反向代理)
-7. [监控与可观测性](#监控与可观测性)
+3. [Railway 平台部署（当前生产）](#railway-平台部署当前生产)
+4. [Docker Compose 多节点部署](#docker-compose-多节点部署)
+5. [生产环境启动前自检](#生产环境启动前自检)
+6. [健康检查端点](#健康检查端点)
+7. [PostgreSQL 备份策略](#postgresql-备份策略)
+8. [回滚策略](#回滚策略)
+9. [监控与可观测性](#监控与可观测性)
 
 ---
 
@@ -71,23 +73,24 @@ npm start
 | `ADMIN_JWT_SECRET` | 否 | 同 `JWT_SECRET` | 管理后台专用 JWT 密钥（如需独立） |
 | `ADMIN_USERNAME` | 否 | `admin` | 管理员用户名 |
 | `ADMIN_PASSWORD` | **生产必需** | 开发默认值（不安全） | 管理员密码 |
-| `COOKIE_SECRET` | 否 | — | Cookie 签名密钥（留作扩展） |
+| `DATABASE_PROVIDER` | **生产必需** | `sqlite` | 数据库类型，生产设为 `postgresql` |
+| `DATABASE_URL` | **生产必需** | — | Prisma 连接字符串，如 `postgresql://user:pass@host:5432/db` |
+| `UPLOADS_DIR` | 否 | `backend/uploads` | 上传文件目录 |
+| `SEED_ON_START` | 否 | `false` | 设为 `true` 时启动时执行数据填充 |
+| `CORS_ORIGINS` | **生产必需** | — | CORS 白名单，逗号分隔，例：`https://example.com` |
+| `MAPBOX_TOKEN` | 否 | — | Mapbox GL JS Token（海外地图切换功能） |
+| `ALIYUN_ACCESS_KEY_ID` | 否 | — | 阿里云 AccessKey ID（内容安全审核） |
+| `ALIYUN_ACCESS_KEY_SECRET` | 否 | — | 阿里云 AccessKey Secret（内容安全审核） |
 | `OPENWEATHER_API_KEY` | 天气功能必需 | — | OpenWeatherMap API Key |
 | `AMAP_KEY` | 地图功能必需 | — | 高德地图 Web JS API Key |
 | `AMAP_SECURITY_CODE` | 地图功能必需 | — | 高德 Web JS API 2.0 安全密钥 |
-| `CORS_ORIGINS` | **生产必需** | — | CORS 白名单，逗号分隔，例：`https://example.com` |
-| `DATABASE_PATH` | 否 | `backend/db/summitlink.db` | SQLite 数据库文件路径 |
-| `UPLOADS_DIR` | 否 | `backend/uploads` | 上传文件目录 |
-| `SEED_ON_START` | 否 | `false` | 设为 `true` 时启动时执行数据填充 |
 | `SENTRY_DSN` | 否 | — | Sentry DSN，未设置则不启用监控 |
-| `SENTRY_RELEASE` | 否 | — | Sentry 发布版本标识（可用 git commit hash）|
+| `COOKIE_SECRET` | 否 | — | Cookie 签名密钥（留作扩展） |
 | `SMS_PROVIDER` | 否 | mock | 短信服务商（`aliyun` 切换阿里云）|
-| `WECHAT_APPID` | 否 | — | 微信小程序 AppID（预留） |
-| `WECHAT_SECRET` | 否 | — | 微信小程序 Secret（预留） |
 
 ---
 
-## Railway 平台部署
+## Railway 平台部署（当前生产）
 
 ### 前置条件
 
@@ -126,8 +129,9 @@ Railway 容器重启后临时文件会丢失，**必须挂载 Volume** 持久化
 ```
 NODE_ENV=production
 PORT=8080
-DATABASE_PATH=/data/summitlink.db
-UPLOADS_DIR=/data/uploads
+DATABASE_PROVIDER=postgresql
+DATABASE_URL=postgresql://<user>:<pass>@<host>:5432/<db>
+UPLOADS_DIR=/app/uploads
 JWT_SECRET=<用 openssl rand -hex 32 生成>
 ADMIN_PASSWORD=<强随机密码>
 CORS_ORIGINS=https://你的域名,https://www.你的域名
@@ -155,6 +159,72 @@ curl -I https://your-app.railway.app/
 
 ---
 
+## Docker Compose 多节点部署
+
+本方案使用 `docker-compose.prod.yml` 在单机或多机上运行 2 个后端副本 + Nginx 负载均衡。
+
+### 前置条件
+
+- Docker ≥ 24 及 Docker Compose V2（`docker compose` 命令）
+- 已有 PostgreSQL 实例（Railway PostgreSQL / 阿里云 RDS / 自托管 PostgreSQL）
+- SSL 证书（放在 `./ssl/` 目录，可用 Let's Encrypt）
+
+### 步骤
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/gaoshanyindi/desktop-tutorial.git
+cd desktop-tutorial
+
+# 2. 创建 .env 文件（参考下方环境变量清单）
+cat > .env << 'EOF'
+DATABASE_URL=postgresql://alpinelink:<password>@<host>:5432/alpinelink
+JWT_SECRET=<openssl rand -hex 32>
+ADMIN_PASSWORD=<强随机密码>
+MAPBOX_TOKEN=<可选>
+ALIYUN_ACCESS_KEY_ID=<可选>
+ALIYUN_ACCESS_KEY_SECRET=<可选>
+EOF
+
+# 3. 构建镜像
+docker compose -f docker-compose.prod.yml build
+
+# 4. 推送 Prisma schema 并 seed（仅首次）
+docker compose -f docker-compose.prod.yml run --rm \
+  -e SEED_ON_START=true \
+  backend node db/seed.js
+
+# 5. 启动服务（后台运行）
+docker compose -f docker-compose.prod.yml up -d
+
+# 6. 验证健康状态
+curl http://localhost/api/health
+```
+
+### 扩容 / 缩容
+
+```bash
+# 扩容到 3 个后端副本
+docker compose -f docker-compose.prod.yml up -d --scale backend=3
+
+# 缩回 2 个副本
+docker compose -f docker-compose.prod.yml up -d --scale backend=2
+```
+
+### 零停机更新（滚动发布）
+
+`deploy.update_config.order: start-first` 已在 `docker-compose.prod.yml` 中配置，使用 Docker Swarm 时自动执行滚动更新：
+
+```bash
+# 构建新镜像
+docker compose -f docker-compose.prod.yml build
+
+# 使用 Swarm 滚动发布
+docker stack deploy -c docker-compose.prod.yml alpinelink
+```
+
+---
+
 ## 生产环境启动前自检
 
 | 检查项 | 验证方法 | 备注 |
@@ -162,7 +232,7 @@ curl -I https://your-app.railway.app/
 | `JWT_SECRET` 已设置且非默认值 | 服务启动时会自动校验，若为默认值则拒绝启动 | 必须 |
 | `ADMIN_PASSWORD` 已设置且非默认值 | 同上 | 必须 |
 | `CORS_ORIGINS` 已配置 | `curl -H "Origin: https://evil.com" /api/auth/me` 应返回 CORS 错误 | 生产必须 |
-| SQLite 数据库路径可写 | 检查 Volume 挂载是否成功 | Railway 部署必须 |
+| `DATABASE_PROVIDER=postgresql` | 确认环境变量 | 生产必须 |
 | `SEED_ON_START=false` | 确认环境变量值 | 防止每次重启重置数据 |
 | `AMAP_KEY` / `AMAP_SECURITY_CODE` 已配置 | 打开前端页面，地图正常加载 | 地图功能必须 |
 | `OPENWEATHER_API_KEY` 已配置 | `curl /api/weather?location=珠峰大本营` 返回正常数据 | 天气功能必须 |
@@ -180,49 +250,106 @@ openssl rand -base64 24
 
 ---
 
-## 数据库备份与恢复
+## 健康检查端点
 
-### 手动备份（Railway Volume）
-
-Railway Volume 数据存储在 `/data/summitlink.db`，可通过 Railway CLI 导出：
-
-```bash
-# 安装 Railway CLI
-npm i -g @railway/cli
-
-# 登录并进入项目
-railway login
-railway link
-
-# 进入容器 shell
-railway shell
-
-# 在容器内备份数据库
-cp /data/summitlink.db /data/summitlink-backup-$(date +%Y%m%d).db
+```
+GET /api/health
 ```
 
-### SQLite 热备份（在线备份，不锁定）
+返回示例：
+
+```json
+{
+  "status": "ok",
+  "uptime": 3600.5,
+  "version": "1.0.0"
+}
+```
+
+- **Railway**：在 Service Settings 中将 healthcheck path 设为 `/api/health`
+- **Docker Compose**：已在 `docker-compose.prod.yml` 的 `healthcheck.test` 中配置
+- **外部监控**：UptimeRobot / BetterStack 可每 1 分钟轮询此端点并在宕机时发送告警
+
+---
+
+## PostgreSQL 备份策略
+
+### 手动备份（pg_dump）
 
 ```bash
-# 使用 SQLite .backup 命令（不影响在线读写）
-sqlite3 /data/summitlink.db ".backup /data/summitlink-backup.db"
+# 单次备份
+pg_dump "$DATABASE_URL" --no-owner --no-acl \
+  -f backup-$(date +%Y%m%d-%H%M%S).sql
+
+# 压缩格式（推荐，便于恢复）
+pg_dump "$DATABASE_URL" --no-owner --no-acl \
+  -Fc -f backup-$(date +%Y%m%d).dump
 ```
 
 ### 恢复备份
 
 ```bash
-# 停止服务（Railway → Service → Pause）
-# 通过 Railway CLI 替换数据库文件
-cp /data/summitlink-backup-20260101.db /data/summitlink.db
-# 重新启动服务
+# 恢复 SQL 文件
+psql "$DATABASE_URL" < backup-20260429.sql
+
+# 恢复压缩格式
+pg_restore --no-owner --no-acl -d "$DATABASE_URL" backup-20260429.dump
 ```
 
-### 自动备份建议
+### 自动备份（cron）
 
-生产环境建议配置定期备份脚本，可参考以下方案：
+在部署服务器上配置 crontab，每日凌晨 2 点自动备份并保留 7 天：
 
-1. **Railway Cron Service**：创建一个独立的 Railway 服务，每日凌晨 2 点执行备份并上传至对象存储（阿里云 OSS / 腾讯云 COS）
-2. **GitHub Actions 定时任务**：每日拉取备份文件并存储至 GitHub Artifact（适合小数据量）
+```bash
+# 编辑 crontab
+crontab -e
+
+# 添加以下行（将 DATABASE_URL 替换为实际连接串）
+0 2 * * * DATABASE_URL="postgresql://alpinelink:<pass>@<host>:5432/alpinelink" \
+  pg_dump "$DATABASE_URL" --no-owner --no-acl -Fc \
+  -f /data/backups/alpinelink-$(date +\%Y\%m\%d).dump \
+  && find /data/backups -name "alpinelink-*.dump" -mtime +7 -delete
+```
+
+### Railway PostgreSQL 自动备份
+
+Railway PostgreSQL 插件提供每日自动备份（保留 7 天），在 **Database → Backups** 面板可查看和恢复。
+
+---
+
+## 回滚策略
+
+### Railway 回滚
+
+1. 进入 **Deployments** 面板，找到上一个成功的部署
+2. 点击 **Redeploy** 回滚到该版本
+3. 若数据库 schema 有变化，使用上面的 pg_dump 备份恢复
+
+### Docker Compose 镜像回滚
+
+```bash
+# 查看已构建的镜像版本（建议使用 git commit hash 打 tag）
+docker images alpinelink-backend
+
+# 回滚到指定版本
+docker compose -f docker-compose.prod.yml stop backend
+docker tag alpinelink-backend:<old-tag> alpinelink-backend:latest
+docker compose -f docker-compose.prod.yml up -d backend
+```
+
+### 数据库回滚
+
+```bash
+# 1. 停止后端服务（避免写入新数据）
+docker compose -f docker-compose.prod.yml stop backend
+
+# 2. 恢复备份（确保已有 pg_dump 备份）
+pg_restore --no-owner --no-acl -d "$DATABASE_URL" \
+  /data/backups/alpinelink-20260428.dump
+
+# 3. 重新启动后端
+docker compose -f docker-compose.prod.yml start backend
+```
 
 ---
 

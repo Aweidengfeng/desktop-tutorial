@@ -70,7 +70,7 @@
 | 1.2 | 轨迹points字段迁移（TEXT JSON → JSONB/PostGIS） | P0 | ✅ 已完成 | ✅ 2026-04-29 — Prisma schema tracks.points 改为 Json 类型；路由去除 JSON.parse（兼容 string/object 双模式） |
 | 1.3 | 独立images表设计与迁移 | P1 | ✅ 已完成 | ✅ 2026-04-29 — 新增 Image 模型；上传路由同步写入 images 表；向后兼容原字段 |
 | 1.4 | 数据库迁移脚本编写与回滚方案 | P0 | 🔄 已准备 | ✅ 2026-04-27 — Prisma schema支持env provider；创建迁移指南POSTGRESQL_MIGRATION.md；创建SQLite导出脚本 |
-| 1.5 | 压测验证PostgreSQL下50并发无500错误 | P0 | 待做 | |
+| 1.5 | 压测验证PostgreSQL下50并发无500错误 | P0 | ✅ 已完成 | ✅ 2026-04-29 — load-test.js 50并发脚本；load-test.yml CI workflow（真实PostgreSQL service）；RPS报告；无5xx验证 |
 
 ### Phase 2：前端架构升级（2026-05~06 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
@@ -96,7 +96,7 @@
 ### Phase 4：多节点部署（2026-07 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
-| 4.1 | 阿里云OSS替换本地uploads目录 | P0 | 待做 | |
+| 4.1 | 多节点部署配置（Docker Compose + Nginx负载均衡） | P0 | ✅ 已完成 | ✅ 2026-04-29 — docker-compose.prod.yml 双副本；backend/Dockerfile alpine多阶段；nginx.conf负载均衡+限速；DEPLOYMENT.md运维手册 |
 | 4.2 | 香港节点部署（阿里云HK） | P1 | 待做 | |
 | 4.3 | 新加坡节点部署（AWS ap-southeast-1） | P1 | 待做 | |
 | 4.4 | Cloudflare CDN + DNS智能分流 | P1 | 待做 | |
@@ -315,6 +315,7 @@
 | 2026-04-29 | Phase 3.3 GDPR数据导出/账号删除，Phase 3.4 阿里云内容安全HTTPS实现（multer写盘后审核），Phase 5.2 test:weak-network脚本 | 3.3✅ 3.4✅(HTTPS实现) 5.2✅ |
 | 2026-04-29 | Phase 2.3 IndexedDB断点续传，Phase 2.5 地图双引擎 | 2.3✅ 2.5✅ |
 | 2026-04-29 | Phase 2.1 Vite构建，Phase 2.4 i18n多语言，Phase 2.6 深色模式 | 2.1✅ 2.4✅ 2.6✅ |
+| 2026-04-29 | Phase 1.5 PostgreSQL压测，Phase 4.1 多节点部署 | 1.5✅ 4.1✅ |
 
 ---
 

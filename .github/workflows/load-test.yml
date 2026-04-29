@@ -1,0 +1,74 @@
+name: Load Test (PostgreSQL)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  load-test:
+    name: 50-concurrency load test on PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: alpinelink
+          POSTGRES_PASSWORD: alpinelink_test
+          POSTGRES_DB: alpinelink_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install backend dependencies
+        run: cd backend && npm install
+
+      - name: Generate Prisma Client (PostgreSQL)
+        run: cd backend && DATABASE_PROVIDER=postgresql DATABASE_URL="postgresql://alpinelink:alpinelink_test@localhost:5432/alpinelink_test" node scripts/generate-prisma-client.js --push
+        env:
+          DATABASE_URL: postgresql://alpinelink:alpinelink_test@localhost:5432/alpinelink_test
+
+      - name: Seed database
+        run: cd backend && SEED_ON_START=true node db/seed.js
+        env:
+          NODE_ENV: test
+          DATABASE_PROVIDER: postgresql
+          DATABASE_URL: postgresql://alpinelink:alpinelink_test@localhost:5432/alpinelink_test
+
+      - name: Start backend server
+        run: cd backend && node app.js &
+        env:
+          NODE_ENV: test
+          PORT: 8080
+          JWT_SECRET: ci_load_test_secret
+          ADMIN_PASSWORD: ci_load_test_admin
+          DATABASE_PROVIDER: postgresql
+          DATABASE_URL: postgresql://alpinelink:alpinelink_test@localhost:5432/alpinelink_test
+
+      - name: Wait for backend
+        run: npx wait-on http://localhost:8080/api/health --timeout 30000
+
+      - name: Run load test (50 concurrent, 200 total)
+        run: npm run test:load
+        env:
+          BASE_URL: http://localhost:8080
