@@ -87,7 +87,7 @@
 |---|------|--------|------|---------|
 | 3.1 | ICP备案申请（国内域名+服务器） | P0 | 待做 | |
 | 3.2 | 等保2.0二级安全评估 | P1 | 待做 | |
-| 3.3 | GDPR隐私政策完善+数据删除接口 | P1 | 待做 | |
+| 3.3 | GDPR隐私政策完善+数据删除接口 | P1 | ✅ 已完成 | ✅ 2026-04-29 — GET /api/users/me/data-export 导出全量数据（JSON下载）；DELETE /api/users/me 软删除账号（清除PII）；JWT cookie清除 |
 | 3.4 | 图片上传接入阿里云内容安全API | P1 | ✅ 已完成 | ✅ 2026-04-29 — middleware/contentSafety.js框架；生产环境可配置ALIYUN_ACCESS_KEY_ID启用；文档CONTENT_SAFETY_INTEGRATION.md |
 | 3.5 | 速率限制全接口覆盖（非仅聊天接口） | P1 | ✅ 已完成 | ✅ 2026-04-27 — 创建统一 rateLimits.js 中间件；全局 /api defaultLimiter；auth/write/upload/外部API分级保护 |
 | 3.6 | 向导rejected状态支持重新申请流程 | P1 | ✅ 已完成 | ✅ 2026-04-29 — PATCH /api/guides/reapply 接口；前端 rejected 状态显示拒因+重申请按钮 |
@@ -312,6 +312,7 @@
 | 2026-04-29 | Phase 3.6 向导重申请 + Phase 1.3 images 表 + Phase 5.4 安全验收自动化 | 3.6✅ 1.3✅ 5.4✅ |
 | 2026-04-29 | Phase 5.1 并发测试 + 5.3 JWT测试 + 5.5 性能基准 | 5.1✅ 5.3✅ 5.5✅ |
 | 2026-04-29 | Phase 5.2 弱网测试 + Phase 3.4 内容安全框架 + Phase 2.2 PWA SW | 5.2✅ 3.4✅ 2.2✅ |
+| 2026-04-29 | Phase 3.3 GDPR数据导出/账号删除，Phase 3.4 阿里云内容安全HTTPS实现（multer写盘后审核），Phase 5.2 test:weak-network脚本 | 3.3✅ 3.4✅(HTTPS实现) 5.2✅ |
 
 ---
 

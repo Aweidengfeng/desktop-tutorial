@@ -10,7 +10,8 @@
     "seed": "node db/seed.js",
     "test": "cd .. && npx jest --forceExit --no-coverage --runInBand --testPathPatterns=backend/tests/",
     "test:security": "cd .. && npx jest --forceExit --no-coverage --runInBand --testPathPatterns=backend/tests/security.test.js",
-    "test:perf": "cd .. && npx jest --forceExit --no-coverage --runInBand --testTimeout=60000 --testPathPatterns=backend/tests/performance.test.js"
+    "test:perf": "cd .. && npx jest --forceExit --no-coverage --runInBand --testTimeout=60000 --testPathPatterns=backend/tests/performance.test.js",
+    "test:weak-network": "cd .. && npx jest --forceExit --no-coverage --runInBand --testPathPatterns=backend/tests/weak-network.test.js"
   },
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.5.1",
