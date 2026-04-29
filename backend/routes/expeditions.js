@@ -257,7 +257,7 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
 
       // 2. 检查名额是否充足
       const currentCount = Number(expedition.current_participants) || 0;
-      const maxCount = Number(expedition.max_participants) || 10;
+      const maxCount = Number(expedition.max_participants) || Number(expedition.max_members) || 10;
       if (currentCount + participantCount > maxCount) {
         throw { status: 409, message: '名额已满，无法下单' };
       }
