@@ -43,7 +43,10 @@
       "**/tests/api-offline-expedition.test.js",
       "**/tests/api-routes-teams.test.js",
       "**/tests/api-coverage.test.js",
-      "**/backend/tests/security.test.js"
+      "**/backend/tests/security.test.js",
+      "**/backend/tests/concurrency.test.js",
+      "**/backend/tests/jwt.test.js",
+      "**/backend/tests/performance.test.js"
     ],
     "testTimeout": 15000
   }
