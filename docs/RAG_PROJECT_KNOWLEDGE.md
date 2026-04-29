@@ -34,7 +34,7 @@
 - [x] 前端图片上传无预校验 ✅ 2026-04-27（validateImageFile/validateImageFiles 全局函数已添加，Phase 0.4）
 - [ ] 图片上传目录（`uploads/`）禁止目录浏览，需配置Nginx
 - [x] 轨迹坐标精度提升至6位小数 ✅ 2026-04-27（Phase 0.6）
-- [ ] 向导 `rejected` 状态需支持重新申请流程
+- [x] 向导 `rejected` 状态需支持重新申请流程 ✅ 2026-04-29（Phase 3.6）
 - [x] 订单并发下单需加数据库事务+乐观锁（防超额） ✅ 2026-04-29（Phase 3.7）
 - [x] JWT过期前端检测与自动跳转登录 ✅ 2026-04-27（apiFetch全局封装，session-expired事件，核心API路径已替换，Phase 0.5）
 
@@ -68,7 +68,7 @@
 |---|------|--------|------|---------|
 | 1.1 | SQLite → PostgreSQL 迁移（Railway PostgreSQL） | P0 | ✅ 已完成 | ✅ 2026-04-28 — 所有路由从 better-sqlite3 迁移到 Prisma Client；prisma.js 单例；seed.js 迁移；app.js 移除 SQLite 初始化 |
 | 1.2 | 轨迹points字段迁移（TEXT JSON → JSONB/PostGIS） | P0 | ✅ 已完成 | ✅ 2026-04-29 — Prisma schema tracks.points 改为 Json 类型；路由去除 JSON.parse（兼容 string/object 双模式） |
-| 1.3 | 独立images表设计与迁移 | P1 | 待做 | |
+| 1.3 | 独立images表设计与迁移 | P1 | ✅ 已完成 | ✅ 2026-04-29 — 新增 Image 模型；上传路由同步写入 images 表；向后兼容原字段 |
 | 1.4 | 数据库迁移脚本编写与回滚方案 | P0 | 🔄 已准备 | ✅ 2026-04-27 — Prisma schema支持env provider；创建迁移指南POSTGRESQL_MIGRATION.md；创建SQLite导出脚本 |
 | 1.5 | 压测验证PostgreSQL下50并发无500错误 | P0 | 待做 | |
 
@@ -90,7 +90,7 @@
 | 3.3 | GDPR隐私政策完善+数据删除接口 | P1 | 待做 | |
 | 3.4 | 图片上传接入阿里云内容安全API | P1 | 待做 | |
 | 3.5 | 速率限制全接口覆盖（非仅聊天接口） | P1 | ✅ 已完成 | ✅ 2026-04-27 — 创建统一 rateLimits.js 中间件；全局 /api defaultLimiter；auth/write/upload/外部API分级保护 |
-| 3.6 | 向导rejected状态支持重新申请流程 | P1 | 待做 | |
+| 3.6 | 向导rejected状态支持重新申请流程 | P1 | ✅ 已完成 | ✅ 2026-04-29 — PATCH /api/guides/reapply 接口；前端 rejected 状态显示拒因+重申请按钮 |
 | 3.7 | 订单并发下单加事务+乐观锁防超额 | P0 | ✅ 已完成 | ✅ 2026-04-29 — prisma.$transaction + SELECT FOR UPDATE 行锁；超额返回 409；current_participants 原子递增 |
 
 ### Phase 4：多节点部署（2026-07 目标）
@@ -109,7 +109,7 @@
 | 5.1 | 并发超额下单E2E测试（10并发同时下单同一活动） | P0 | 待做 | |
 | 5.2 | 弱网轨迹上传模拟测试（2G/失联场景） | P1 | 待做 | |
 | 5.3 | JWT过期全链路测试 | P1 | 待做 | |
-| 5.4 | 安全验收清单自动化（mock-pay/sms-codes/CORS） | P0 | 待做 | |
+| 5.4 | 安全验收清单自动化（mock-pay/sms-codes/CORS） | P0 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/security.test.js 覆盖 6 项安全验收用例 |
 | 5.5 | 性能基准：50并发无500，轨迹上传<3s，天气<2s | P0 | 待做 | |
 
 ---
@@ -309,6 +309,7 @@
 | 2026-04-27 | Phase 3.5 速率限制全覆盖 | 创建 middleware/rateLimits.js；全接口分级速率保护 |
 | 2026-04-28 | Phase 1.1 完成 SQLite→PostgreSQL 全量迁移 | 1.1✅ |
 | 2026-04-29 | Phase 1.2 轨迹 JSONB 迁移 + Phase 3.7 订单并发乐观锁 | 1.2✅ 3.7✅ |
+| 2026-04-29 | Phase 3.6 向导重申请 + Phase 1.3 images 表 + Phase 5.4 安全验收自动化 | 3.6✅ 1.3✅ 5.4✅ |
 
 ---
 

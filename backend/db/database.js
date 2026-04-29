@@ -2364,6 +2364,18 @@ CREATE TABLE IF NOT EXISTS location_shares (
   viewed_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  url TEXT NOT NULL,
+  filename TEXT NOT NULL,
+  size INTEGER,
+  mime_type TEXT,
+  owner_type TEXT NOT NULL,
+  owner_id INTEGER NOT NULL,
+  field_name TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // Seed badges

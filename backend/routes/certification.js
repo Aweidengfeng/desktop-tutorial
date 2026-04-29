@@ -31,7 +31,7 @@ router.get('/guide/status', certReadLimiter, auth, async (req, res) => {
   try {
     const guide = (await prisma.$queryRaw`
       SELECT id, name, cert_level, cert_expires_at, cert_year_fee, listing_fee_paid,
-             status, specialty, region, rating, reviews, created_at
+             status, reject_reason, specialty, region, rating, reviews, created_at
       FROM guides WHERE user_id = ${req.user.id}
     `)[0];
     if (!guide) {
