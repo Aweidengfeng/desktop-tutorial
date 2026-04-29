@@ -13,6 +13,57 @@ const usersWriteLimiter = rateLimit({
   message: { error: '操作过于频繁' }, standardHeaders: true, legacyHeaders: false,
 });
 
+// GET /api/users/me/data-export — GDPR 数据导出（需要JWT）
+router.get('/me/data-export', usersReadLimiter, auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [user] = await prisma.$queryRaw`
+      SELECT id, name, username, phone, email, avatar, level, summits, expeditions,
+             followers, following, settings, privacy, policy_version, policy_agreed_at, created_at
+      FROM users WHERE id = ${userId}
+    `;
+    if (!user) return res.status(404).json({ error: '用户不存在' });
+
+    const posts = await prisma.$queryRaw`
+      SELECT id, content, image, created_at FROM posts WHERE user_id = ${userId} ORDER BY created_at DESC
+    `;
+    const tracks = await prisma.$queryRaw`
+      SELECT id, name, peak_name, date, distance_km, elevation_gain, duration_minutes, notes, created_at
+      FROM tracks WHERE user_id = ${userId} ORDER BY created_at DESC
+    `;
+    const orders = await prisma.$queryRaw`
+      SELECT id, status, created_at FROM orders WHERE user_id = ${userId} ORDER BY created_at DESC
+    `.catch(() => []);
+    const comments = await prisma.$queryRaw`
+      SELECT id, content, created_at FROM comments WHERE user_id = ${userId} ORDER BY created_at DESC
+    `.catch(() => []);
+
+    const exportData = { user, posts, tracks, orders, comments, exportedAt: new Date().toISOString() };
+
+    res.setHeader('Content-Disposition', 'attachment; filename="alpinelink-data-export.json"');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.json(exportData);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/users/me — 软删除账号（GDPR 注销，需要JWT）
+router.delete('/me', usersWriteLimiter, auth, async (req, res) => {
+  try {
+    await prisma.$executeRaw`
+      UPDATE users
+      SET deleted_at = ${new Date()}, phone = NULL, email = NULL, password = NULL,
+          name = '[已注销用户]', avatar = NULL
+      WHERE id = ${req.user.id}
+    `;
+    res.clearCookie('token');
+    res.json({ success: true, message: '账号已注销' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/users/:id/achievements — 用户成就
 router.get('/:id/achievements', usersReadLimiter, async (req, res) => {
   try {

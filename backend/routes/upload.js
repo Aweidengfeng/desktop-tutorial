@@ -6,7 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimits');
-const { checkImageSafety } = require('../middleware/contentSafety');
+const { checkImageSafety, reviewImageFile } = require('../middleware/contentSafety');
 const prisma = require('../db/prisma');
 
 // 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
@@ -69,10 +69,23 @@ const uploadGpx = multer({
 });
 
 // POST /api/upload — 单张图片上传（需要JWT）
-router.post('/', uploadLimiter, auth, checkImageSafety, (req, res, next) => {
-  upload.single('file')(req, res, (err) => {
+router.post('/', uploadLimiter, auth, (req, res, next) => {
+  upload.single('file')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/gif/webp）' });
     if (!req.file) return res.status(400).json({ error: '未收到文件' });
+    // 内容安全审核（multer 写盘后调用，生产环境有效）
+    try {
+      const review = await reviewImageFile(req.file.path);
+      if (review.suggestion === 'block') {
+        fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ error: '图片内容违规，上传被拒绝' });
+      }
+      if (review.suggestion === 'review') {
+        console.warn('[contentSafety] 图片需人工复审:', req.file.filename);
+      }
+    } catch (e) {
+      console.error('[contentSafety] 审核异常，放行：', e.message);
+    }
     const url = '/uploads/' + req.file.filename;
     prisma.$executeRaw`
       INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
@@ -83,10 +96,26 @@ router.post('/', uploadLimiter, auth, checkImageSafety, (req, res, next) => {
 });
 
 // POST /api/upload/multiple — 多张图片上传（最多9张，需要JWT）
-router.post('/multiple', uploadLimiter, auth, checkImageSafety, (req, res, next) => {
-  upload.array('files', 9)(req, res, (err) => {
+router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
+  upload.array('files', 9)(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/gif/webp）' });
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: '未收到文件' });
+    // 内容安全审核：逐一审核每张图片
+    for (const f of req.files) {
+      try {
+        const review = await reviewImageFile(f.path);
+        if (review.suggestion === 'block') {
+          // 删除所有已上传文件
+          for (const rf of req.files) fs.unlink(rf.path, () => {});
+          return res.status(400).json({ error: '图片内容违规，上传被拒绝' });
+        }
+        if (review.suggestion === 'review') {
+          console.warn('[contentSafety] 图片需人工复审:', f.filename);
+        }
+      } catch (e) {
+        console.error('[contentSafety] 审核异常，放行：', e.message);
+      }
+    }
     const urls = req.files.map(f => '/uploads/' + f.filename);
     for (const f of req.files) {
       prisma.$executeRaw`
