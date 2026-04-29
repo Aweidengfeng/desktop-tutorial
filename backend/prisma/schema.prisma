@@ -667,19 +667,21 @@ model CustomOrder {
 // ─────────────────────────────────────────
 
 model Expedition {
-  id          Int      @id @default(autoincrement())
-  peakName    String?  @map("peak_name")
-  title       String?
-  description String?
-  date        String?
-  price       Float?
-  currency    String   @default("CNY")
-  maxMembers  Int?     @map("max_members")
-  difficulty  String?
-  status      String   @default("open")
-  clubId      Int?     @map("club_id")
-  guideId     Int?     @map("guide_id")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id                  Int      @id @default(autoincrement())
+  peakName            String?  @map("peak_name")
+  title               String?
+  description         String?
+  date                String?
+  price               Float?
+  currency            String   @default("CNY")
+  maxMembers          Int?     @map("max_members")
+  maxParticipants     Int?     @default(10) @map("max_participants")
+  currentParticipants Int      @default(0) @map("current_participants")
+  difficulty          String?
+  status              String   @default("open")
+  clubId              Int?     @map("club_id")
+  guideId             Int?     @map("guide_id")
+  createdAt           DateTime @default(now()) @map("created_at")
 
   orders ExpeditionOrder[]
 
@@ -783,6 +785,7 @@ model Track {
   image       String?
   peakName    String?  @map("peak_name")
   distanceKm  Float?   @map("distance_km")
+  points      Json?
   createdAt   DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

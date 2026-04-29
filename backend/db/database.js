@@ -1552,6 +1552,12 @@ if (!existingExpOrderCols.includes('refunded_at')) {
   db.exec('ALTER TABLE expedition_orders ADD COLUMN refunded_at DATETIME');
 }
 
+// expeditions 表：补充 current_participants 字段（防并发超额）
+const existingExpeditionCols = db.pragma('table_info(expeditions)').map(c => c.name);
+if (!existingExpeditionCols.includes('current_participants')) {
+  db.exec('ALTER TABLE expeditions ADD COLUMN current_participants INTEGER DEFAULT 0');
+}
+
 // Add note column to guide_applications if missing
 const guideAppColsNote = db.pragma('table_info(guide_applications)').map(c => c.name);
 if (!guideAppColsNote.includes('note')) {
