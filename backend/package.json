@@ -7,7 +7,10 @@
     "postinstall": "DATABASE_URL=\"file:/tmp/build.db\" node scripts/generate-prisma-client.js || true",
     "start": "node db/seed.js && node app.js",
     "dev": "node db/seed.js && node app.js",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "test": "cd .. && npx jest --forceExit --no-coverage --runInBand --testPathPatterns=backend/tests/",
+    "test:security": "cd .. && npx jest --forceExit --no-coverage --runInBand --testPathPatterns=backend/tests/security.test.js",
+    "test:perf": "cd .. && npx jest --forceExit --no-coverage --runInBand --testTimeout=60000 --testPathPatterns=backend/tests/performance.test.js"
   },
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.5.1",
