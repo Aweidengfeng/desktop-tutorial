@@ -9,6 +9,7 @@ const https = require('https');
 const BASE_URL = process.argv[2] || process.env.BASE_URL || 'http://localhost:8080';
 const CONCURRENCY = 50;
 const TOTAL_REQUESTS = 200;
+const TIMEOUT_THRESHOLD_PERCENT = 0.05; // fail if >5% of requests time out
 
 function request(url) {
   return new Promise((resolve, reject) => {
@@ -76,7 +77,7 @@ async function main() {
     console.error(`❌ FAIL: ${allResults.status500} requests returned 5xx`);
     process.exit(1);
   }
-  if (allResults.timeouts > TOTAL_REQUESTS * 0.05) {
+  if (allResults.timeouts > TOTAL_REQUESTS * TIMEOUT_THRESHOLD_PERCENT) {
     console.error(`❌ FAIL: Too many timeouts (${allResults.timeouts}/${TOTAL_REQUESTS})`);
     process.exit(1);
   }

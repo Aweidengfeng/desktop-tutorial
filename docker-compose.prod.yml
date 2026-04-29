@@ -29,6 +29,8 @@ services:
       retries: 3
       start_period: 40s
     deploy:
+      # NOTE: The deploy section is used with Docker Swarm (`docker stack deploy`).
+      # In standalone Compose mode, use `docker compose up --scale backend=2` instead.
       replicas: 2
       update_config:
         parallelism: 1
