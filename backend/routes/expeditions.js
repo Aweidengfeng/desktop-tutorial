@@ -242,39 +242,69 @@ router.put('/:id', auth, async (req, res) => {
 router.post('/:id/order', orderLimiter, auth, async (req, res) => {
   try {
     const expId = parseInt(req.params.id);
-    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId} AND status = 'published'`;
-    if (!expedition) return res.status(404).json({ error: '远征不存在或暂未开放报名' });
     const { participants = 1, selected_addons, contact_name, contact_phone, emergency_contact, emergency_phone, notes } = req.body;
-    let subtotal = expedition.base_price * participants;
-    let discount = 0;
-    if (expedition.group_discount) {
-      try {
-        const gd = typeof expedition.group_discount === 'string' ? JSON.parse(expedition.group_discount) : expedition.group_discount;
-        if (participants >= (gd.min || 3)) {
-          discount = subtotal * (1 - (gd.rate || 0.95));
-        }
-      } catch (e) {}
-    }
-    const total = subtotal - discount;
-    const platform_fee = total * (expedition.commission_rate || 0.15);
-    const publisher_income = total - platform_fee;
-    const order_no = 'EX' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
-    const now = new Date().toISOString();
-    const addonsStr = selected_addons ? JSON.stringify(selected_addons) : null;
-    const [{ id: newOrderId }] = await prisma.$queryRaw`
-      INSERT INTO expedition_orders (
-        order_no, expedition_id, user_id, participants, selected_addons,
-        subtotal, discount, total, platform_fee, publisher_income,
-        status, contact_name, contact_phone, emergency_contact, emergency_phone, notes, created_at
-      ) VALUES (${order_no}, ${expedition.id}, ${req.user.id}, ${participants}, ${addonsStr},
-        ${subtotal}, ${discount}, ${total}, ${platform_fee}, ${publisher_income},
-        'pending_payment', ${contact_name || null}, ${contact_phone || null},
-        ${emergency_contact || null}, ${emergency_phone || null}, ${notes || null}, ${now})
-      RETURNING id
-    `;
-    const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = ${newOrderId}`;
+    const participantCount = parseInt(participants) || 1;
+
+    const order = await prisma.$transaction(async (tx) => {
+      // 1. 加行锁查询团期（防止并发超额）
+      const [expedition] = await tx.$queryRaw`
+        SELECT id, title, base_price, commission_rate, max_participants, current_participants,
+               group_discount, status
+        FROM expeditions WHERE id = ${expId} FOR UPDATE
+      `;
+      if (!expedition) throw { status: 404, message: '远征不存在或暂未开放报名' };
+      if (expedition.status !== 'published') throw { status: 404, message: '远征不存在或暂未开放报名' };
+
+      // 2. 检查名额是否充足
+      const currentCount = Number(expedition.current_participants) || 0;
+      const maxCount = Number(expedition.max_participants) || 10;
+      if (currentCount + participantCount > maxCount) {
+        throw { status: 409, message: '名额已满，无法下单' };
+      }
+
+      let subtotal = (expedition.base_price || 0) * participantCount;
+      let discount = 0;
+      if (expedition.group_discount) {
+        try {
+          const gd = typeof expedition.group_discount === 'string' ? JSON.parse(expedition.group_discount) : expedition.group_discount;
+          if (participantCount >= (gd.min || 3)) {
+            discount = subtotal * (1 - (gd.rate || 0.95));
+          }
+        } catch (e) {}
+      }
+      const total = subtotal - discount;
+      const platform_fee = total * (expedition.commission_rate || 0.15);
+      const publisher_income = total - platform_fee;
+      const order_no = 'EX' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
+      const now = new Date().toISOString();
+      const addonsStr = selected_addons ? JSON.stringify(selected_addons) : null;
+
+      // 3. 创建订单
+      const [{ id: newOrderId }] = await tx.$queryRaw`
+        INSERT INTO expedition_orders (
+          order_no, expedition_id, user_id, participants, selected_addons,
+          subtotal, discount, total, platform_fee, publisher_income,
+          status, contact_name, contact_phone, emergency_contact, emergency_phone, notes, created_at
+        ) VALUES (${order_no}, ${expId}, ${req.user.id}, ${participantCount}, ${addonsStr},
+          ${subtotal}, ${discount}, ${total}, ${platform_fee}, ${publisher_income},
+          'pending_payment', ${contact_name || null}, ${contact_phone || null},
+          ${emergency_contact || null}, ${emergency_phone || null}, ${notes || null}, ${now})
+        RETURNING id
+      `;
+
+      // 4. 递增参与人数（原子性保证）
+      await tx.$executeRaw`
+        UPDATE expeditions SET current_participants = current_participants + ${participantCount} WHERE id = ${expId}
+      `;
+
+      const [newOrder] = await tx.$queryRaw`SELECT * FROM expedition_orders WHERE id = ${newOrderId}`;
+      return newOrder;
+    });
+
     res.json(order);
   } catch (e) {
+    if (e && e.status === 409) return res.status(409).json({ error: e.message });
+    if (e && e.status === 404) return res.status(404).json({ error: e.message });
     res.status(500).json({ error: '服务器错误' });
   }
 });

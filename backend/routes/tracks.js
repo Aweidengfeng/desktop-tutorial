@@ -90,7 +90,7 @@ router.get('/', auth, async (req, res) => {
     `;
     const parsed = tracks.map(t => ({
       ...t,
-      points: t.points ? JSON.parse(t.points) : [],
+      points: t.points ? (typeof t.points === 'string' ? JSON.parse(t.points) : t.points) : [],
       proof_images: t.proof_images ? JSON.parse(t.proof_images) : [],
     }));
     res.json(parsed);
@@ -111,7 +111,7 @@ router.get('/my', auth, async (req, res) => {
     `;
     const parsed = tracks.map(t => ({
       ...t,
-      points: t.points ? JSON.parse(t.points) : [],
+      points: t.points ? (typeof t.points === 'string' ? JSON.parse(t.points) : t.points) : [],
       proof_images: t.proof_images ? JSON.parse(t.proof_images) : [],
     }));
     res.json(parsed);
@@ -132,7 +132,7 @@ router.get('/:id', auth, async (req, res) => {
     `;
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
     if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权访问' });
-    track.points = track.points ? JSON.parse(track.points) : [];
+    track.points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
     track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
     res.json(track);
   } catch (e) {
@@ -175,7 +175,7 @@ router.post('/', auth, async (req, res) => {
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points
       FROM tracks WHERE id = ${newTrackId}
     `;
-    track.points = track.points ? JSON.parse(track.points) : [];
+    track.points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
     res.json({ ...track, flagged, rewardGranted: !flagged, ...(flagReason ? { flagReason } : {}) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -242,7 +242,7 @@ router.post('/import-gpx', auth, async (req, res) => {
       SELECT id, name, peak_name, date, distance_km, elevation_gain, points, created_at
       FROM tracks WHERE id = ${newTrackId}
     `;
-    track.points = track.points ? JSON.parse(track.points) : [];
+    track.points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
     res.json({ ...track, imported: true, flagged, rewardGranted: !flagged });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -332,7 +332,9 @@ router.get('/:id/export', exportLimiter, async (req, res) => {
     }
 
     const format = (req.query.format || 'gpx').toLowerCase();
-    const points = track.points ? JSON.parse(track.points) : [];
+    const points = track.points
+      ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points)
+      : [];
     const trackName = track.name || track.peak_name || '轨迹';
 
     if (format === 'gpx') {

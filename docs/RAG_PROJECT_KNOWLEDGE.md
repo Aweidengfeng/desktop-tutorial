@@ -2,7 +2,7 @@
 
 > **文档用途**：项目进度对齐、里程碑打赏标记、核心约束核对、多专业视角评审结论沉淀
 > **创建日期**：2026-04-26
-> **最后更新**：2026-04-27
+> **最后更新**：2026-04-29
 > **维护规则**：每次完成一个里程碑模块后，在对应任务后标记 ✅ 并记录完成日期；每次新对话开始必须核对"核心约束清单"
 
 ---
@@ -35,7 +35,7 @@
 - [ ] 图片上传目录（`uploads/`）禁止目录浏览，需配置Nginx
 - [x] 轨迹坐标精度提升至6位小数 ✅ 2026-04-27（Phase 0.6）
 - [ ] 向导 `rejected` 状态需支持重新申请流程
-- [ ] 订单并发下单需加数据库事务+乐观锁（防超额）
+- [x] 订单并发下单需加数据库事务+乐观锁（防超额） ✅ 2026-04-29（Phase 3.7）
 - [x] JWT过期前端检测与自动跳转登录 ✅ 2026-04-27（apiFetch全局封装，session-expired事件，核心API路径已替换，Phase 0.5）
 
 ### 🟢 中期执行项
@@ -67,7 +67,7 @@
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
 | 1.1 | SQLite → PostgreSQL 迁移（Railway PostgreSQL） | P0 | ✅ 已完成 | ✅ 2026-04-28 — 所有路由从 better-sqlite3 迁移到 Prisma Client；prisma.js 单例；seed.js 迁移；app.js 移除 SQLite 初始化 |
-| 1.2 | 轨迹points字段迁移（TEXT JSON → JSONB/PostGIS） | P0 | 待做 | |
+| 1.2 | 轨迹points字段迁移（TEXT JSON → JSONB/PostGIS） | P0 | ✅ 已完成 | ✅ 2026-04-29 — Prisma schema tracks.points 改为 Json 类型；路由去除 JSON.parse（兼容 string/object 双模式） |
 | 1.3 | 独立images表设计与迁移 | P1 | 待做 | |
 | 1.4 | 数据库迁移脚本编写与回滚方案 | P0 | 🔄 已准备 | ✅ 2026-04-27 — Prisma schema支持env provider；创建迁移指南POSTGRESQL_MIGRATION.md；创建SQLite导出脚本 |
 | 1.5 | 压测验证PostgreSQL下50并发无500错误 | P0 | 待做 | |
@@ -91,7 +91,7 @@
 | 3.4 | 图片上传接入阿里云内容安全API | P1 | 待做 | |
 | 3.5 | 速率限制全接口覆盖（非仅聊天接口） | P1 | ✅ 已完成 | ✅ 2026-04-27 — 创建统一 rateLimits.js 中间件；全局 /api defaultLimiter；auth/write/upload/外部API分级保护 |
 | 3.6 | 向导rejected状态支持重新申请流程 | P1 | 待做 | |
-| 3.7 | 订单并发下单加事务+乐观锁防超额 | P0 | 待做 | |
+| 3.7 | 订单并发下单加事务+乐观锁防超额 | P0 | ✅ 已完成 | ✅ 2026-04-29 — prisma.$transaction + SELECT FOR UPDATE 行锁；超额返回 409；current_participants 原子递增 |
 
 ### Phase 4：多节点部署（2026-07 目标）
 | # | 任务 | 优先级 | 状态 | 完成标记 |
@@ -308,6 +308,7 @@
 | 2026-04-27 | Phase 0.5 JWT过期前端检测，Phase 0.6 轨迹坐标精度，Phase 1 PostgreSQL迁移准备 | 0.5✅ 0.6✅ 1.4✅(已准备) |
 | 2026-04-27 | Phase 3.5 速率限制全覆盖 | 创建 middleware/rateLimits.js；全接口分级速率保护 |
 | 2026-04-28 | Phase 1.1 完成 SQLite→PostgreSQL 全量迁移 | 1.1✅ |
+| 2026-04-29 | Phase 1.2 轨迹 JSONB 迁移 + Phase 3.7 订单并发乐观锁 | 1.2✅ 3.7✅ |
 
 ---
 
