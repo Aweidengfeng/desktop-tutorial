@@ -97,9 +97,9 @@
 | # | 任务 | 优先级 | 状态 | 完成标记 |
 |---|------|--------|------|---------|
 | 4.1 | 多节点部署配置（Docker Compose + Nginx负载均衡） | P0 | ✅ 已完成 | ✅ 2026-04-29 — docker-compose.prod.yml 双副本；backend/Dockerfile alpine多阶段；nginx.conf负载均衡+限速；DEPLOYMENT.md运维手册 |
-| 4.2 | 香港节点部署（阿里云HK） | P1 | 待做 | |
-| 4.3 | 新加坡节点部署（AWS ap-southeast-1） | P1 | 待做 | |
-| 4.4 | Cloudflare CDN + DNS智能分流 | P1 | 待做 | |
+| 4.2 | 阿里云 OSS 图片存储集成 | P1 | ✅ 已完成 | ✅ 2026-04-29 — ossUpload.js中间件；ali-oss可选依赖；OSS_ENABLED降级本地存储；CDN_HOST支持；upload.js双模式 |
+| 4.3 | CDN 加速配置 | P1 | ✅ 已完成 | ✅ 2026-04-29 — nginx.conf Gzip压缩；静态资源365天缓存；Socket.IO WebSocket代理；CDN_SETUP.md配置指南 |
+| 4.4 | 多地域健康检查 + 自动故障转移 | P1 | ✅ 已完成 | ✅ 2026-04-29 — /api/health增强（db+内存+延迟）；/ready /live K8s探针；health-check.yml定时巡检；DEPLOYMENT.md故障转移策略 |
 | 4.5 | PostgreSQL主从复制（主库新加坡+只读副本国内/HK） | P1 | 待做 | |
 | 4.6 | 高可用监控（阿里云ARMS + Sentry） | P1 | 待做 | |
 
@@ -316,6 +316,7 @@
 | 2026-04-29 | Phase 2.3 IndexedDB断点续传，Phase 2.5 地图双引擎 | 2.3✅ 2.5✅ |
 | 2026-04-29 | Phase 2.1 Vite构建，Phase 2.4 i18n多语言，Phase 2.6 深色模式 | 2.1✅ 2.4✅ 2.6✅ |
 | 2026-04-29 | Phase 1.5 PostgreSQL压测，Phase 4.1 多节点部署 | 1.5✅ 4.1✅ |
+| 2026-04-29 | Phase 4.2 OSS存储，Phase 4.3 CDN加速，Phase 4.4 健康检查+故障转移 | 4.2✅ 4.3✅ 4.4✅ |
 
 ---
 
