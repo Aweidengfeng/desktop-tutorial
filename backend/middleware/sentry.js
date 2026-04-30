@@ -32,7 +32,7 @@ function initSentry(app) {
 
 function sentryRequestHandler() {
   if (!SENTRY_ENABLED || !Sentry) return (req, res, next) => next();
-  return Sentry.expressErrorHandler ? Sentry.Handlers?.requestHandler?.() || ((req, res, next) => next()) : (req, res, next) => next();
+  return Sentry.Handlers?.requestHandler?.() || ((req, res, next) => next());
 }
 
 function sentryErrorHandler() {
