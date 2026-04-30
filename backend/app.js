@@ -11,25 +11,8 @@ const logger = pino({
     : undefined,
 });
 
-// ── Sentry 初始化（仅当 SENTRY_DSN 存在时启用，否则无副作用）──────────────
-let Sentry = null;
-if (process.env.SENTRY_DSN) {
-  try {
-    Sentry = require('@sentry/node');
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      environment: process.env.NODE_ENV || 'development',
-      tracesSampleRate: 0.1,
-      release: process.env.SENTRY_RELEASE,
-    });
-    console.log('✅ Sentry 已启用');
-  } catch (e) {
-    console.warn('⚠️  Sentry 初始化失败（不影响服务运行）:', e.message);
-    Sentry = null;
-  }
-}
-
 const express = require('express');
+const { initSentry, sentryRequestHandler, sentryErrorHandler } = require('./middleware/sentry');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -47,13 +30,11 @@ const htmlPageLimiter = rateLimit({
 
 const app = express();
 
+initSentry(app);
+app.use(sentryRequestHandler());
+
 // 信任 Railway / Nginx 等反向代理（修复 express-rate-limit xForwardedFor 报错）
 app.set('trust proxy', 1);
-
-// Sentry 请求处理中间件（路由最前，仅当 Sentry 启用时）
-if (Sentry) {
-  app.use(Sentry.Handlers.requestHandler());
-}
 
 // CORS 配置：生产环境只允许 CORS_ORIGINS 白名单，开发环境允许所有来源
 const corsOrigins = process.env.CORS_ORIGINS;
@@ -125,12 +106,17 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
     }
     let result = html
       .replaceAll('YOUR_AMAP_KEY', amapKey);
-    // 注入 SENTRY_DSN 和 API_BASE 到前端
+    // 注入 SENTRY_DSN、API_BASE、ENV 和 MAP_PROVIDER 到前端
     const sentryDsn = process.env.SENTRY_DSN || '';
     const apiBase = process.env.API_BASE || '';
     const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};${apiBase ? `window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}</script>`;
-    result = result.replace('</head>', sentryScript + '\n</head>');
+    const injected = `<head>
+  <script>
+    window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)};
+    window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};
+    window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}
+  </script>`;
+    result = result.replace('<head>', injected);
     // 在 AMap script 标签之前注入安全密钥配置（高德官方要求：必须先于 AMap JS 加载）
     if (amapSecurityCode) {
       const amapSecurityScript = `<script>window._AMapSecurityConfig = { securityJsCode: ${JSON.stringify(amapSecurityCode)} };</script>`;
@@ -237,7 +223,7 @@ app.get('/admin', htmlPageLimiter, (req, res) => {
       return res.status(500).send('Internal Server Error');
     }
     const sentryDsn = process.env.SENTRY_DSN || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const sentryScript = `<script>window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)}; window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};</script>`;
     const result = html.replace('</head>', sentryScript + '\n</head>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(result);
@@ -253,7 +239,7 @@ app.get('/guide-portal', htmlPageLimiter, (req, res) => {
       return res.status(500).send('Internal Server Error');
     }
     const sentryDsn = process.env.SENTRY_DSN || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const sentryScript = `<script>window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)}; window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};</script>`;
     const result = html.replace('</head>', sentryScript + '\n</head>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(result);
@@ -269,7 +255,7 @@ app.get('/club-portal', htmlPageLimiter, (req, res) => {
       return res.status(500).send('Internal Server Error');
     }
     const sentryDsn = process.env.SENTRY_DSN || '';
-    const sentryScript = `<script>window.__SENTRY_DSN__ = ${JSON.stringify(sentryDsn)};</script>`;
+    const sentryScript = `<script>window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)}; window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};</script>`;
     const result = html.replace('</head>', sentryScript + '\n</head>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(result);
@@ -342,9 +328,7 @@ app.use((err, req, res, next) => {
 });
 
 // Sentry 错误处理中间件（必须在其他错误处理之前）
-if (Sentry) {
-  app.use(Sentry.Handlers.errorHandler());
-}
+app.use(sentryErrorHandler());
 
 // 通用错误处理（兜底）
 // eslint-disable-next-line no-unused-vars

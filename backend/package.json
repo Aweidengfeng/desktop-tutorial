@@ -16,7 +16,6 @@
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.5.1",
     "@prisma/client": "^6.19.3",
-    "@sentry/node": "^10.49.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
     "cookie-parser": "^1.4.7",
@@ -41,6 +40,7 @@
     "prisma": "^6.19.3"
   },
   "optionalDependencies": {
-    "ali-oss": "^6.20.0"
+    "ali-oss": "^6.20.0",
+    "@sentry/node": "^8.0.0"
   }
 }

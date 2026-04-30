@@ -71,7 +71,7 @@
     /* Text shadow for readability on images */
     .text-shadow { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
   </style>
-  <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
+  <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN 由后端注入，未配置时不加载）-->
   <script>
   (function(){
     // 全局兜底错误捕获（Sentry 未启用时也记录，便于排查）
@@ -82,18 +82,23 @@
       if (!window.__sentryInitialized) console.warn('[SummitLink] 未处理 Promise 拒绝:', e.reason);
     });
     // 仅当后端注入了有效 DSN 时才加载 Sentry SDK
-    if (window.__SENTRY_DSN__) {
-      var s = document.createElement('script');
-      s.src = 'https://browser.sentry-cdn.com/8/bundle.min.js';
-      s.crossOrigin = 'anonymous';
-      s.onload = function() {
-        try {
-          Sentry.init({ dsn: window.__SENTRY_DSN__, tracesSampleRate: 0.1 });
-          window.__sentryInitialized = true;
-        } catch(e) { console.warn('[SummitLink] Sentry 初始化失败:', e); }
-      };
-      document.head.appendChild(s);
-    }
+    var dsn = window.__SENTRY_DSN;
+    if (!dsn) return;
+    var script = document.createElement('script');
+    script.src = 'https://browser.sentry-cdn.com/8.0.0/bundle.min.js';
+    script.crossOrigin = 'anonymous';
+    script.onload = function() {
+      if (window.Sentry) {
+        Sentry.init({
+          dsn: dsn,
+          environment: window.__ENV || 'production',
+          tracesSampleRate: 0.1,
+          ignoreErrors: ['ResizeObserver loop', 'ChunkLoadError'],
+        });
+        window.__sentryInitialized = true;
+      }
+    };
+    document.head.appendChild(script);
   })();
   </script>
   <!-- Phase 2.6: 早期主题检测，防止浅色模式闪烁 -->
