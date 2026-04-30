@@ -15,8 +15,8 @@
 | 项目定位 | 全球高海拔登山/户外徒步垂直APP，对标Strava+两步路，主打高海拔攀登社群+山峰数据库+高海拔安全服务+全球化出海 |
 | 核心业务 | 山峰资料库、户外轨迹记录、登山社群、向导/俱乐部认证、高海拔攀登保险、全球用户运营、海外多节点部署 |
 | 当前技术栈 | 前端：Alpine.js + Tailwind CSS（单HTML index.html）/ 后端：Node.js + Express + Prisma + PostgreSQL / 部署：Railway |
-| 当前版本 | B1-Alpha（2026-04-27） |
-| 评审版本状态 | 原型/早期开发阶段 |
+| 当前版本 | 🎉 v1.0.0 生产就绪 — 所有代码类 Phase 全部完成（Phase 3.1 ICP备案、Phase 3.2 等保2.0 需人工处理）|
+| 评审版本状态 | v1.0.0 生产就绪 |
 
 ---
 
@@ -111,6 +111,13 @@
 | 5.3 | JWT过期全链路测试 | P1 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/jwt.test.js；覆盖过期/无token/篡改/有效4个场景 |
 | 5.4 | 安全验收清单自动化（mock-pay/sms-codes/CORS） | P0 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/security.test.js 覆盖 6 项安全验收用例 |
 | 5.5 | 性能基准：50并发无500，轨迹上传<3s，天气<2s | P0 | ✅ 已完成 | ✅ 2026-04-29 — backend/tests/performance.test.js；50并发峰值列表无500；100点轨迹<3s |
+
+### Phase 6：监控与可观测性（2026-04 目标）
+| # | 任务 | 优先级 | 状态 | 完成标记 |
+|---|------|--------|------|---------|
+| 6.1 | Sentry 错误监控（后端 + 前端） | P1 | ✅ 已完成 | ✅ 2026-04-29 — @sentry/node可选依赖；backend/middleware/sentry.js（initSentry/sentryErrorHandler）；前端Sentry懒加载；window.__SENTRY_DSN注入 |
+| 6.2 | README 完整重写 | P1 | ✅ 已完成 | ✅ 2026-04-29 — README完整重写（功能表、快速开始、技术栈、API文档、环境变量）|
+| 6.3 | CHANGELOG + v1.0.0 发布准备 | P1 | ✅ 已完成 | ✅ 2026-04-29 — CHANGELOG.md（0.x~6.x全量变更记录）；.env.example（完整环境变量模板）|
 
 ---
 
@@ -317,6 +324,7 @@
 | 2026-04-29 | Phase 2.1 Vite构建，Phase 2.4 i18n多语言，Phase 2.6 深色模式 | 2.1✅ 2.4✅ 2.6✅ |
 | 2026-04-29 | Phase 1.5 PostgreSQL压测，Phase 4.1 多节点部署 | 1.5✅ 4.1✅ |
 | 2026-04-29 | Phase 4.2 OSS存储，Phase 4.3 CDN加速，Phase 4.4 健康检查+故障转移 | 4.2✅ 4.3✅ 4.4✅ |
+| 2026-04-29 | Phase 6.1 Sentry监控，Phase 6.2 README，Phase 6.3 CHANGELOG+发布准备 | 6.1✅ 6.2✅ 6.3✅ 🎉v1.0.0 |
 
 ---
 

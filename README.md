@@ -1,214 +1,145 @@
-# 巅峰探索 / SummitLink 🏔️
+# 🏔️ AlpineLink — 高山探险社交平台
 
-[![Build](https://img.shields.io/github/actions/workflow/status/gaoshanyindi/desktop-tutorial/ci.yml?branch=main&label=build)](https://github.com/gaoshanyindi/desktop-tutorial/actions)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+> 连接攀登者、向导与俱乐部的一站式户外运动平台
 
-全球高山攀登社交平台 — 探索山峰、记录轨迹、连接向导与俱乐部、查询天气。
+[![CI](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml)
+[![Load Test](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml)
 
----
+## ✨ 核心功能
 
-## 🧪 测试账号（系统自动创建）
-
-| 角色 | 手机号 | 密码 | 昵称 | 权限 |
-|------|-------|------|------|------|
-| 普通用户 A | 13800000001 | test1234 | 阿尔卑斯 | 普通 |
-| 普通用户 B | 13800000002 | test1234 | 喜马拉雅 | 普通 |
-| 向 导 | 13800000003 | test1234 | 老张向导 | guide |
-| 俱乐部管理员 | 13800000004 | test1234 | 川藏俱乐部 | club_admin |
-| 平台管理员 | 13800000099 | admin1234 | 平台管理员 | admin |
-
-> 这些账号在系统首次启动时自动创建（`backend/db/database.js` 种子数据），无需手动操作。
-
----
+| 模块 | 功能 |
+|------|------|
+| 👤 用户体系 | 手机/邮箱注册，JWT鉴权，会员等级（探索者→传奇攀登者） |
+| 🏔️ 山峰数据库 | 全球山峰数据，路线攻略，成功率统计，峰会记录 |
+| 🗺️ 轨迹系统 | GPS轨迹录制，GPX上传解析，IndexedDB断点续传，高德/Mapbox双引擎 |
+| 👥 社区动态 | 图文发布，点赞评论，关注关系，实时群聊（Socket.IO） |
+| 🧭 向导认证 | 申请→审核→支付→认证全流程，rejected可重申请 |
+| 🏢 俱乐部 | 俱乐部认证，成员管理，路线定价 |
+| 📦 装备市场 | 二手装备发布，智能装备清单推荐 |
+| 🎫 预约系统 | 远征订单，SELECT FOR UPDATE防超额，事务保证一致性 |
+| 💬 AI教练 | 高山训练建议，装备推荐（Claude/GPT接入框架） |
+| 🛡️ 管理后台 | 用户/内容/订单管理，数据大屏 |
 
 ## 🚀 快速开始
 
+### 本地开发
+
 ```bash
-# 1. 克隆仓库
+# 克隆项目
 git clone https://github.com/gaoshanyindi/desktop-tutorial.git
 cd desktop-tutorial
 
-# 2. 安装后端依赖
-cd backend && npm install && cd ..
+# 安装依赖
+npm install
+cd backend && npm install
 
-# 3. 配置环境变量
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，填入 AMAP_KEY / OPENWEATHER_API_KEY 等
+# 生成 Prisma Client（SQLite，本地开发）
+DATABASE_PROVIDER=sqlite DATABASE_URL="file:./dev.db" node scripts/generate-prisma-client.js
 
-# 4. 启动服务
-npm start
-# → 访问 http://localhost:8080/summitlink
+# 初始化种子数据
+SEED_ON_START=true node db/seed.js
+
+# 启动后端
+PORT=8080 JWT_SECRET=dev-secret node app.js
 ```
 
----
+访问 http://localhost:8080
 
-## 📋 环境变量
+### Docker 生产部署
 
-详见 [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)。关键变量：
+```bash
+# 复制环境变量配置
+cp .env.example .env
+# 编辑 .env，填写 DATABASE_URL、JWT_SECRET 等
 
-| 变量 | 说明 |
-|------|------|
-| `JWT_SECRET` | JWT 签名密钥（**生产必须修改**）|
-| `AMAP_KEY` | 高德地图 Key |
-| `OPENWEATHER_API_KEY` | 天气 API Key |
-| `CORS_ORIGINS` | 生产 CORS 白名单 |
-| `SENTRY_DSN` | Sentry DSN（可选，未设置则不启用监控）|
-
----
-
-## 🚢 部署
-
-详见 [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)。推荐使用 [Railway](https://railway.app) 平台，仓库已包含 `railway.toml` 配置。
-
----
-
-## 📚 文档索引
-
-| 文档 | 说明 |
-|------|------|
-| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | 完整部署指南（本地开发 + Railway + Nginx + 监控）|
-| [docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md) | 环境变量详细说明表 |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系统架构图（Mermaid）+ 模块说明 |
-| [docs/API.md](./docs/API.md) | 后端 API 接口概览（按模块分组）|
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
-| [legal/README.md](./legal/README.md) | 隐私政策 / 用户协议 / 数据处理说明 |
-| [LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md) | 上线前检查清单 |
-
----
-
-## 📁 目录结构
-
-```
-desktop-tutorial/
-├── index.html                       # 主前端页面（Alpine.js + Tailwind CSS）
-├── admin.html                       # 后台管理面板
-├── backend/                         # Node.js / Express 后端
-│   ├── app.js                       # 服务入口
-│   ├── routes/                      # API 路由（27 个模块）
-│   ├── db/                          # 数据库初始化与 seed
-│   ├── middleware/                  # auth / adminAuth 中间件
-│   ├── utils/                       # 工具函数
-│   └── uploads/                     # 上传文件目录（本地开发）
-├── tests/                           # E2E 测试（Playwright）
-├── docs/                            # 部署 / 环境变量 / 架构 / API 文档
-├── legal/                           # 隐私政策 / 用户协议草稿
-├── railway.toml                     # Railway 平台部署配置
-├── railpack.toml                    # Railpack 构建配置
-├── playwright.config.js             # Playwright 配置
-├── CONTRIBUTING.md                  # 贡献指南
-└── LAUNCH_CHECKLIST.md              # 上线前检查清单
+# 启动多节点
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
----
+## 🏗️ 技术栈
 
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request，详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
----
-
-## 更新日志（原有内容）
-
-# Welcome to GitHub Desktop!
-
-This is your README. READMEs are where you can communicate what your project is and how to use it.
-
-Write your name on line 6, save it, and then head back to GitHub Desktop.
-
-## 新功能
-
-### 1. 全球热门商业向导带队攀登雪山统计
-
-在「探索山峰」页面新增了「**商业攀登**」标签页，展示全球 30 座主流商业向导公司带队攀登的热门雪山。
-
-- **数据内容**：涵盖 8000 米级、7000 米级、6000 米级及中国热门商业山峰，每座山峰包括：名称（中英文）、海拔、所在国家/山系、主要商业运营商、年均攀登人数（带「估算」标注）、最佳季节、常见路线、是否使用辅助氧气、难度等级。
-- **顶部图表**：展示年攀登人数 Top 10 的柱状图，直观了解各山峰商业热度。
-- **筛选排序**：支持按地区、难度筛选，以及按海拔/年攀登人数排序。
-- **营地天气直达**：每座配置了营地坐标的山峰下方有「查看营地天气」按钮，点击后直接调起营地分层天气。
-
-### 2. 修复营地天气 C2 与 C3 数据相同的问题
-
-- **根因**：部分山峰的 C2 与 C3 营地坐标相差过小（< 0.01°），落到了天气 API 同一格点，导致返回数据一致。
-- **修复**：重新调整了「道拉吉里峰、马纳斯卢峰、南迦帕尔巴特峰、安纳普尔纳峰、加舒尔布鲁姆 I/II 峰、布洛阿特峰、K2、干城章嘉峰」等多座山峰各营地的经纬度，确保相邻营地间距 ≥ 0.01°。
-- **UI 说明**：若两个营地因格点确实接近而天气相同，界面上会显示「⚠ 因格点接近，天气数据相同」提示，避免用户误以为是数据 bug。
-- 每个营地 DOM 节点带有 `data-camp` 属性标识（值为营地名称），便于自动化测试验证独立性。
-
-### 3. 集成 OpenStreetMap Nominatim 地名查询
-
-- **解决了「城市/山峰查不到」的问题**：当内置坐标库和 OpenWeather 均无法匹配时，自动 fallback 到 OpenStreetMap Nominatim 解析地名，再用坐标请求天气。
-- **下拉候选**：天气搜索框输入时（≥2 个字符），经过 500ms 防抖后，从 Nominatim 拉取 Top 5 候选，显示下拉选择。
-- **节流与缓存**：请求间隔 ≥ 1s；结果缓存到 `localStorage`，7 天内复用，减少对 Nominatim 的压力。
-- **友好提示**：当 Nominatim 也找不到时，提示：「未找到该地点，请尝试使用英文名或更具体的名称（例如 "Mount Everest Base Camp, Nepal"）」。
-
-### 4. 地图 API 切换为高德 Web JS API v2
-
-- **轨迹地图**：「轨迹」页的地图替换为高德真实地图，支持实时定位（`AMap.Geolocation`）和轨迹 Polyline 显示。
-- **坐标转换**：后端 `tracks.points` 仍以 WGS84（`{lat, lng, ele, ts}`）存储，前端通过 `AMap.convertFrom` 将 GPS 坐标转为 GCJ-02 再绘制。
-- **封装工具函数**：`initAMap(containerId, options)`、`locateMe()`、`renderTrackDetailMap(track)` 统一管理地图逻辑。
-
-> ⚠️ **上线前必须替换 AMap Key**：
->
-> 1. 前往 [https://console.amap.com/dev/key/app](https://console.amap.com/dev/key/app) 注册并申请一个 **Web 端（JS API）** 类型的 Key（个人认证免费）。
-> 2. 打开 `index.html`，将文件顶部中的 `YOUR_AMAP_KEY` 替换为你的真实 Key：
->    ```html
->    <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
->    ```
-> 3. 开发环境可在高德控制台将本地域（如 `localhost`）加入白名单。
-
-### 5. 探索模块去预约
-
-- 「探索山峰」页面的商业攀登模块**移除了「立即预约」按钮**，专注于路线介绍/图文展示。
-- 「向导」卡片上的「预约」按钮同样移除，点击卡片可查看向导详情，通过「私信向导」联系。
-- 所有付款/下单流程统一走底部导航「商业攀登」独立入口。
-
-### 6. 聊天发图
-
-- 聊天输入栏新增「📷 图片」按钮，支持多选图片；发送前可预览，点 × 删除。
-- 消息结构新增 `type`（`text` / `image` / `mixed`）和 `images: []` 字段。
-- 图片上传走 `POST /api/upload/multiple`；消息气泡自动渲染图片，点击可全屏预览（Lightbox）。
-- `POST /api/messages/conversations/:id/messages` 加 **30 次/分钟** 速率限制。
-
-### 7. 社区发图/评论发图
-
-- 发帖编辑器「照片」按钮改为真实文件选择，支持多图预览与上传；帖子表新增 `images TEXT JSON` 字段。
-- 评论区同样支持带图评论（照片按钮 + 预览）；评论表新增 `images TEXT JSON` 字段。
-- 帖子列表正确渲染多图九宫格（最多显示 9 张），超出显示 `+N`；点击图片全屏预览。
-
-## 接口说明
-
-| 接口 | 说明 |
+| 层级 | 技术 |
 |------|------|
-| `POST /api/upload` | 单图上传（JWT 鉴权，5MB 限制）|
-| `POST /api/upload/multiple` | 多图上传，最多 9 张（JWT 鉴权，5MB/张）|
-| `POST /api/messages/conversations/:id/messages` | 发送消息，支持 `content`、`type`、`images` 字段，限 30 次/分钟 |
-| `GET /api/messages/conversations/:id/messages` | 获取消息列表，返回 `type` 和 `images` 字段 |
-| `POST /api/posts` | 发帖，支持 `images` 字段（URL 数组）|
-| `GET /api/posts` | 帖子列表，返回 `images` 字段 |
-| `POST /api/comments` | 评论，支持 `images` 字段，`content` 为空但有图片时允许提交 |
-| `GET /api/comments` | 评论列表，返回 `images` 字段 |
-| `GET /api/tracks/:id` | 轨迹详情，返回 `points` 字段（WGS84 坐标数组）|
-| `POST /api/tracks` | 新增轨迹，支持 `points` 字段 |
+| 后端 | Node.js 24 + Express 4 |
+| ORM | Prisma 5（SQLite 开发 / PostgreSQL 生产）|
+| 实时通信 | Socket.IO 4 |
+| 认证 | JWT（jsonwebtoken） |
+| 文件存储 | 本地磁盘 / 阿里云 OSS（可选）|
+| 地图 | 高德地图 JS API / Mapbox GL JS（海外）|
+| 前端 | 原生 HTML5 + Tailwind CSS（CDN）|
+| PWA | Service Worker + IndexedDB 断点续传 |
+| 国际化 | 轻量级 i18n（zh/en）|
+| 部署 | Railway（主）/ Docker Compose（多节点）|
+| CI/CD | GitHub Actions（E2E + 压测 + 健康巡检）|
+| 监控 | Sentry（可选）/ 自定义健康检查 |
 
-## DB Schema 变更
+## ⚙️ 环境变量
 
-| 表 | 新增字段 | 说明 |
-|----|---------|------|
-| `messages` | `type TEXT DEFAULT 'text'` | 消息类型：text / image / mixed |
-| `messages` | `images TEXT` | 图片 URL JSON 数组 |
-| `posts` | `images TEXT` | 图片 URL JSON 数组 |
-| `comments` | `images TEXT` | 图片 URL JSON 数组 |
-| `tracks` | `points TEXT` | WGS84 坐标点 JSON 数组 `[{lat,lng,ele,ts}]` |
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | ✅ | PostgreSQL 连接串 |
+| `DATABASE_PROVIDER` | ✅ | `postgresql` 或 `sqlite` |
+| `JWT_SECRET` | ✅ | JWT 签名密钥（≥32字符）|
+| `ADMIN_PASSWORD` | ✅ | 管理员初始密码 |
+| `PORT` | - | 监听端口，默认 8080 |
+| `MAPBOX_TOKEN` | - | Mapbox GL JS Token（海外地图）|
+| `OSS_BUCKET` | - | 阿里云 OSS Bucket（图片存储）|
+| `OSS_REGION` | - | OSS Region，如 `oss-cn-hangzhou` |
+| `OSS_ACCESS_KEY_ID` | - | 阿里云 AccessKeyId |
+| `OSS_ACCESS_KEY_SECRET` | - | 阿里云 AccessKeySecret |
+| `OSS_CDN_HOST` | - | CDN 域名，如 `https://cdn.alpinelink.com` |
+| `SENTRY_DSN` | - | Sentry DSN（错误监控）|
+| `ALIYUN_ACCESS_KEY_ID` | - | 阿里云内容安全 AK |
+| `ALIYUN_ACCESS_KEY_SECRET` | - | 阿里云内容安全 SK |
 
-## 相关文件
+## 📡 API 文档
 
-| 文件 | 变更说明 |
-|------|---------|
-| `index.html` | AMap 替换 Leaflet、探索去预约、聊天/帖子/评论图片上传与渲染、Lightbox、AMap工具函数 |
-| `backend/routes/upload.js` | JWT 鉴权、`crypto.randomUUID()` 安全文件名、5MB 限制 |
-| `backend/routes/messages.js` | 消息接口支持 `type` 和 `images` 字段，30次/分钟限流 |
-| `backend/routes/posts.js` | 帖子接口支持 `images` 字段 |
-| `backend/routes/comments.js` | 评论接口支持 `images` 字段，允许纯图片评论 |
-| `backend/routes/tracks.js` | 轨迹接口支持 `points` 字段（WGS84 JSON）|
-| `backend/db/database.js` | 迁移：messages/posts/comments 表加 `images`，messages 加 `type` |
+完整 OpenAPI 3.0 文档见 [`docs/swagger.yaml`](docs/swagger.yaml)。
+
+主要端点：
+
+```
+GET  /api/health          综合健康检查
+GET  /api/health/ready    K8s readiness probe
+GET  /api/health/live     K8s liveness probe
+
+POST /api/auth/send-code  发送验证码
+POST /api/auth/login      登录（手机/邮箱/密码）
+
+GET  /api/peaks           山峰列表
+GET  /api/peaks/:id       山峰详情
+
+GET  /api/posts           社区动态
+POST /api/posts           发布动态
+
+POST /api/tracks          上传轨迹
+POST /api/upload          上传图片
+
+POST /api/bookings        创建预约
+POST /api/expedition-orders  远征下单（防超额）
+
+GET  /api/users/:id       用户资料
+POST /api/users/follow    关注用户
+```
+
+## 🧪 测试
+
+```bash
+# API 集成测试
+npm run test:api
+
+# E2E 测试（Playwright）
+npm run test:e2e
+
+# 50 并发压测
+npm run test:load
+```
+
+## 📦 部署文档
+
+详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
+## 📄 许可证
+
+MIT © 2026 AlpineLink
 
