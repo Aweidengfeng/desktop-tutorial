@@ -58,30 +58,67 @@ async function uploadToOss(buffer, originalname, folder = 'uploads') {
 }
 
 /**
- * Express 中间件：将 req.file.buffer 上传到 OSS，
- * 并将 req.file.ossUrl 设为 OSS 公开 URL。
- * 若 OSS 未启用，直接 next()（降级本地存储）。
+ * 从磁盘文件安全读取 buffer，仅允许读取 allowedDir 内的文件
+ * @param {string} filePath  multer 写盘后的文件路径
+ * @param {string} allowedDir  受控上传目录（绝对路径）
+ * @returns {Buffer|null}
  */
-async function ossUploadMiddleware(req, res, next) {
-  if (!OSS_ENABLED) return next();
-  if (!req.file && (!req.files || req.files.length === 0)) return next();
+function safeReadFile(filePath, allowedDir) {
+  const fs = require('fs');
+  const resolved = path.resolve(filePath);
+  const dir = path.resolve(allowedDir);
+  if (!resolved.startsWith(dir + path.sep) && resolved !== dir) {
+    console.error('[OSS] 路径越界，拒绝读取:', resolved);
+    return null;
+  }
   try {
-    const files = req.file ? [req.file] : req.files;
-    for (const f of files) {
-      if (!f.buffer && f.path) {
-        const fs = require('fs');
-        f.buffer = fs.readFileSync(f.path);
-        try { fs.unlinkSync(f.path); } catch (e) {}
-      }
-      if (f.buffer) {
-        f.ossUrl = await uploadToOss(f.buffer, f.originalname);
-      }
-    }
-    next();
+    const buf = fs.readFileSync(resolved);
+    try { fs.unlinkSync(resolved); } catch (e) {}
+    return buf;
   } catch (e) {
-    console.error('[OSS] 上传失败，降级本地存储:', e.message);
-    next(); // 降级不阻断
+    return null;
   }
 }
 
-module.exports = { OSS_ENABLED, uploadToOss, ossUploadMiddleware };
+/**
+ * 为已挂载到 req 上的文件执行 OSS 上传，并将 f.ossUrl 设为公开 URL。
+ * 若文件已有 buffer（memoryStorage），直接上传；
+ * 若文件在磁盘（diskStorage），从 allowedDir 内安全读取后上传。
+ * @param {object[]} files  multer 文件对象数组
+ * @param {string} [allowedDir]  允许读取的磁盘目录（diskStorage 时使用）
+ * @returns {Promise<void>}
+ */
+async function uploadFilesToOss(files, allowedDir) {
+  for (const f of files) {
+    let buf = f.buffer || null;
+    if (!buf && f.path && allowedDir) {
+      buf = safeReadFile(f.path, allowedDir);
+    }
+    if (buf) {
+      f.ossUrl = await uploadToOss(buf, f.originalname);
+    }
+  }
+}
+
+/**
+ * Express 中间件：将 req.file / req.files 上传到 OSS，
+ * 并将各文件的 ossUrl 设为 OSS 公开 URL。
+ * 若 OSS 未启用，直接 next()（降级本地存储）。
+ * @param {string} [allowedDir]  磁盘存储时允许读取的目录（绑定到路由时传入）
+ */
+function ossUploadMiddleware(allowedDir) {
+  return async function (req, res, next) {
+    if (!OSS_ENABLED) return next();
+    if (!req.file && (!req.files || req.files.length === 0)) return next();
+    try {
+      const files = req.file ? [req.file] : req.files;
+      await uploadFilesToOss(files, allowedDir);
+      next();
+    } catch (e) {
+      console.error('[OSS] 上传失败，降级本地存储:', e.message);
+      next(); // 降级不阻断
+    }
+  };
+}
+
+module.exports = { OSS_ENABLED, uploadToOss, uploadFilesToOss, ossUploadMiddleware };

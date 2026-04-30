@@ -5,7 +5,12 @@ const prisma = require('../db/prisma');
 // GET /api/health — 基础健康检查（已存在，保持兼容）
 router.get('/', async (req, res) => {
   const start = Date.now();
-  const checks = { status: 'ok', timestamp: new Date().toISOString(), version: process.env.npm_package_version || '1.0.0', region: process.env.REGION || 'default' };
+  const checks = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+    region: process.env.REGION || 'default',
+  };
 
   // DB 连通性检查
   try {

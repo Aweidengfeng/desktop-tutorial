@@ -8,7 +8,7 @@ const auth = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimits');
 const { checkImageSafety, reviewImageFile } = require('../middleware/contentSafety');
 const prisma = require('../db/prisma');
-const { ossUploadMiddleware, OSS_ENABLED } = require('../middleware/ossUpload');
+const { ossUploadMiddleware, OSS_ENABLED, uploadFilesToOss } = require('../middleware/ossUpload');
 
 // 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
 const uploadDir = process.env.UPLOADS_DIR
@@ -88,7 +88,9 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
       console.error('[contentSafety] 审核异常，放行：', e.message);
     }
     // OSS 上传
-    await ossUploadMiddleware(req, res, () => {});
+    if (OSS_ENABLED) {
+      await uploadFilesToOss([req.file], uploadDir);
+    }
     const url = req.file.ossUrl || ('/uploads/' + req.file.filename);
     prisma.$executeRaw`
       INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
@@ -120,7 +122,9 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
       }
     }
     // OSS 上传
-    await ossUploadMiddleware(req, res, () => {});
+    if (OSS_ENABLED) {
+      await uploadFilesToOss(req.files, uploadDir);
+    }
     const urls = req.files.map(f => f.ossUrl || ('/uploads/' + f.filename));
     for (const f of req.files) {
       const fileUrl = f.ossUrl || ('/uploads/' + f.filename);
