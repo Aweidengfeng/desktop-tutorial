@@ -92,11 +92,13 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
       await uploadFilesToOss([req.file], uploadDir);
     }
     const url = req.file.ossUrl || ('/uploads/' + req.file.filename);
+    // memoryStorage（OSS模式）下没有 filename，使用 originalname 作为记录
+    const storedFilename = req.file.filename || req.file.originalname || '';
     prisma.$executeRaw`
       INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
-      VALUES (${url}, ${req.file.filename || ''}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+      VALUES (${url}, ${storedFilename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
     `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
-    res.json({ url, filename: req.file.filename || '' });
+    res.json({ url, filename: storedFilename });
   });
 });
 
@@ -128,9 +130,11 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
     const urls = req.files.map(f => f.ossUrl || ('/uploads/' + f.filename));
     for (const f of req.files) {
       const fileUrl = f.ossUrl || ('/uploads/' + f.filename);
+      // memoryStorage（OSS模式）下没有 filename，使用 originalname 作为记录
+      const storedFilename = f.filename || f.originalname || '';
       prisma.$executeRaw`
         INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
-        VALUES (${fileUrl}, ${f.filename || ''}, ${f.size || null}, ${f.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+        VALUES (${fileUrl}, ${storedFilename}, ${f.size || null}, ${f.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
       `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
     }
     res.json({ urls });

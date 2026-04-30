@@ -73,7 +73,7 @@ function safeReadFile(filePath, allowedDir) {
   }
   try {
     const buf = fs.readFileSync(resolved);
-    try { fs.unlinkSync(resolved); } catch (e) {}
+    try { fs.unlinkSync(resolved); } catch (e) { console.warn('[OSS] 临时文件删除失败:', e.message); }
     return buf;
   } catch (e) {
     return null;

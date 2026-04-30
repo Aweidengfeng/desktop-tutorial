@@ -20,14 +20,8 @@ jobs:
           echo "Checking: $HEALTH_URL"
           RESPONSE=$(curl -sf --max-time 10 "$HEALTH_URL" || echo '{"status":"error"}')
           echo "Response: $RESPONSE"
-          PARSED=$(echo "$RESPONSE" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print(d.get('status', 'error'))
-print(d.get('db', 'unknown'))
-" 2>/dev/null || printf "error\nunknown")
-          STATUS=$(echo "$PARSED" | head -1)
-          DB=$(echo "$PARSED" | tail -1)
+          STATUS=$(echo "$RESPONSE" | jq -r '.status // "error"')
+          DB=$(echo "$RESPONSE" | jq -r '.db // "unknown"')
           echo "Status: $STATUS, DB: $DB"
           if [ "$STATUS" = "error" ]; then
             echo "❌ Health check FAILED"
