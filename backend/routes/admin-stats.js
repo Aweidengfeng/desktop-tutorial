@@ -28,12 +28,12 @@ router.get('/overview', adminAuth, async (req, res) => {
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM posts`,
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM posts WHERE date(created_at) = date('now')`,
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM peaks`,
-      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM guides WHERE status = 'active'`,
+      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM guides WHERE status IN ('active', 'approved')`,
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM clubs WHERE status = 'active'`,
-      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM orders`,
-      prisma.$queryRaw`SELECT COALESCE(SUM(amount), 0) as total FROM orders WHERE status = 'paid'`,
-      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM tracks`,
-      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM images`,
+      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM orders`.catch(() => [{ cnt: 0 }]),
+      prisma.$queryRaw`SELECT COALESCE(SUM(amount), 0) as total FROM orders WHERE status = 'paid'`.catch(() => [{ total: 0 }]),
+      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM tracks`.catch(() => [{ cnt: 0 }]),
+      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM images`.catch(() => [{ cnt: 0 }]),
     ]);
 
     res.json({
@@ -58,10 +58,11 @@ router.get('/overview', adminAuth, async (req, res) => {
 router.get('/users/trend', adminAuth, async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
+    const daysParam = `-${days} days`;
     const trend = await prisma.$queryRaw`
       SELECT date(created_at) as date, COUNT(*) as count
       FROM users
-      WHERE created_at >= date('now', ${'-' + days + ' days'})
+      WHERE created_at >= date('now', ${daysParam})
         AND deleted_at IS NULL
       GROUP BY date(created_at)
       ORDER BY date ASC
@@ -76,10 +77,11 @@ router.get('/users/trend', adminAuth, async (req, res) => {
 router.get('/posts/trend', adminAuth, async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
+    const daysParam = `-${days} days`;
     const trend = await prisma.$queryRaw`
       SELECT date(created_at) as date, COUNT(*) as count
       FROM posts
-      WHERE created_at >= date('now', ${'-' + days + ' days'})
+      WHERE created_at >= date('now', ${daysParam})
       GROUP BY date(created_at)
       ORDER BY date ASC
     `;
@@ -111,13 +113,14 @@ router.get('/peaks/top', adminAuth, async (req, res) => {
 router.get('/revenue/trend', adminAuth, async (req, res) => {
   try {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
+    const daysParam = `-${days} days`;
     const trend = await prisma.$queryRaw`
       SELECT date(created_at) as date,
              COUNT(*) as orders,
              COALESCE(SUM(amount), 0) as revenue
       FROM orders
       WHERE status = 'paid'
-        AND created_at >= date('now', ${'-' + days + ' days'})
+        AND created_at >= date('now', ${daysParam})
       GROUP BY date(created_at)
       ORDER BY date ASC
     `;
@@ -134,7 +137,7 @@ router.get('/pending', adminAuth, async (req, res) => {
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM guide_applications WHERE status = 'pending'`,
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM club_applications WHERE status = 'pending'`,
       prisma.$queryRaw`SELECT COUNT(*) as cnt FROM posts WHERE is_reported = 1`.catch(() => [{ cnt: 0 }]),
-      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM users WHERE is_banned = 1 AND deleted_at IS NULL`,
+      prisma.$queryRaw`SELECT COUNT(*) as cnt FROM users WHERE is_banned = 1 AND deleted_at IS NULL`.catch(() => [{ cnt: 0 }]),
     ]);
     res.json({
       guide_applications: Number(guideApps[0].cnt),
