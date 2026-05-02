@@ -27,19 +27,27 @@ router.post('/chat', coachLimiter, auth, async (req, res) => {
       return res.status(400).json({ error: '对话过长，请开始新对话' });
     }
 
-    // 构建用户上下文
+    // 构建用户上下文（容错处理）
     let context = '';
-    const [user] = await prisma.$queryRaw`
-      SELECT name, level, summits, expeditions FROM users WHERE id = ${req.user.id}
-    `;
-    if (user) {
-      context = `用户：${user.name}，等级：${user.level}，登顶次数：${user.summits}，远征次数：${user.expeditions}`;
+    try {
+      const [user] = await prisma.$queryRaw`
+        SELECT name, level, summits, expeditions FROM users WHERE id = ${req.user.id}
+      `;
+      if (user) {
+        context = `用户：${user.name}，等级：${user.level}，登顶次数：${user.summits}，远征次数：${user.expeditions}`;
+      }
+    } catch (dbErr) {
+      // 上下文获取失败时降级（不影响 AI 回复）
     }
     if (peak_id) {
-      const [peak] = await prisma.$queryRaw`
-        SELECT name, altitude, difficulty, country FROM peaks WHERE id = ${parseInt(peak_id)}
-      `;
-      if (peak) context += `，目标山峰：${peak.name}（${peak.altitude}m，${peak.difficulty}，${peak.country}）`;
+      try {
+        const [peak] = await prisma.$queryRaw`
+          SELECT name, altitude, difficulty, country FROM peaks WHERE id = ${parseInt(peak_id)}
+        `;
+        if (peak) context += `，目标山峰：${peak.name}（${peak.altitude}m，${peak.difficulty}，${peak.country}）`;
+      } catch (dbErr) {
+        // 忽略
+      }
     }
 
     const { reply, engine } = await askCoach(messages, context);

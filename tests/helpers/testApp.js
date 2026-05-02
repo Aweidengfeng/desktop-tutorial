@@ -92,6 +92,11 @@ function createApp() {
     app.use('/api/assistant', require('../../backend/routes/assistant'));
   }
 
+  // Phase 8 新路由（与 backend/app.js 保持一致）
+  app.use('/api/coach',        require('../../backend/routes/coach'));
+  app.use('/api/payment',      require('../../backend/routes/payment'));
+  app.use('/api/admin/stats',  require('../../backend/routes/admin-stats'));
+
   // 健康检查
   app.get(['/api/health', '/health'], (req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), version: '1.0.0' });
