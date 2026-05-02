@@ -45,12 +45,15 @@ router.post('/create', auth, async (req, res) => {
 // GET /api/payment/mock-pay — Mock 支付页面（仅开发/测试）
 router.get('/mock-pay', async (req, res) => {
   if (process.env.NODE_ENV === 'production') return res.status(404).send('Not Found');
-  const { orderNo, amount } = req.query;
+  const escape = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+  const orderNo = escape(req.query.orderNo || '');
+  const amount = escape(req.query.amount || '0');
+  const amountDisplay = (parseFloat(amount) / 100).toFixed(2);
   res.send(`
     <html><body style="font-family:sans-serif;text-align:center;padding:40px">
       <h2>🏔️ AlpineLink Mock 支付</h2>
       <p>订单号：<strong>${orderNo}</strong></p>
-      <p>金额：<strong>¥${(amount/100).toFixed(2)}</strong></p>
+      <p>金额：<strong>¥${amountDisplay}</strong></p>
       <button onclick="pay()" style="background:#1e40af;color:white;padding:12px 32px;border:none;border-radius:6px;font-size:16px;cursor:pointer">确认支付</button>
       <script>
         async function pay() {
