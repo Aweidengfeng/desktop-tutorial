@@ -1,6 +1,6 @@
 # CDN 加速配置指南
 
-本文档说明如何为 AlpineLink 配置阿里云 CDN 加速，覆盖加速域名设置、OSS 联合加速、缓存规则、HTTPS 证书及回源鉴权。
+本文档说明如何为 SummitLink 配置阿里云 CDN 加速，覆盖加速域名设置、OSS 联合加速、缓存规则、HTTPS 证书及回源鉴权。
 
 ---
 
@@ -10,7 +10,7 @@
 
 1. 登录 [阿里云 CDN 控制台](https://cdn.console.aliyun.com)
 2. 点击 **域名管理** → **添加域名**
-3. 填写加速域名，例如 `cdn.alpinelink.com`
+3. 填写加速域名，例如 `cdn.summitlink.com`
 4. 业务类型选择 **图片小文件**
 5. 加速区域选择 **全球**（海外用户也可加速）
 
@@ -18,8 +18,8 @@
 
 | 源站类型 | 配置值 | 备注 |
 |---------|--------|------|
-| OSS 域名 | `alpinelink-prod.oss-cn-hangzhou.aliyuncs.com` | 替换为实际 Bucket + Region |
-| 自定义源站 | `https://alpinelink.up.railway.app` | 直接回源到 Railway（非 OSS 场景） |
+| OSS 域名 | `summitlink-prod.oss-cn-hangzhou.aliyuncs.com` | 替换为实际 Bucket + Region |
+| 自定义源站 | `https://summitlink.up.railway.app` | 直接回源到 Railway（非 OSS 场景） |
 
 > **推荐方案**：图片存 OSS，CDN 以 OSS 为源站；API 仍走 Railway。
 
@@ -28,24 +28,24 @@
 ## 2. OSS + CDN 联合加速方案
 
 ```
-用户请求 cdn.alpinelink.com/uploads/xxx.jpg
+用户请求 cdn.summitlink.com/uploads/xxx.jpg
         ↓
   阿里云 CDN 节点（就近命中缓存）
         ↓ 未命中
-  OSS Bucket（alpinelink-prod, oss-cn-hangzhou）
+  OSS Bucket（summitlink-prod, oss-cn-hangzhou）
         ↓
   返回图片并在 CDN 节点缓存
 ```
 
 ### 配置步骤
 
-1. 在 OSS Bucket 控制台开启 **绑定自定义域名**，绑定 `cdn.alpinelink.com`
+1. 在 OSS Bucket 控制台开启 **绑定自定义域名**，绑定 `cdn.summitlink.com`
 2. 在 CDN 域名管理中将源站配置为该 OSS Bucket 的默认域名
 3. 在后端环境变量中设置：
    ```env
-   OSS_BUCKET=alpinelink-prod
+   OSS_BUCKET=summitlink-prod
    OSS_REGION=oss-cn-hangzhou
-   OSS_CDN_HOST=https://cdn.alpinelink.com
+   OSS_CDN_HOST=https://cdn.summitlink.com
    ```
 4. 上传图片后，`ossUpload.js` 中间件会自动生成 CDN URL
 
@@ -76,7 +76,7 @@
 
 1. 进入 [阿里云 SSL 证书控制台](https://yundun.console.aliyun.com/?p=cas)
 2. 购买 **免费证书**（每个账号每年 20 张）
-3. 填写域名 `cdn.alpinelink.com`，完成 DNS 验证
+3. 填写域名 `cdn.summitlink.com`，完成 DNS 验证
 4. 签发后在 CDN 域名 → **HTTPS 配置** 中上传证书
 
 ### 方案 B：Let's Encrypt（自动续期）
@@ -86,7 +86,7 @@
 apt install certbot python3-certbot-nginx
 
 # 申请证书
-certbot --nginx -d cdn.alpinelink.com
+certbot --nginx -d cdn.summitlink.com
 
 # 自动续期（crontab）
 0 3 * * * certbot renew --quiet
@@ -100,9 +100,9 @@ certbot --nginx -d cdn.alpinelink.com
 
 1. 在 OSS Bucket → **防盗链** 中开启 **Referer 白名单**：
    ```
-   https://cdn.alpinelink.com
-   https://alpinelink.up.railway.app
-   https://alpinelink.com
+   https://cdn.summitlink.com
+   https://summitlink.up.railway.app
+   https://summitlink.com
    ```
 
 2. 在 CDN 控制台 → **访问控制** → **URL 鉴权** 中启用 A 类型鉴权：

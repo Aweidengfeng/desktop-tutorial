@@ -1,6 +1,6 @@
-# AlpineLink API 文档说明
+# SummitLink API 文档说明
 
-AlpineLink 雪域高端登山户外社交平台 — API 接口文档中心。
+SummitLink 高山探险户外社交平台 — API 接口文档中心。
 
 ---
 
@@ -203,7 +203,7 @@ JWT_EXPIRES_IN=7d
 # ─── 阿里云短信 ─────────────────────────────────────
 ALIYUN_ACCESS_KEY_ID=your_access_key_id
 ALIYUN_ACCESS_KEY_SECRET=your_access_key_secret
-ALIYUN_SMS_SIGN_NAME=AlpineLink雪域
+ALIYUN_SMS_SIGN_NAME=SummitLink
 ALIYUN_SMS_TEMPLATE_CODE=SMS_000000000
 
 # ─── 跨域 ────────────────────────────────────────────

@@ -5552,7 +5552,7 @@ async function apiFetch(url, options = {}) {
   if (res.status === 401) {
     localStorage.removeItem('summitlink_token');
     // 触发全局登出事件
-    window.dispatchEvent(new CustomEvent('alpinelink:session-expired'));
+    window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
     throw new Error('登录已过期，请重新登录');
   }
   return res;
@@ -5560,7 +5560,7 @@ async function apiFetch(url, options = {}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Phase 2.3: IndexedDB 轨迹断点续传队列 ──────────────────────────────────
-const _IDB_NAME = 'alpinelink-db';
+const _IDB_NAME = 'summitlink-db';
 const _IDB_VERSION = 1;
 const _IDB_STORE = 'pending-tracks';
 
@@ -8955,8 +8955,8 @@ function alpineLink() {
         this.currentUser = null;
         this.showLogin = true;
       };
-      window.addEventListener('alpinelink:session-expired', onSessionExpired);
-      this.$cleanup(() => window.removeEventListener('alpinelink:session-expired', onSessionExpired));
+      window.addEventListener('summitlink:session-expired', onSessionExpired);
+      this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
       // Initialize public tracks
       this.filteredPublicTracks = this.publicTracks;
       // Verify token and load initial data

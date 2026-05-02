@@ -1,4 +1,4 @@
-# AlpineLink — Prisma 数据库设计说明
+# SummitLink — Prisma 数据库设计说明
 
 > **方案A（全新重建）**：抛弃原有 better-sqlite3 + 原生 SQL，改用 **Prisma ORM + PostgreSQL**（Railway 托管）。
 
@@ -25,7 +25,7 @@ npm install prisma @prisma/client
 npx prisma init
 
 # 3. 配置 .env
-echo 'DATABASE_URL="postgresql://user:pass@host:5432/alpinelink"' >> .env
+echo 'DATABASE_URL="postgresql://user:pass@host:5432/summitlink"' >> .env
 
 # 4. 推送 schema 到数据库（开发/方案A）
 npx prisma db push

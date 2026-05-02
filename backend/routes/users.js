@@ -40,7 +40,7 @@ router.get('/me/data-export', usersReadLimiter, auth, async (req, res) => {
 
     const exportData = { user, posts, tracks, orders, comments, exportedAt: new Date().toISOString() };
 
-    res.setHeader('Content-Disposition', 'attachment; filename="alpinelink-data-export.json"');
+    res.setHeader('Content-Disposition', 'attachment; filename="summitlink-data-export.json"');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.json(exportData);
   } catch (e) {

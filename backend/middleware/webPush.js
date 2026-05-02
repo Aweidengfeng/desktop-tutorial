@@ -8,7 +8,7 @@
  * 环境变量：
  *   VAPID_PUBLIC_KEY
  *   VAPID_PRIVATE_KEY
- *   VAPID_MAILTO      如 mailto:admin@alpinelink.com
+ *   VAPID_MAILTO      如 mailto:admin@summitlink.com
  */
 
 const PUSH_ENABLED = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -19,7 +19,7 @@ function getWebPush() {
   try {
     webpush = require('web-push');
     webpush.setVapidDetails(
-      process.env.VAPID_MAILTO || 'mailto:admin@alpinelink.com',
+      process.env.VAPID_MAILTO || 'mailto:admin@summitlink.com',
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );
@@ -41,7 +41,7 @@ async function sendPushNotification(subscription, payload) {
   if (!wp) return { skipped: true };
   try {
     await wp.sendNotification(subscription, JSON.stringify({
-      title: payload.title || 'AlpineLink',
+      title: payload.title || 'SummitLink',
       body: payload.body || '',
       icon: payload.icon || '/icon-192.png',
       badge: payload.badge || '/icon-192.png',

@@ -30,7 +30,7 @@ router.post('/create', auth, async (req, res) => {
     const result = await createPayment({
       orderNo,
       amount: Math.round(amount * 100), // 转为分
-      description: description || 'AlpineLink 订单',
+      description: description || 'SummitLink 订单',
       openid,
       returnUrl: return_url,
     });
@@ -53,7 +53,7 @@ router.get('/mock-pay', async (req, res) => {
   const orderNoJson = JSON.stringify(String(req.query.orderNo || ''));
   res.send(`
     <html><body style="font-family:sans-serif;text-align:center;padding:40px">
-      <h2>🏔️ AlpineLink Mock 支付</h2>
+      <h2>🏔️ SummitLink Mock 支付</h2>
       <p>订单号：<strong>${orderNo}</strong></p>
       <p>金额：<strong>¥${amountDisplay}</strong></p>
       <button onclick="pay()" style="background:#1e40af;color:white;padding:12px 32px;border:none;border-radius:6px;font-size:16px;cursor:pointer">确认支付</button>

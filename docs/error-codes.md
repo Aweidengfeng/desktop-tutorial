@@ -1,4 +1,4 @@
-# AlpineLink 统一错误码说明
+# SummitLink 统一错误码说明
 
 ## 统一响应格式
 

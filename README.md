@@ -1,4 +1,4 @@
-# 🏔️ AlpineLink — 高山探险社交平台
+# 🏔️ SummitLink — 高山探险社交平台
 
 > 连接攀登者、向导与俱乐部的一站式户外运动平台
 
@@ -87,7 +87,7 @@ docker-compose -f docker-compose.prod.yml up -d
 | `OSS_REGION` | - | OSS Region，如 `oss-cn-hangzhou` |
 | `OSS_ACCESS_KEY_ID` | - | 阿里云 AccessKeyId |
 | `OSS_ACCESS_KEY_SECRET` | - | 阿里云 AccessKeySecret |
-| `OSS_CDN_HOST` | - | CDN 域名，如 `https://cdn.alpinelink.com` |
+| `OSS_CDN_HOST` | - | CDN 域名，如 `https://cdn.summitlink.app` |
 | `SENTRY_DSN` | - | Sentry DSN（错误监控）|
 | `ALIYUN_ACCESS_KEY_ID` | - | 阿里云内容安全 AK |
 | `ALIYUN_ACCESS_KEY_SECRET` | - | 阿里云内容安全 SK |
@@ -141,5 +141,5 @@ npm run test:load
 
 ## 📄 许可证
 
-MIT © 2026 AlpineLink
+MIT © 2026 SummitLink
 

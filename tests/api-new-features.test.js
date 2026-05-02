@@ -7,7 +7,7 @@
 'use strict';
 
 // ── 测试前设置环境变量（必须在 require app 之前）──────────────────────────────
-const testDbPath = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
+const testDbPath = process.env.TEST_DB_PATH || '/tmp/test-summitlink.db';
 process.env.DATABASE_PATH   = testDbPath;
 process.env.DATABASE_URL    = process.env.DATABASE_URL || `file:${testDbPath}`;
 process.env.JWT_SECRET      = 'test-jwt-secret-summitlink';

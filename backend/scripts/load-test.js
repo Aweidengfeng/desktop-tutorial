@@ -29,7 +29,7 @@ async function runBatch(urls) {
 }
 
 async function main() {
-  console.log(`\n🏔️  AlpineLink Load Test`);
+  console.log(`\n🏔️  SummitLink Load Test`);
   console.log(`Target: ${BASE_URL}`);
   console.log(`Concurrency: ${CONCURRENCY}, Total: ${TOTAL_REQUESTS}\n`);
 
