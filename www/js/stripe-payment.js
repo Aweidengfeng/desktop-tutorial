@@ -19,11 +19,13 @@ class StripePayment {
   }
 
   async createPaymentSheet(container, { amount, currency, orderId, orderType }) {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('用户未登录，请先登录后再支付');
     const res = await fetch('/api/payment/create-intent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({ amount, currency, orderId, orderType }),
     });

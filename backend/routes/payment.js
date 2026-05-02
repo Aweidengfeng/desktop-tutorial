@@ -150,7 +150,7 @@ router.post('/create-intent', auth, async (req, res) => {
       INSERT INTO payments (user_id, stripe_payment_intent_id, amount, currency, status, order_id, order_type)
       VALUES (${req.user.id}, ${paymentIntent.id}, ${amount}, ${currency || 'usd'}, 'pending', ${String(orderId || '')}, ${String(orderType || '')})
       ON CONFLICT(stripe_payment_intent_id) DO NOTHING
-    `.catch(() => {}); // 表不存在时静默
+    `.catch(dbErr => console.error('[payment/create-intent] DB insert error:', dbErr.message));
 
     res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
   } catch (e) {
@@ -180,7 +180,7 @@ router.post('/webhook', verifyStripeWebhook, async (req, res) => {
         await prisma.$executeRaw`
           UPDATE payments SET status = 'paid', updated_at = datetime('now')
           WHERE stripe_payment_intent_id = ${pi.id}
-        `.catch(() => {});
+        `.catch(dbErr => console.error('[payment/webhook] DB update (succeeded) error:', dbErr.message));
         break;
       }
       case 'payment_intent.payment_failed': {
@@ -188,7 +188,7 @@ router.post('/webhook', verifyStripeWebhook, async (req, res) => {
         await prisma.$executeRaw`
           UPDATE payments SET status = 'failed', updated_at = datetime('now')
           WHERE stripe_payment_intent_id = ${pi.id}
-        `.catch(() => {});
+        `.catch(dbErr => console.error('[payment/webhook] DB update (failed) error:', dbErr.message));
         break;
       }
       default:
@@ -211,7 +211,7 @@ router.get('/history', auth, async (req, res) => {
       FROM payments
       WHERE user_id = ${req.user.id}
       ORDER BY created_at DESC
-    `.catch(() => []);
+    `;
     res.json(payments);
   } catch (e) {
     console.error('[payment/history]', e.message);

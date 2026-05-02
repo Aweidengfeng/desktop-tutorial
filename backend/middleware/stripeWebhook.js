@@ -1,6 +1,9 @@
 /**
  * Stripe Webhook 签名验证中间件
  */
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('⚠️  STRIPE_SECRET_KEY 未设置，stripeWebhook 中间件在无密钥模式下运行');
+}
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
 module.exports = function verifyStripeWebhook(req, res, next) {
