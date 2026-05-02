@@ -213,6 +213,9 @@ app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/certification', require('./routes/certification'));
 app.use('/api/config', require('./routes/config'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/coach', require('./routes/coach'));
+app.use('/api/payment', require('./routes/payment'));
+app.use('/api/admin/stats', require('./routes/admin-stats'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');
