@@ -9,12 +9,12 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'AlpineLink API',
+      title: 'SummitLink API',
       version: '1.0.0',
       description:
-        'AlpineLink 登山社区平台后端 API 文档。包含用户认证、山峰信息、向导、俱乐部、轨迹、帖子、订单等全部接口。',
+        'SummitLink 登山社区平台后端 API 文档。包含用户认证、山峰信息、向导、俱乐部、轨迹、帖子、订单等全部接口。',
       contact: {
-        name: 'AlpineLink',
+        name: 'SummitLink',
       },
     },
     servers: [

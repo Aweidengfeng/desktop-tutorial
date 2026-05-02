@@ -1,13 +1,13 @@
 # PostgreSQL 迁移指南（Phase 1）
 
 > **文档创建日期**：2026-04-27
-> **适用版本**：AlpineLink B1-Alpha 及以上
+> **适用版本**：SummitLink B1-Alpha 及以上
 
 ---
 
 ## 概述
 
-AlpineLink 当前使用 SQLite（`better-sqlite3` + Prisma），适合开发环境。
+SummitLink 当前使用 SQLite（`better-sqlite3` + Prisma），适合开发环境。
 生产环境需迁移至 PostgreSQL（Railway PostgreSQL 服务）以解决：
 - SQLite 并发写入瓶颈（10 并发即卡顿，出现 `SQLITE_BUSY`）
 - SQLite 是**投资人融资尽调红线**

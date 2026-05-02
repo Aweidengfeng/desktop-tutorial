@@ -48,7 +48,7 @@ router.post('/test', auth, async (req, res) => {
     const settings = JSON.parse(user?.settings || '{}');
     if (!settings.pushSubscription) return res.status(400).json({ error: '未订阅推送' });
     const result = await sendPushNotification(JSON.parse(settings.pushSubscription), {
-      title: '🏔️ AlpineLink 测试推送',
+      title: '🏔️ SummitLink 测试推送',
       body: '推送通知工作正常！',
       url: '/',
     });

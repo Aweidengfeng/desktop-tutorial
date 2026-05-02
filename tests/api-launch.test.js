@@ -1,4 +1,4 @@
-process.env.DATABASE_PATH  = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
+process.env.DATABASE_PATH  = process.env.TEST_DB_PATH || '/tmp/test-summitlink.db';
 process.env.DATABASE_URL   = process.env.DATABASE_URL || `file:${process.env.DATABASE_PATH}`;
 process.env.JWT_SECRET     = 'test-jwt-secret-summitlink';
 process.env.NODE_ENV       = 'test';

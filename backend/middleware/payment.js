@@ -59,7 +59,7 @@ async function createWechatPayment({ orderNo, amount, description, openid }) {
     mchid: process.env.WECHAT_MCH_ID,
     description,
     out_trade_no: orderNo,
-    notify_url: process.env.PAYMENT_NOTIFY_URL || 'https://alpinelink.com/api/payment/notify/wechat',
+    notify_url: process.env.PAYMENT_NOTIFY_URL || 'https://summitlink.com/api/payment/notify/wechat',
     amount: { total: amount, currency: 'CNY' },
     payer: { openid },
   };

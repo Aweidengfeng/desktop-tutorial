@@ -717,6 +717,10 @@ router.post('/expeditions/:id/reject', adminWriteLimiter, adminAuth, async (req,
 
 // GET /api/admin/sms-codes — 查看最近50条验证码（仅管理员，内测用）
 router.get('/sms-codes', adminLoginLimiter, devOnly, adminAuth, async (req, res) => {
+  // 生产环境禁用 - 安全漏洞，仅内测使用
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   try {
     const codes = await prisma.$queryRaw`
       SELECT id, phone, code, expires_at, used, created_at

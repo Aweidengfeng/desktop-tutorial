@@ -7,7 +7,7 @@
  *   OSS_REGION         如 oss-cn-hangzhou
  *   OSS_ACCESS_KEY_ID  阿里云 AccessKeyId
  *   OSS_ACCESS_KEY_SECRET
- *   OSS_CDN_HOST       （可选）CDN 域名，如 https://cdn.alpinelink.com
+ *   OSS_CDN_HOST       （可选）CDN 域名，如 https://cdn.summitlink.com
  */
 const path = require('path');
 const crypto = require('crypto');

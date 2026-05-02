@@ -8,7 +8,7 @@
  *   SMTP_SECURE    true/false，默认 true
  *   SMTP_USER      发件人邮箱
  *   SMTP_PASS      邮箱密码/授权码
- *   SMTP_FROM      发件人显示名，如 "AlpineLink <noreply@alpinelink.com>"
+ *   SMTP_FROM      发件人显示名，如 "SummitLink <noreply@summitlink.com>"
  */
 
 const MAIL_ENABLED = !!process.env.SMTP_HOST;
@@ -34,7 +34,7 @@ function getTransporter() {
   }
 }
 
-const FROM = process.env.SMTP_FROM || 'AlpineLink <noreply@alpinelink.com>';
+const FROM = process.env.SMTP_FROM || 'SummitLink <noreply@summitlink.com>';
 
 async function sendMail({ to, subject, html, text }) {
   if (!MAIL_ENABLED) {
@@ -59,10 +59,10 @@ async function sendMail({ to, subject, html, text }) {
 
 function bookingConfirmEmail({ userName, peakName, date, guideOrClub, orderNo }) {
   return {
-    subject: `【AlpineLink】预约确认 - ${peakName}`,
+    subject: `【SummitLink】预约确认 - ${peakName}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#1e40af">🏔️ AlpineLink 预约确认</h2>
+        <h2 style="color:#1e40af">🏔️ SummitLink 预约确认</h2>
         <p>您好 <strong>${userName}</strong>，</p>
         <p>您的预约已确认：</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -73,7 +73,7 @@ function bookingConfirmEmail({ userName, peakName, date, guideOrClub, orderNo })
         </table>
         <p style="color:#6b7280;font-size:14px">如有问题请联系客服。祝攀登顺利！</p>
         <hr style="border:none;border-top:1px solid #e5e7eb">
-        <p style="color:#9ca3af;font-size:12px">AlpineLink © 2026</p>
+        <p style="color:#9ca3af;font-size:12px">SummitLink © 2026</p>
       </div>
     `,
   };
@@ -83,16 +83,16 @@ function certificationResultEmail({ userName, type, status, reviewNote }) {
   const statusText = status === 'approved' ? '✅ 已通过' : '❌ 未通过';
   const typeText = type === 'guide' ? '向导认证' : '俱乐部认证';
   return {
-    subject: `【AlpineLink】${typeText}审核结果`,
+    subject: `【SummitLink】${typeText}审核结果`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#1e40af">🏔️ AlpineLink 认证审核结果</h2>
+        <h2 style="color:#1e40af">🏔️ SummitLink 认证审核结果</h2>
         <p>您好 <strong>${userName}</strong>，</p>
         <p>您的 <strong>${typeText}</strong> 申请审核结果：<strong>${statusText}</strong></p>
         ${reviewNote ? `<p style="background:#f3f4f6;padding:12px;border-radius:6px">审核意见：${reviewNote}</p>` : ''}
         ${status !== 'approved' ? '<p>您可以修改材料后重新申请。</p>' : '<p>恭喜！您现在可以在平台上为用户提供服务。</p>'}
         <hr style="border:none;border-top:1px solid #e5e7eb">
-        <p style="color:#9ca3af;font-size:12px">AlpineLink © 2026</p>
+        <p style="color:#9ca3af;font-size:12px">SummitLink © 2026</p>
       </div>
     `,
   };
@@ -101,15 +101,15 @@ function certificationResultEmail({ userName, type, status, reviewNote }) {
 function emailVerifyCode({ code, purpose }) {
   const purposeText = purpose === 'login' ? '登录' : purpose === 'register' ? '注册' : '验证';
   return {
-    subject: `【AlpineLink】${purposeText}验证码：${code}`,
+    subject: `【SummitLink】${purposeText}验证码：${code}`,
     html: `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h2 style="color:#1e40af">🏔️ AlpineLink 验证码</h2>
+        <h2 style="color:#1e40af">🏔️ SummitLink 验证码</h2>
         <p>您的${purposeText}验证码为：</p>
         <p style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#1e40af;text-align:center;padding:20px;background:#eff6ff;border-radius:8px">${code}</p>
         <p style="color:#6b7280">验证码有效期 10 分钟，请勿泄露给他人。</p>
         <hr style="border:none;border-top:1px solid #e5e7eb">
-        <p style="color:#9ca3af;font-size:12px">AlpineLink © 2026</p>
+        <p style="color:#9ca3af;font-size:12px">SummitLink © 2026</p>
       </div>
     `,
   };

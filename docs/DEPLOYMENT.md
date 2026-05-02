@@ -1,4 +1,4 @@
-# AlpineLink 部署运维手册
+# SummitLink 部署运维手册
 
 本文档涵盖本地开发环境搭建、Railway 一键部署（当前生产）、Docker Compose 多节点部署、环境变量清单、PostgreSQL 备份策略、健康检查端点说明，以及回滚策略。
 
@@ -178,7 +178,7 @@ cd desktop-tutorial
 
 # 2. 创建 .env 文件（参考下方环境变量清单）
 cat > .env << 'EOF'
-DATABASE_URL=postgresql://alpinelink:<password>@<host>:5432/alpinelink
+DATABASE_URL=postgresql://summitlink:<password>@<host>:5432/summitlink
 JWT_SECRET=<openssl rand -hex 32>
 ADMIN_PASSWORD=<强随机密码>
 MAPBOX_TOKEN=<可选>
@@ -220,7 +220,7 @@ docker compose -f docker-compose.prod.yml up -d --scale backend=2
 docker compose -f docker-compose.prod.yml build
 
 # 使用 Swarm 滚动发布
-docker stack deploy -c docker-compose.prod.yml alpinelink
+docker stack deploy -c docker-compose.prod.yml summitlink
 ```
 
 ---
@@ -305,10 +305,10 @@ pg_restore --no-owner --no-acl -d "$DATABASE_URL" backup-20260429.dump
 crontab -e
 
 # 添加以下行（将 DATABASE_URL 替换为实际连接串）
-0 2 * * * DATABASE_URL="postgresql://alpinelink:<pass>@<host>:5432/alpinelink" \
+0 2 * * * DATABASE_URL="postgresql://summitlink:<pass>@<host>:5432/summitlink" \
   pg_dump "$DATABASE_URL" --no-owner --no-acl -Fc \
-  -f /data/backups/alpinelink-$(date +\%Y\%m\%d).dump \
-  && find /data/backups -name "alpinelink-*.dump" -mtime +7 -delete
+  -f /data/backups/summitlink-$(date +\%Y\%m\%d).dump \
+  && find /data/backups -name "summitlink-*.dump" -mtime +7 -delete
 ```
 
 ### Railway PostgreSQL 自动备份
@@ -329,11 +329,11 @@ Railway PostgreSQL 插件提供每日自动备份（保留 7 天），在 **Data
 
 ```bash
 # 查看已构建的镜像版本（建议使用 git commit hash 打 tag）
-docker images alpinelink-backend
+docker images summitlink-backend
 
 # 回滚到指定版本
 docker compose -f docker-compose.prod.yml stop backend
-docker tag alpinelink-backend:<old-tag> alpinelink-backend:latest
+docker tag summitlink-backend:<old-tag> summitlink-backend:latest
 docker compose -f docker-compose.prod.yml up -d backend
 ```
 
@@ -345,7 +345,7 @@ docker compose -f docker-compose.prod.yml stop backend
 
 # 2. 恢复备份（确保已有 pg_dump 备份）
 pg_restore --no-owner --no-acl -d "$DATABASE_URL" \
-  /data/backups/alpinelink-20260428.dump
+  /data/backups/summitlink-20260428.dump
 
 # 3. 重新启动后端
 docker compose -f docker-compose.prod.yml start backend
@@ -495,7 +495,7 @@ Sentry 通过 `SENTRY_DSN` 环境变量控制启用，**未设置时完全无副
 `.github/workflows/health-check.yml` 每15分钟自动检查生产环境健康状态。
 
 在 GitHub Repo Settings → Variables 中设置：
-- `PRODUCTION_URL`: 生产环境 URL（如 `https://alpinelink.up.railway.app`）
+- `PRODUCTION_URL`: 生产环境 URL（如 `https://summitlink.up.railway.app`）
 
 ### 故障转移策略
 

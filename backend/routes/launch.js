@@ -13,7 +13,7 @@ const applicationLimiter = rateLimit({
 });
 
 const program = {
-  title: 'AlpineLink Seven Summits Global Selection Program',
+  title: 'SummitLink Seven Summits Global Selection Program',
   subtitle: '2026 七大洲最高峰全球 20 人招募计划',
   positioning: '全球经典商业攀登展示 + 活动报名 + 服务商招募 + 官网/App 可访问的轻量启动版',
   launchWindow: '2026-06-01 至 2026-08-30',

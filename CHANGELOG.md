@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to AlpineLink are documented here.
+All notable changes to SummitLink are documented here.
 
 ## [1.0.0] - 2026-04-29
 

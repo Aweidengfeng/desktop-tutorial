@@ -8,8 +8,8 @@
  *   /api/club-console, /api/expeditions, /api/group-chats, /api/upload
  */
 
-process.env.DATABASE_PATH  = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
-process.env.DATABASE_URL   = process.env.DATABASE_URL || 'file:/tmp/test-alpinelink.db';
+process.env.DATABASE_PATH  = process.env.TEST_DB_PATH || '/tmp/test-summitlink.db';
+process.env.DATABASE_URL   = process.env.DATABASE_URL || 'file:/tmp/test-summitlink.db';
 process.env.JWT_SECRET     = 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD = 'test-admin-password';
 process.env.ADMIN_USERNAME = 'admin';

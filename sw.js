@@ -1,5 +1,5 @@
 // sw.js
-const CACHE_NAME = 'alpinelink-v1';
+const CACHE_NAME = 'summitlink-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', event => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
-    self.registration.showNotification(data.title || 'AlpineLink', {
+    self.registration.showNotification(data.title || 'SummitLink', {
       body: data.body || '',
       icon: data.icon || '/icon-192.png',
       badge: data.badge || '/icon-192.png',

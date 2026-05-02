@@ -14,7 +14,7 @@ const CLAUDE_ENABLED = !!process.env.ANTHROPIC_API_KEY;
 const OPENAI_ENABLED = !!process.env.OPENAI_API_KEY;
 const AI_ENABLED = CLAUDE_ENABLED || OPENAI_ENABLED;
 
-const SYSTEM_PROMPT = `你是 AlpineLink 平台的专业高山训练教练，名叫"峰岭"。
+const SYSTEM_PROMPT = `你是 SummitLink 平台的专业高山训练教练，名叫"峰岭"。
 你精通高海拔登山、技术攀岩、体能训练和装备选择。
 回答要简洁专业，中文为主，必要时使用英文专业术语。
 每次回答控制在 300 字以内，提供可操作的具体建议。

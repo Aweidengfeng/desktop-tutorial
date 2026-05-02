@@ -7,7 +7,7 @@
 const fs = require('fs');
 
 module.exports = async function globalSetup() {
-  const dbPath = process.env.TEST_DB_PATH || '/tmp/test-alpinelink.db';
+  const dbPath = process.env.TEST_DB_PATH || '/tmp/test-summitlink.db';
   // 删除旧的测试数据库，确保每次 CI 从干净状态开始
   if (fs.existsSync(dbPath)) {
     fs.unlinkSync(dbPath);
