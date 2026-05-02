@@ -38,7 +38,9 @@ const FROM = process.env.SMTP_FROM || 'AlpineLink <noreply@alpinelink.com>';
 
 async function sendMail({ to, subject, html, text }) {
   if (!MAIL_ENABLED) {
-    console.log(`[mailer] 邮件未配置，跳过发送 → ${to}: ${subject}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[mailer] 邮件未配置，跳过发送 → subject: ${subject}`);
+    }
     return { skipped: true };
   }
   const t = getTransporter();
