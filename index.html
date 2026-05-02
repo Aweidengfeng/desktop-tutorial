@@ -109,6 +109,70 @@
     document.documentElement.setAttribute('data-theme', theme);
   })();
   </script>
+<script>
+// SummitLink i18n 兜底英文翻译
+(function() {
+  if (window.__SL_I18N_LOADED) return;
+  window.__SL_I18N_LOADED = true;
+
+  var lang = localStorage.getItem('sl_lang') ||
+    (navigator.language || navigator.userLanguage || 'zh').split('-')[0];
+
+  window.__SL_LANG = lang;
+
+  var EN = {
+    // 通用
+    'loading': 'Loading...',
+    'error': 'Error',
+    'success': 'Success',
+    'cancel': 'Cancel',
+    'confirm': 'Confirm',
+    'submit': 'Submit',
+    'save': 'Save',
+    'delete': 'Delete',
+    'edit': 'Edit',
+    'close': 'Close',
+    'back': 'Back',
+    'next': 'Next',
+    'search': 'Search',
+    'filter': 'Filter',
+    'all': 'All',
+    'more': 'More',
+    // 认证
+    'login': 'Sign In',
+    'register': 'Sign Up',
+    'logout': 'Sign Out',
+    'email': 'Email',
+    'password': 'Password',
+    'phone': 'Phone',
+    'name': 'Name',
+    'forgot_password': 'Forgot password?',
+    // 错误
+    'network_error': 'Network error, please try again',
+    'server_error': 'Server error, please try again later',
+    'login_required': 'Please sign in first',
+    'permission_denied': 'Permission denied',
+    // 山峰/探险
+    'peaks': 'Peaks',
+    'guides': 'Guides',
+    'clubs': 'Clubs',
+    'expeditions': 'Expeditions',
+    'tracks': 'Tracks',
+    'gear': 'Gear',
+    'community': 'Community',
+    // 用户
+    'profile': 'Profile',
+    'settings': 'Settings',
+    'my_orders': 'My Orders',
+    'my_tracks': 'My Tracks',
+  };
+
+  window.__t = function(key) {
+    if (lang === 'zh') return key; // 中文直接返回key（前端模板已用中文）
+    return EN[key] || key;
+  };
+})();
+</script>
 </head>
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
 <div class="app-container relative min-h-screen overflow-hidden" style="background: var(--bg-primary);">
@@ -9156,6 +9220,53 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
   </div>
 </div>
+
+<!-- GDPR Cookie 同意横幅 -->
+<div id="gdpr-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e293b;color:#f1f5f9;padding:16px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,0.3);">
+  <div style="flex:1;min-width:200px;font-size:13px;line-height:1.6;">
+    🍪 We use cookies to improve your experience. By continuing, you agree to our
+    <a href="/legal/privacy" style="color:#60a5fa;text-decoration:underline;">Privacy Policy</a>.
+  </div>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="gdprAccept()" style="background:#3b82f6;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Accept</button>
+    <button onclick="gdprDecline()" style="background:transparent;color:#94a3b8;border:1px solid #475569;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Decline</button>
+  </div>
+</div>
+<script>
+(function() {
+  // 检查是否已经同意/拒绝
+  var consent = localStorage.getItem('sl_gdpr_consent');
+  if (consent) return;
+
+  // 调用后端检查是否需要显示横幅
+  var apiBase = window.__API_BASE__ || '';
+  fetch(apiBase + '/api/gdpr/check')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.requiresGdpr) {
+        var banner = document.getElementById('gdpr-banner');
+        if (banner) banner.style.display = 'flex';
+      }
+    })
+    .catch(function() {
+      // 网络失败时不显示横幅（避免影响用户体验）
+    });
+})();
+
+function gdprAccept() {
+  localStorage.setItem('sl_gdpr_consent', 'accepted');
+  localStorage.setItem('sl_gdpr_date', new Date().toISOString());
+  var banner = document.getElementById('gdpr-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function gdprDecline() {
+  localStorage.setItem('sl_gdpr_consent', 'declined');
+  localStorage.setItem('sl_gdpr_date', new Date().toISOString());
+  var banner = document.getElementById('gdpr-banner');
+  if (banner) banner.style.display = 'none';
+}
+</script>
 
 </body>
 <script>
