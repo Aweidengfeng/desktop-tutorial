@@ -212,6 +212,7 @@ if (process.env.ENABLE_ASSISTANT === 'true') {
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/certification', require('./routes/certification'));
 app.use('/api/config', require('./routes/config'));
+app.use('/api/push', require('./routes/push'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');

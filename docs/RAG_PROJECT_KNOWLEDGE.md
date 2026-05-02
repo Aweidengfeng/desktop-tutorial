@@ -2,7 +2,7 @@
 
 > **文档用途**：项目进度对齐、里程碑打赏标记、核心约束核对、多专业视角评审结论沉淀
 > **创建日期**：2026-04-26
-> **最后更新**：2026-04-29
+> **最后更新**：2026-05-02
 > **维护规则**：每次完成一个里程碑模块后，在对应任务后标记 ✅ 并记录完成日期；每次新对话开始必须核对"核心约束清单"
 
 ---
@@ -118,6 +118,13 @@
 | 6.1 | Sentry 错误监控（后端 + 前端） | P1 | ✅ 已完成 | ✅ 2026-04-29 — @sentry/node可选依赖；backend/middleware/sentry.js（initSentry/sentryErrorHandler）；前端Sentry懒加载；window.__SENTRY_DSN注入 |
 | 6.2 | README 完整重写 | P1 | ✅ 已完成 | ✅ 2026-04-29 — README完整重写（功能表、快速开始、技术栈、API文档、环境变量）|
 | 6.3 | CHANGELOG + v1.0.0 发布准备 | P1 | ✅ 已完成 | ✅ 2026-04-29 — CHANGELOG.md（0.x~6.x全量变更记录）；.env.example（完整环境变量模板）|
+
+### Phase 7：v1.1 核心增强（2026-05 目标）
+| # | 任务 | 优先级 | 状态 | 完成标记 |
+|---|------|--------|------|---------|
+| 7.1 | PostgreSQL 全文搜索（tsvector + GIN索引） | P1 | ✅ 已完成 | ✅ 2026-05-02 — /api/search全文搜索（PG tsvector + GIN索引降级SQLite LIKE）；/api/search/suggest建议；pg-search-indexes.js索引脚本 |
+| 7.2 | 邮件通知系统（nodemailer） | P1 | ✅ 已完成 | ✅ 2026-05-02 — mailer.js（nodemailer可选）；预约确认/认证结果/验证码邮件模板；bookings/admin/auth路由集成 |
+| 7.3 | Web Push 推送（VAPID） | P1 | ✅ 已完成 | ✅ 2026-05-02 — webPush.js（web-push可选）；/api/push路由（订阅/取消/测试）；前端subscribePush()；SW push事件处理 |
 
 ---
 
@@ -325,6 +332,7 @@
 | 2026-04-29 | Phase 1.5 PostgreSQL压测，Phase 4.1 多节点部署 | 1.5✅ 4.1✅ |
 | 2026-04-29 | Phase 4.2 OSS存储，Phase 4.3 CDN加速，Phase 4.4 健康检查+故障转移 | 4.2✅ 4.3✅ 4.4✅ |
 | 2026-04-29 | Phase 6.1 Sentry监控，Phase 6.2 README，Phase 6.3 CHANGELOG+发布准备 | 6.1✅ 6.2✅ 6.3✅ 🎉v1.0.0 |
+| 2026-05-02 | Phase 7.1 全文搜索，Phase 7.2 邮件通知，Phase 7.3 Web Push | 7.1✅ 7.2✅ 7.3✅ |
 
 ---
 

@@ -595,6 +595,7 @@ router.post('/cancel-deletion', authWriteLimiter, auth, async (req, res) => {
 // POST /api/auth/sms/send — 发送短信验证码（mock：打印到控制台）
 const smsProvider = require('../utils/sms');
 const emailProvider = require('../utils/email');
+const { sendMail, emailVerifyCode } = require('../middleware/mailer');
 // 内存限流：同一手机号 60 秒内只能请求一次
 const smsSendCooldown = new Map(); // phone → lastSentAt(ms)
 // 验证失败计数（失败三次锁定10分钟）
@@ -711,9 +712,11 @@ router.post('/email/send', async (req, res) => {
     await prisma.emailCode.create({ data: { email, code, expiresAt } });
     // 记录发送时间
     emailSendCooldown.set(email, Date.now());
-    // 发送邮件
-    emailProvider.send(email, code).catch(e => console.error('[Email]', e.message));
-    const isDev = process.env.EMAIL_PROVIDER !== 'smtp';
+    // 发送邮件（优先使用 mailer.js，降级到 emailProvider）
+    sendMail({ to: email, ...emailVerifyCode({ code, purpose: 'login' }) }).then(result => {
+      if (result.skipped) emailProvider.send(email, code).catch(e => console.error('[Email]', e.message));
+    }).catch(() => emailProvider.send(email, code).catch(e => console.error('[Email]', e.message)));
+    const isDev = process.env.EMAIL_PROVIDER !== 'smtp' && !process.env.SMTP_HOST;
     res.json({ success: true, message: isDev ? '验证码已发送（开发模式：查看服务器控制台）' : '验证码已发送到您的邮箱，请注意查收' });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

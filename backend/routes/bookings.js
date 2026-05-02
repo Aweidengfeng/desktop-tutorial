@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { writeLimiter } = require('../middleware/rateLimits');
+const { sendMail, bookingConfirmEmail } = require('../middleware/mailer');
 
 const poolReadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -139,6 +140,14 @@ router.post('/', writeLimiter, auth, async (req, res) => {
       }
     }
     res.json(booking);
+    // 异步发送预约确认邮件（不阻断响应）
+    prisma.$queryRaw`SELECT name, email FROM users WHERE id = ${req.user.id}`.then(rows => {
+      const user = rows[0];
+      if (user?.email) {
+        const guideOrClub = guide_name || club_name || '平台';
+        sendMail({ to: user.email, ...bookingConfirmEmail({ userName: user.name || requesterName, peakName: mountain, date, guideOrClub, orderNo: String(id) }) }).catch(() => {});
+      }
+    }).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
