@@ -126,6 +126,13 @@
 | 7.2 | 邮件通知系统（nodemailer） | P1 | ✅ 已完成 | ✅ 2026-05-02 — mailer.js（nodemailer可选）；预约确认/认证结果/验证码邮件模板；bookings/admin/auth路由集成 |
 | 7.3 | Web Push 推送（VAPID） | P1 | ✅ 已完成 | ✅ 2026-05-02 — webPush.js（web-push可选）；/api/push路由（订阅/取消/测试）；前端subscribePush()；SW push事件处理 |
 
+### Phase 8：v1.2 核心增强（2026-05 目标）
+| # | 任务 | 优先级 | 状态 | 完成标记 |
+|---|------|--------|------|---------|
+| 8.1 | AI 教练接入（Claude/OpenAI双引擎） | P1 | ✅ 已完成 | ✅ 2026-05-02 — aiCoach.js（Claude/OpenAI双引擎+离线降级）；/api/coach/chat聊天；/api/coach/tips每日提示；用户上下文注入 |
+| 8.2 | 支付网关对接框架（微信/支付宝/mock） | P1 | ✅ 已完成 | ✅ 2026-05-02 — payment.js抽象层（微信/支付宝/mock三模式）；/api/payment/create；mock支付页面；回调框架 |
+| 8.3 | 管理后台数据大屏 | P1 | ✅ 已完成 | ✅ 2026-05-02 — admin-stats.js；/overview总览；/users/trend /posts/trend /revenue/trend趋势；/peaks/top热门；/pending待处理 |
+
 ---
 
 ## 🔍 6专业视角完整评审结论（2026-04-27）
@@ -333,6 +340,7 @@
 | 2026-04-29 | Phase 4.2 OSS存储，Phase 4.3 CDN加速，Phase 4.4 健康检查+故障转移 | 4.2✅ 4.3✅ 4.4✅ |
 | 2026-04-29 | Phase 6.1 Sentry监控，Phase 6.2 README，Phase 6.3 CHANGELOG+发布准备 | 6.1✅ 6.2✅ 6.3✅ 🎉v1.0.0 |
 | 2026-05-02 | Phase 7.1 全文搜索，Phase 7.2 邮件通知，Phase 7.3 Web Push | 7.1✅ 7.2✅ 7.3✅ |
+| 2026-05-02 | Phase 8.1 AI教练，Phase 8.2 支付网关，Phase 8.3 数据大屏 | 8.1✅ 8.2✅ 8.3✅ |
 
 ---
 
