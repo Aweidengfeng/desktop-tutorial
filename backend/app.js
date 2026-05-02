@@ -67,6 +67,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cookieParser());
+// Stripe webhook 需要原始 body（必须在 express.json() 之前）
+app.use('/api/payment/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 app.use(pinoHttp({

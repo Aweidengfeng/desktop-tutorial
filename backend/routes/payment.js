@@ -3,6 +3,27 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { createPayment, verifyCallback, PROVIDER } = require('../middleware/payment');
+const verifyStripeWebhook = require('../middleware/stripeWebhook');
+
+// 如果未配置 Stripe，优雅降级
+if (!process.env.STRIPE_SECRET_KEY) {
+  router.all('/create-intent', (req, res) => {
+    res.status(503).json({ error: 'Payment service not configured' });
+  });
+  router.all('/webhook', (req, res) => {
+    res.status(503).json({ error: 'Payment service not configured' });
+  });
+  router.all('/config', (req, res) => {
+    res.status(503).json({ error: 'Payment service not configured' });
+  });
+  router.all('/history', (req, res) => {
+    res.status(503).json({ error: 'Payment service not configured' });
+  });
+}
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 // GET /api/payment/provider — 当前支付提供商
 router.get('/provider', (req, res) => {
@@ -93,6 +114,108 @@ router.post('/notify/wechat', express.raw({ type: 'application/json' }), async (
     res.json({ code: 'SUCCESS' });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ─────────────────────────────────────────
+// Stripe 端点
+// ─────────────────────────────────────────
+
+// GET /api/payment/config — 返回前端需要的 Stripe 公钥
+router.get('/config', (req, res) => {
+  res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null });
+});
+
+// POST /api/payment/create-intent — 创建 Stripe 支付意图
+router.post('/create-intent', auth, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Payment service not configured' });
+  try {
+    const { amount, currency, orderId, orderType } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: '金额不合法' });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // 转为分
+      currency: currency || 'usd',
+      metadata: {
+        orderId: String(orderId || ''),
+        orderType: String(orderType || ''),
+        userId: String(req.user.id),
+      },
+    });
+
+    // 记录到数据库
+    await prisma.$executeRaw`
+      INSERT INTO payments (user_id, stripe_payment_intent_id, amount, currency, status, order_id, order_type)
+      VALUES (${req.user.id}, ${paymentIntent.id}, ${amount}, ${currency || 'usd'}, 'pending', ${String(orderId || '')}, ${String(orderType || '')})
+      ON CONFLICT(stripe_payment_intent_id) DO NOTHING
+    `.catch(() => {}); // 表不存在时静默
+
+    res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
+  } catch (e) {
+    console.error('[payment/create-intent]', e.message);
+    res.status(500).json({ error: '创建支付意图失败' });
+  }
+});
+
+// POST /api/payment/webhook — 接收 Stripe Webhook（raw body 由 app.js 预处理）
+router.post('/webhook', verifyStripeWebhook, async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Payment service not configured' });
+  try {
+    // req.stripeEvent 由 verifyStripeWebhook 中间件设置（已验签）
+    // 若 STRIPE_WEBHOOK_SECRET 未配置（开发环境），则直接解析 body
+    let event = req.stripeEvent;
+    if (!event) {
+      try {
+        event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      } catch (e) {
+        return res.status(400).json({ error: 'Invalid JSON body' });
+      }
+    }
+
+    switch (event.type) {
+      case 'payment_intent.succeeded': {
+        const pi = event.data.object;
+        await prisma.$executeRaw`
+          UPDATE payments SET status = 'paid', updated_at = datetime('now')
+          WHERE stripe_payment_intent_id = ${pi.id}
+        `.catch(() => {});
+        break;
+      }
+      case 'payment_intent.payment_failed': {
+        const pi = event.data.object;
+        await prisma.$executeRaw`
+          UPDATE payments SET status = 'failed', updated_at = datetime('now')
+          WHERE stripe_payment_intent_id = ${pi.id}
+        `.catch(() => {});
+        break;
+      }
+      default:
+        // 忽略其他事件类型
+        break;
+    }
+
+    res.json({ received: true });
+  } catch (e) {
+    console.error('[payment/webhook]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/payment/history — 用户支付记录（需要 JWT）
+router.get('/history', auth, async (req, res) => {
+  try {
+    const payments = await prisma.$queryRaw`
+      SELECT id, stripe_payment_intent_id, amount, currency, status, order_id, order_type, created_at, updated_at
+      FROM payments
+      WHERE user_id = ${req.user.id}
+      ORDER BY created_at DESC
+    `.catch(() => []);
+    res.json(payments);
+  } catch (e) {
+    console.error('[payment/history]', e.message);
+    res.status(500).json({ error: '获取支付记录失败' });
   }
 });
 
