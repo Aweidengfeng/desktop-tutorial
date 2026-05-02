@@ -216,6 +216,7 @@ if (process.env.ENABLE_ASSISTANT === 'true') {
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/certification', require('./routes/certification'));
 app.use('/api/config', require('./routes/config'));
+app.use('/api/config', require('./routes/mapConfig')); // IP地图自动切换
 app.use('/api/push', require('./routes/push'));
 app.use('/api/coach', require('./routes/coach'));
 app.use('/api/payment', require('./routes/payment'));
