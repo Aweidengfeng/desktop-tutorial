@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimits');
+const { encryptPII, decryptPII } = require('../utils/crypto');
 
 const POLICY_VERSION = '2026-04-20';
 
@@ -240,8 +241,8 @@ async function safeUser(user) {
     expeditions: user.expeditions,
     followers: user.followers,
     following: user.following,
-    phone: user.phone,
-    email: user.email,
+    phone: user.phone ? decryptPII(user.phone) : null,
+    email: user.email ? decryptPII(user.email) : null,
     is_admin: user.isAdmin ? 1 : 0,
     is_guide: isGuide ? 1 : 0,
     is_club_admin: isClubAdmin ? 1 : 0,
@@ -328,11 +329,11 @@ router.post('/register', registerLimiter, async (req, res) => {
     }
     // 检查手机号/邮箱是否已注册
     if (phone) {
-      const existing = await prisma.user.findUnique({ where: { phone } });
+      const existing = await prisma.user.findFirst({ where: { phone: encryptPII(phone) } });
       if (existing) return res.status(400).json({ error: '手机号已注册' });
     }
     if (email) {
-      const existing = await prisma.user.findFirst({ where: { email } });
+      const existing = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
       if (existing) return res.status(400).json({ error: '邮箱已注册' });
     }
     // 用4位随机十六进制后缀确保用户名唯一
@@ -349,8 +350,8 @@ router.post('/register', registerLimiter, async (req, res) => {
       policyVersion,
       policyAgreedAt: new Date(),
     };
-    if (phone) userData.phone = phone;
-    if (email) userData.email = email;
+    if (phone) userData.phone = encryptPII(phone);
+    if (email) userData.email = encryptPII(email);
     const user = await prisma.user.create({ data: userData });
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
@@ -409,13 +410,13 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (!password) return res.status(400).json({ error: '请输入密码' });
     let user = null;
     if (email && isValidEmail(email)) {
-      user = await prisma.user.findFirst({ where: { email } });
+      user = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
       if (!user) return res.status(401).json({ error: '邮箱或密码错误' });
     } else if (phone) {
       if (!isValidPhone(phone)) {
         return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
       }
-      user = await prisma.user.findUnique({ where: { phone } });
+      user = await prisma.user.findFirst({ where: { phone: encryptPII(phone) } });
       if (!user) return res.status(401).json({ error: '手机号或密码错误' });
     } else {
       return res.status(400).json({ error: '请填写手机号或邮箱' });
@@ -556,7 +557,7 @@ router.put('/change-phone', authWriteLimiter, auth, async (req, res) => {
     const { phone, code } = req.body || {};
     if (!phone || !code) return res.status(400).json({ error: '请填写新手机号和验证码' });
     if (!isValidPhone(phone)) return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
-    const existing = await prisma.user.findUnique({ where: { phone } });
+    const existing = await prisma.user.findFirst({ where: { phone: encryptPII(phone) } });
     if (existing && existing.id !== req.user.id) return res.status(400).json({ error: '该手机号已被其他账号使用' });
     const record = await prisma.smsCode.findFirst({
       where: { phone, code, used: false },
@@ -564,7 +565,7 @@ router.put('/change-phone', authWriteLimiter, auth, async (req, res) => {
     });
     if (!record || Date.now() > record.expiresAt) return res.status(401).json({ error: '验证码无效或已过期' });
     await prisma.smsCode.update({ where: { id: record.id }, data: { used: true } });
-    await prisma.user.update({ where: { id: req.user.id }, data: { phone } });
+    await prisma.user.update({ where: { id: req.user.id }, data: { phone: encryptPII(phone) } });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -665,12 +666,12 @@ router.post('/sms/verify', async (req, res) => {
     await prisma.smsCode.update({ where: { id: record.id }, data: { used: true } });
     smsFailCount.delete(phone);
     // 查找或创建用户
-    let user = await prisma.user.findUnique({ where: { phone } });
+    let user = await prisma.user.findFirst({ where: { phone: encryptPII(phone) } });
     if (!user) {
       const name = '攀登者' + phone.slice(-4);
       const username = '@climber' + phone.slice(-6);
       const avatar = 'https://i.pravatar.cc/150?u=' + phone;
-      user = await prisma.user.create({ data: { name, username, phone, avatar } });
+      user = await prisma.user.create({ data: { name, username, phone: encryptPII(phone), avatar } });
     }
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
@@ -754,12 +755,12 @@ router.post('/email/verify', async (req, res) => {
     await prisma.emailCode.update({ where: { id: record.id }, data: { used: true } });
     emailFailCount.delete(email);
     // 查找或创建用户
-    let user = await prisma.user.findFirst({ where: { email } });
+    let user = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
     if (!user) {
       const name = '攀登者' + email.split('@')[0].slice(0, 6);
       let username = '@climber_' + crypto.randomBytes(4).toString('hex');
       const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(email);
-      user = await prisma.user.create({ data: { name, username, email, avatar } });
+      user = await prisma.user.create({ data: { name, username, email: encryptPII(email), avatar } });
     }
     res.json({ token: makeToken(user.id), user: await safeUser(user) });
   } catch (e) {
@@ -776,7 +777,7 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
     const { email, code } = req.body || {};
     if (!email || !code) return res.status(400).json({ error: '请填写新邮箱和验证码' });
     if (!isValidEmail(email)) return res.status(400).json({ error: '邮箱格式不正确' });
-    const existing = await prisma.user.findFirst({ where: { email } });
+    const existing = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
     if (existing && existing.id !== req.user.id) return res.status(400).json({ error: '该邮箱已被其他账号使用' });
     const record = await prisma.emailCode.findFirst({
       where: { email, code, used: false },
@@ -784,7 +785,7 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
     });
     if (!record || Date.now() > record.expiresAt) return res.status(401).json({ error: '验证码无效或已过期' });
     await prisma.emailCode.update({ where: { id: record.id }, data: { used: true } });
-    await prisma.user.update({ where: { id: req.user.id }, data: { email } });
+    await prisma.user.update({ where: { id: req.user.id }, data: { email: encryptPII(email) } });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -888,7 +889,7 @@ router.post('/apple', loginLimiter, async (req, res) => {
       // 若 Apple 返回了已验证邮箱，尝试关联已有账号
       // 安全性：Apple 平台要求邮箱所有权验证，因此此处邮箱关联是安全的
       if (appleEmail) {
-        user = await prisma.user.findFirst({ where: { email: appleEmail } });
+        user = await prisma.user.findFirst({ where: { email: encryptPII(appleEmail) } });
         if (user) {
           await prisma.user.update({ where: { id: user.id }, data: { appleSub } });
         }
@@ -899,7 +900,7 @@ router.post('/apple', loginLimiter, async (req, res) => {
       const name   = appleName || ('Apple用户' + suffix.slice(0, 4));
       const avatar = 'https://i.pravatar.cc/150?u=ap' + appleSub;
       const userData = { name, avatar, appleSub };
-      if (appleEmail) userData.email = appleEmail;
+      if (appleEmail) userData.email = encryptPII(appleEmail);
       try {
         const username = '@apple' + Date.now().toString(36) + suffix;
         user = await prisma.user.create({ data: { ...userData, username } });
@@ -948,7 +949,7 @@ router.post('/google', loginLimiter, async (req, res) => {
     if (!user && googleEmail) {
       // 尝试通过邮箱关联已有账号
       // 安全性：Google 平台验证邮箱所有权，因此此处邮箱关联是安全的（仅在真实 token 验证时执行）
-      user = await prisma.user.findFirst({ where: { email: googleEmail } });
+      user = await prisma.user.findFirst({ where: { email: encryptPII(googleEmail) } });
       if (user) {
         await prisma.user.update({ where: { id: user.id }, data: { googleSub } });
       }
@@ -958,7 +959,7 @@ router.post('/google', loginLimiter, async (req, res) => {
       const name = googleName || ('Google用户' + suffix.slice(0, 4));
       const avatar = googleAvatar || ('https://i.pravatar.cc/150?u=g' + googleSub);
       const userData = { name, avatar, googleSub };
-      if (googleEmail) userData.email = googleEmail;
+      if (googleEmail) userData.email = encryptPII(googleEmail);
       try {
         const username = '@g' + Date.now().toString(36) + suffix;
         user = await prisma.user.create({ data: { ...userData, username } });

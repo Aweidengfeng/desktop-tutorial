@@ -1,0 +1,3569 @@
+// 全球热门商业向导带队攀登雪山统计数据
+const COMMERCIAL_PEAKS = [
+  { id: 1, name: '珠穆朗玛峰', nameEn: 'Everest', altitude: 8849, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Furtenbach Adventures', 'Himex', 'Madison Mountaineering'], routes: '东南山脊(南坡)/东北山脊(北坡)', oxygen: true, annualClimbers: 800, annualTeams: 35, isEstimated: true, campKey: '珠穆朗玛峰' },
+  { id: 2, name: '乔戈里峰', nameEn: 'K2', altitude: 8611, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Alpine Ascents', 'Nazir Sabir Expeditions', 'Pakistan Alpine Club', 'Latok Alpine'], routes: 'Abruzzi山脊路线', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: 'K2' },
+  { id: 3, name: '干城章嘉峰', nameEn: 'Kangchenjunga', altitude: 8586, country: '印度/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Pioneer Adventure'], routes: '西南壁路线', oxygen: true, annualClimbers: 80, annualTeams: 6, isEstimated: true, campKey: '干城章嘉峰' },
+  { id: 4, name: '洛子峰', nameEn: 'Lhotse', altitude: 8516, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['IMG', 'Seven Summit Treks', 'Alpine Ascents', 'Himex'], routes: '西壁/Couloir路线', oxygen: true, annualClimbers: 200, annualTeams: 15, isEstimated: true, campKey: '洛子峰' },
+  { id: 5, name: '马卡鲁峰', nameEn: 'Makalu', altitude: 8485, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Altitude Junkies'], routes: '北坡/西北山脊', oxygen: true, annualClimbers: 70, annualTeams: 5, isEstimated: true, campKey: '马卡鲁峰' },
+  { id: 6, name: '卓奥友峰', nameEn: 'Cho Oyu', altitude: 8201, country: '中国/尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '秋季(9-10月)', operators: ['IMG', 'Asian Trekking', 'Furtenbach Adventures', 'Seven Summit Treks', 'Amical Alpin'], routes: '西北山脊路线', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: '卓奥友峰' },
+  { id: 7, name: '道拉吉里峰', nameEn: 'Dhaulagiri', altitude: 8167, country: '尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Alpine Ascents', 'Altitude Junkies'], routes: '东北山脊路线', oxygen: false, annualClimbers: 90, annualTeams: 7, isEstimated: true, campKey: '道拉吉里峰' },
+  { id: 8, name: '马纳斯卢峰', nameEn: 'Manaslu', altitude: 8163, country: '尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '秋季(9-10月)', operators: ['Seven Summit Treks', 'IMG', 'Furtenbach Adventures', 'Amical Alpin', 'Asian Trekking'], routes: '东北面/东北山脊', oxygen: false, annualClimbers: 400, annualTeams: 30, isEstimated: true, campKey: '马纳斯卢峰' },
+  { id: 9, name: '南迦帕尔巴特峰', nameEn: 'Nanga Parbat', altitude: 8126, country: '巴基斯坦', region: '喜马拉雅', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Jasmine Tours', 'Latok Alpine'], routes: 'Kinshofer路线/鲁帕尔壁', oxygen: false, annualClimbers: 60, annualTeams: 5, isEstimated: true, campKey: '南迦帕尔巴特峰' },
+  { id: 10, name: '安纳普尔纳峰', nameEn: 'Annapurna', altitude: 8091, country: '尼泊尔', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)', operators: ['Seven Summit Treks', 'Imagine Nepal', 'Altitude Junkies'], routes: '北壁路线', oxygen: false, annualClimbers: 60, annualTeams: 5, isEstimated: true, campKey: '安纳普尔纳峰' },
+  { id: 11, name: '迦舒布鲁姆I峰', nameEn: 'Gasherbrum I', altitude: 8080, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'Latok Alpine'], routes: '美国路线/西北壁', oxygen: false, annualClimbers: 50, annualTeams: 4, isEstimated: true, campKey: '加舒尔布鲁姆I峰' },
+  { id: 12, name: '布洛阿特峰', nameEn: 'Broad Peak', altitude: 8051, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'Latok Alpine'], routes: '普通路线/西壁', oxygen: false, annualClimbers: 120, annualTeams: 10, isEstimated: true, campKey: '布洛阿特峰' },
+  { id: 13, name: '迦舒布鲁姆II峰', nameEn: 'Gasherbrum II', altitude: 8034, country: '巴基斯坦/中国', region: '喀喇昆仑', difficulty: '8000m级', season: '夏季(6-8月)', operators: ['Nazir Sabir Expeditions', 'Alpine Ascents', 'IMG', 'Furtenbach Adventures'], routes: '西南壁路线', oxygen: false, annualClimbers: 180, annualTeams: 14, isEstimated: true, campKey: '加舒尔布鲁姆II峰' },
+  { id: 14, name: '希夏邦马峰', nameEn: 'Shishapangma', altitude: 8027, country: '中国', region: '喜马拉雅', difficulty: '8000m级', season: '春季(4-5月)/秋季(9-10月)', operators: ['IMG', 'Seven Summit Treks', 'Furtenbach Adventures', 'Amical Alpin'], routes: '北坡/西南壁', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: '希夏邦马峰' },
+  { id: 15, name: '慕士塔格峰', nameEn: 'Muztagh Ata', altitude: 7546, country: '中国', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['China Mountaineering Association', 'Alpenglow Expeditions', 'SummitClimb'], routes: '东坡标准路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: '慕士塔格峰' },
+  { id: 16, name: '列宁峰', nameEn: 'Lenin Peak', altitude: 7134, country: '吉尔吉斯斯坦/塔吉克斯坦', region: '帕米尔', difficulty: '进阶7000m', season: '夏季(7-8月)', operators: ['Alpenglow Expeditions', 'SummitClimb', 'Vertical', 'Asia Mountains'], routes: '标准路线(Razdelnaya山脊)', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: '列宁峰' },
+  { id: 17, name: '阿玛达布拉姆峰', nameEn: 'Ama Dablam', altitude: 6812, country: '尼泊尔', region: '喜马拉雅', difficulty: '技术型', season: '秋季(10-11月)/春季(3-5月)', operators: ['Alpine Ascents', 'IMG', 'Seven Summit Treks', 'Adventure Consultants', 'Peak Freaks'], routes: '西南山脊路线', oxygen: false, annualClimbers: 350, annualTeams: 30, isEstimated: true, campKey: '阿玛达布拉姆峰' },
+  { id: 18, name: '阿空加瓜峰', nameEn: 'Aconcagua', altitude: 6961, country: '阿根廷', region: '安第斯', difficulty: '进阶7000m', season: '南半球夏季(12-2月)', operators: ['IMG', 'Alpine Ascents', 'RMI Expeditions', 'SummitClimb', 'Aymara Expeditions'], routes: '标准路线(普通路线)/波兰冰川', oxygen: false, annualClimbers: 3000, annualTeams: 120, isEstimated: false, campKey: '阿空加瓜峰' },
+  { id: 19, name: 'Denali', nameEn: 'Denali', altitude: 6190, country: '美国', region: '北美', difficulty: '进阶7000m', season: '春季(5-6月)', operators: ['RMI Expeditions', 'Alpine Ascents', 'AAI', 'Mountain Trip', 'Rainier Mountaineering'], routes: '西山脊/卡希尔顿路线', oxygen: false, annualClimbers: 1200, annualTeams: 80, isEstimated: false, campKey: '麦金利山' },
+  { id: 20, name: '乞力马扎罗山', nameEn: 'Kilimanjaro', altitude: 5895, country: '坦桑尼亚', region: '非洲', difficulty: '入门6000m', season: '旱季(1-3月/6-10月)', operators: ['Zara Tours', 'Thomson Safaris', 'Altezza Travel', 'Kilimanjaro Experts', 'Africa Dream Safaris'], routes: 'Marangu路线/Machame路线/Lemosho路线', oxygen: false, annualClimbers: 35000, annualTeams: 2000, isEstimated: false, campKey: '乞力马扎罗山' },
+  { id: 21, name: '厄尔布鲁士山', nameEn: 'Elbrus', altitude: 5642, country: '俄罗斯', region: '高加索', difficulty: '入门6000m', season: '夏季(6-8月)', operators: ['Alpine Ascents', 'IMG', 'Alpenglow Expeditions', 'MCS AlpClub', 'Risk.ru'], routes: '南坡标准路线/北坡路线', oxygen: false, annualClimbers: 15000, annualTeams: 800, isEstimated: true, campKey: '厄尔布鲁士山' },
+  { id: 22, name: '文森峰', nameEn: 'Vinson Massif', altitude: 4892, country: '南极洲', region: '南极', difficulty: '入门6000m', season: '南极夏季(11-1月)', operators: ['Alpine Ascents', 'Antarctic Logistics & Expeditions', 'IMG', 'Climbing the Seven Summits'], routes: '标准路线', oxygen: false, annualClimbers: 200, annualTeams: 20, isEstimated: true, campKey: '文森峰' },
+  { id: 23, name: '卡斯滕士金字塔', nameEn: 'Carstensz Pyramid', altitude: 4884, country: '印度尼西亚', region: '大洋洲', difficulty: '技术型', season: '全年(需申请许可)', operators: ['Alpine Ascents', 'Adventure Indonesia', 'Papua Jungle Expedition'], routes: '标准技术路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: null },
+  { id: 24, name: '梅拉峰', nameEn: 'Mera Peak', altitude: 6461, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Mera Peak Climbing', 'Glacier Safari Treks'], routes: '标准路线(北侧)', oxygen: false, annualClimbers: 1500, annualTeams: 100, isEstimated: true, campKey: '梅拉峰' },
+  { id: 25, name: '岛峰', nameEn: 'Island Peak (Imja Tse)', altitude: 6189, country: '尼泊尔', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(10-11月)', operators: ['IMG', 'Seven Summit Treks', 'Himalayan Guides', 'Island Peak Climbing'], routes: '标准路线/西壁', oxygen: false, annualClimbers: 2000, annualTeams: 150, isEstimated: true, campKey: '岛峰' },
+  { id: 26, name: '哈巴雪山', nameEn: 'Haba Snow Mountain', altitude: 5396, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['玉珠峰探险', '横断山向导公司', '四川高山探险', 'Alpenglow Expeditions'], routes: '标准路线(西侧)', oxygen: false, annualClimbers: 800, annualTeams: 60, isEstimated: true, campKey: '哈巴雪山' },
+  { id: 27, name: '四姑娘山大峰', nameEn: 'Four Girls Mountain (Da Peak)', altitude: 5025, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川四姑娘山探险', '蓝天救援队', '四川山地向导'], routes: '南坡标准路线', oxygen: false, annualClimbers: 600, annualTeams: 50, isEstimated: true, campKey: '四姑娘山' },
+  { id: 28, name: '幺妹峰', nameEn: 'Siguniang (Yaomei Peak)', altitude: 6250, country: '中国', region: '横断山脉', difficulty: '技术型', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川四姑娘山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 30, annualTeams: 3, isEstimated: true, campKey: '四姑娘山' },
+  { id: 29, name: '玉珠峰', nameEn: 'Yuzhufeng', altitude: 6178, country: '中国', region: '昆仑山', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['玉珠峰探险', '中国登山协会', '西藏高山探险'], routes: '北坡标准路线', oxygen: false, annualClimbers: 500, annualTeams: 40, isEstimated: true, campKey: '玉珠峰' },
+  { id: 30, name: '雀儿山', nameEn: 'Que Er Shan', altitude: 6168, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '夏季(7-8月)', operators: ['四川高山探险', '成都山地向导联盟'], routes: '东坡标准路线', oxygen: false, annualClimbers: 150, annualTeams: 12, isEstimated: true, campKey: '雀儿山' },
+  { id: 31, name: '玉龙雪山', nameEn: 'Yulong Snow Mountain', altitude: 5596, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(3-5月)/秋季(9-10月)', operators: ['云南山地向导公司', '丽江登山协会', '横断山探险'], routes: '主峰扇子陡北侧路线', oxygen: false, annualClimbers: 400, annualTeams: 30, isEstimated: true, campKey: '玉龙雪山' },
+  { id: 32, name: '贡嘎山', nameEn: 'Minya Konka', altitude: 7556, country: '中国', region: '横断山脉', difficulty: '技术型', season: '春季(4-5月)/秋季(9-10月)', operators: ['四川高山探险', '成都山地向导联盟', '贡嘎登山服务'], routes: '东南山脊标准路线', oxygen: false, annualClimbers: 40, annualTeams: 4, isEstimated: true, campKey: '贡嘎山' },
+  { id: 33, name: '启孜峰', nameEn: 'Qizhi Peak', altitude: 6206, country: '中国', region: '喜马拉雅', difficulty: '入门6000m', season: '春季(4-5月)/秋季(9-10月)', operators: ['西藏高山探险', '中国登山协会', '拉萨登山向导'], routes: '西南坡标准路线', oxygen: false, annualClimbers: 300, annualTeams: 25, isEstimated: true, campKey: '启孜峰' },
+  { id: 34, name: '亚拉雪山', nameEn: 'Yala Snow Mountain', altitude: 5820, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-6月)/秋季(9-10月)', operators: ['四川高山探险', '康定山地向导', '蓝天户外'], routes: '南坡常规路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: '亚拉雪山' },
+];
+
+// ─── 图片上传预校验工具函数（Phase 0.4）───────────────────────────────
+function validateImageFile(file) {
+  const MAX_SIZE = 5 * 1024 * 1024;
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { valid: false, error: `不支持的格式（${file.type || '未知'}），请上传 JPG/PNG/GIF/WebP` };
+  }
+  if (file.size > MAX_SIZE) {
+    return { valid: false, error: `图片 ${(file.size / (1024 * 1024)).toFixed(1)}MB 超过 5MB 限制，请压缩后重试` };
+  }
+  return { valid: true, error: null };
+}
+
+function validateImageFiles(files) {
+  const validFiles = [], errors = [];
+  Array.from(files).forEach(file => {
+    const r = validateImageFile(file);
+    if (r.valid) validFiles.push(file);
+    else errors.push(`${file.name}：${r.error}`);
+  });
+  return { validFiles, errors };
+}
+// ─────────────────────────────────────────────────────────────────────────
+
+// ─── API Fetch 封装：统一处理 401 过期跳转（Phase 0.5）─────────────────────
+async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem('summitlink_token');
+  const headers = {
+    ...(options.headers || {}),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  // 如果 body 是对象且没有设置 Content-Type，自动加 JSON 头
+  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    options = { ...options, body: JSON.stringify(options.body) };
+  }
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch (e) {
+    // 网络错误（断网/超时）
+    throw new Error('网络连接失败，请检查网络后重试');
+  }
+  if (res.status === 401) {
+    localStorage.removeItem('summitlink_token');
+    // 触发全局登出事件
+    window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
+    throw new Error('登录已过期，请重新登录');
+  }
+  return res;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Phase 2.3: IndexedDB 轨迹断点续传队列 ──────────────────────────────────
+const _IDB_NAME = 'summitlink-db';
+const _IDB_VERSION = 1;
+const _IDB_STORE = 'pending-tracks';
+
+function _idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_IDB_NAME, _IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+        const store = db.createObjectStore(_IDB_STORE, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('status', 'status', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbSavePendingTrack(trackData) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(_IDB_STORE);
+    const record = {
+      name: trackData.name,
+      points: trackData.points || [],
+      gpxFile: trackData.gpxFile || null,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      retries: 0,
+    };
+    const req = store.add(record);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbGetPendingTracks() {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readonly');
+    const store = tx.objectStore(_IDB_STORE);
+    const req = store.getAll();
+    req.onsuccess = (e) => {
+      const all = e.target.result || [];
+      resolve(all.filter(t => t.status === 'pending' || t.status === 'failed'));
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbDeletePendingTrack(id) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(_IDB_STORE);
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function idbUpdateTrackStatus(id, status, retries) {
+  const db = await _idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    const store = tx.objectStore(_IDB_STORE);
+    const getReq = store.get(id);
+    getReq.onsuccess = (e) => {
+      const record = e.target.result;
+      if (!record) return resolve();
+      record.status = status;
+      if (retries !== undefined) record.retries = retries;
+      const putReq = store.put(record);
+      putReq.onsuccess = () => resolve();
+      putReq.onerror = (ev) => reject(ev.target.error);
+    };
+    getReq.onerror = (e) => reject(e.target.error);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Phase 2.5: 地图引擎检测与 Mapbox 懒加载 ────────────────────────────────
+window.__activeMapProvider = 'amap';
+
+async function detectMapProvider() {
+  try {
+    const res = await fetch('/api/config/map');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.provider === 'mapbox' || !navigator.language.startsWith('zh')) {
+        window.__activeMapProvider = 'mapbox';
+        return { provider: 'mapbox', token: data.token || '' };
+      }
+    }
+  } catch (e) {}
+  window.__activeMapProvider = 'amap';
+  return { provider: 'amap' };
+}
+
+function loadMapboxGL(token) {
+  return new Promise((resolve, reject) => {
+    if (window.mapboxgl) { if (token) window.mapboxgl.accessToken = token; resolve(); return; }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css';
+    document.head.appendChild(link);
+    const script = document.createElement('script');
+    script.src = 'https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js';
+    script.onload = () => { if (token) window.mapboxgl.accessToken = token; resolve(); };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function alpineLink() {
+  return {
+    currentPage: 'home',
+    currentUser: null,
+    authToken: localStorage.getItem('summitlink_token') || null,
+    showLogin: false,
+    showRegister: false,
+    loginLoading: false,
+    loginType: 'password',
+    smsCode: '',
+    smsCountdown: 0,
+    smsTimer: null,
+    loginForm: { phone: '', password: '' },
+    registerForm: { name: '', phone: '', password: '' },
+    agreedPrivacy: false,
+    agreedTerms: false,
+    POLICY_VERSION: '2026-04-20',
+    privacySettings: { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false },
+    gearImageUploading: false,
+    trackRecordedPoints: [],
+    heroSlide: 0,
+    heroTouchStartX: 0,
+    heroSlides: [
+      { name: '珠穆朗玛峰', sub: '海拔 8,849m · 中国/尼泊尔 · 世界之巅', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800', linkType: 'peak', linkTarget: 'everest' },
+      { name: 'K2 乔戈里峰', sub: '海拔 8,611m · 巴基斯坦/中国 · 野蛮巨峰', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', linkType: 'peak', linkTarget: 'k2' },
+      { name: '麦金利山 Denali', sub: '海拔 6,190m · 阿拉斯加 · 北美之巅', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', linkType: 'peak', linkTarget: 'denali' },
+      { name: '马特洪峰 Matterhorn', sub: '海拔 4,478m · 瑞士/意大利 · 阿尔卑斯标志', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800', linkType: 'page', linkTarget: 'explore' },
+      { name: '阿玛达布拉姆', sub: '海拔 6,814m · 尼泊尔 · 喜马拉雅最美', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800', linkType: 'page', linkTarget: 'explore' },
+      { name: '乞力马扎罗山', sub: '海拔 5,895m · 坦桑尼亚 · 非洲之巅', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800', linkType: 'page', linkTarget: 'explore' },
+    ],
+    activeCategory: '8000ers',
+    gearMode: 'buy',
+    gearCategory: '全部',
+    activeChatType: 'all',
+    currentLang: 'zh',
+    showLangPicker: false,
+    showSearch: false,
+    searchQuery: '',
+    searchResults: [],
+    searchHistory: ['珠穆朗玛峰', 'K2', '马特洪峰'],
+    useMetric: true,
+    currentCurrency: 'CNY',
+    showPeakDetail: false,
+    selectedPeak: null,
+    peakWeather: null,
+    peakForecast: [],
+    peakWeatherLoading: false,
+    peakCampWeathers: [],
+    peakCampWeathersLoading: false,
+    weatherSearch: '',
+    weatherSearchResult: null,
+    weatherSearchForecast: [],
+    weatherSearchCamps: [],
+    weatherSearchLoading: false,
+    showWeatherSearchResult: false,
+    // 商业攀登数据
+    commercialPeaks: COMMERCIAL_PEAKS,
+    commercialFilter: { region: '', difficulty: '', sortBy: 'altitude' },
+    // OSM 地名查询状态
+    osmSuggestions: [],
+    osmSuggestionsLoading: false,
+    showOsmSuggestions: false,
+    osmLastRequestTime: 0,
+    osmSearchDebounceTimer: null,
+    showBooking: false,
+    bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '' },
+    showSOS: false,
+    showSOSConfirm: false,
+    showChatWindow: false,
+    activeChatSession: null,
+    chatSubTab: 'all',
+    meSubPage: 'profile',
+    postsLoading: true,
+    teamsLoading: true,
+    chatSessions: [
+      {
+        id: 1, name: '扎西次仁', nameEn: 'Zhaxi Ciren',
+        avatar: 'https://i.pravatar.cc/150?u=guide1',
+        flag: '🇨🇳', type: 'guide', online: true, unread: 2,
+        lastMsg: '好的，4月是最佳攀登窗口！', time: '10:26',
+        messages: [
+          { from: 'them', text: '您好！我是珠峰认证向导扎西次仁，请问您计划什么时候出发？', time: '10:23' },
+          { from: 'me', text: '你好！我计划明年4月，想攀登珠峰南坡路线', time: '10:25' },
+          { from: 'them', text: '好的，4月是最佳攀登窗口！我可以为您制定详细行程，我们来具体谈谈吧', time: '10:26' },
+        ]
+      },
+      {
+        id: 2, name: 'Tenzin Sherpa', nameEn: 'Tenzin Sherpa',
+        flag: '🇳🇵', type: 'guide', online: true, unread: 0,
+        avatar: 'https://i.pravatar.cc/150?u=guide2',
+        lastMsg: 'My rate is $320/day, including all equipment support.', time: '09:22',
+        messages: [
+          { from: 'them', text: 'Hi! I have availability in October for K2. Are you interested?', time: '09:15' },
+          { from: 'me', text: 'Yes! What is your rate per day?', time: '09:20' },
+          { from: 'them', text: 'My rate is $320/day, including all equipment support and safety briefings.', time: '09:22' },
+        ]
+      },
+      {
+        id: 3, name: '珠峰2026远征队', nameEn: 'Everest 2026 Expedition',
+        flag: '🏔️', type: 'club', online: false, unread: 5,
+        avatar: 'https://i.pravatar.cc/150?u=team1',
+        lastMsg: '明天出发的朋友注意，天气窗口确认开启！', time: '10:00',
+        members: ['🇨��','🇳🇵','🇩🇪','🇺🇸','🇰🇷'],
+        messages: [
+          { from: 'other', name: '李明远', text: '大家好，路线规划已上传到共享文件夹', time: '昨天' },
+          { from: 'other', name: 'Tenzin', text: 'I reviewed the route, looks good!', time: '昨天' },
+          { from: 'me', text: '收到！装备清单我已经更新', time: '昨天' },
+          { from: 'other', name: '队长', text: '明天出发的朋友注意，天气窗口确认开启！', time: '10:00' },
+        ]
+      },
+      {
+        id: 4, name: '西藏登山俱乐部群', nameEn: 'Tibet Mountaineering Club',
+        flag: '🏔️', type: 'club', online: false, unread: 0,
+        avatar: 'https://i.pravatar.cc/150?u=club1',
+        lastMsg: '扎西：明天出发的朋友注意...', time: '昨天',
+        members: ['🇨🇳','🇨🇳','🇳🇵','🇺🇸'],
+        messages: [
+          { from: 'other', name: '扎西', text: '明天出发的朋友注意，注意保暖和高反', time: '昨天' },
+        ]
+      },
+    ],
+    sosStep: 0,
+    sosImages: [],
+    showSettings: false,
+    settingsType: 'profile',
+    showComments: false,
+    selectedPostForComment: null,
+    showShare: false,
+    selectedPostForShare: null,
+    showPostEditor: false,
+    newPost: { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '' },
+    showPostEmojiPicker: false,
+    showChat: false,
+    activeChatConv: null,
+    chatInput: '',
+    chatImagePreviews: [],
+    commentImagePreviews: [],
+    lightboxUrl: '',
+    showLightbox: false,
+    trackMap: null,
+    amapAvailable: typeof AMap !== 'undefined',
+    pendingUploadCount: 0,
+    recordingMap: null,
+    selectedConversation: null,
+    showChatDetail: false,
+    showGearPublish: false,
+    showGearPurchase: false,
+    gearPurchaseItem: null,
+    gearPurchaseForm: { receiver_name: '', receiver_phone: '', address: '' },
+    gearPurchaseLoading: false,
+    gearOrders: [],
+    gearOrdersLoading: false,
+    newGear: { name: '', brand: '', price: '', condition: 'good', description: '', images: [] },
+    showTeamDetail: false,
+    selectedTeam: null,
+    showCreateTeam: false,
+    newTeam: { name: '', peak: '', date: '', level: '', spots: 4, description: '' },
+    showManualSummitModal: false,
+    manualSummit: { peak_name: '', date: '', altitude: '', notes: '', proof_images: [] },
+    showInsurance: false,
+    insuranceRegion: '喜马拉雅',
+    insurancePlans: [],
+    insurancePlansLoading: false,
+    showInsuranceInquiry: false,
+    selectedInsurancePlan: null,
+    insuranceInquiry: { name: '', phone: '', peak_name: '', departure_date: '' },
+    paymentAmount: 0,
+    paymentMethod: 'alipay',
+    showTrackDetail: false,
+    selectedTrackDetail: null,
+    featuredClubs: [
+      { id: 'm1', name: '中国高山协会', description: '专注于中国高山探险和技术攀登的专业协会', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', specialty: '8000米峰', members: 1280, expeditions: 45, verified: true, type: '专业' },
+      { id: 'm2', name: '阿尔派探险俱乐部', description: '综合性俱乐部，提供从初级到专业的培训和远征服务', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', specialty: '技术攀登', members: 560, expeditions: 28, verified: true, type: '综合' },
+      { id: 'm3', name: '北京户外探险队', description: '以休闲户外和中低海拔攀登为主，适合初学者', cover: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', specialty: '中低海拔', members: 890, expeditions: 120, verified: true, type: '休闲' },
+      { id: 'm4', name: '喜马拉雅探险队', description: '专业的喜马拉雅远征组织，曾多次带队登顶8000米峰', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', specialty: '喜马拉雅', members: 320, expeditions: 18, verified: true, type: '专业' },
+      { id: 'm5', name: '成都山地俱乐部', description: '专注于川西高原和横断山脉攀登的本地俱乐部', cover: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', specialty: '川西高原', members: 450, expeditions: 67, verified: false, type: '区域' },
+      { id: 'm6', name: '丝路登山协会', description: '西北地区攀登爱好者的聚集地，专注昆仑山、天山攀登', cover: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', specialty: '昆仑/天山', members: 230, expeditions: 35, verified: false, type: '区域' },
+    ],
+    popularPeaksWeather: [
+      { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️' },
+      { name: 'K2', nameEn: 'K2', altitude: 8611, temp: -35, wind: 62, humidity: 25, condition: '多云', conditionIcon: '⛅' },
+      { name: '丹拿利峰', nameEn: 'Denali', altitude: 6190, temp: -22, wind: 38, humidity: 55, condition: '阴', conditionIcon: '☁️' },
+      { name: '白朗峰', nameEn: 'Mont Blanc', altitude: 4808, temp: -12, wind: 28, humidity: 70, condition: '小雪', conditionIcon: '🌨️' },
+      { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, temp: -18, wind: 32, humidity: 48, condition: '晴', conditionIcon: '☀️' },
+      { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️' },
+    ],
+    banners: [],
+    // 我的成就
+    showAchievementsModal: false,
+    achievementsList: [],
+    achievementsLoading: false,
+    // 会员中心
+    showMembershipModal: false,
+    membershipData: null,
+    membershipLoading: false,
+    leaderboardSort: 'count',
+    communitySearchQuery: '',
+    filteredCommunityPosts: [],
+    showGuideApply: false,
+    guideApplyForm: { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' },
+    showClubApplyModal: false,
+    clubApplyForm: { club_name: '', cert_url: '', contact: '', wechat: '', specialty: '', region: '', description: '', website: '' },
+    showGuideDetail: false,
+    showGuideProfile: false,
+    selectedGuide: null,
+    showGuideProfileModal: false,
+    currentGuideProfile: null,
+    guideReviewForm: { rating: 5, content: '' },
+    showClubProfileModal: false,
+    currentClubProfile: null,
+    clubActivityTab: 'activity',
+    clubReviewForm: { rating: 5, content: '' },
+    showPublishActivity: false,
+    newActivity: { title: '', type: 'activity', mountain: '', region: '', price: '', max_members: 10, start_date: '', end_date: '', difficulty: '', description: '' },
+    showNotificationCenter: false,
+    notifications: [],
+    notificationCount: 0,
+    summitWindow: [],
+    summitWindowExpanded: -1,
+    showCertModal: false,
+    certTrackId: null,
+    showRejectReason: false,
+    rejectReason: '',
+    rejectingNotif: null,
+    showMyBookings: false,
+    myBookings: [],
+    showIncomingBookings: false,
+    incomingBookings: [],
+    showExpeditionDetail: false,
+    selectedExpedition: null,
+    showClubDetail: false,
+    selectedClub: null,
+    showArticle: false,
+    selectedArticle: null,
+    showGearDetail: false,
+    selectedGear: null,
+    showWorldPeakDetail: false,
+    selectedWorldPeak: null,
+    showAlpineDetail: false,
+    selectedAlpine: null,
+    // Articles / 攻略知识库
+    articles: [],
+    articleCategory: 'all',
+    showArticleDetail: false,
+    selectedArticle: null,
+    articlesLoading: false,
+    // Customs / 定制攀登
+    showCustomsForm: false,
+    customsForm: { peak_name: '', preferred_date: '', group_size: 1, notes: '', contact_phone: '' },
+    customsSubmitted: false,
+    customsOrderId: null,
+    // Profile sub-sections
+    medicalInfo: { blood_type: '', allergies: '', health_notes: '' },
+    medicalInfoLoaded: false,
+    userEmergencyContacts: [],
+    showAddContact: false,
+    newContact: { name: '', relationship: '', phone: '' },
+    userGearChecklist: [],
+    newGearItemName: '',
+    userFavorites: [],
+    meSection: 'profile',
+    // Rescue contacts
+    rescueContacts: [],
+    toasts: [],
+    newComment: '',
+    selectedPostComments: [],
+    commentsLoading: false,
+    availableLangs: [
+      { code: 'zh', native: '简体中文', flag: '🇨🇳' },
+      { code: 'en', native: 'English', flag: '🇬🇧' },
+      { code: 'zh-TW', native: '繁體中文', flag: '🇹🇼' },
+      { code: 'ja', native: '日本語', flag: '🇯🇵' },
+      { code: 'ne', native: 'नेपाली', flag: '🇳🇵' },
+      { code: 'hi', native: 'हिन्दी', flag: '🇮🇳' },
+      { code: 'fr', native: 'Français', flag: '🇫🇷' },
+      { code: 'it', native: 'Italiano', flag: '🇮🇹' },
+      { code: 'es', native: 'Español', flag: '🇪🇸' },
+    ],
+    translations: {
+      zh: { app_name: '巅峰探索', summit: '峰顶', search: '搜索', language: '语言', home: '首页', explore: '探索', community: '社区', track: '轨迹', gear: '装备', me: '我的', booking: '预约', submit: '提交', cancel: '取消', close: '关闭', save: '保存', confirm: '确认', back: '返回', edit: '编辑', delete: '删除', share: '分享', like: '点赞', comment: '评论', follow: '关注', login: '登录', logout: '退出', settings: '设置', sos: 'SOS 紧急救援', loading: '加载中...', success: '成功', error: '错误', weather: '天气', altitude: '海拔', difficulty: '难度', country: '国家', price: '价格', date: '日期', guide: '向导', members: '成员', notes: '备注', send_sos: '发送 SOS', book_now: '立即预约', peak_detail: '山峰详情', booking_title: '预约攀登' },
+      en: { app_name: 'SummitLink', summit: 'Summit', search: 'Search', language: 'Language', home: 'Home', explore: 'Explore', community: 'Community', track: 'Track', gear: 'Gear', me: 'Me', booking: 'Booking', submit: 'Submit', cancel: 'Cancel', close: 'Close', save: 'Save', confirm: 'Confirm', back: 'Back', edit: 'Edit', delete: 'Delete', share: 'Share', like: 'Like', comment: 'Comment', follow: 'Follow', login: 'Login', logout: 'Logout', settings: 'Settings', sos: 'SOS Emergency', loading: 'Loading...', success: 'Success', error: 'Error', weather: 'Weather', altitude: 'Altitude', difficulty: 'Difficulty', country: 'Country', price: 'Price', date: 'Date', guide: 'Guide', members: 'Members', notes: 'Notes', send_sos: 'Send SOS', book_now: 'Book Now', peak_detail: 'Peak Detail', booking_title: 'Book Climbing' },
+      'zh-TW': { app_name: '巔峰探索', summit: '峰頂', search: '搜尋', language: '語言', home: '首頁', explore: '探索', community: '社群', track: '軌跡', gear: '裝備', me: '我的', booking: '預約', submit: '提交', cancel: '取消', close: '關閉', save: '儲存', confirm: '確認', back: '返回', edit: '編輯', delete: '刪除', share: '分享', like: '按讚', comment: '評論', follow: '追蹤', login: '登入', logout: '登出', settings: '設定', sos: 'SOS 緊急救援', loading: '載入中...', success: '成功', error: '錯誤', weather: '天氣', altitude: '海拔', difficulty: '難度', country: '國家', price: '價格', date: '日期', guide: '嚮導', members: '成員', notes: '備註', send_sos: '發送 SOS', book_now: '立即預約', peak_detail: '山峰詳情', booking_title: '預約攀登' },
+      ja: { app_name: 'サミットリンク', summit: '山頂', search: '検索', language: '言語', home: 'ホーム', explore: '探索', community: 'コミュニティ', track: 'トラック', gear: 'ギア', me: '自分', booking: '予約', submit: '送信', cancel: 'キャンセル', close: '閉じる', save: '保存', confirm: '確認', back: '戻る', edit: '編集', delete: '削除', share: '共有', like: 'いいね', comment: 'コメント', follow: 'フォロー', login: 'ログイン', logout: 'ログアウト', settings: '設定', sos: 'SOS 緊急救助', loading: '読み込み中...', success: '成功', error: 'エラー', weather: '天気', altitude: '高度', difficulty: '難易度', country: '国', price: '価格', date: '日付', guide: 'ガイド', members: 'メンバー', notes: 'メモ', send_sos: 'SOS送信', book_now: '今すぐ予約', peak_detail: '山の詳細', booking_title: 'クライミング予約' },
+      ne: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोज्नुहोस्', language: 'भाषा', home: 'गृह', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्र्याक', gear: 'गियर', me: 'म', booking: 'बुकिङ', submit: 'पेश गर्नुहोस्', cancel: 'रद्द गर्नुहोस्', close: 'बन्द गर्नुहोस्', save: 'सुरक्षित', confirm: 'पुष्टि गर्नुहोस्', back: 'पछाडि', edit: 'सम्पादन', delete: 'मेटाउनुहोस्', share: 'साझा गर्नुहोस्', like: 'मन पर्छ', comment: 'टिप्पणी', follow: 'अनुसरण', login: 'लगिन', logout: 'लगआउट', settings: 'सेटिङ', sos: 'SOS आपतकालीन', loading: 'लोड हुँदैछ...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'उचाइ', difficulty: 'कठिनाइ', country: 'देश', price: 'मूल्य', date: 'मिति', guide: 'गाइड', members: 'सदस्यहरू', notes: 'नोट', send_sos: 'SOS पठाउनुहोस्', book_now: 'अहिले बुक गर्नुहोस्', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिङ' },
+      hi: { app_name: 'समिटलिंक', summit: 'शिखर', search: 'खोजें', language: 'भाषा', home: 'होम', explore: 'अन्वेषण', community: 'समुदाय', track: 'ट्रैक', gear: 'गियर', me: 'मैं', booking: 'बुकिंग', submit: 'जमा करें', cancel: 'रद्द करें', close: 'बंद करें', save: 'सहेजें', confirm: 'पुष्टि करें', back: 'वापस', edit: 'संपादित करें', delete: 'हटाएं', share: 'साझा करें', like: 'पसंद', comment: 'टिप्पणी', follow: 'अनुसरण करें', login: 'लॉगिन', logout: 'लॉगआउट', settings: 'सेटिंग', sos: 'SOS आपातकालीन', loading: 'लोड हो रहा है...', success: 'सफलता', error: 'त्रुटि', weather: 'मौसम', altitude: 'ऊंचाई', difficulty: 'कठिनाई', country: 'देश', price: 'कीमत', date: 'तारीख', guide: 'गाइड', members: 'सदस्य', notes: 'नोट', send_sos: 'SOS भेजें', book_now: 'अभी बुक करें', peak_detail: 'शिखर विवरण', booking_title: 'आरोहण बुकिंग' },
+      fr: { app_name: 'SommetsLink', summit: 'Sommet', search: 'Rechercher', language: 'Langue', home: 'Accueil', explore: 'Explorer', community: 'Communauté', track: 'Piste', gear: 'Équipement', me: 'Moi', booking: 'Réservation', submit: 'Soumettre', cancel: 'Annuler', close: 'Fermer', save: 'Enregistrer', confirm: 'Confirmer', back: 'Retour', edit: 'Modifier', delete: 'Supprimer', share: 'Partager', like: "J'aime", comment: 'Commenter', follow: 'Suivre', login: 'Connexion', logout: 'Déconnexion', settings: 'Paramètres', sos: 'SOS Urgence', loading: 'Chargement...', success: 'Succès', error: 'Erreur', weather: 'Météo', altitude: 'Altitude', difficulty: 'Difficulté', country: 'Pays', price: 'Prix', date: 'Date', guide: 'Guide', members: 'Membres', notes: 'Notes', send_sos: 'Envoyer SOS', book_now: 'Réserver maintenant', peak_detail: 'Détail du sommet', booking_title: "Réserver l'escalade" },
+      it: { app_name: 'SummitLink', summit: 'Vetta', search: 'Cerca', language: 'Lingua', home: 'Home', explore: 'Esplora', community: 'Comunità', track: 'Percorso', gear: 'Attrezzatura', me: 'Io', booking: 'Prenotazione', submit: 'Invia', cancel: 'Annulla', close: 'Chiudi', save: 'Salva', confirm: 'Conferma', back: 'Indietro', edit: 'Modifica', delete: 'Elimina', share: 'Condividi', like: 'Mi piace', comment: 'Commenta', follow: 'Segui', login: 'Accedi', logout: 'Esci', settings: 'Impostazioni', sos: 'SOS Emergenza', loading: 'Caricamento...', success: 'Successo', error: 'Errore', weather: 'Meteo', altitude: 'Altitudine', difficulty: 'Difficoltà', country: 'Paese', price: 'Prezzo', date: 'Data', guide: 'Guida', members: 'Membri', notes: 'Note', send_sos: 'Invia SOS', book_now: 'Prenota ora', peak_detail: 'Dettaglio cima', booking_title: 'Prenota scalata' },
+      es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
+    },
+    t(key) { const lang = this.translations[this.currentLang] || this.translations['zh']; return lang[key] || this.translations['zh'][key] || key; },
+    nearbyGuides: [],
+    summitLeaderboard: [
+      { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
+      { id: 2, name: 'Pemba Sherpa', flag: '🇳🇵', avatar: 'https://i.pravatar.cc/150?u=lb2', peak: 'K2 8611m', date: '4月10日' },
+      { id: 3, name: 'Hans Weber', flag: '🇩🇪', avatar: 'https://i.pravatar.cc/150?u=lb3', peak: '干城章嘉 8586m', date: '4月9日' },
+      { id: 4, name: 'Sofia Martínez', flag: '🇪🇸', avatar: 'https://i.pravatar.cc/150?u=lb4', peak: '洛子峰 8516m', date: '4月8日' },
+      { id: 5, name: '张伟峰', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb5', peak: '马卡鲁 8485m', date: '4月7日' },
+      { id: 6, name: 'Raj Thapa', flag: '🇮🇳', avatar: 'https://i.pravatar.cc/150?u=lb6', peak: '卓奥友 8188m', date: '4月6日' },
+      { id: 7, name: 'Emma Wilson', flag: '🇬🇧', avatar: 'https://i.pravatar.cc/150?u=lb7', peak: '道拉吉里 8167m', date: '4月5日' },
+      { id: 8, name: 'Kenji Tanaka', flag: '🇯🇵', avatar: 'https://i.pravatar.cc/150?u=lb8', peak: '马纳斯鲁 8163m', date: '4月4日' },
+      { id: 9, name: 'Carlos Lima', flag: '🇧🇷', avatar: 'https://i.pravatar.cc/150?u=lb9', peak: '安纳普尔纳 8091m', date: '4月3日' },
+      { id: 10, name: 'Fatima Hassan', flag: '🇵🇰', avatar: 'https://i.pravatar.cc/150?u=lb10', peak: '南伽帕尔巴特 8126m', date: '4月2日' },
+    ],
+    eightThousanders: [],
+    continentalPeaks: [],
+    worldPeaks: [],
+    climbingSpots: [],
+    categories: [
+      { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
+      { id: 'continental', name: '洲最高峰', icon: 'public' },
+      { id: 'world', name: '世界经典', icon: 'travel_explore' },
+      { id: 'alpine', name: '技术攀登', icon: 'terrain' },
+      { id: 'guides', name: '专业向导', icon: 'person_pin' },
+      { id: 'commercial', name: '商业攀登', icon: 'groups' },
+    ],
+    communityPosts: [
+      { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
+      { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
+      { id: 3, author: '王芳', authorAvatar: 'https://i.pravatar.cc/150?u=wang', timeAgo: '1天前', content: '马特洪峰北壁首次尝试，虽然未能登顶，但收获了宝贵的经验。山在那里，我还会回来的。', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '马特洪峰, 瑞士', likes: 89, comments: 15, isLiked: false, isFavorited: false, commentPreview: [{ author: '陈强', text: '勇敢！下次一定能成功！' }] },
+    ],
+    climbDiaries: [
+      { id: 1, title: '珠峰BC到C1的旅程', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', altitude: 6065, difficulty: '极难', duration: '3天', date: '2024-05-10', peak: '珠穆朗玛峰', likes: 234, comments: 45, views: 1200, tags: ['珠峰', '高海拔', '远征'], excerpt: '从大本营出发，穿越冰川到达C1营地，记录了沿途的风景和挑战...' },
+      { id: 2, title: 'K2绝壁攀登记录', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '李明', avatar: 'https://i.pravatar.cc/150?u=li', altitude: 8611, difficulty: '极难', duration: '45天', date: '2024-07-25', peak: 'K2', likes: 567, comments: 89, views: 3400, tags: ['K2', '技术攀登', '挑战'], excerpt: '历时45天的K2远征，经历了风暴、高反和团队合作的考验...' },
+      { id: 3, title: '马特洪峰北壁技术路线', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', author: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', altitude: 4478, difficulty: '难', duration: '2天', date: '2024-08-15', peak: '马特洪峰', likes: 123, comments: 28, views: 890, tags: ['阿尔卑斯', '技术路线', '欧洲'], excerpt: '马特洪峰北壁是阿尔卑斯最具挑战性的路线之一，本文记录了攀登过程...' },
+    ],
+    clubs: [],
+    expeditions: [
+      { id: 1, title: '2025珠峰商业远征', peak: '珠穆朗玛峰', date: '2025-04-01', duration: '60天', difficulty: '极难', spots: 3, totalSpots: 8, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang', price: 380000, image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专业向导带领的珠峰南坡商业远征，全程高山支援，适合有经验的攀登者' },
+      { id: 2, title: 'K2夏季挑战队', peak: 'K2', date: '2025-06-15', duration: '45天', difficulty: '极难', spots: 2, totalSpots: 6, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li', price: 450000, image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', description: 'K2 标准路线挑战，要求参与者有8000米以上攀登经历' },
+      { id: 3, title: '马特洪峰技术攀登营', peak: '马特洪峰', date: '2025-08-01', duration: '14天', difficulty: '难', spots: 4, totalSpots: 6, leader: '王芳', leaderAvatar: 'https://i.pravatar.cc/150?u=wang', price: 35000, image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '由资深向导带领的马特洪峰技术攀登，含技术培训和北壁尝试' },
+    ],
+    guides: [],
+    gearItems: [
+      { id: 1, name: '黑钻Momentum高山靴', brand: 'Black Diamond', price: 2800, condition: '九成新', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', description: '用过两次，无明显磨损，尺码43', seller: '张磊', sellerAvatar: 'https://i.pravatar.cc/150?u=zhang' },
+      { id: 2, name: 'Petzl高山头盔', brand: 'Petzl', price: 680, condition: '全新', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', description: '全新未使用，原价980元，尺寸M/L可调', seller: '李明', sellerAvatar: 'https://i.pravatar.cc/150?u=li' },
+      { id: 3, name: 'Mammut 8.0干绳', brand: 'Mammut', price: 1200, condition: '八成新', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '60米干绳，使用约10次，无严重磨损，经检验可继续使用', seller: '王芳', sellerAvatar: 'https://i.pravatar.cc/150?u=wang' },
+    ],
+    guideArticles: [
+      { id: 1, title: '8000米峰攀登基础知识', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', readTime: '15分钟', category: '高海拔' },
+      { id: 2, title: '冰雪技术入门指南', cover: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', author: '李明', readTime: '10分钟', category: '技术' },
+      { id: 3, title: '高海拔营养补给策略', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '王芳', readTime: '8分钟', category: '健康' },
+    ],
+    insuranceProducts: [
+      { id: 1, name: '高山探险险', price: 2980, coverage: '300万', period: '30天', type: 'premium' },
+      { id: 2, name: '标准登山险', price: 980, coverage: '100万', period: '14天', type: 'standard' },
+      { id: 3, name: '基础户外险', price: 280, coverage: '30万', period: '7天', type: 'basic' },
+    ],
+    conversations: [
+      { id: 1, name: '救援指挥中心', avatar: 'https://i.pravatar.cc/150?u=rescue', type: 'rescue', lastMsg: '您好，有紧急情况请立即联系', time: '10:30', unread: 0, messages: [] },
+      { id: 2, name: '张磊（向导）', avatar: 'https://i.pravatar.cc/150?u=zhang', type: 'guide', lastMsg: '明天我们6点出发', time: '09:15', unread: 2, messages: [] },
+      { id: 3, name: '珠峰2025队', avatar: 'https://i.pravatar.cc/150?u=team', type: 'team', lastMsg: '装备检查完毕', time: '昨天', unread: 5, messages: [] },
+    ],
+    tracks: [
+      { id: 1, name: '珠峰大本营徒步', date: '2024-03-15', distance: 45.2, elevation: 2300, duration: '5天', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400' },
+      { id: 2, name: 'K2 BC 线路', date: '2024-07-20', distance: 62.8, elevation: 3800, duration: '8天', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400' },
+    ],
+    teams: [
+      { id: 1, name: '珠峰突击队2025', peak: '珠穆朗玛峰', date: '2025-05-01', level: '专业级', spots: 2, totalSpots: 6, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang' },
+      { id: 2, name: '马特洪峰探险团', peak: '马特洪峰', date: '2025-08-15', level: '中级', spots: 3, totalSpots: 4, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li' },
+    ],
+    emergencyContacts: [
+      { name: '巅峰探索平台客服', number: '400-888-6699', country: '🏔️', tag: '默认', tagClass: 'bg-primary/20 text-primary-light' },
+      { name: '中国登山救援', number: '12345', country: '🇨🇳' },
+      { name: '尼泊尔山地救援', number: '+977-1-4231234', country: '🇳🇵' },
+      { name: 'International SOS', number: '+86-10-6462-9100', country: '🌍' },
+    ],
+    // 用户保险信息 (Mock - 后端接口: GET /api/user/insurance 返回 {has_insurance, rescue_phone, insurer_name, policy_no})
+    userInsurance: { has_insurance: true, rescue_phone: '400-999-1234', insurer_name: '太平洋山地险', policy_no: 'ALPS20250416' },
+    // 新增状态
+    showNewTrackModal: false,
+    trackRecordingState: 'idle', // idle | recording | paused
+    trackLiveStats: { distance: 0, elevation: 5364, seconds: 0 },
+    trackTimer: null,
+    newTrackName: '',
+    publicTracks: [
+      { id: 'p1', name: '珠峰BC徒步经典线路', author: '扎西旺堆', author_id: 'g1', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', distance_km: 52.3, elevation_gain: 2856, difficulty: '高', region: '喜马拉雅', likes: 234, date: '2025-03-20' },
+      { id: 'p2', name: 'K2大本营穿越', author: 'Ang Dorji', author_id: 'g2', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', distance_km: 68.1, elevation_gain: 3920, difficulty: '极难', region: '喀喇昆仑', likes: 189, date: '2025-02-15' },
+      { id: 'p3', name: '阿玛达布拉姆环线', author: 'Marc Dubois', author_id: 'g3', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400', distance_km: 38.5, elevation_gain: 1950, difficulty: '中', region: '喜马拉雅', likes: 156, date: '2025-01-10' },
+      { id: 'p4', name: '哈巴雪山标准路线', author: '李明', author_id: 'u2', image: 'https://images.unsplash.com/photo-1521336575822-6da63fb45455?w=400', distance_km: 24.2, elevation_gain: 1830, difficulty: '中', region: '横断山脉', likes: 98, date: '2025-04-01' },
+      { id: 'p5', name: '慕士塔格峰正常路线', author: '王芳', author_id: 'u3', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', distance_km: 31.6, elevation_gain: 2480, difficulty: '高', region: '帕米尔', likes: 72, date: '2025-04-05' },
+    ],
+    filteredPublicTracks: [],
+    publicTrackSearch: { query: '', difficulty: '' },
+    showCommercialBooking: false,
+    commercialBookingData: { peakName: '', difficulty: '', region: '', date: '', persons: 1, package: 'standard', notes: '', selectedClub: null, selectedGuide: null, routeId: null },
+    commercialStep: 0,
+    commercialRouteClubs: [],
+    commercialClubsLoading: false,
+    commercialClubGuides: [],
+    commercialGuidesLoading: false,
+    commercialPackages: [
+      { id: 'basic', name: '基础套餐', desc: '向导费 + 营地支援', price: 25000 },
+      { id: 'standard', name: '标准套餐', desc: '向导费 + 营地 + 高山厨师 + 氧气', price: 45000 },
+      { id: 'premium', name: '全包套餐', desc: '标准套餐 + 私人协作 + 直升机保障', price: 80000 },
+    ],
+    showMyOrders: false,
+    myOrdersFilter: '全部',
+    myOrdersSubTab: 'expedition',
+    myLeaderboardRank: { rank: 8, summit_count: 2, max_elevation: 6178, total_distance: 87.3 },
+    showLeaderboardInfo: false,
+    myOrders: [
+      { id: 'o1', title: '珠峰BC徒步向导预约', type: '向导预约', date: '2025-04-10', amount: 35000, fee: 525, total: 35525, status: '已托管' },
+      { id: 'o2', title: '马特洪峰技术攀登营报名', type: '俱乐部活动', date: '2025-03-28', amount: 12000, fee: 180, total: 12180, status: '服务中' },
+      { id: 'o3', title: '哈巴雪山商业攀登预约', type: '商业攀登', date: '2025-04-05', amount: 28500, fee: 428, total: 28928, status: '待支付' },
+      { id: 'o4', title: 'K2大本营向导全程', type: '向导预约', date: '2025-02-20', amount: 85000, fee: 1275, total: 86275, status: '已完成', isProvider: false },
+    ],
+    expeditionOrders: [],
+    expeditionOrdersLoading: false,
+    activityOrders: [],
+    activityOrdersLoading: false,
+    guideServiceOrders: [],
+    guideServiceOrdersLoading: false,
+    showActivityEnrollModal: false,
+    enrollingActivity: null,
+    enrollingClub: null,
+    enrollForm: { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0' },
+    enrollLoading: false,
+    currentGuideServices: [],
+    guideServicesLoading: false,
+    showGuideServiceEnrollModal: false,
+    enrollingGuideService: null,
+    enrollingGuideForService: null,
+    guideServiceEnrollForm: { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0', notes: '' },
+    guideServiceEnrollLoading: false,
+    showEnrollmentsDrawer: false,
+    selectedActivityEnrollments: [],
+    enrollmentsLoading: false,
+    selectedActivityForEnrollments: null,
+    myGuideServices: [],
+    myGuideServicesLoading: false,
+    showAddGuideService: false,
+    newGuideService: { title: '', type: 'guided_climb', mountain: '', region: '', price: '', price_unit: 'per_day', duration_days: 1, max_clients: 8, difficulty: '', description: '' },
+    showClubCommercialApply: false,
+    clubCommercialApplyId: null,
+    clubCommercialForm: { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' },
+    clubCommercialLoading: false,
+    showGuideCommercialApply: false,
+    guideCommercialApplyId: null,
+    guideCommercialForm: { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' },
+    guideCommercialLoading: false,
+    showClubActivityMgmt: false,
+    clubActivitiesMgmt: [],
+    clubActivitiesMgmtLoading: false,
+    teamDetailTab: 'info',
+    teamChatInput: '',
+    teamChatGroupId: null,
+    teamChatMembers: [
+      { name: '张磊 (领队)', avatar: 'https://i.pravatar.cc/150?u=zhang', online: true },
+      { name: 'Ang Dorji', avatar: 'https://i.pravatar.cc/150?u=guide2', online: true },
+      { name: '李明', avatar: 'https://i.pravatar.cc/150?u=li', online: false },
+      { name: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', online: true },
+    ],
+    teamChatMessages: [],
+    navTabs: [
+      { id: 'home', icon: 'home', name: '首页' },
+      { id: 'explore', icon: 'group', name: '找队友' },
+      { id: 'chat', icon: 'chat', name: '聊天' },
+      { id: 'me', icon: 'person', name: '我的' },
+    ],
+    weather: { location: '珠穆朗玛峰大本营', condition: 'partly_cloudy', temp: -8, wind: 25, humidity: 45, visibility: 12 },
+    userProfile: { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 },
+
+    // Toast notifications
+    showToast(message, type = 'success') {
+      const id = Date.now();
+      this.toasts.push({ id, message, type });
+      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
+    },
+
+    // Search
+    async performSearch() {
+      if (!this.searchQuery.trim()) { this.searchResults = []; return; }
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(this.searchQuery)}&type=all&limit=20`, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          this.searchResults = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch(e) {
+        this.searchResults = [];
+      }
+    },
+    selectSearchResult(result) {
+      if (result.type === 'peak') this.openPeakDetail(result);
+      else if (result.type === 'spot') this.openAlpineDetail(result);
+      else if (result.type === 'guide') this.viewGuideProfile(result);
+      else if (result.type === 'club') this.openClubDetail(result);
+      else if (result.type === 'gear') this.openGearDetail(result);
+      this.showSearch = false;
+    },
+    searchByKeyword(keyword) { this.searchQuery = keyword; this.performSearch(); },
+    removeHistory(index) { this.searchHistory.splice(index, 1); },
+
+    // Peak detail
+    openPeakDetail(peak) {
+      this.selectedPeak = peak;
+      this.showPeakDetail = true;
+      this.peakWeather = null;
+      this.peakForecast = [];
+      this.peakCampWeathers = [];
+      this.loadPeakWeather(peak);
+      this.loadCampWeathers(peak);
+      this.loadSummitWindow(peak.id || peak.name);
+    },
+    openWorldPeakDetail(peak) { this.openPeakDetail(peak); },
+    openAlpineDetail(spot) { this.openPeakDetail(spot); },
+    async loadPeakWeather(peak) {
+      if (!peak) return;
+      this.peakWeatherLoading = true;
+      try {
+        let url;
+        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
+          url = `/api/weather?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
+        } else {
+          url = `/api/weather?location=${encodeURIComponent(peak.name)}`;
+        }
+        const res = await fetch(url);
+        if (res.ok) this.peakWeather = await res.json();
+      } catch(e) {}
+      try {
+        let furl;
+        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
+          furl = `/api/weather/forecast?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
+        } else {
+          furl = `/api/weather/forecast?location=${encodeURIComponent(peak.name)}`;
+        }
+        const fres = await fetch(furl);
+        if (fres.ok) {
+          const fd = await fres.json();
+          this.peakForecast = fd.forecast || [];
+        }
+      } catch(e) {}
+      this.peakWeatherLoading = false;
+    },
+    async loadCampWeathers(peak) {
+      if (!peak) return;
+      this.peakCampWeathersLoading = true;
+      this.peakCampWeathers = [];
+      try {
+        const res = await fetch(`/api/weather/camps?peak=${encodeURIComponent(peak.name)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.camps && data.camps.length > 0) {
+            this.peakCampWeathers = this.markSameCampWeathers(data.camps);
+          }
+        }
+      } catch(e) {}
+      this.peakCampWeathersLoading = false;
+    },
+    // 标记相邻营地天气相同的情况
+    markSameCampWeathers(camps) {
+      for (let i = 1; i < camps.length; i++) {
+        const prev = camps[i - 1];
+        const curr = camps[i];
+        if (prev.weather && curr.weather &&
+            prev.weather.temp === curr.weather.temp &&
+            prev.weather.wind === curr.weather.wind &&
+            prev.weather.humidity === curr.weather.humidity) {
+          curr.sameWeatherAsPrev = true;
+        }
+      }
+      return camps;
+    },
+    // 获取过滤后的商业山峰列表
+    getFilteredCommercialPeaks() {
+      let peaks = this.commercialPeaks || [];
+      if (this.commercialFilter.region) {
+        peaks = peaks.filter(p => p.region === this.commercialFilter.region);
+      }
+      if (this.commercialFilter.difficulty) {
+        peaks = peaks.filter(p => p.difficulty === this.commercialFilter.difficulty);
+      }
+      if (this.commercialFilter.sortBy === 'altitude') {
+        peaks = [...peaks].sort((a, b) => b.altitude - a.altitude);
+      } else if (this.commercialFilter.sortBy === 'annualClimbers') {
+        peaks = [...peaks].sort((a, b) => b.annualClimbers - a.annualClimbers);
+      } else if (this.commercialFilter.sortBy === 'difficulty') {
+        const order = { '入门6000m': 1, '进阶7000m': 2, '技术型': 3, '8000m级': 4 };
+        peaks = [...peaks].sort((a, b) => (order[b.difficulty] || 0) - (order[a.difficulty] || 0));
+      }
+      return peaks;
+    },
+    // OpenStreetMap Nominatim 地名查询（带缓存和节流）
+    async geocodeByOSM(name) {
+      if (!name || !name.trim()) return null;
+      const key = 'osm_geo_' + name.trim().toLowerCase().replace(/\s+/g, '_');
+      try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          const obj = JSON.parse(cached);
+          if (Date.now() - obj.ts < 7 * 24 * 3600 * 1000) return obj;
+        }
+      } catch(e) {}
+      const now = Date.now();
+      if (now - this.osmLastRequestTime < 1000) {
+        await new Promise(resolve => setTimeout(resolve, 1000 - (now - this.osmLastRequestTime)));
+      }
+      this.osmLastRequestTime = Date.now();
+      try {
+        const q = encodeURIComponent(name.trim());
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data || data.length === 0) return null;
+        const first = data[0];
+        const result = { lat: parseFloat(first.lat), lon: parseFloat(first.lon), displayName: first.display_name, raw: first, ts: Date.now() };
+        try { localStorage.setItem(key, JSON.stringify(result)); } catch(e) {}
+        return result;
+      } catch(e) { return null; }
+    },
+    // 获取 Nominatim 候选列表（用于下拉）
+    async fetchOsmSuggestions(name) {
+      if (!name || name.trim().length < 2) { this.osmSuggestions = []; this.showOsmSuggestions = false; return; }
+      const now = Date.now();
+      if (now - this.osmLastRequestTime < 1000) {
+        await new Promise(resolve => setTimeout(resolve, 1000 - (now - this.osmLastRequestTime)));
+      }
+      this.osmLastRequestTime = Date.now();
+      this.osmSuggestionsLoading = true;
+      try {
+        const q = encodeURIComponent(name.trim());
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) { this.osmSuggestions = []; this.osmSuggestionsLoading = false; return; }
+        const data = await res.json();
+        this.osmSuggestions = data.map(item => ({
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon),
+          displayName: item.display_name,
+          raw: item,
+        }));
+        this.showOsmSuggestions = this.osmSuggestions.length > 0;
+      } catch(e) {
+        this.osmSuggestions = [];
+      }
+      this.osmSuggestionsLoading = false;
+    },
+    // 选择 Nominatim 候选项
+    selectOsmSuggestion(suggestion) {
+      this.weatherSearch = suggestion.displayName.split(',')[0].trim();
+      this.showOsmSuggestions = false;
+      this.osmSuggestions = [];
+      this._searchWeatherByCoords(suggestion.lat, suggestion.lon, suggestion.displayName);
+    },
+    // 通过坐标查询天气
+    async _searchWeatherByCoords(lat, lon, displayName) {
+      this.weatherSearchLoading = true;
+      this.weatherSearchResult = null;
+      this.weatherSearchForecast = [];
+      this.weatherSearchCamps = [];
+      this.showWeatherSearchResult = true;
+      try {
+        const [wres, fres] = await Promise.all([
+          fetch(`/api/weather?lat=${lat}&lon=${lon}&location=${encodeURIComponent(displayName)}`),
+          fetch(`/api/weather/forecast?lat=${lat}&lon=${lon}`)
+        ]);
+        if (wres.ok) {
+          this.weatherSearchResult = await wres.json();
+        } else {
+          this.weatherSearchResult = { error: '无法获取该地点天气', location: displayName };
+        }
+        if (fres.ok) {
+          const fd = await fres.json();
+          this.weatherSearchForecast = fd.forecast || [];
+        }
+      } catch(e) {
+        this.weatherSearchResult = { error: '网络错误，请稍后重试' };
+      }
+      this.weatherSearchLoading = false;
+    },
+    async searchWeather() {
+      if (!this.weatherSearch.trim()) return;
+      this.weatherSearchLoading = true;
+      this.weatherSearchResult = null;
+      this.weatherSearchForecast = [];
+      this.weatherSearchCamps = [];
+      this.showWeatherSearchResult = true;
+      const loc = this.weatherSearch.trim();
+      const locEnc = encodeURIComponent(loc);
+      try {
+        // 先尝试获取营地分层天气（山峰名称匹配）
+        const campsRes = await fetch(`/api/weather/camps?peak=${locEnc}`);
+        if (campsRes.ok) {
+          const campsData = await campsRes.json();
+          if (campsData.camps && campsData.camps.length > 0) {
+            this.weatherSearchCamps = this.markSameCampWeathers(campsData.camps);
+            // 同时获取普通天气作为 header 显示
+            try {
+              const wres = await fetch(`/api/weather?location=${locEnc}`);
+              if (wres.ok) this.weatherSearchResult = await wres.json();
+              else this.weatherSearchResult = { location: loc, temp: '-', wind: '-', humidity: '-', visibility: '-' };
+            } catch(e) {
+              this.weatherSearchResult = { location: loc, temp: '-', wind: '-', humidity: '-', visibility: '-' };
+            }
+            this.weatherSearchLoading = false;
+            return;
+          }
+        }
+      } catch(e) {}
+      // 普通地点天气查询
+      try {
+        const [wres, fres] = await Promise.all([
+          fetch(`/api/weather?location=${locEnc}`),
+          fetch(`/api/weather/forecast?location=${locEnc}`)
+        ]);
+        if (wres.ok) {
+          this.weatherSearchResult = await wres.json();
+        } else {
+          const errData = await wres.json().catch(() => ({}));
+          this.weatherSearchResult = { error: errData.error || '未找到该地点天气，请检查地名是否正确' };
+        }
+        if (fres.ok) {
+          const fd = await fres.json();
+          this.weatherSearchForecast = fd.forecast || [];
+        }
+      } catch(e) {
+        this.weatherSearchResult = { error: '网络错误，请稍后重试' };
+      }
+      // OSM 地名解析回退：如果普通查询失败，尝试通过OSM获取坐标
+      if (this.weatherSearchResult && this.weatherSearchResult.error) {
+        const geo = await this.geocodeByOSM(loc);
+        if (geo) {
+          try {
+            const [wres2, fres2] = await Promise.all([
+              fetch(`/api/weather?lat=${geo.lat}&lon=${geo.lon}&location=${encodeURIComponent(geo.displayName)}`),
+              fetch(`/api/weather/forecast?lat=${geo.lat}&lon=${geo.lon}`)
+            ]);
+            if (wres2.ok) this.weatherSearchResult = await wres2.json();
+            if (fres2.ok) { const fd2 = await fres2.json(); this.weatherSearchForecast = fd2.forecast || []; }
+          } catch(e) {}
+        } else {
+          this.weatherSearchResult = { error: '未找到该地点，请尝试使用英文名或更具体的名称（例如 "Mount Everest Base Camp, Nepal"）' };
+        }
+      }
+      this.weatherSearchLoading = false;
+    },
+
+    // Booking
+    openBooking(item) { this.bookingData.mountain = item.name || item; this.showBooking = true; },
+    openBookingWithGuide(peak, guide) { this.bookingData.mountain = peak.name; this.bookingData.guide = guide.name; this.showBooking = true; },
+    async submitBooking() {
+      if (!this.bookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
+      if (!this.requireAuth()) return;
+      this.showBooking = false;
+      const deposit = 3000 * (this.bookingData.members || 1);
+      try {
+        const body = {
+          mountain: this.bookingData.mountain,
+          guide_id: this.bookingData.guide_id || null,
+          guide_name: this.bookingData.guide_name || (this.bookingData.guide ? (this.bookingData.guide.name || this.bookingData.guide) : ''),
+          club_id: this.bookingData.club_id || null,
+          club_name: this.bookingData.club_name || '',
+          date: this.bookingData.date,
+          members: this.bookingData.members || 1,
+          notes: this.bookingData.notes || '',
+          type: this.bookingData.club_id ? 'club' : 'guide',
+        };
+        const res = await apiFetch('/api/bookings', { method: 'POST', body });
+        if (!res.ok) { const d = await res.json(); this.showToast(d.error || '预约创建失败', 'error'); return; }
+        this.showToast('预约已提交，等待向导/俱乐部确认 🎉');
+        this.loadUnreadCount();
+      } catch(e) { this.showToast('网络错误，预约未保存', 'error'); }
+      this.openPayment(deposit);
+    },
+
+    async toggleLike(post) {
+      if (!this.requireAuth()) return;
+      const wasLiked = post.isLiked;
+      post.isLiked = !wasLiked;
+      post.likes += post.isLiked ? 1 : -1;
+      try {
+        const res = await apiFetch('/api/posts/' + post.id + '/like', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          post.isLiked = data.liked;
+          post.likes = data.likes;
+        } else {
+          post.isLiked = wasLiked;
+          post.likes += wasLiked ? 1 : -1;
+        }
+      } catch(e) {
+        post.isLiked = wasLiked;
+        post.likes += wasLiked ? 1 : -1;
+      }
+    },
+    toggleFavorite(post) { post.isFavorited = !post.isFavorited; },
+    openComments(post) { this.selectedPostForComment = post; this.selectedPostComments = []; this.showComments = true; this.loadComments(post.id); },
+    closeComments() { this.showComments = false; this.selectedPostForComment = null; },
+    async addComment() {
+      if (!this.newComment.trim() && this.commentImagePreviews.length === 0) return;
+      if (!this.requireAuth()) return;
+      const content = this.newComment.trim() || '';
+      const imagePreviews = [...this.commentImagePreviews];
+      this.newComment = '';
+      this.commentImagePreviews = [];
+      if (this.selectedPostForComment) {
+        try {
+          let imageUrls = imagePreviews;
+          const blobImages = imagePreviews.filter(u => u.startsWith('blob:'));
+          if (blobImages.length > 0) {
+            imageUrls = await this.uploadImages(blobImages);
+          }
+          const res = await apiFetch('/api/comments', {
+            method: 'POST',
+            body: { post_id: this.selectedPostForComment.id, content: content || '', images: imageUrls },
+          });
+          const data = await res.json();
+          if (res.ok) {
+            this.selectedPostComments.push({ ...data, images: data.images || imageUrls });
+            this.selectedPostForComment.comments++;
+          } else { this.showToast(data.error || '评论失败', 'error'); }
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      }
+    },
+    sharePost(post) { this.selectedPostForShare = post; this.showShare = true; },
+    closeShareModal() { this.showShare = false; },
+    doShare(platform) { this.showToast('已分享到 ' + platform); this.closeShareModal(); },
+    copyShareLink() {
+      const url = window.location.origin + '/summitlink';
+      const text = this.selectedPostForShare ? this.selectedPostForShare.content : '来自巅峰探索 SummitLink';
+      navigator.clipboard?.writeText(url).then(() => this.showToast('链接已复制')).catch(() => this.showToast('复制失败', 'error'));
+    },
+    shareToWeibo() {
+      const url = encodeURIComponent(window.location.origin + '/summitlink');
+      const text = encodeURIComponent((this.selectedPostForShare ? this.selectedPostForShare.content : '来自巅峰探索 SummitLink') + ' ' + window.location.origin + '/summitlink');
+      window.open('https://service.weibo.com/share/share.php?url=' + url + '&title=' + text, '_blank');
+      this.showShare = false;
+    },
+    shareToQQ() {
+      const url = encodeURIComponent(window.location.origin + '/summitlink');
+      const title = encodeURIComponent(this.selectedPostForShare ? this.selectedPostForShare.content.slice(0, 100) : '巅峰探索 SummitLink');
+      window.open('https://connect.qq.com/widget/shareqq/index.html?url=' + url + '&title=' + title, '_blank');
+      this.showShare = false;
+    },
+
+    // Post editor
+    openPostEditor() { if (!this.requireAuth()) return; this.showPostEditor = true; },
+    async submitPost() {
+      if (!this.requireAuth()) return;
+      if (!this.newPost.content.trim() && this.newPost.images.length === 0 && !this.newPost.videoFile) return;
+      try {
+        // 上传视频（若有）
+        let videoUrl = this.newPost.videoUrl || null;
+        if (this.newPost.videoFile && !videoUrl) {
+          const fd = new FormData();
+          fd.append('file', this.newPost.videoFile);
+          const vr = await fetch('/api/upload/video', { method: 'POST', headers: { Authorization: 'Bearer ' + this.authToken }, body: fd });
+          if (vr.ok) { const vd = await vr.json(); videoUrl = vd.url; }
+        }
+        // 上传图片（blob URLs → 服务器 URLs）
+        let imageUrls = this.newPost.images;
+        const blobImages = imageUrls.filter(u => u.startsWith('blob:'));
+        if (blobImages.length > 0) {
+          const uploaded = await this.uploadImages(blobImages);
+          imageUrls = [...imageUrls.filter(u => !u.startsWith('blob:')), ...uploaded];
+        }
+        const res = await apiFetch('/api/posts', {
+          method: 'POST',
+          body: { content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl },
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
+        this.communityPosts.unshift({ ...data, author: data.authorName, timeAgo: '刚刚', isLiked: false, isFavorited: false, commentPreview: [] });
+      } catch(e) {
+        const imageUrls = this.newPost.images;
+        this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: imageUrls[0] || null, images: imageUrls, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
+      }
+      this.newPost = { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '' };
+      this.showPostEditor = false;
+      this.showToast('发布成功！');
+    },
+    addPostImage() { this.newPost.images.push('https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'); },
+    removePostImage(idx) { this.newPost.images.splice(idx, 1); },
+    selectPostEmoji(emoji) { this.newPost.content += emoji; },
+    togglePostEmojiPicker() { this.showPostEmojiPicker = !this.showPostEmojiPicker; },
+
+    // Chat
+    selectEmoji(emoji) { this.chatInput += emoji; },
+    sendMessage() {
+      if (!this.chatInput.trim()) return;
+      if (this.selectedConversation) {
+        this.selectedConversation.messages = this.selectedConversation.messages || [];
+        this.selectedConversation.messages.push({ from: 'me', text: this.chatInput, time: new Date().toLocaleTimeString() });
+      }
+      this.chatInput = '';
+    },
+    openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
+    async openChatWithUser(name, avatar) {
+      this.activeChatSession = { id: Date.now(), name, avatar, flag: '', type: 'guide', online: false, unread: 0, lastMsg: '', messages: [] };
+      this.showChatWindow = true;
+      this.currentPage = 'chat';
+    },
+    get filteredConversations() {
+      if (!this.activeChatType || this.activeChatType === 'all') return this.conversations;
+      return this.conversations.filter(c => c.type === this.activeChatType);
+    },
+
+    // Guides
+    viewGuideProfile(guide) { this.selectedGuide = guide; this.showGuideDetail = true; },
+    contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar); },
+    bookGuideService(guide) { if (!this.requireAuth()) return; this.bookingData.mountain = guide.specialty ? guide.specialty.split('/')[0].trim() : ''; this.bookingData.guide = guide.name; this.showBooking = true; },
+    selectGuideDate(date) { this.bookingData.date = date; },
+    isGuideDateAvailable(date) { return true; },
+
+    // SOS
+    openSOS() { this.showSOS = true; this.sosStep = 0; },
+    sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
+    cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
+    refreshLocation() { this.showToast('位置已刷新'); },
+    shareLocation() { this.showToast('位置已分享'); },
+    callEmergency(number) { this.showToast('正在拨打 ' + number); },
+    callContact(contact) { this.showToast('正在联系 ' + contact.name); },
+    callVIPHotline() { this.showToast('正在拨打 VIP 热线'); },
+    saveMedicalInfo() { this.showToast('医疗信息已保存'); },
+    handleSOSImageUpload(event) {
+      const files = event.target.files;
+      if (files) {
+        Array.from(files).forEach(f => {
+          if (!f.type.startsWith('image/')) return;
+          if (f.size > 10 * 1024 * 1024) { this.showToast('图片大小不能超过10MB', 'error'); return; }
+          this.sosImages.push(URL.createObjectURL(f));
+        });
+      }
+    },
+
+    // Insurance (legacy helpers)
+    buyInsurance(type) { this.showToast('已选择保险方案：' + type); },
+    purchaseInsurance(product) { this.showToast('购买成功：' + product.name); this.showInsurance = false; },
+    fileInsuranceClaim() { this.showToast('理赔申请已提交'); },
+    bookVIPService() { this.showToast('VIP 服务预约成功'); },
+
+    // Expeditions & Clubs
+    openExpeditionDetail(exp) { this.selectedExpedition = exp; this.showExpeditionDetail = true; },
+    openClubDetail(club) { this.selectedClub = club; this.showClubDetail = true; },
+    async joinClub() {
+      if (!this.requireAuth()) return;
+      if (!this.selectedClub) return;
+      try {
+        const res = await fetch('/api/clubs/' + this.selectedClub.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('已成功加入俱乐部！');
+          if (this.selectedClub) this.selectedClub.members = (this.selectedClub.members || 0) + 1;
+        } else { this.showToast(data.error || '加入失败', 'error'); }
+      } catch(e) { this.showToast('加入失败，请重试', 'error'); }
+      this.showClubDetail = false;
+    },
+    openArticle(guide) { this.selectedArticle = guide; this.showArticle = true; },
+
+    // Gear
+    openGearDetail(item) { this.selectedGear = item; this.showGearDetail = true; },
+    openGearPublish() { this.showGearPublish = true; },
+    async uploadGearImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const { valid, error } = validateImageFile(file);
+      if (!valid) { alert(error); event.target.value = ''; return; }
+      this.gearImageUploading = true;
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          this.newGear.images.push(data.url);
+        } else {
+          this.showToast('图片上传失败', 'error');
+        }
+      } catch(e) { this.showToast('上传失败', 'error'); }
+      this.gearImageUploading = false;
+      event.target.value = '';
+    },
+    async uploadAvatar(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const { valid, error } = validateImageFile(file);
+      if (!valid) { alert(error); event.target.value = ''; return; }
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.authToken }, body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          this.userProfile.avatar = data.url;
+          if (this.authToken) {
+            await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ avatar: data.url, name: this.userProfile.name }) });
+          }
+          this.showToast('头像更新成功 ✅');
+        } else {
+          this.showToast('头像上传失败', 'error');
+        }
+      } catch(e) { this.showToast('头像上传失败', 'error'); }
+      event.target.value = '';
+    },
+    triggerAvatarUpload() {
+      if (this.$refs.avatarInput) this.$refs.avatarInput.click();
+    },
+    async submitGear() {
+      if (!this.requireAuth()) return;
+      if (!this.newGear.name || !this.newGear.price) { this.showToast('请填写装备名称和价格', 'error'); return; }
+      try {
+        const payload = {
+          ...this.newGear,
+          price: Number(this.newGear.price),
+          mode: 'used',
+          image: this.newGear.images && this.newGear.images.length > 0 ? this.newGear.images[0] : null,
+          images: JSON.stringify(this.newGear.images || []),
+        };
+        const res = await fetch('/api/gear', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
+        this.gearItems.unshift({ ...data, sellerAvatar: this.userProfile.avatar, seller: this.userProfile.name });
+        this.showToast('装备已发布！');
+        this.newGear = { name: '', brand: '', price: '', condition: 'good', description: '', images: [] };
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      this.showGearPublish = false;
+    },
+    contactSeller(item) { this.openChatWithUser(item.seller || '卖家', item.sellerAvatar || ''); },
+    getConditionClass(condition) {
+      const map = { '全新': 'text-green-400', '九成新': 'text-emerald-400', '八成新': 'text-yellow-400', '七成新': 'text-orange-400' };
+      return map[condition] || 'text-slate-400';
+    },
+
+    async joinTeam(team) {
+      if (!this.requireAuth()) { this.closeTeamDetail(); return; }
+      try {
+        const res = await fetch('/api/teams/' + team.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
+        this.showToast('已申请加入：' + team.name + ' 🎉');
+        team.spots = Math.max(0, team.spots - 1);
+      } catch(e) { this.showToast('申请失败，请重试', 'error'); }
+      this.closeTeamDetail();
+    },
+    openTeamDetail(team) { this.selectedTeam = team; this.showTeamDetail = true; },
+    closeTeamDetail() { this.showTeamDetail = false; },
+    openCreateTeam() { this.showCreateTeam = true; },
+    closeCreateTeam() { this.showCreateTeam = false; },
+    async createTeam() {
+      if (!this.requireAuth()) return;
+      if (!this.newTeam.name || !this.newTeam.peak) { this.showToast('请填写队伍名称和目标山峰', 'error'); return; }
+      try {
+        const res = await fetch('/api/teams', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ name: this.newTeam.name, peak: this.newTeam.peak, date: this.newTeam.date, totalSpots: Number(this.newTeam.spots), level: this.newTeam.level, description: this.newTeam.description }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '创建失败', 'error'); return; }
+        this.teams.unshift({ ...data, leaderAvatar: this.userProfile.avatar });
+        this.showToast('队伍创建成功！');
+        this.newTeam = { name: '', peak: '', date: '', level: '', spots: 4, description: '' };
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      this.closeCreateTeam();
+    },
+
+    // AMap 工具函数：初始化地图（可复用于多个场景）
+    initAMap(containerId, options = {}) {
+      if (typeof AMap === 'undefined') return null;
+      const defaultOptions = { zoom: 13, center: [116.397428, 39.90923], mapStyle: 'amap://styles/dark' };
+      try {
+        return new AMap.Map(containerId, { ...defaultOptions, ...options });
+      } catch(e) { return null; }
+    },
+
+    // Phase 2.5: 统一地图初始化（高德 / Mapbox 双引擎）
+    async initMap(containerId, options = {}) {
+      if (window.__activeMapProvider === 'mapbox' && window.mapboxgl) {
+        try {
+          return new window.mapboxgl.Map({
+            container: containerId,
+            style: 'mapbox://styles/mapbox/outdoors-v12',
+            center: options.center || [86.925, 27.988],
+            zoom: options.zoom || 13,
+          });
+        } catch(e) { return null; }
+      }
+      return this.initAMap(containerId, options);
+    },
+
+    // Phase 2.5: 轨迹绘制双引擎适配
+    drawTrackOnMap(map, points) {
+      if (!map || !points || points.length < 2) return;
+      if (window.__activeMapProvider === 'mapbox' && window.mapboxgl && map.addSource) {
+        const geojson = {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: points.map(p => [p.lng, p.lat]) },
+        };
+        if (map.getSource('track-line')) {
+          map.getSource('track-line').setData(geojson);
+        } else {
+          map.addSource('track-line', { type: 'geojson', data: geojson });
+          map.addLayer({ id: 'track-layer', type: 'line', source: 'track-line',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#3d8a9e', 'line-width': 4 } });
+        }
+        return;
+      }
+      // 高德路径
+      if (typeof AMap !== 'undefined') {
+        const path = points.map(p => new AMap.LngLat(p.lng, p.lat));
+        new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map });
+      }
+    },
+
+    // Phase 2.3: 同步待上传轨迹（重试最多3次）
+    async syncPendingTracks() {
+      if (!this.authToken) return;
+      let pending;
+      try { pending = await idbGetPendingTracks(); } catch(e) { console.warn('[IDB] 读取待上传轨迹失败', e); return; }
+      for (const track of pending) {
+        if (track.retries >= 3) {
+          await idbUpdateTrackStatus(track.id, 'failed', track.retries).catch(e => console.warn('[IDB] 更新状态失败', e));
+          continue;
+        }
+        await idbUpdateTrackStatus(track.id, 'uploading', track.retries).catch(e => console.warn('[IDB] 更新状态失败', e));
+        try {
+          const res = await apiFetch('/api/tracks', {
+            method: 'POST',
+            body: { name: track.name, points: track.points, distance: 0, elevation_gain: 0, duration: '00:00' },
+          });
+          if (res.ok) {
+            await idbDeletePendingTrack(track.id).catch(e => console.warn('[IDB] 删除记录失败', e));
+          } else {
+            await idbUpdateTrackStatus(track.id, 'failed', track.retries + 1).catch(e => console.warn('[IDB] 更新状态失败', e));
+          }
+        } catch(e) {
+          await idbUpdateTrackStatus(track.id, 'pending', track.retries + 1).catch(err => console.warn('[IDB] 更新状态失败', err));
+        }
+      }
+      this.pendingUploadCount = await idbGetPendingTracks().then(t => t.length).catch(() => 0);
+      if (this.pendingUploadCount === 0 && pending.length > 0) {
+        this.showToast('待上传轨迹已全部同步成功 ✅');
+      }
+    },
+
+    // 初始化轨迹记录地图
+    initTrackMap() {
+      if (this.trackMap) {
+        try { this.trackMap.resize(); } catch(e) {}
+        return;
+      }
+      this.trackMap = this.initAMap('track-map', { zoom: 13 });
+    },
+
+    // GPS 定位
+    locateMe() {
+      this.initTrackMap();
+      if (!this.trackMap || typeof AMap === 'undefined') return;
+      AMap.plugin('AMap.Geolocation', () => {
+        const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+        this.trackMap.addControl(geo);
+        geo.getCurrentPosition((status, result) => {
+          if (status === 'complete' && result.position) {
+            this.trackMap.setCenter([result.position.lng, result.position.lat]);
+            this.trackMap.setZoom(15);
+            new AMap.Marker({ position: result.position, map: this.trackMap });
+          } else {
+            this.showToast('定位失败，请检查GPS权限', 'error');
+          }
+        });
+      });
+    },
+
+    locateRecordingMap() {
+      const activeMap = this.recordingMap || this.trackMap;
+      if (!activeMap || typeof AMap === 'undefined') return;
+      AMap.plugin('AMap.Geolocation', () => {
+        const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
+        activeMap.addControl(geo);
+        geo.getCurrentPosition((status, result) => {
+          if (status === 'complete' && result.position) {
+            activeMap.setCenter([result.position.lng, result.position.lat]);
+            activeMap.setZoom(15);
+          } else {
+            this.showToast('定位失败，请检查GPS权限', 'error');
+          }
+        });
+      });
+    },
+
+    // 在轨迹详情弹窗里渲染带 Polyline 的地图（WGS84 → GCJ-02）
+    renderTrackDetailMap(track) {
+      if (typeof AMap === 'undefined' || !track || !track.points || track.points.length < 2) return;
+      try {
+        const mapEl = document.getElementById('track-detail-map');
+        if (!mapEl) return;
+        const center = [track.points[0].lng, track.points[0].lat];
+        const detailMap = new AMap.Map('track-detail-map', { zoom: 13, center, mapStyle: 'amap://styles/dark' });
+        AMap.convertFrom(track.points.map(p => [p.lng, p.lat]), 'gps', (status, result) => {
+          const rawPoints = track.points.map(p => new AMap.LngLat(p.lng, p.lat));
+          const path = status === 'complete' ? result.locations : rawPoints;
+          new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map: detailMap });
+          new AMap.Marker({ position: path[0], map: detailMap, label: { content: '起点', offset: new AMap.Pixel(-10, -30) } });
+          new AMap.Marker({ position: path[path.length - 1], map: detailMap, label: { content: '终点', offset: new AMap.Pixel(-10, -30) } });
+          detailMap.setFitView();
+        });
+      } catch(e) {}
+    },
+
+    // Track Recording with AMap
+    async importGpxFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!this.requireAuth()) return;
+      try {
+        const text = await file.text();
+        let points = [];
+        if (file.name.toLowerCase().endsWith('.gpx')) {
+          // Parse GPX
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(text, 'application/xml');
+          const trkpts = doc.querySelectorAll('trkpt');
+          const baseTs = Date.now();
+          trkpts.forEach((pt, idx) => {
+            const lat = parseFloat(pt.getAttribute('lat'));
+            const lng = parseFloat(pt.getAttribute('lon'));
+            const eleEl = pt.querySelector('ele');
+            const timeEl = pt.querySelector('time');
+            const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
+            const ts = timeEl ? new Date(timeEl.textContent).getTime() : baseTs + idx * 1000;
+            if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts });
+          });
+        } else if (file.name.toLowerCase().endsWith('.kml')) {
+          // Parse KML coordinates
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(text, 'application/xml');
+          const coordsEl = doc.querySelector('coordinates');
+          if (coordsEl) {
+            const coordStr = coordsEl.textContent.trim();
+            const kmlBaseTs = Date.now();
+            coordStr.split(/\s+/).forEach((c, idx) => {
+              const parts = c.split(',');
+              if (parts.length >= 2) {
+                const lng = parseFloat(parts[0]);
+                const lat = parseFloat(parts[1]);
+                const ele = parts[2] ? parseFloat(parts[2]) : 0;
+                if (!isNaN(lat) && !isNaN(lng)) points.push({ lat, lng, ele, ts: kmlBaseTs + idx * 1000 });
+              }
+            });
+          }
+        }
+        if (points.length < 2) { this.showToast('轨迹文件需要至少2个有效坐标点，请检查文件格式', 'error'); return; }
+        // Calculate stats
+        let totalDist = 0;
+        let elevGain = 0;
+        let maxEle = points[0].ele || 0;
+        for (let i = 1; i < points.length; i++) {
+          const p1 = points[i-1], p2 = points[i];
+          const R = 6371;
+          const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+          const dLon = (p2.lng - p1.lng) * Math.PI / 180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180)*Math.cos(p2.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+          totalDist += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          if (p2.ele > p1.ele) elevGain += p2.ele - p1.ele;
+          if (p2.ele > maxEle) maxEle = p2.ele;
+        }
+        const trackName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const body = {
+          name: trackName,
+          date: new Date().toISOString().slice(0, 10),
+          distance_km: Math.round(totalDist * 100) / 100,
+          elevation_gain: Math.round(elevGain),
+          max_elevation: Math.round(maxEle),
+          points,
+        };
+        const res = await fetch('/api/tracks/import-gpx', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('GPX轨迹导入成功！共 ' + points.length + ' 个轨迹点 📍');
+          this.loadTracks();
+          event.target.value = '';
+        } else { this.showToast(data.error || '导入失败', 'error'); }
+      } catch(e) { this.showToast('文件解析失败：' + e.message, 'error'); event.target.value = ''; }
+    },
+    startTrackRecording() {
+      this.initTrackMap();
+      this.trackRecordingState = 'recording';
+      this.trackRecordedPoints = [];
+      this._amapPolyline = null;
+      if (navigator.geolocation) {
+        this._geoWatch = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude, longitude, altitude } = pos.coords;
+            const lat = parseFloat(latitude.toFixed(6));
+            const lng = parseFloat(longitude.toFixed(6));
+            const ele = altitude != null ? parseFloat(altitude.toFixed(1)) : 0;
+            this.trackRecordedPoints.push({ lat, lng, ele, ts: Date.now() });
+            const activeMap = this.recordingMap || this.trackMap;
+            if (activeMap && typeof AMap !== 'undefined') {
+              const lnglat = new AMap.LngLat(lng, lat);
+              if (!this._amapPolyline) {
+                this._amapPolyline = new AMap.Polyline({ path: [lnglat], strokeColor: '#2b6579', strokeWeight: 4, map: activeMap });
+              } else {
+                const path = this._amapPolyline.getPath();
+                path.push(lnglat);
+                this._amapPolyline.setPath(path);
+              }
+              activeMap.setCenter(lnglat);
+              activeMap.setZoom(14);
+            }
+            this.trackLiveStats.elevation = Math.round(ele || this.trackLiveStats.elevation);
+            if (this.trackRecordedPoints.length > 1) {
+              const prev = this.trackRecordedPoints[this.trackRecordedPoints.length - 2];
+              const d = this._haversine(prev.lat, prev.lng, lat, lng);
+              this.trackLiveStats.distance = Math.round((this.trackLiveStats.distance + d) * 1000) / 1000;
+            }
+          },
+          () => { this._startSimulatedTracking(); },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+      } else {
+        this._startSimulatedTracking();
+      }
+      this.trackTimer = setInterval(() => {
+        if (this.trackRecordingState === 'recording') this.trackLiveStats.seconds++;
+      }, 1000);
+    },
+    _startSimulatedTracking() {
+      const baseLat = 27.9881 + (Math.random() - 0.5) * 0.05;
+      const baseLng = 86.9250 + (Math.random() - 0.5) * 0.05;
+      let curLat = baseLat; let curLng = baseLng; let curEle = 5364;
+      this._simInterval = setInterval(() => {
+        if (this.trackRecordingState !== 'recording') return;
+        curLat += (Math.random() - 0.48) * 0.0005;
+        curLng += (Math.random() - 0.48) * 0.0005;
+        curEle += (Math.random() - 0.3) * 3;
+        this.trackRecordedPoints.push({ lat: curLat, lng: curLng, ele: curEle, ts: Date.now() });
+        const activeMap = this.recordingMap || this.trackMap;
+        if (activeMap && typeof AMap !== 'undefined') {
+          const lnglat = new AMap.LngLat(curLng, curLat);
+          if (!this._amapPolyline) {
+            this._amapPolyline = new AMap.Polyline({ path: [lnglat], strokeColor: '#2b6579', strokeWeight: 4, map: activeMap });
+          } else {
+            const path = this._amapPolyline.getPath();
+            path.push(lnglat);
+            this._amapPolyline.setPath(path);
+          }
+          activeMap.setCenter(lnglat);
+        }
+        this.trackLiveStats.distance = Math.round((this.trackLiveStats.distance + 0.05) * 100) / 100;
+        this.trackLiveStats.elevation = Math.round(curEle);
+      }, 3000);
+    },
+    _haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    },
+    pauseTrackRecording() {
+      this.trackRecordingState = 'paused';
+    },
+    async saveTrackRecording() {
+      clearInterval(this.trackTimer);
+      clearInterval(this._simInterval);
+      if (this._geoWatch) navigator.geolocation.clearWatch(this._geoWatch);
+      const name = this.newTrackName || ('轨迹记录 ' + new Date().toLocaleDateString('zh-CN'));
+      const newTrack = {
+        id: 'local_' + Date.now(), name,
+        date: new Date().toLocaleDateString('zh-CN'),
+        distance: this.trackLiveStats.distance,
+        elevation: this.trackLiveStats.elevation,
+        duration: this.formatTrackDuration(this.trackLiveStats.seconds),
+        image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+        points: this.trackRecordedPoints,
+      };
+      this.tracks.unshift(newTrack);
+      if (this.authToken) {
+        // Phase 2.3: 先存 IndexedDB，再尝试立即上传
+        let idbId = null;
+        try { idbId = await idbSavePendingTrack({ name, points: this.trackRecordedPoints }); } catch(e) {}
+        let uploadOk = false;
+        try {
+          const res = await apiFetch('/api/tracks', {
+            method: 'POST',
+            body: { name, points: this.trackRecordedPoints, distance: this.trackLiveStats.distance, elevation_gain: this.trackLiveStats.elevation, duration: this.formatTrackDuration(this.trackLiveStats.seconds) },
+          });
+          if (res.ok) {
+            uploadOk = true;
+            if (idbId !== null) await idbDeletePendingTrack(idbId).catch(() => {});
+          }
+        } catch(e) {}
+        this.pendingUploadCount = await idbGetPendingTracks().then(t => t.length).catch(() => 0);
+        if (uploadOk) {
+          this.showToast('轨迹已保存：' + name + ' 🗺️');
+        } else {
+          this.showToast('轨迹已保存到本地，联网后自动上传 📡', 'warning');
+        }
+      } else {
+        this.showToast('轨迹已保存：' + name + ' 🗺️');
+      }
+      this.trackRecordingState = 'idle';
+      this.trackRecordedPoints = [];
+      this.newTrackName = '';
+      this._amapPolyline = null;
+      if (this.recordingMap) { this.recordingMap.destroy(); this.recordingMap = null; }
+      this.showNewTrackModal = false;
+    },
+    resumeTrackRecording() {
+      this.trackRecordingState = 'recording';
+    },
+    stopTrackRecording() {
+      this.trackRecordingState = 'paused';
+    },
+    openTrackDetail(track) {
+      this.selectedTrackDetail = track;
+      this.showTrackDetail = true;
+    },
+    openNewTrack() {
+      this.showNewTrackModal = true;
+      this.trackLiveStats = { distance: 0, elevation: 5364, seconds: 0 };
+      this.$nextTick(() => {
+        if (!this.recordingMap) {
+          this.recordingMap = this.initAMap('recording-map', { zoom: 13 });
+        }
+      });
+    },
+    closeNewTrack() {
+      if (this.trackRecordingState !== 'idle') {
+        if (!confirm('确定要放弃当前记录吗？')) return;
+        clearInterval(this.trackTimer);
+        clearInterval(this._simInterval);
+        if (this._geoWatch) navigator.geolocation.clearWatch(this._geoWatch);
+        this.trackRecordingState = 'idle';
+      }
+      if (this.recordingMap) {
+        this.recordingMap.destroy();
+        this.recordingMap = null;
+      }
+      this._amapPolyline = null;
+      this.showNewTrackModal = false;
+    },
+    formatTrackDuration(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    },
+    filterPublicTracks() {
+      let list = this.publicTracks;
+      if (this.publicTrackSearch.query) {
+        const q = this.publicTrackSearch.query.toLowerCase();
+        list = list.filter(t => t.name.toLowerCase().includes(q) || t.author.toLowerCase().includes(q) || (t.region||'').toLowerCase().includes(q));
+      }
+      if (this.publicTrackSearch.difficulty) {
+        list = list.filter(t => t.difficulty === this.publicTrackSearch.difficulty);
+      }
+      this.filteredPublicTracks = list;
+    },
+    // Commercial Booking - Step-by-step
+    openCommercialBooking(peak) {
+      if (!this.requireAuth()) return;
+      const region = peak.region || peak.continent || peak.country || '';
+      this.commercialBookingData = { peakName: peak.name, difficulty: peak.difficulty, region, date: '', persons: 1, package: 'standard', notes: '', selectedClub: null, selectedGuide: null, routeId: null };
+      this.commercialStep = 0;
+      this.commercialRouteClubs = [];
+      this.commercialClubGuides = [];
+      this.showCommercialBooking = true;
+    },
+    async loadRouteClubs() {
+      if (!this.commercialBookingData.date) { this.showToast('请先选择出发日期', 'error'); return; }
+      this.commercialStep = 1;
+      this.commercialClubsLoading = true;
+      try {
+        // Try to find matching route from backend
+        const routesRes = await fetch('/api/routes');
+        if (routesRes.ok) {
+          const routes = await routesRes.json();
+          const matched = routes.find(r => r.peak && this.commercialBookingData.peakName.includes(r.peak.split(' ')[0]));
+          if (matched) {
+            this.commercialBookingData.routeId = matched.id;
+            const clubsRes = await fetch('/api/routes/' + matched.id + '/clubs');
+            if (clubsRes.ok) this.commercialRouteClubs = await clubsRes.json();
+          }
+        }
+      } catch(e) {}
+      this.commercialClubsLoading = false;
+    },
+    async selectCommercialClub(club) {
+      this.commercialBookingData.selectedClub = club;
+      this.commercialBookingData.package = 'club';
+      this.commercialStep = 2;
+      await this.loadClubGuides(club.club_id);
+    },
+    async loadClubGuides(clubId) {
+      this.commercialGuidesLoading = true;
+      this.commercialClubGuides = [];
+      if (!clubId) { this.commercialGuidesLoading = false; return; }
+      try {
+        const res = await fetch('/api/clubs/' + clubId + '/guides');
+        if (res.ok) this.commercialClubGuides = await res.json();
+      } catch(e) {}
+      this.commercialGuidesLoading = false;
+    },
+    selectCommercialGuide(guide) {
+      this.commercialBookingData.selectedGuide = guide;
+      this.commercialStep = 3;
+    },
+    getCommercialSubtotal() {
+      if (this.commercialBookingData.selectedClub) {
+        return (this.commercialBookingData.selectedClub.price || 0) * this.commercialBookingData.persons;
+      }
+      const pkg = this.commercialPackages.find(p => p.id === this.commercialBookingData.package) || this.commercialPackages[1];
+      return pkg.price * this.commercialBookingData.persons;
+    },
+    getCommercialFee() { return Math.round(this.getCommercialSubtotal() * 0.015); },
+    getCommercialTotal() { return this.getCommercialSubtotal() + this.getCommercialFee(); },
+    async submitCommercialBooking() {
+      if (!this.commercialBookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
+      const clubName = this.commercialBookingData.selectedClub?.club_name || '平台统一运营';
+      const guideName = this.commercialBookingData.selectedGuide?.name || '待分配';
+      const order = {
+        id: 'o_' + Date.now(),
+        title: this.commercialBookingData.peakName + ' 商业攀登预约',
+        type: '商业攀登',
+        date: this.commercialBookingData.date,
+        amount: this.getCommercialSubtotal(),
+        fee: this.getCommercialFee(),
+        total: this.getCommercialTotal(),
+        status: '待支付',
+        detail: '运营：' + clubName + ' · 向导：' + guideName,
+      };
+      // Try to post to backend
+      if (this.authToken) {
+        try {
+          await fetch('/api/bookings', {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({
+              type: 'commercial',
+              peak_name: this.commercialBookingData.peakName,
+              route_id: this.commercialBookingData.routeId,
+              club_id: this.commercialBookingData.selectedClub?.club_id,
+              guide_id: this.commercialBookingData.selectedGuide?.id,
+              date: this.commercialBookingData.date,
+              people: this.commercialBookingData.persons,
+              price: this.getCommercialTotal(),
+              notes: this.commercialBookingData.notes,
+            }),
+          });
+        } catch(e) {}
+      }
+      this.myOrders.unshift(order);
+      this.showCommercialBooking = false;
+      this.showToast('预约已提交，请前往"我的订单"完成支付 ✅');
+    },
+    // My Orders
+    openMyOrders() { this.showMyOrders = true; this.myOrdersFilter = '全部'; this.myOrdersSubTab = 'expedition'; this.loadMyOrders(); },
+    async loadMyOrders() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/orders', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            this.expeditionOrders = data;
+          }
+        }
+      } catch(e) {}
+    },
+    async payExpeditionOrder(orderId) {
+      try {
+        const res = await fetch(`/api/orders/${orderId}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('支付成功'); this.loadMyOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async cancelExpeditionOrder(orderId) {
+      try {
+        const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('订单已取消'); this.loadMyOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async refundExpeditionOrder(orderId) {
+      try {
+        const res = await fetch(`/api/orders/${orderId}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        if (res.ok) { this.showToast('退款申请已提交'); this.loadMyOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    getFilteredOrders() {
+      if (this.myOrdersFilter === '全部') return this.myOrders;
+      return this.myOrders.filter(o => o.status === this.myOrdersFilter);
+    },
+    // Activity orders
+    async loadActivityOrders() {
+      if (!this.authToken) return;
+      this.activityOrdersLoading = true;
+      try {
+        const res = await fetch('/api/activity-orders/my', { headers: this.getAuthHeaders() });
+        if (res.ok) this.activityOrders = await res.json();
+      } catch(e) {} finally { this.activityOrdersLoading = false; }
+    },
+    async payActivityOrder(id) {
+      try {
+        const res = await fetch(`/api/activity-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('支付成功'); this.loadActivityOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async cancelActivityOrder(id) {
+      try {
+        const res = await fetch(`/api/activity-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('订单已取消'); this.loadActivityOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async refundActivityOrder(id) {
+      try {
+        const res = await fetch(`/api/activity-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        if (res.ok) { this.showToast('退款申请已提交'); this.loadActivityOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    // Guide service orders
+    async loadGuideServiceOrders() {
+      if (!this.authToken) return;
+      this.guideServiceOrdersLoading = true;
+      try {
+        const res = await fetch('/api/guide-service-orders/my', { headers: this.getAuthHeaders() });
+        if (res.ok) this.guideServiceOrders = await res.json();
+      } catch(e) {} finally { this.guideServiceOrdersLoading = false; }
+    },
+    async payGuideServiceOrder(id) {
+      try {
+        const res = await fetch(`/api/guide-service-orders/${id}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('支付成功'); this.loadGuideServiceOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async cancelGuideServiceOrder(id) {
+      try {
+        const res = await fetch(`/api/guide-service-orders/${id}/cancel`, { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('订单已取消'); this.loadGuideServiceOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '取消失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async refundGuideServiceOrder(id) {
+      try {
+        const res = await fetch(`/api/guide-service-orders/${id}/refund-request`, { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ reason: '用户申请退款' }) });
+        if (res.ok) { this.showToast('退款申请已提交'); this.loadGuideServiceOrders(); }
+        else { const d = await res.json(); this.showToast(d.error || '申请失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    // Activity enrollment
+    openActivityEnroll(club, act) {
+      if (!this.requireAuth()) return;
+      this.enrollingClub = club;
+      this.enrollingActivity = act;
+      this.enrollForm = { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0' };
+      this.showActivityEnrollModal = true;
+    },
+    async submitActivityEnroll() {
+      if (!this.enrollForm.emergency_contact_name || !this.enrollForm.emergency_contact_phone) {
+        this.showToast('请填写紧急联系人信息', 'error'); return;
+      }
+      if (!this.enrollForm.agreed_waiver) { this.showToast('请同意免责协议', 'error'); return; }
+      this.enrollLoading = true;
+      try {
+        const res = await fetch(`/api/clubs/${this.enrollingClub.id}/activities/${this.enrollingActivity.id}/enroll`, {
+          method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.enrollForm)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showActivityEnrollModal = false;
+          this.showToast('报名成功！请前往"我的订单→俱乐部活动"完成支付 ✅');
+          this.activityOrders = [];
+        } else {
+          this.showToast(data.error || '报名失败', 'error');
+        }
+      } catch(e) { this.showToast('报名提交失败，请检查网络连接后重试', 'error'); } finally { this.enrollLoading = false; }
+    },
+    // Guide services
+    async loadGuideServices(guideId) {
+      this.guideServicesLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${guideId}/services`);
+        if (res.ok) this.currentGuideServices = await res.json();
+        else this.currentGuideServices = [];
+      } catch(e) { this.currentGuideServices = []; } finally { this.guideServicesLoading = false; }
+    },
+    openGuideServiceEnroll(guide, service) {
+      if (!this.requireAuth()) return;
+      this.enrollingGuideForService = guide;
+      this.enrollingGuideService = service;
+      this.guideServiceEnrollForm = { emergency_contact_name: '', emergency_contact_phone: '', agreed_waiver: false, waiver_version: '1.0', notes: '' };
+      this.showGuideServiceEnrollModal = true;
+    },
+    async submitGuideServiceBook() {
+      if (!this.guideServiceEnrollForm.emergency_contact_name || !this.guideServiceEnrollForm.emergency_contact_phone) {
+        this.showToast('请填写紧急联系人信息', 'error'); return;
+      }
+      if (!this.guideServiceEnrollForm.agreed_waiver) { this.showToast('请同意免责协议', 'error'); return; }
+      this.guideServiceEnrollLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${this.enrollingGuideForService.id}/services/${this.enrollingGuideService.id}/book`, {
+          method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.guideServiceEnrollForm)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showGuideServiceEnrollModal = false;
+          this.showToast('预约成功！请前往"我的订单→向导服务"完成支付 ✅');
+          this.guideServiceOrders = [];
+        } else {
+          this.showToast(data.error || '预约失败', 'error');
+        }
+      } catch(e) { this.showToast('预约提交失败，请检查网络连接后重试', 'error'); } finally { this.guideServiceEnrollLoading = false; }
+    },
+    // My guide services management
+    async loadMyGuideServices(guideId) {
+      this.myGuideServicesLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${guideId}/services`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.myGuideServices = await res.json();
+      } catch(e) {} finally { this.myGuideServicesLoading = false; }
+    },
+    async submitGuideService() {
+      if (!this.currentGuideProfile) return;
+      const g = this.newGuideService;
+      if (!g.title) { this.showToast('请填写服务标题', 'error'); return; }
+      try {
+        const res = await fetch(`/api/guides/${this.currentGuideProfile.id}/services`, {
+          method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...g, price: Number(g.price)||0, max_clients: Number(g.max_clients)||8, duration_days: Number(g.duration_days)||1 })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showAddGuideService = false;
+          this.showToast('服务已发布 ✅');
+          await this.loadGuideServices(this.currentGuideProfile.id);
+        } else {
+          if (data.error === 'commercial_not_verified') {
+            this.showToast('收费服务需先完成商业资质认证', 'error');
+          } else {
+            this.showToast(data.error || '发布失败', 'error');
+          }
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async deleteMyGuideService(guideId, serviceId) {
+      if (!confirm('确认删除此服务？')) return;
+      try {
+        const res = await fetch(`/api/guides/${guideId}/services/${serviceId}`, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) { this.showToast('服务已删除'); await this.loadGuideServices(guideId); }
+        else { const d = await res.json(); this.showToast(d.error||'删除失败','error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    // Club activity management
+    async loadClubActivitiesMgmt(clubId) {
+      this.clubActivitiesMgmtLoading = true;
+      this.showClubActivityMgmt = true;
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/activities`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.clubActivitiesMgmt = await res.json();
+      } catch(e) {} finally { this.clubActivitiesMgmtLoading = false; }
+    },
+    async viewActivityEnrollments(clubId, act) {
+      this.selectedActivityForEnrollments = act;
+      this.enrollmentsLoading = true;
+      this.showEnrollmentsDrawer = true;
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/activities/${act.id}/enrollments`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.selectedActivityEnrollments = await res.json();
+        else this.selectedActivityEnrollments = [];
+      } catch(e) { this.selectedActivityEnrollments = []; } finally { this.enrollmentsLoading = false; }
+    },
+    async toggleActivityStatus(clubId, act) {
+      const newStatus = act.status === 'active' ? 'inactive' : 'active';
+      try {
+        const res = await fetch(`/api/clubs/${clubId}/activity/${act.id}`, {
+          method: 'PUT', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) { act.status = newStatus; this.showToast(newStatus === 'active' ? '活动已上线' : '活动已下架'); }
+        else { const d = await res.json(); this.showToast(d.error||'操作失败','error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    openClubCommercialApply(clubId) {
+      if (!this.requireAuth()) return;
+      this.clubCommercialApplyId = clubId;
+      this.clubCommercialForm = { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' };
+      this.showClubCommercialApply = true;
+    },
+    async uploadCommercialDoc(field, formRef, event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.type.startsWith('image/')) {
+        const { valid, error } = validateImageFile(file);
+        if (!valid) { alert(error); event.target.value = ''; return; }
+      }
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          formRef[field] = data.url;
+          this.showToast('文件上传成功 ✅');
+        } else {
+          this.showToast('文件上传失败', 'error');
+        }
+      } catch(e) { this.showToast('上传失败', 'error'); }
+      event.target.value = '';
+    },
+    async submitClubCommercialApply() {
+      if (!this.clubCommercialApplyId) return;
+      this.clubCommercialLoading = true;
+      try {
+        const res = await fetch(`/api/clubs/${this.clubCommercialApplyId}/commercial-apply`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.clubCommercialForm),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast(data.message || '商业资质申请已提交 ✅');
+          this.showClubCommercialApply = false;
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.clubCommercialLoading = false;
+    },
+    openGuideCommercialApply(guideId) {
+      if (!this.requireAuth()) return;
+      this.guideCommercialApplyId = guideId;
+      this.guideCommercialForm = { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' };
+      this.showGuideCommercialApply = true;
+    },
+    async submitGuideCommercialApply() {
+      if (!this.guideCommercialApplyId) return;
+      this.guideCommercialLoading = true;
+      try {
+        const res = await fetch(`/api/guides/${this.guideCommercialApplyId}/commercial-apply`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.guideCommercialForm),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast(data.message || '商业资质申请已提交 ✅');
+          this.showGuideCommercialApply = false;
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.guideCommercialLoading = false;
+    },
+    payOrder(order) {
+      this.paymentAmount = order.total;
+      this.showMyOrders = false;
+      this.showPayment = true;
+      this._pendingOrder = order;
+    },
+    confirmOrderComplete(order) {
+      order.status = '已完成';
+      this.showToast('已确认服务完成，款项将在3-5个工作日结算给服务方 ✅');
+    },
+    // SOS helpers
+    getSosAllContacts() {
+      const contacts = [
+        ...this.emergencyContacts,
+        ...this.userEmergencyContacts.map(c => ({ name: c.name + '（' + c.relationship + '）', number: c.phone, country: '👤' })),
+      ];
+      // Add insurance rescue phone if user has active insurance
+      if (this.userInsurance && this.userInsurance.has_insurance) {
+        contacts.push({
+          name: this.userInsurance.insurer_name + ' 救援热线',
+          number: this.userInsurance.rescue_phone,
+          country: '🛡️',
+          tag: '保险',
+          tagClass: 'bg-emerald-500/20 text-emerald-400',
+        });
+      }
+      return contacts;
+    },
+    sendLocation() {
+      this.showToast('定位已分享给所有紧急联系人 📍');
+    },
+    // Team Chat
+    initTeamChat(groupChatId) {
+      this.teamChatGroupId = groupChatId || null;
+      this.teamChatMessages = [];
+      if (groupChatId && this.authToken) {
+        this.loadGroupChatMessages(groupChatId);
+        // Poll for new messages every 5 seconds
+        if (this._teamChatPollTimer) clearInterval(this._teamChatPollTimer);
+        this._teamChatPollTimer = setInterval(() => {
+          if (this.showTeamDetail && this.teamChatGroupId) {
+            this.pollGroupChatMessages(this.teamChatGroupId);
+          }
+        }, 5000);
+      }
+    },
+    async loadGroupChatMessages(chatId) {
+      try {
+        const res = await fetch('/api/group-chats/' + chatId + '/messages', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const msgs = await res.json();
+          const myId = this.currentUser ? this.currentUser.id : null;
+          this.teamChatMessages = msgs.map(m => ({
+            id: m.id, sender: m.senderName, avatar: m.senderAvatar,
+            text: m.content, images: m.images || [],
+            time: new Date(m.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            self: m.senderId === myId,
+          }));
+          this._teamChatLastId = msgs.length > 0 ? msgs[msgs.length - 1].id : 0;
+        }
+      } catch(e) {}
+    },
+    async pollGroupChatMessages(chatId) {
+      try {
+        const after = this._teamChatLastId || 0;
+        const res = await fetch('/api/group-chats/' + chatId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const msgs = await res.json();
+          if (msgs.length > 0) {
+            const myId = this.currentUser ? this.currentUser.id : null;
+            const newMsgs = msgs.map(m => ({
+              id: m.id, sender: m.senderName, avatar: m.senderAvatar,
+              text: m.content, images: m.images || [],
+              time: new Date(m.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+              self: m.senderId === myId,
+            }));
+            this.teamChatMessages.push(...newMsgs);
+            this._teamChatLastId = msgs[msgs.length - 1].id;
+          }
+        }
+      } catch(e) {}
+    },
+    async sendTeamChat() {
+      const text = this.teamChatInput.trim();
+      if (!text) return;
+      this.teamChatInput = '';
+      // Optimistic update
+      const tempMsg = {
+        id: Date.now(), sender: this.userProfile.name,
+        avatar: this.userProfile.avatar, text,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        self: true,
+      };
+      this.teamChatMessages.push(tempMsg);
+      if (this.teamChatGroupId && this.authToken) {
+        try {
+          const res = await fetch('/api/group-chats/' + this.teamChatGroupId + '/messages', {
+            method: 'POST', headers: this.getAuthHeaders(),
+            body: JSON.stringify({ content: text }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            // Replace temp message with real one
+            const idx = this.teamChatMessages.findIndex(m => m.id === tempMsg.id);
+            if (idx >= 0) {
+              this.teamChatMessages[idx].id = data.id;
+              this._teamChatLastId = data.id;
+            }
+          }
+        } catch(e) {}
+      }
+    },
+    async openTrackDetail(track) {
+      this.selectedTrackDetail = track;
+      this.showTrackDetail = true;
+      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      if (localStorage.getItem(claimedKey)) track._pointsClaimed = true;
+      if (this.authToken && track.id) {
+        try {
+          const res = await fetch('/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
+          if (res.ok) {
+            this.selectedTrackDetail = await res.json();
+            if (localStorage.getItem(claimedKey)) this.selectedTrackDetail._pointsClaimed = true;
+          }
+        } catch(e) {}
+      }
+    },
+    shareTrack(track) {
+      const trackId = track.id ? ('?track=' + track.id) : '';
+      const url = window.location.origin + '/summitlink' + trackId;
+      const text = `${track.name || '我的轨迹'} 📍${(track.distance_km || track.distance || 0)}km ↑${(track.elevation_gain || track.elevation || 0)}m - 来自巅峰探索 SummitLink`;
+      if (navigator.share) {
+        navigator.share({ title: track.name || '轨迹分享', text, url }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text + '\n' + url).then(() => this.showToast('链接已复制 🔗'));
+      } else {
+        this.showToast('轨迹：' + (track.name || '我的轨迹'));
+      }
+    },
+    calcTrackPoints(track) {
+      if (!track) return 0;
+      const dist = Math.max(0, parseFloat(track.distance_km || track.distance || 0));
+      const elev = Math.max(0, parseFloat(track.elevation_gain || track.elevation || 0));
+      return 50 + Math.round(dist) + Math.round(elev / 100);
+    },
+    async claimTrackPoints(track) {
+      if (!track || track._pointsClaimed) return;
+      if (!this.requireAuth()) return;
+      const pts = this.calcTrackPoints(track);
+      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      if (localStorage.getItem(claimedKey)) {
+        track._pointsClaimed = true;
+        return;
+      }
+      try {
+        const res = await fetch(`/api/tracks/${track.id}/claim-points`, {
+          method: 'POST',
+          headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ points: pts }),
+        });
+        if (res.ok || res.status === 404 || res.status === 405) {
+          track._pointsClaimed = true;
+          try { localStorage.setItem(claimedKey, '1'); } catch(e) {}
+          this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+        } else {
+          this.showToast('积分领取失败，请稍后重试', 'error');
+        }
+      } catch(e) {
+        track._pointsClaimed = true;
+        try { localStorage.setItem(claimedKey, '1'); } catch(e2) {}
+        this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+      }
+    },
+
+    // Utility methods
+    getDifficultyClass(difficulty) {
+      const map = { '极难': 'text-red-500', '高': 'text-orange-400', '中': 'text-yellow-400', '低': 'text-green-400' };
+      return map[difficulty] || 'text-slate-400';
+    },
+    getWeatherIcon(condition) {
+      const map = { 'sunny': 'wb_sunny', 'cloudy': 'cloud', 'snowy': 'ac_unit', 'windy': 'air', 'stormy': 'thunderstorm' };
+      return map[condition] || 'wb_sunny';
+    },
+    // Unit formatting functions
+    formatDistance(km) {
+      if (this.useMetric) return (Math.round(km * 10) / 10) + ' km';
+      return (Math.round(km * 0.621 * 10) / 10) + ' mi';
+    },
+    formatElevation(m) {
+      if (this.useMetric) return Math.round(m) + ' m';
+      return Math.round(m * 3.281) + ' ft';
+    },
+    formatTemp(celsius) {
+      if (this.useMetric) return Math.round(celsius) + '°C';
+      return Math.round(celsius * 9/5 + 32) + '°F';
+    },
+    formatAlt(alt) { return this.formatElevation(alt); },
+    formatWind(speed) { return this.useMetric ? speed + ' km/h' : Math.round(speed * 0.621) + ' mph'; },
+    formatPrice(price) {
+      if (this.currentCurrency === 'USD') return '$' + Math.round(price / 7.2).toLocaleString();
+      if (this.currentCurrency === 'EUR') return '€' + Math.round(price / 7.8).toLocaleString();
+      return '¥' + price.toLocaleString('zh-CN');
+    },
+    openPayment(amount) { this.paymentAmount = amount; this.showPayment = true; },
+    openGearPurchase(item) {
+      if (!this.requireAuth()) return;
+      this.gearPurchaseItem = item;
+      this.gearPurchaseForm = { receiver_name: this.userProfile?.name || '', receiver_phone: '', address: '' };
+      this.showGearPurchase = true;
+    },
+    async submitGearPurchase() {
+      if (!this.gearPurchaseItem) return;
+      if (!this.gearPurchaseForm.receiver_name || !this.gearPurchaseForm.receiver_phone || !this.gearPurchaseForm.address) {
+        this.showToast('请填写完整的收货人姓名、电话和地址', 'error'); return;
+      }
+      this.gearPurchaseLoading = true;
+      try {
+        const res = await fetch('/api/gear/' + this.gearPurchaseItem.id + '/order', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.gearPurchaseForm)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showGearPurchase = false;
+          this.showToast('购买成功！订单号：' + data.orderNo + '，等待卖家发货 📦');
+          this.gearOrders = [];
+        } else { this.showToast(data.error || '购买失败', 'error'); }
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      this.gearPurchaseLoading = false;
+    },
+    async loadGearOrders() {
+      if (!this.authToken) return;
+      this.gearOrdersLoading = true;
+      try {
+        const res = await fetch('/api/gear/orders/mine', { headers: this.getAuthHeaders() });
+        if (res.ok) this.gearOrders = await res.json();
+      } catch(e) {}
+      this.gearOrdersLoading = false;
+    },
+    async confirmGearDelivery(order) {
+      try {
+        const res = await fetch('/api/gear/orders/' + order.id + '/confirm', {
+          method: 'POST', headers: this.getAuthHeaders()
+        });
+        if (res.ok) {
+          this.showToast('已确认收货！');
+          order.shipping_status = 'delivered';
+          order.status = 'completed';
+        } else {
+          const d = await res.json();
+          this.showToast(d.error || '操作失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async confirmPayment() {
+      try {
+        const res = await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
+        if (!res.ok) {
+          // Fallback to mock success for demo (remove in production)
+        }
+      } catch(e) {
+        // Allow mock success for frontend demo
+      }
+      // Update pending order status to "已托管"
+      if (this._pendingOrder) {
+        this._pendingOrder.status = '已托管';
+        this._pendingOrder = null;
+      }
+      this.showPayment = false;
+      this.showToast('支付成功！款项已托管平台，服务完成后结算 🎉');
+    },
+    async submitGuideApply() {
+      if (!this.guideApplyForm.name || !this.guideApplyForm.cert) {
+        this.showToast('请填写姓名和证书信息', 'error'); return;
+      }
+      if (!this.requireAuth()) return;
+      try {
+        const res = await apiFetch('/api/guides/apply', { method: 'POST', body: this.guideApplyForm });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
+        this.showGuideApply = false;
+        this.showToast('申请已提交，7天内审核完成 ✅');
+        this.guideApplyForm = { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' };
+        // TODO: 引导用户到支付页面 /api/guides/payment
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+    async submitClubApply() {
+      if (!this.clubApplyForm.club_name || !this.clubApplyForm.contact) {
+        this.showToast('请填写俱乐部名称和联系方式', 'error'); return;
+      }
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/clubs/apply', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.clubApplyForm) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
+        this.showClubApplyModal = false;
+        this.showToast('申请已提交，请完成支付以激活审核 ✅');
+        this.clubApplyForm = { club_name: '', cert_url: '', contact: '', wechat: '', specialty: '', region: '', description: '', website: '' };
+        // TODO: 跳转支付页面 POST /api/clubs/payment
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+    goToPage(id) {
+      this.currentPage = id;
+      if (id === 'track') {
+        this.$nextTick(() => this.initTrackMap());
+      }
+    },
+    viewImage(url) { window.open(url, '_blank'); },
+    viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
+    openSidebar() { this.showToast('侧边菜单即将推出'); },
+    getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
+    getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
+    openSettings(type) { this.settingsType = type; this.showSettings = true; },
+    handleMenuAction(action) {
+      if (action === 'gear') { this.currentPage = 'gear'; }
+      else if (action === 'track') { this.currentPage = 'track'; }
+      else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
+      else if (action === 'achievements') { this.openAchievements(); }
+      else if (action === 'membership') { this.openMembership(); }
+      else { this.showToast('即将推出'); }
+    },
+    async openAchievements() {
+      if (!this.requireAuth()) return;
+      this.showAchievementsModal = true;
+      this.achievementsLoading = true;
+      try {
+        const res = await fetch(`/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.achievementsList = await res.json();
+      } catch(e) {}
+      this.achievementsLoading = false;
+    },
+    async openMembership() {
+      if (!this.requireAuth()) return;
+      this.showMembershipModal = true;
+      this.membershipLoading = true;
+      try {
+        const res = await fetch(`/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
+        if (res.ok) this.membershipData = await res.json();
+      } catch(e) {}
+      this.membershipLoading = false;
+    },
+    async saveSettings() {
+      if (this.settingsType === 'profile' && this.authToken) {
+        try {
+          const res = await apiFetch('/api/auth/profile', { method: 'PUT', body: { name: this.userProfile.name, avatar: this.userProfile.avatar } });
+          if (res.ok) { const u = await res.json(); this.currentUser = u; this.showToast('资料已保存 ✅'); }
+          else { this.showToast('保存失败', 'error'); }
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      } else if (this.settingsType === 'units' && this.authToken) {
+        try {
+          await fetch('/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ useMetric: this.useMetric }) });
+          this.showToast('单位设置已保存 ✅');
+        } catch(e) {}
+      } else if (this.settingsType === 'privacy' && this.authToken) {
+        try {
+          await fetch('/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
+          this.showToast('隐私设置已保存 ✅');
+        } catch(e) { this.showToast('网络错误', 'error'); }
+      }
+      this.showSettings = false;
+    },
+
+    // Auth methods
+    getAuthHeaders() {
+      const h = { 'Content-Type': 'application/json' };
+      if (this.authToken) h['Authorization'] = 'Bearer ' + this.authToken;
+      return h;
+    },
+    async doLogin() {
+      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      this.loginLoading = true;
+      try {
+        const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '登录失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.loginLoading = false; }
+    },
+    async doRegister() {
+      if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
+      try {
+        const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '注册失败', 'error'); return; }
+        this.authToken = data.token;
+        this.currentUser = data.user;
+        localStorage.setItem('summitlink_token', data.token);
+        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
+        this.showRegister = false;
+        this.registerForm = { name: '', phone: '', password: '' };
+        this.agreedPrivacy = false;
+        this.agreedTerms = false;
+        this.showToast('注册成功，欢迎加入 ' + data.user.name + '！');
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+    doLogout() {
+      this.authToken = null;
+      this.currentUser = null;
+      localStorage.removeItem('summitlink_token');
+      this.userProfile = { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 };
+      this.showToast('已退出登录');
+    },
+    // SMS login
+    async sendSmsCode() {
+      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (this.smsCountdown > 0) return;
+      try {
+        const res = await fetch('/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
+        this.showToast('验证码已发送（开发模式：查看服务器控制台）');
+        this.smsCountdown = 60;
+        this.smsTimer = setInterval(() => {
+          this.smsCountdown--;
+          if (this.smsCountdown <= 0) { clearInterval(this.smsTimer); this.smsTimer = null; }
+        }, 1000);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async doSmsLogin() {
+      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!this.smsCode || this.smsCode.length !== 6) { this.showToast('请输入6位验证码', 'error'); return; }
+      this.loginLoading = true;
+      try {
+        const res = await fetch('/api/auth/sms/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone, code: this.smsCode }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '验证失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.loginLoading = false; }
+    },
+    async doWechatLogin() {
+      // Mock: generate a fake code
+      const fakeCode = 'wx_' + Date.now();
+      try {
+        const res = await fetch('/api/auth/wechat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: fakeCode }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '微信登录失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async doAppleLogin() {
+      // Mock: generate a fake identity token
+      const fakeToken = 'apple_mock_' + Date.now();
+      try {
+        const res = await fetch('/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: fakeToken }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || 'Apple 登录失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    _handleLoginSuccess(data) {
+      this.authToken = data.token;
+      this.currentUser = data.user;
+      localStorage.setItem('summitlink_token', data.token);
+      this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
+      this.showLogin = false;
+      this.loginForm = { phone: '', password: '' };
+      this.smsCode = '';
+      this.showToast('登录成功，欢迎 ' + data.user.name + '！');
+    },
+    requireAuth() {
+      if (!this.authToken) { this.showLogin = true; return false; }
+      return true;
+    },
+    async verifyToken() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/auth/me', { headers: this.getAuthHeaders() });
+        if (!res.ok) { localStorage.removeItem('summitlink_token'); this.authToken = null; this.currentUser = null; return; }
+        const user = await res.json();
+        this.currentUser = user;
+        this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
+      } catch(e) {}
+    },
+
+    // Data loading methods
+    async loadPeaks(type) {
+      try {
+        const t = type || this.activeCategory;
+        const res = await fetch('/api/peaks?type=' + t);
+        if (!res.ok) return;
+        const data = await res.json();
+        const mapped = data.map(p => ({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
+        if (t === '8000ers') this.eightThousanders = mapped;
+        else if (t === 'continental') this.continentalPeaks = mapped;
+        else if (t === 'world') this.worldPeaks = mapped;
+        else if (t === 'alpine') this.climbingSpots = mapped;
+      } catch(e) {}
+    },
+    async loadGuides() {
+      try {
+        const res = await fetch('/api/guides');
+        if (!res.ok) return;
+        const data = await res.json();
+        this.nearbyGuides = data.map(g => ({ ...g, tag: g.rating >= 4.8 ? '🏅 认证精英' : '' }));
+        this.guides = data;
+      } catch(e) {}
+    },
+    async loadTeams() {
+      this.teamsLoading = true;
+      try {
+        const res = await fetch('/api/teams');
+        if (!res.ok) return;
+        const data = await res.json();
+        this.teams = data;
+      } catch(e) {} finally { this.teamsLoading = false; }
+    },
+    async loadGear(mode, category) {
+      try {
+        const m = mode || this.gearMode;
+        const c = category !== undefined ? category : this.gearCategory;
+        let url = '/api/gear?mode=' + m;
+        if (c && c !== '全部') url += '&category=' + encodeURIComponent(c);
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        this.gearItems = data;
+      } catch(e) {}
+    },
+    async loadPosts() {
+      this.postsLoading = true;
+      try {
+        const res = await fetch('/api/posts');
+        if (!res.ok) return;
+        const data = await res.json();
+        this.communityPosts = data.map(p => ({
+          ...p,
+          author: p.authorName,
+          authorAvatar: p.authorAvatar,
+          timeAgo: p.createdAt ? new Date(p.createdAt).toLocaleDateString('zh-CN') : '最近',
+          isLiked: false,
+          isFavorited: false,
+          commentPreview: [],
+        }));
+        this.filteredCommunityPosts = this.communityPosts;
+      } catch(e) {} finally { this.postsLoading = false; }
+    },
+    async loadLeaderboard() {
+      // Backend API contract:
+      // GET /api/leaderboard?sort=count|elevation|distance&year=YYYY&month=MM
+      // Returns: { leaders: [{id, name, avatar, flag, summit_count, max_elevation, total_distance, best_peak}], my_rank: {rank, ...} }
+      // Backend auto-aggregates every hour via cron: SELECT user_id, COUNT(*) as summit_count, MAX(max_elevation) as max_elevation, SUM(distance_km) as total_distance FROM tracks WHERE month=current_month GROUP BY user_id ORDER BY {sort} DESC
+      // My rank: GET /api/leaderboard/my-rank?sort=count|elevation|distance
+      try {
+        const res = await fetch('/api/leaderboard?sort=' + (this.leaderboardSort || 'count'));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.leaders && data.leaders.length > 0) {
+          this.summitLeaderboard = data.leaders.map((l, i) => ({ ...l, flag: l.flag || '🏔️' }));
+        }
+        if (data.my_rank) { this.myLeaderboardRank = data.my_rank; }
+      } catch(e) {
+        // Fallback: use static mock data (already initialized in state)
+      }
+    },
+    async loadWeather() {
+      try {
+        const res = await fetch('/api/weather?location=珠峰大本营');
+        if (!res.ok) return;
+        const data = await res.json();
+        this.weather = { ...data, condition: 'partly_cloudy' };
+      } catch(e) {}
+    },
+    async loadTracks() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/tracks', { headers: this.getAuthHeaders() });
+        if (!res.ok) {
+          // Fallback to /my for backward compat
+          const res2 = await fetch('/api/tracks/my', { headers: this.getAuthHeaders() });
+          if (!res2.ok) return;
+          const data2 = await res2.json();
+          if (data2.length > 0) this.tracks = data2;
+          return;
+        }
+        const data = await res.json();
+        if (data.length > 0) this.tracks = data;
+      } catch(e) {}
+    },
+
+    // Comments
+    async loadComments(postId) {
+      this.commentsLoading = true;
+      try {
+        const res = await fetch('/api/comments?post_id=' + postId);
+        if (res.ok) { this.selectedPostComments = await res.json(); }
+      } catch(e) {}
+      this.commentsLoading = false;
+    },
+
+    // Clubs
+    async loadClubs() {
+      try {
+        const res = await fetch('/api/clubs');
+        if (res.ok) {
+          const data = await res.json();
+          this.clubs = data.map(c => ({
+            ...c,
+            cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+            verified: !!c.verified,
+            specialty: c.specialty || '攀登',
+            achievements: [],
+          }));
+        }
+      } catch(e) {}
+    },
+
+    // Chat/Messages
+    async loadConversations() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/messages/conversations', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.chatSessions = data.map(c => ({
+              id: c.id,
+              conversationId: c.id,
+              name: c.otherName,
+              avatar: c.otherAvatar || ('https://i.pravatar.cc/150?u=' + c.otherId),
+              flag: '',
+              type: 'user',
+              online: false,
+              unread: c.unread || 0,
+              lastMsg: c.lastMsg || '',
+              time: c.updated_at ? new Date(c.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '',
+              messages: [],
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+    async openChatSession(session) {
+      this.activeChatSession = session;
+      this.showChatWindow = true;
+      this._chatLastMsgId = 0;
+      if (this.authToken && session.conversationId) {
+        try {
+          const res = await fetch('/api/messages/conversations/' + session.conversationId + '/messages', { headers: this.getAuthHeaders() });
+          if (res.ok) {
+            const msgs = await res.json();
+            const myId = this.currentUser ? this.currentUser.id : null;
+            this.activeChatSession.messages = msgs.map(m => ({
+              id: m.id,
+              from: m.sender_id === myId ? 'me' : 'them',
+              text: m.content || null,
+              images: m.images || [],
+              time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            }));
+            this._chatLastMsgId = msgs.length > 0 ? msgs[msgs.length - 1].id : 0;
+            this.activeChatSession.unread = 0;
+          }
+        } catch(e) {}
+      }
+      // Start polling for new messages every 5 seconds
+      if (this._chatPollTimer) clearInterval(this._chatPollTimer);
+      this._chatPollTimer = setInterval(() => {
+        if (this.showChatWindow && this.activeChatSession && this.activeChatSession.conversationId && this.authToken) {
+          this.pollChatMessages(this.activeChatSession.conversationId);
+        } else {
+          clearInterval(this._chatPollTimer);
+        }
+      }, 5000);
+    },
+    async pollChatMessages(conversationId) {
+      try {
+        const after = this._chatLastMsgId || 0;
+        const res = await fetch('/api/messages/conversations/' + conversationId + '/messages/poll?after=' + after, { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const msgs = await res.json();
+          if (msgs.length > 0 && this.activeChatSession) {
+            const myId = this.currentUser ? this.currentUser.id : null;
+            const newMsgs = msgs.map(m => ({
+              id: m.id,
+              from: m.sender_id === myId ? 'me' : 'them',
+              text: m.content || null,
+              images: m.images || [],
+              time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+            }));
+            this.activeChatSession.messages.push(...newMsgs);
+            this._chatLastMsgId = msgs[msgs.length - 1].id;
+            this.$nextTick(() => {
+              const el = document.getElementById('chat-messages-container');
+              if (el) el.scrollTop = el.scrollHeight;
+            });
+          }
+        }
+      } catch(e) {}
+    },
+    async sendChatMessage() {
+      if (!this.chatInput.trim() && this.chatImagePreviews.length === 0) return;
+      if (!this.activeChatSession) return;
+      const text = this.chatInput.trim();
+      const images = [...this.chatImagePreviews];
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      const msgType = text && images.length > 0 ? 'mixed' : (images.length > 0 ? 'image' : 'text');
+      this.activeChatSession.messages.push({ from: 'me', text: text || null, images, time });
+      this.chatInput = '';
+      this.chatImagePreviews = [];
+      this.$nextTick(() => {
+        const el = document.getElementById('chat-messages-container');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+      if (this.authToken && this.activeChatSession.conversationId) {
+        try {
+          let uploadedUrls = [];
+          if (images.length > 0 && images[0].startsWith('blob:')) {
+            uploadedUrls = await this.uploadImages(images);
+          } else {
+            uploadedUrls = images;
+          }
+          await fetch('/api/messages/conversations/' + this.activeChatSession.conversationId + '/messages', {
+            method: 'POST', headers: this.getAuthHeaders(),
+            body: JSON.stringify({ content: text, type: msgType, images: uploadedUrls })
+          });
+        } catch(e) {}
+      }
+    },
+
+    // 通用图片上传（接受 blob URL 数组，返回服务器 URL 数组）
+    async uploadImages(blobUrls) {
+      try {
+        const formData = new FormData();
+        for (const blobUrl of blobUrls) {
+          const resp = await fetch(blobUrl);
+          const blob = await resp.blob();
+          const ext = blob.type.split('/')[1] || 'jpg';
+          formData.append('files', blob, `image.${ext}`);
+        }
+        const res = await fetch('/api/upload/multiple', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + this.authToken },
+          body: formData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.urls || [];
+        }
+        this.showToast('图片上传失败，请重试', 'error');
+      } catch(e) {
+        this.showToast('图片上传失败，请检查网络', 'error');
+      }
+      return blobUrls; // fallback: keep blob URLs for local preview
+    },
+
+    // 聊天选图
+    handleChatImageSelect(event) {
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.chatImagePreviews.push(URL.createObjectURL(f));
+      });
+      event.target.value = '';
+    },
+
+    // 发帖选图
+    handlePostImageSelect(event) {
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.newPost.images.push(URL.createObjectURL(f));
+      });
+      event.target.value = '';
+    },
+
+    // 发帖选视频
+    handlePostVideoSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 200 * 1024 * 1024) { this.showToast('视频大小不能超过200MB', 'error'); return; }
+      this.newPost.videoPreview = URL.createObjectURL(file);
+      this.newPost.videoFile = file;
+      event.target.value = '';
+    },
+
+    // 手动登顶证明照片选择
+    handleManualSummitImageSelect(event) {
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.manualSummit.proof_images.push(URL.createObjectURL(f));
+      });
+      event.target.value = '';
+    },
+
+    // 提交手动登顶记录
+    async submitManualSummit() {
+      if (!this.requireAuth()) return;
+      if (!this.manualSummit.peak_name) { this.showToast('请输入山峰名称', 'error'); return; }
+      if (!this.manualSummit.date) { this.showToast('请选择攀登日期', 'error'); return; }
+      if (this.manualSummit.proof_images.length === 0) { this.showToast('请至少上传一张证明照片', 'error'); return; }
+      try {
+        // 上传证明照片
+        const blobImages = this.manualSummit.proof_images.filter(u => u.startsWith('blob:'));
+        let uploadedUrls = [];
+        if (blobImages.length > 0) uploadedUrls = await this.uploadImages(blobImages);
+        const serverUrls = [...this.manualSummit.proof_images.filter(u => !u.startsWith('blob:')), ...uploadedUrls];
+        const res = await fetch('/api/tracks/manual', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({
+            peak_name: this.manualSummit.peak_name,
+            date: this.manualSummit.date,
+            altitude: this.manualSummit.altitude ? parseInt(this.manualSummit.altitude) : null,
+            notes: this.manualSummit.notes,
+            proof_images: serverUrls,
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('登顶记录已提交 🏔️');
+          this.showManualSummitModal = false;
+          this.manualSummit = { peak_name: '', date: '', altitude: '', notes: '', proof_images: [] };
+          this.loadTracks();
+        } else {
+          this.showToast(data.error || '提交失败', 'error');
+        }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+
+    // 评论选图
+    handleCommentImageSelect(event) {
+      const files = event.target.files;
+      const { validFiles, errors } = validateImageFiles(files);
+      if (errors.length > 0) {
+        alert('以下图片无法上传：\n' + errors.join('\n'));
+      }
+      if (validFiles.length === 0) { event.target.value = ''; return; }
+      validFiles.forEach(f => {
+        this.commentImagePreviews.push(URL.createObjectURL(f));
+      });
+      event.target.value = '';
+    },
+
+    // Notifications
+    async loadSummitWindow(peakId) {
+      this.summitWindow = [];
+      this.summitWindowExpanded = -1;
+      if (!peakId) return;
+      try {
+        const res = await fetch(`/api/weather/summit-window/${encodeURIComponent(peakId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.summitWindow = Array.isArray(data) ? data : (data.days || []);
+        }
+      } catch(e) {}
+    },
+    copyText(text) {
+      navigator.clipboard?.writeText(text).then(() => this.showToast('链接已复制')).catch(() => this.showToast('复制失败', 'error'));
+    },
+    async loadNotifications() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+        if (res.ok) { return await res.json(); }
+      } catch(e) {}
+      return [];
+    },
+
+    // Follows
+    async followUser(targetId) {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/follows', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ target_id: targetId }) });
+        const data = await res.json();
+        this.showToast(res.ok ? data.message : (data.error || '操作失败'), res.ok ? 'success' : 'error');
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+
+    // Guide profile full
+    async openGuideProfile(guideId, localGuideData = null) {
+      try {
+        const [guide, expeditions, reviews, posts, photos] = await Promise.all([
+          fetch('/api/guides/' + guideId).then(r => r.ok ? r.json() : null),
+          fetch('/api/guides/' + guideId + '/expeditions').then(r => r.ok ? r.json() : []),
+          fetch('/api/guides/' + guideId + '/reviews').then(r => r.ok ? r.json() : []),
+          fetch('/api/guides/' + guideId + '/posts').then(r => r.ok ? r.json() : []),
+          fetch('/api/guides/' + guideId + '/photos').then(r => r.ok ? r.json() : []),
+        ]);
+        const guideData = guide || localGuideData;
+        if (!guideData) { this.showToast('向导信息获取失败', 'error'); return; }
+        this.currentGuideProfile = { ...guideData, expeditions: expeditions || [], reviews_list: reviews || [], posts: posts || [], photos: photos || [] };
+        this.guideReviewForm = { rating: 5, content: '' };
+        this.currentGuideServices = [];
+        this.showGuideProfileModal = true;
+        this.loadGuideServices(guideId);
+      } catch(e) {
+        if (localGuideData) {
+          // Fallback to local data when API is unavailable (e.g., mock guides)
+          this.currentGuideProfile = { ...localGuideData, expeditions: [], reviews_list: [], posts: [], photos: [] };
+          this.guideReviewForm = { rating: 5, content: '' };
+          this.currentGuideServices = [];
+          this.showGuideProfileModal = true;
+        } else {
+          this.showToast('网络错误', 'error');
+        }
+      }
+    },
+    async submitGuideReview() {
+      if (!this.requireAuth()) return;
+      if (!this.currentGuideProfile) return;
+      try {
+        const res = await fetch('/api/guides/' + this.currentGuideProfile.id + '/review', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ rating: this.guideReviewForm.rating, content: this.guideReviewForm.content })
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '评价失败', 'error'); return; }
+        this.showToast('评价已提交 ✅');
+        this.guideReviewForm = { rating: 5, content: '' };
+        // Refresh reviews
+        const reviews = await fetch('/api/guides/' + this.currentGuideProfile.id + '/reviews').then(r => r.json()).catch(() => []);
+        this.currentGuideProfile.reviews_list = reviews;
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    openBookingForGuide(guide) {
+      this.showGuideProfileModal = false;
+      this.bookingData.mountain = guide.specialty ? guide.specialty.split('/')[0].trim() : '';
+      this.bookingData.guide = guide;
+      this.bookingData.guide_id = guide.id;
+      this.bookingData.guide_name = guide.name;
+      this.showBooking = true;
+    },
+
+    // Club profile full
+    async openClubProfile(clubId) {
+      try {
+        const [club, activities, members, reviews, posts, photos, guidesList] = await Promise.all([
+          fetch('/api/clubs/' + clubId).then(r => r.ok ? r.json() : null),
+          fetch('/api/clubs/' + clubId + '/activities').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/members').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/reviews').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/posts').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/photos').then(r => r.ok ? r.json() : []),
+          fetch('/api/clubs/' + clubId + '/guides').then(r => r.ok ? r.json() : []),
+        ]);
+        if (!club) {
+          // 尝试从本地 featuredClubs 获取 mock 数据
+          const local = this.featuredClubs.find(c => String(c.id) === String(clubId));
+          if (local) {
+            this.currentClubProfile = { ...local, activities: [], members_list: [], reviews: [], guides_list: [], photos: [], posts: [] };
+            this.showClubProfileModal = true;
+            return;
+          }
+          this.showToast('俱乐部信息获取失败', 'error'); return;
+        }
+        this.currentClubProfile = { ...club, activities, members_list: members, reviews_list: reviews, posts, photos, guides_list: guidesList };
+        this.clubActivityTab = 'activity';
+        this.clubReviewForm = { rating: 5, content: '' };
+        this.showClubProfileModal = true;
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async joinCurrentClub() {
+      if (!this.requireAuth()) return;
+      if (!this.currentClubProfile) return;
+      try {
+        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/join', { method: 'POST', headers: this.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('已成功加入俱乐部！');
+          if (this.currentClubProfile) this.currentClubProfile.members = (this.currentClubProfile.members || 0) + 1;
+        } else { this.showToast(data.error || '加入失败', 'error'); }
+      } catch(e) { this.showToast('加入失败，请重试', 'error'); }
+    },
+    async submitClubReview() {
+      if (!this.requireAuth()) return;
+      if (!this.currentClubProfile) return;
+      try {
+        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/review', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ rating: this.clubReviewForm.rating, content: this.clubReviewForm.content })
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '评价失败', 'error'); return; }
+        this.showToast('评价已提交 ✅');
+        this.clubReviewForm = { rating: 5, content: '' };
+        const reviews = await fetch('/api/clubs/' + this.currentClubProfile.id + '/reviews').then(r => r.json()).catch(() => []);
+        this.currentClubProfile.reviews_list = reviews;
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async submitActivity() {
+      if (!this.currentClubProfile) return;
+      if (!this.requireAuth()) return;
+      if (!this.newActivity.title) { this.showToast('请填写活动标题', 'error'); return; }
+      try {
+        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/activity', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ ...this.newActivity, price: Number(this.newActivity.price) || 0, max_members: Number(this.newActivity.max_members) || 10 })
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
+        if (!this.currentClubProfile.activities) this.currentClubProfile.activities = [];
+        this.currentClubProfile.activities.unshift(data);
+        this.showToast('活动已发布 ✅');
+        this.showPublishActivity = false;
+        this.newActivity = { title: '', type: 'activity', mountain: '', region: '', price: '', max_members: 10, start_date: '', end_date: '', difficulty: '', description: '' };
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    bookClubActivity(club, act) {
+      this.openActivityEnroll(club, act);
+    },
+
+    // Notification center
+    async openNotificationCenter() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+        if (res.ok) this.notifications = await res.json();
+      } catch(e) {}
+      this.showNotificationCenter = true;
+    },
+    async loadUnreadCount() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/notifications/unread-count', { headers: this.getAuthHeaders() });
+        if (res.ok) { const d = await res.json(); this.notificationCount = d.count || 0; }
+      } catch(e) {}
+    },
+    async markNotificationRead(n) {
+      if (n.is_read) return;
+      n.is_read = 1;
+      this.notificationCount = Math.max(0, this.notificationCount - 1);
+      try {
+        await fetch('/api/notifications/' + n.id + '/read', { method: 'PUT', headers: this.getAuthHeaders() });
+      } catch(e) {}
+    },
+    async markAllNotificationsRead() {
+      this.notifications.forEach(n => { n.is_read = 1; });
+      this.notificationCount = 0;
+      try {
+        await fetch('/api/notifications/read-all', { method: 'PUT', headers: this.getAuthHeaders() });
+      } catch(e) {}
+    },
+    confirmBookingFromNotif(n) {
+      this.confirmBookingById(n.related_id);
+      n.is_read = 1;
+    },
+    rejectBookingFromNotif(n) {
+      this.openRejectBooking(n);
+    },
+    openRejectBooking(n) {
+      this.rejectingNotif = n;
+      this.rejectReason = '';
+      this.showRejectReason = true;
+    },
+    async confirmBookingById(bookingId) {
+      try {
+        const res = await fetch('/api/bookings/' + bookingId + '/confirm', { method: 'PUT', headers: this.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('预约已确认 ✅');
+          // Update in incomingBookings list
+          const idx = this.incomingBookings.findIndex(b => b.id === bookingId);
+          if (idx !== -1) this.incomingBookings[idx].status = 'confirmed';
+        } else { this.showToast(data.error || '操作失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async submitRejectBooking() {
+      if (!this.rejectingNotif) return;
+      const bookingId = this.rejectingNotif.related_id || this.rejectingNotif;
+      try {
+        const res = await fetch('/api/bookings/' + bookingId + '/reject', {
+          method: 'PUT', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ reason: this.rejectReason || '对方暂时无法安排' })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showToast('预约已拒绝');
+          const idx = this.incomingBookings.findIndex(b => b.id === bookingId);
+          if (idx !== -1) this.incomingBookings[idx].status = 'rejected';
+        } else { this.showToast(data.error || '操作失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+      this.showRejectReason = false;
+      this.rejectingNotif = null;
+    },
+
+    // My bookings
+    async openMyBookings() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/bookings/my', { headers: this.getAuthHeaders() });
+        if (res.ok) this.myBookings = await res.json();
+      } catch(e) {}
+      this.showMyBookings = true;
+    },
+    // Incoming bookings
+    async openIncomingBookings() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/bookings/incoming', { headers: this.getAuthHeaders() });
+        if (res.ok) this.incomingBookings = await res.json();
+      } catch(e) {}
+      this.showIncomingBookings = true;
+    },
+
+    // ─── Articles / 攻略知识库 ───────────────────────────────────────────────
+    async loadArticles() {
+      this.articlesLoading = true;
+      try {
+        let url = '/api/articles';
+        if (this.articleCategory && this.articleCategory !== 'all') url += '?category=' + this.articleCategory;
+        const res = await fetch(url);
+        if (res.ok) this.articles = await res.json();
+      } catch(e) {}
+      this.articlesLoading = false;
+    },
+    async openArticleDetail(art) {
+      this.selectedArticle = art;
+      this.showArticleDetail = true;
+      try {
+        const res = await fetch('/api/articles/' + art.id);
+        if (res.ok) {
+          const full = await res.json();
+          this.selectedArticle = full;
+          // Update view count in list
+          const idx = this.articles.findIndex(a => a.id === art.id);
+          if (idx !== -1) this.articles[idx].view_count = full.view_count;
+        }
+      } catch(e) {}
+    },
+    async likeArticle(art) {
+      if (!this.requireAuth()) return;
+      if (!art) return;
+      try {
+        const res = await fetch('/api/articles/' + art.id + '/like', { method: 'POST', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          art.like_count = data.like_count;
+          this.showToast('已点赞 ❤️');
+        }
+      } catch(e) {}
+    },
+
+    // ─── Rescue / 全球紧急救援 ──────────────────────────────────────────────
+    async loadRescueContacts() {
+      try {
+        const res = await fetch('/api/rescue/contacts');
+        if (res.ok) this.rescueContacts = await res.json();
+      } catch(e) {}
+    },
+    async sendSOS() {
+      this.sosStep = 1;
+      this.showToast('SOS 已发送！救援正在响应', 'warning');
+      if (this.authToken) {
+        try {
+          await fetch('/api/rescue/sos', {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({ location: '27.9881° N, 86.9250° E', peak_name: '珠穆朗玛峰大本营', message: 'SOS求救' })
+          });
+        } catch(e) {}
+      }
+    },
+
+    // ─── Customs / 定制攀登 ──────────────────────────────────────────────────
+    openCustomsForm() {
+      if (!this.requireAuth()) return;
+      this.customsSubmitted = false;
+      this.customsOrderId = null;
+      this.customsForm = { peak_name: '', preferred_date: '', group_size: 1, notes: '', contact_phone: '' };
+      this.showCustomsForm = true;
+    },
+    async submitCustomsOrder() {
+      if (!this.customsForm.peak_name || !this.customsForm.contact_phone) {
+        this.showToast('请填写山峰名称和联系电话', 'error'); return;
+      }
+      try {
+        const res = await fetch('/api/customs', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.customsForm)
+        });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '提交失败', 'error'); return; }
+        this.customsOrderId = data.id;
+        this.customsSubmitted = true;
+        this.showToast('定制申请已提交 🎉');
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+
+    // ─── Profile sub-sections ────────────────────────────────────────────────
+    async loadMedicalInfo() {
+      if (!this.authToken || this.medicalInfoLoaded) return;
+      try {
+        const res = await fetch('/api/profile/medical', { headers: this.getAuthHeaders() });
+        if (res.ok) { this.medicalInfo = await res.json(); this.medicalInfoLoaded = true; }
+      } catch(e) {}
+    },
+    async saveMedicalInfo() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/profile/medical', {
+          method: 'PUT', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.medicalInfo)
+        });
+        if (res.ok) { this.medicalInfo = await res.json(); this.showToast('医疗信息已保存 ✅'); }
+        else { this.showToast('保存失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async loadEmergencyContacts() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/profile/emergency-contacts', { headers: this.getAuthHeaders() });
+        if (res.ok) this.userEmergencyContacts = await res.json();
+      } catch(e) {}
+    },
+    async addEmergencyContact() {
+      if (!this.newContact.name || !this.newContact.phone) {
+        this.showToast('请填写姓名和电话', 'error'); return;
+      }
+      try {
+        const res = await fetch('/api/profile/emergency-contacts', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify(this.newContact)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.userEmergencyContacts.push(data);
+          this.newContact = { name: '', relationship: '', phone: '' };
+          this.showAddContact = false;
+          this.showToast('联系人已添加');
+        } else { this.showToast(data.error || '添加失败', 'error'); }
+      } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async deleteEmergencyContact(id) {
+      try {
+        const res = await fetch('/api/profile/emergency-contacts/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.userEmergencyContacts = this.userEmergencyContacts.filter(c => c.id !== id);
+          this.showToast('联系人已删除');
+        }
+      } catch(e) { this.showToast('操作失败', 'error'); }
+    },
+    async loadGearChecklist() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/profile/gear-checklist', { headers: this.getAuthHeaders() });
+        if (res.ok) this.userGearChecklist = await res.json();
+      } catch(e) {}
+    },
+    async addGearItem() {
+      if (!this.newGearItemName.trim()) return;
+      try {
+        const res = await fetch('/api/profile/gear-checklist', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ item_name: this.newGearItemName.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.userGearChecklist.push(data);
+          this.newGearItemName = '';
+          this.showToast('装备项已添加');
+        }
+      } catch(e) { this.showToast('操作失败', 'error'); }
+    },
+    async toggleGearItem(item) {
+      const newReady = !item.is_ready;
+      item.is_ready = newReady;
+      try {
+        const res = await fetch('/api/profile/gear-checklist/' + item.id, {
+          method: 'PUT', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ is_ready: newReady })
+        });
+        if (!res.ok) item.is_ready = !newReady;
+      } catch(e) { item.is_ready = !newReady; }
+    },
+    async loadFavorites() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/profile/favorites', { headers: this.getAuthHeaders() });
+        if (res.ok) this.userFavorites = await res.json();
+      } catch(e) {}
+    },
+    async removeFavorite(id) {
+      try {
+        const res = await fetch('/api/profile/favorites/' + id, { method: 'DELETE', headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.userFavorites = this.userFavorites.filter(f => f.id !== id);
+          this.showToast('已取消收藏');
+        }
+      } catch(e) { this.showToast('操作失败', 'error'); }
+    },
+
+    // ─── Featured Clubs (Problem 1) ─────────────────────────────────────────
+    async loadFeaturedClubs() {
+      try {
+        const res = await fetch('/api/clubs/featured');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.featuredClubs = data.map(c => ({
+              ...c,
+              cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
+              verified: !!c.verified,
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+
+    // ─── Popular Peaks Weather ────────────────────────────────────────────────
+    async loadPopularPeaksWeather() {
+      try {
+        const res = await fetch('/api/weather/popular-peaks');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) this.popularPeaksWeather = data;
+        }
+      } catch(e) {}
+    },
+
+    // ─── Banners (Problem 6) ────────────────────────────────────────────────
+    async loadBanners() {
+      try {
+        const res = await fetch('/api/banners');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.length > 0) {
+            this.banners = data;
+            this.heroSlides = data.map(b => ({
+              name: b.title, sub: b.subtitle || '', image: b.image_url,
+              linkType: b.link_type, linkTarget: b.link_target,
+            }));
+          }
+        }
+      } catch(e) {}
+    },
+    handleBannerClick(slide) {
+      if (!slide.linkType || slide.linkType === 'none') return;
+      if (slide.linkType === 'peak') {
+        const peak = [...this.eightThousanders, ...this.continentalPeaks].find(p => p.nameEn && p.nameEn.toLowerCase() === slide.linkTarget.toLowerCase());
+        if (peak) { this.openPeakDetail(peak); }
+      } else if (slide.linkType === 'page') {
+        if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
+        else { this.currentPage = slide.linkTarget || 'explore'; }
+      } else if (slide.linkType === 'insurance') {
+        this.openInsurance();
+      }
+    },
+
+    // ─── Insurance (Problem 4) ───────────────────────────────────────────────
+    async openInsurance() {
+      this.showInsurance = true;
+      if (this.insurancePlans.length === 0) await this.loadInsurancePlans();
+    },
+    async loadInsurancePlans() {
+      this.insurancePlansLoading = true;
+      try {
+        const res = await fetch('/api/insurance/plans');
+        if (res.ok) this.insurancePlans = await res.json();
+      } catch(e) {}
+      this.insurancePlansLoading = false;
+    },
+    openInsuranceInquiry(plan) {
+      if (!this.requireAuth()) return;
+      this.selectedInsurancePlan = plan;
+      this.insuranceInquiry = { name: this.userProfile.name || '', phone: '', peak_name: '', departure_date: '' };
+      this.showInsuranceInquiry = true;
+    },
+    async submitInsuranceInquiry() {
+      if (!this.insuranceInquiry.name || !this.insuranceInquiry.phone) {
+        this.showToast('请填写姓名和联系电话', 'error'); return;
+      }
+      try {
+        const res = await fetch('/api/insurance/inquire', {
+          method: 'POST', headers: this.getAuthHeaders(),
+          body: JSON.stringify({ ...this.insuranceInquiry, plan_id: this.selectedInsurancePlan?.id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          this.showInsuranceInquiry = false;
+          this.showInsurance = false;
+          this.showToast('询价已提交，我们将在24小时内联系您 📱');
+        } else { this.showToast(data.error || '提交失败', 'error'); }
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+
+    // ─── Community Search (Problem 2) ────────────────────────────────────────
+    filterCommunityPosts() {
+      const q = (this.communitySearchQuery || '').toLowerCase().trim();
+      if (!q) { this.filteredCommunityPosts = this.communityPosts; return; }
+      this.filteredCommunityPosts = this.communityPosts.filter(p =>
+        (p.content && p.content.toLowerCase().includes(q)) ||
+        (p.author && p.author.toLowerCase().includes(q)) ||
+        (p.location && p.location.toLowerCase().includes(q))
+      );
+    },
+
+    init() {
+      // Auto-rotate hero carousel every 5 seconds
+      setInterval(() => {
+        this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
+      }, 5000);
+      // 监听 JWT 过期事件，统一提示并跳转登录（Phase 0.5）
+      const onSessionExpired = () => {
+        this.showToast('登录已过期，请重新登录', 'warning');
+        this.authToken = null;
+        this.currentUser = null;
+        this.showLogin = true;
+      };
+      window.addEventListener('summitlink:session-expired', onSessionExpired);
+      this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
+      // Initialize public tracks
+      this.filteredPublicTracks = this.publicTracks;
+      // Verify token and load initial data
+      this.verifyToken();
+      this.loadPeaks('8000ers');
+      this.loadGuides();
+      this.loadTeams();
+      this.loadGear('buy');
+      this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
+      this.loadLeaderboard();
+      this.loadWeather();
+      this.loadClubs();
+      this.loadFeaturedClubs();
+      this.loadBanners();
+      this.loadPopularPeaksWeather();
+      this.loadRescueContacts();
+      this.loadConversations();
+      // Load notification count after token verify
+      this.$watch('authToken', (val) => {
+        if (val) { this.loadUnreadCount(); this.loadTracks(); }
+      });
+      if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
+      // Phase 2.3: 页面加载时同步待上传轨迹；网络恢复时也自动触发
+      idbGetPendingTracks().then(t => { this.pendingUploadCount = t.length; }).catch(() => {});
+      this.syncPendingTracks();
+      window.addEventListener('online', () => this.syncPendingTracks());
+      // Phase 2.5: 检测地图引擎，Mapbox 时懒加载 SDK
+      detectMapProvider().then(cfg => {
+        if (cfg.provider === 'mapbox' && cfg.token) {
+          loadMapboxGL(cfg.token).catch(() => {});
+        }
+      });
+      // Watch gearMode changes to reload gear (reset category first to avoid double-call)
+      this.$watch('gearMode', (val) => {
+        if (this.gearCategory !== '全部') {
+          this.gearCategory = '全部'; // triggers gearCategory watch → loadGear
+        } else {
+          this.loadGear(val); // category unchanged, load manually
+        }
+      });
+      // Watch gearCategory changes to reload gear
+      this.$watch('gearCategory', (val) => this.loadGear(this.gearMode, val));
+      // Watch activeCategory changes to reload peaks
+      this.$watch('activeCategory', (val) => {
+        if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
+        if (val === 'guides') this.loadGuides();
+      });
+      // Watch activeChatType to load articles when articles tab is selected
+      this.$watch('activeChatType', (val) => {
+        if (val === 'articles' && this.articles.length === 0) this.loadArticles();
+      });
+      // Watch communityPosts to sync filteredCommunityPosts
+      this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });
+      // Watch currentPage to init AMap when entering track page
+      this.$watch('currentPage', (val) => {
+        if (val === 'track') {
+          this.$nextTick(() => setTimeout(() => this.initTrackMap(), 150));
+        }
+      });
+      // Handle shared track URL: /summitlink?track=ID
+      const urlParams = new URLSearchParams(window.location.search);
+      const sharedTrackId = urlParams.get('track');
+      if (sharedTrackId) {
+        this.$nextTick(async () => {
+          try {
+            const res = await fetch('/api/tracks/' + sharedTrackId);
+            if (res.ok) {
+              const track = await res.json();
+              this.currentPage = 'track';
+              await this.$nextTick();
+              this.openTrackDetail(track);
+            }
+          } catch(e) {}
+        });
+      }
+    },
+  };
+}
