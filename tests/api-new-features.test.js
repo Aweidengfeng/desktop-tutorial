@@ -69,9 +69,8 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
     // 验证数据库记录了 policy_version（通过返回的用户ID查找，因为手机号已加密存储）
     const db = require('../backend/db/database');
     const userId = res.body.user && res.body.user.id;
-    const user = userId
-      ? db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
-      : db.prepare("SELECT * FROM users WHERE policy_version = '2026-04-20' ORDER BY id DESC LIMIT 1").get();
+    expect(userId).toBeTruthy(); // 确保响应包含用户ID
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     expect(user).toBeTruthy();
     expect(user.policy_version).toBe('2026-04-20');
     expect(user.policy_agreed_at).toBeTruthy();
