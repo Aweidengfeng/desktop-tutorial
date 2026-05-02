@@ -5,20 +5,40 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
+      "launchAutoHide": true,
       "backgroundColor": "#0f172a",
-      "showSpinner": false
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
     },
     "StatusBar": {
       "style": "DARK",
-      "backgroundColor": "#0f172a"
+      "backgroundColor": "#0f172a",
+      "overlaysWebView": false
     },
     "Keyboard": {
       "resize": "body",
       "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   },
   "server": {
-    "allowNavigation": ["*.summitlink.app"],
-    "allowMixedContent": false
+    "allowNavigation": ["*.summitlink.app", "*.railway.app"],
+    "allowMixedContent": false,
+    "hostname": "summitlink.app"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "limitsNavigationsToAppBoundDomains": true
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
   }
 }
