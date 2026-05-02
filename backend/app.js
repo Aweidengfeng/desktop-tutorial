@@ -19,6 +19,7 @@ const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 const { defaultLimiter } = require('./middleware/rateLimits');
+const { cacheMiddleware, noCache } = require('./middleware/cache');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
 const htmlPageLimiter = rateLimit({
@@ -168,8 +169,11 @@ if (process.env.DATABASE_PROVIDER === 'postgresql') {
 // 全局速率限制兜底（仅对 /api 前缀，不影响静态文件服务）
 app.use('/api', defaultLimiter);
 
+// HTTP 缓存头（在路由挂载之前）
+app.use(cacheMiddleware);
+
 // 挂载路由
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', noCache, require('./routes/auth'));
 app.use('/api/peaks', require('./routes/peaks'));
 app.use('/api/guides', require('./routes/guides'));
 app.use('/api/teams', require('./routes/teams'));
@@ -216,6 +220,7 @@ app.use('/api/push', require('./routes/push'));
 app.use('/api/coach', require('./routes/coach'));
 app.use('/api/payment', require('./routes/payment'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
+app.use('/api/gdpr', require('./routes/gdpr'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');
