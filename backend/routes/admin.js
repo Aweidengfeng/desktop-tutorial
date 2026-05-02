@@ -7,6 +7,7 @@ const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
 const devOnly = require('../middleware/devOnly');
 const { GUIDE_CERT_LEVELS, CLUB_CERT_LEVELS } = require('../utils/certLevels');
+const { sendMail, certificationResultEmail } = require('../middleware/mailer');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -212,6 +213,11 @@ router.put('/guides/:id/approve', adminWriteLimiter, adminAuth, async (req, res)
     }
     try { await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${app.user_id}, 'guide_review', '向导申请审核通过，请完成付费', '您的向导申请已审核通过，请支付入驻费后正式入驻平台', '/guide-portal')`; } catch(e) {}
     res.json({ success: true });
+    // 异步发送认证结果邮件
+    prisma.$queryRaw`SELECT name, email FROM users WHERE id = ${app.user_id}`.then(rows => {
+      const u = rows[0];
+      if (u?.email) sendMail({ to: u.email, ...certificationResultEmail({ userName: u.name || app.name, type: 'guide', status: 'approved', reviewNote: '' }) }).catch(() => {});
+    }).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -225,6 +231,12 @@ router.put('/guides/:id/reject', adminAuth, async (req, res) => {
     await prisma.$executeRaw`UPDATE guide_applications SET status = 'rejected' WHERE id = ${req.params.id}`;
     await prisma.$executeRaw`UPDATE guides SET status = 'rejected' WHERE user_id = ${app.user_id} AND status = 'pending'`;
     res.json({ success: true });
+    // 异步发送认证结果邮件
+    const reason = req.body?.reason || '';
+    prisma.$queryRaw`SELECT name, email FROM users WHERE id = ${app.user_id}`.then(rows => {
+      const u = rows[0];
+      if (u?.email) sendMail({ to: u.email, ...certificationResultEmail({ userName: u.name || app.name, type: 'guide', status: 'rejected', reviewNote: reason }) }).catch(() => {});
+    }).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -590,6 +602,11 @@ router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, asyn
     }
     try { await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${app.user_id}, 'club_review', '俱乐部申请审核通过，请完成付费', '您的俱乐部申请已审核通过，请支付入驻费后正式入驻平台', '/club-portal')`; } catch(e) {}
     res.json({ success: true });
+    // 异步发送认证结果邮件
+    prisma.$queryRaw`SELECT name, email FROM users WHERE id = ${app.user_id}`.then(rows => {
+      const u = rows[0];
+      if (u?.email) sendMail({ to: u.email, ...certificationResultEmail({ userName: u.name || app.name, type: 'club', status: 'approved', reviewNote: '' }) }).catch(() => {});
+    }).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -599,10 +616,15 @@ router.post('/club-applications/:id/approve', adminWriteLimiter, adminAuth, asyn
 router.post('/club-applications/:id/reject', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
     const { reason = '' } = req.body;
-    const app = (await prisma.$queryRaw`SELECT id FROM club_applications WHERE id = ${req.params.id}`)[0];
+    const app = (await prisma.$queryRaw`SELECT id, user_id, name FROM club_applications WHERE id = ${req.params.id}`)[0];
     if (!app) return res.status(404).json({ error: '申请不存在' });
     await prisma.$executeRaw`UPDATE club_applications SET status = 'rejected', reject_reason = ${reason} WHERE id = ${req.params.id}`;
     res.json({ success: true });
+    // 异步发送认证结果邮件
+    prisma.$queryRaw`SELECT name, email FROM users WHERE id = ${app.user_id}`.then(rows => {
+      const u = rows[0];
+      if (u?.email) sendMail({ to: u.email, ...certificationResultEmail({ userName: u.name || app.name, type: 'club', status: 'rejected', reviewNote: reason }) }).catch(() => {});
+    }).catch(() => {});
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

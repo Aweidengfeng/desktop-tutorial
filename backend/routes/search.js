@@ -1,122 +1,149 @@
+/**
+ * search.js — 全文搜索路由
+ * 支持山峰、向导、俱乐部、动态的统一搜索
+ * PostgreSQL: 使用 tsvector + GIN 索引
+ * SQLite 降级: 使用 LIKE 模糊匹配
+ */
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const { searchLimiter } = require('../middleware/rateLimits');
+const rateLimit = require('express-rate-limit');
 
-// Initialize FTS5 search index
-(async () => {
-  try {
-    await prisma.$executeRawUnsafe(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
-        name, description, type UNINDEXED, ref_id UNINDEXED
-      );
-    `);
-    const rows = await prisma.$queryRawUnsafe('SELECT COUNT(*) as cnt FROM search_index');
-    if (Number(rows[0].cnt) === 0) {
-      const peaks = await prisma.$queryRawUnsafe('SELECT id, name, description FROM peaks');
-      for (const item of peaks) {
-        await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-          item.name || '', item.description || '', 'peak', String(item.id));
-      }
-      try {
-        const guides = await prisma.$queryRawUnsafe('SELECT id, name, bio as description FROM guides');
-        for (const item of guides) {
-          await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'guide', String(item.id));
-        }
-      } catch(e) {}
-      try {
-        const clubs = await prisma.$queryRawUnsafe('SELECT id, name, description FROM clubs');
-        for (const item of clubs) {
-          await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'club', String(item.id));
-        }
-      } catch(e) {}
-      try {
-        const articles = await prisma.$queryRawUnsafe('SELECT id, title as name, content as description FROM articles');
-        for (const item of articles) {
-          await prisma.$executeRawUnsafe('INSERT INTO search_index (name, description, type, ref_id) VALUES (?, ?, ?, ?)',
-            item.name || '', item.description || '', 'article', String(item.id));
-        }
-      } catch(e) {}
-    }
-  } catch(e) {
-    console.warn('FTS5 index init failed:', e.message);
-  }
-})();
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 30,
+  message: { error: '搜索过于频繁，请稍后再试' },
+  standardHeaders: true, legacyHeaders: false,
+});
 
-// GET /api/search?q=xxx&type=all|peak|guide|club|article&limit=20
-/**
- * @swagger
- * /api/search:
- *   get:
- *     tags: [搜索]
- *     summary: 全局搜索
- *     description: 搜索山峰、向导、俱乐部、文章等内容
- *     security: []
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema: { type: string }
- *         description: 搜索关键词
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [all, peak, guide, club, article]
- *           default: all
- *         description: 搜索类型
- *       - in: query
- *         name: limit
- *         schema: { type: integer, default: 20, maximum: 100 }
- *     responses:
- *       200:
- *         description: 搜索结果数组
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   type: { type: string }
- *                   id: { type: integer }
- *                   name: { type: string }
- *                   description: { type: string }
- */
+const IS_PG = (process.env.DATABASE_PROVIDER || 'sqlite') === 'postgresql';
+
+// GET /api/search?q=...&type=all|peaks|guides|clubs|posts&limit=10&page=1
 router.get('/', searchLimiter, async (req, res) => {
   try {
-    const { q, type = 'all', limit = 20 } = req.query;
-    if (!q || q.trim().length < 1) return res.json([]);
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 1) return res.json({ peaks: [], guides: [], clubs: [], posts: [], total: 0 });
 
-    const safeLimit = Math.min(Number(limit) || 20, 100);
-    let results = [];
+    const type = req.query.type || 'all';
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const offset = (page - 1) * limit;
 
-    try {
-      // Try FTS5 first (works well for ASCII/English queries)
-      const safeQ = q.replace(/['"*]/g, '') + '*';
-      let sql = 'SELECT name, description, type, ref_id FROM search_index WHERE search_index MATCH ?';
-      const params = [safeQ];
-      if (type !== 'all') { sql += ' AND type = ?'; params.push(type); }
-      sql += ' LIMIT ?';
-      params.push(safeLimit);
-      results = await prisma.$queryRawUnsafe(sql, ...params);
-    } catch(ftsErr) {
-      // Fallback: LIKE query for CJK and other non-ASCII characters
-      const likeQ = `%${q.replace(/[%_]/g, '')}%`;
-      let sql = 'SELECT name, description, type, ref_id FROM search_index WHERE name LIKE ?';
-      const params = [likeQ];
-      if (type !== 'all') { sql += ' AND type = ?'; params.push(type); }
-      sql += ' LIMIT ?';
-      params.push(safeLimit);
-      results = await prisma.$queryRawUnsafe(sql, ...params);
+    const results = {};
+
+    if (type === 'all' || type === 'peaks') {
+      if (IS_PG) {
+        results.peaks = await prisma.$queryRaw`
+          SELECT id, name, name_en, altitude, country, difficulty, image, cover_image,
+                 ts_rank(to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(name_en,'') || ' ' || coalesce(description,'')),
+                         plainto_tsquery('simple', ${q})) AS rank
+          FROM peaks
+          WHERE to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(name_en,'') || ' ' || coalesce(description,''))
+                @@ plainto_tsquery('simple', ${q})
+             OR name ILIKE ${'%' + q + '%'}
+             OR name_en ILIKE ${'%' + q + '%'}
+          ORDER BY rank DESC, altitude DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        results.peaks = await prisma.$queryRaw`
+          SELECT id, name, altitude, country, difficulty, image FROM peaks
+          WHERE name LIKE ${'%' + q + '%'} OR description LIKE ${'%' + q + '%'}
+          ORDER BY altitude DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      }
     }
 
-    res.json(results);
-  } catch(e) {
-    console.error('Search error:', e.message);
-    res.status(500).json({ error: '搜索失败', results: [] });
+    if (type === 'all' || type === 'guides') {
+      if (IS_PG) {
+        results.guides = await prisma.$queryRaw`
+          SELECT g.id, g.name, g.avatar, g.rating, g.specialty, g.region, g.day_rate, g.nationality
+          FROM guides g
+          WHERE g.status = 'active'
+            AND (to_tsvector('simple', coalesce(g.name,'') || ' ' || coalesce(g.specialty,'') || ' ' || coalesce(g.region,'') || ' ' || coalesce(g.bio,''))
+                 @@ plainto_tsquery('simple', ${q})
+              OR g.name ILIKE ${'%' + q + '%'}
+              OR g.specialty ILIKE ${'%' + q + '%'})
+          ORDER BY g.rating DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        results.guides = await prisma.$queryRaw`
+          SELECT id, name, avatar, rating, specialty, region, day_rate FROM guides
+          WHERE status = 'active' AND (name LIKE ${'%' + q + '%'} OR specialty LIKE ${'%' + q + '%'} OR region LIKE ${'%' + q + '%'})
+          ORDER BY rating DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      }
+    }
+
+    if (type === 'all' || type === 'clubs') {
+      if (IS_PG) {
+        results.clubs = await prisma.$queryRaw`
+          SELECT id, name, description, cover, specialty, region, members_count, verified
+          FROM clubs
+          WHERE status = 'active'
+            AND (to_tsvector('simple', coalesce(name,'') || ' ' || coalesce(description,'') || ' ' || coalesce(specialty,'') || ' ' || coalesce(region,''))
+                 @@ plainto_tsquery('simple', ${q})
+              OR name ILIKE ${'%' + q + '%'})
+          ORDER BY verified DESC, members_count DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        results.clubs = await prisma.$queryRaw`
+          SELECT id, name, description, cover, specialty, region, members_count, verified FROM clubs
+          WHERE status = 'active' AND (name LIKE ${'%' + q + '%'} OR description LIKE ${'%' + q + '%'})
+          ORDER BY members_count DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      }
+    }
+
+    if (type === 'all' || type === 'posts') {
+      if (IS_PG) {
+        results.posts = await prisma.$queryRaw`
+          SELECT p.id, p.content, p.image, p.likes, p.created_at, u.name as author_name, u.avatar as author_avatar
+          FROM posts p JOIN users u ON u.id = p.user_id
+          WHERE to_tsvector('simple', coalesce(p.content,''))
+                @@ plainto_tsquery('simple', ${q})
+             OR p.content ILIKE ${'%' + q + '%'}
+          ORDER BY p.created_at DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      } else {
+        results.posts = await prisma.$queryRaw`
+          SELECT p.id, p.content, p.image, p.likes, p.created_at, u.name as author_name, u.avatar as author_avatar
+          FROM posts p JOIN users u ON u.id = p.user_id
+          WHERE p.content LIKE ${'%' + q + '%'}
+          ORDER BY p.created_at DESC LIMIT ${limit} OFFSET ${offset}
+        `;
+      }
+    }
+
+    const total = Object.values(results).reduce((s, arr) => s + (arr?.length || 0), 0);
+    res.json({ ...results, query: q, total });
+  } catch (e) {
+    console.error('[search]', e.message);
+    res.status(500).json({ error: '搜索失败' });
+  }
+});
+
+// GET /api/search/suggest?q=... — 搜索建议（仅山峰名称）
+router.get('/suggest', searchLimiter, async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 1) return res.json([]);
+    let suggestions;
+    if (IS_PG) {
+      suggestions = await prisma.$queryRaw`
+        SELECT id, name, altitude, country FROM peaks
+        WHERE name ILIKE ${'%' + q + '%'} OR name_en ILIKE ${'%' + q + '%'}
+        ORDER BY altitude DESC LIMIT 8
+      `;
+    } else {
+      suggestions = await prisma.$queryRaw`
+        SELECT id, name, altitude, country FROM peaks
+        WHERE name LIKE ${'%' + q + '%'}
+        ORDER BY altitude DESC LIMIT 8
+      `;
+    }
+    res.json(suggestions);
+  } catch (e) {
+    res.status(500).json({ error: '搜索建议失败' });
   }
 });
 

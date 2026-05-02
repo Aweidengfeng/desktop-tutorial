@@ -41,6 +41,7 @@
   },
   "optionalDependencies": {
     "ali-oss": "^6.20.0",
-    "@sentry/node": "^8.0.0"
+    "@sentry/node": "^8.0.0",
+    "web-push": "^3.6.0"
   }
 }
