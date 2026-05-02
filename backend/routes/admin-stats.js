@@ -57,7 +57,7 @@ router.get('/overview', adminAuth, async (req, res) => {
 // GET /api/admin/stats/users/trend?days=30 — 用户增长趋势
 router.get('/users/trend', adminAuth, async (req, res) => {
   try {
-    const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
     const trend = await prisma.$queryRaw`
       SELECT date(created_at) as date, COUNT(*) as count
       FROM users
@@ -75,7 +75,7 @@ router.get('/users/trend', adminAuth, async (req, res) => {
 // GET /api/admin/stats/posts/trend?days=30 — 内容发布趋势
 router.get('/posts/trend', adminAuth, async (req, res) => {
   try {
-    const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
     const trend = await prisma.$queryRaw`
       SELECT date(created_at) as date, COUNT(*) as count
       FROM posts
@@ -92,7 +92,7 @@ router.get('/posts/trend', adminAuth, async (req, res) => {
 // GET /api/admin/stats/peaks/top — 热门山峰（按登顶记录）
 router.get('/peaks/top', adminAuth, async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
     const tops = await prisma.$queryRaw`
       SELECT p.id, p.name, p.altitude, p.country, COUNT(us.id) as summit_count
       FROM peaks p
@@ -110,7 +110,7 @@ router.get('/peaks/top', adminAuth, async (req, res) => {
 // GET /api/admin/stats/revenue/trend?days=30 — 营收趋势
 router.get('/revenue/trend', adminAuth, async (req, res) => {
   try {
-    const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
     const trend = await prisma.$queryRaw`
       SELECT date(created_at) as date,
              COUNT(*) as orders,

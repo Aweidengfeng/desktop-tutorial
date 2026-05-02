@@ -49,6 +49,8 @@ router.get('/mock-pay', async (req, res) => {
   const orderNo = escape(req.query.orderNo || '');
   const amount = escape(req.query.amount || '0');
   const amountDisplay = (parseFloat(amount) / 100).toFixed(2);
+  // Use JSON.stringify to safely embed orderNo in the JS context
+  const orderNoJson = JSON.stringify(String(req.query.orderNo || ''));
   res.send(`
     <html><body style="font-family:sans-serif;text-align:center;padding:40px">
       <h2>🏔️ AlpineLink Mock 支付</h2>
@@ -60,7 +62,7 @@ router.get('/mock-pay', async (req, res) => {
           await fetch('/api/payment/mock-confirm', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({orderNo: '${orderNo}'})
+            body: JSON.stringify({orderNo: ${orderNoJson}})
           });
           document.body.innerHTML = '<h2 style="color:green">✅ 支付成功！</h2><p>3秒后关闭...</p>';
           setTimeout(() => window.close(), 3000);
