@@ -67,6 +67,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cookieParser());
+// Stripe webhook 需要 raw body（必须在 express.json() 之前注册）
+app.use('/api/payment/stripe-webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 app.use(pinoHttp({
@@ -222,6 +224,7 @@ app.use('/api/coach', require('./routes/coach'));
 app.use('/api/payment', require('./routes/payment'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/gdpr', require('./routes/gdpr'));
+app.use('/api/currency', require('./routes/currency'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');

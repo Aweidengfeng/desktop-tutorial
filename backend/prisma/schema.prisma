@@ -12,7 +12,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+  output   = "../../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -96,6 +96,7 @@ model User {
   expeditionOrders     ExpeditionOrder[]
   activityOrders       ActivityOrder[]
   guideServices        GuideService[]
+  stripePayments       StripePayment[]
 
   @@map("users")
 }
@@ -1215,3 +1216,23 @@ model Image {
   @@map("images")
 }
 
+
+// ─────────────────────────────────────────
+// Stripe 支付记录（PR-09）
+// ─────────────────────────────────────────
+
+model StripePayment {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @map("user_id")
+  stripePaymentIntentId String   @unique @map("stripe_payment_intent_id")
+  amount                Float
+  currency              String   @default("usd")
+  status                String   @default("pending")
+  orderId               String?  @map("order_id")
+  orderType             String?  @map("order_type")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  user                  User     @relation(fields: [userId], references: [id])
+
+  @@map("stripe_payments")
+}
