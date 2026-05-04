@@ -1,5 +1,5 @@
 # 📋 SummitLink 任务分工总表
-> **最后更新**：2026-05-04 (PR-09 Stripe支付 + PR-10 投资人看板真实数据 + PR-13 多货币显示)
+> **最后更新**：2026-05-04 (PR-14 App图标SVG + PR-15 iOS权限描述 + PR-16 Android权限声明)
 > **规则**：每次对话/PR完成后自动更新此文件，完成项打 ✅
 > **目标**：SummitLink 全球上架（iOS App Store + Google Play）
 
@@ -13,7 +13,7 @@
 |---|------|------|------|------|
 | A-01 | 注册 Apple 开发者账号 | [developer.apple.com/enroll](https://developer.apple.com/programs/enroll/) | $99/年 | ⬜ |
 | A-02 | 注册 Google Play 开发者账号 | [play.google.com/console](https://play.google.com/console/signup) | $25一次性 | ⬜ |
-| A-03 | 注册 Stripe 账号（填营业执照） | [dashboard.stripe.com/register](https://dashboard.stripe.com/register) | 免费+手续费 | ⬜ |
+| A-03 | 注册 Stripe 账号（填营业执照） | [dashboard.stripe.com/register](https://dashboard.stripe.com/register) | 免费+手续费 | ✅ |
 | A-04 | 购买域名 summitlink.app | [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) | ~$15/年 | ⬜ |
 | A-05 | 注册 Sentry 账号 + 创建 Node.js 项目 | [sentry.io/signup](https://sentry.io/signup/) | 免费 | ⬜ |
 
@@ -79,17 +79,28 @@
 
 ---
 
+### 🔵 第四批 — App Store 上架硬需求
+
+| # | PR 内容 | 涉及任务 | 前置条件 | 状态 |
+|---|---------|---------|---------|------|
+| PR-14 | App 图标集（SVG源文件）+ 启动屏 + Capacitor配置 | C-01 | 无 | ✅ |
+| PR-15 | iOS Info.plist 权限描述（相机/位置/通知等） | C-04 | 无 | ✅ |
+| PR-16 | Android AndroidManifest 权限声明 | C-04 | 无 | ✅ |
+
+---
+
 ## 📊 进度统计
 
 | 类别 | 总数 | 已完成 | 进度 |
 |------|------|--------|------|
-| 你来做 A类（账号）| 5 | 0 | 0% |
+| 你来做 A类（账号）| 5 | 1 | 20% |
 | 你来做 B类（配置）| 5 | 0 | 0% |
 | 你来做 C类（上架）| 5 | 1 | 20% |
 | 我来做 PR第一批 | 3 | 3 | 100% |
 | 我来做 PR第二批 | 5 | 5 | 100% |
 | 我来做 PR第三批 | 5 | 5 | 100% 🎉 |
-| **总计** | **28** | **14** | **50%** |
+| 我来做 PR第四批 | 3 | 3 | 100% 🎉 |
+| **总计** | **31** | **18** | **58%** |
 
 ---
 
@@ -109,6 +120,10 @@
 | 2026-05-04 | PR-09合并：Stripe支付完整接入（测试模式），stripe_payments表，webhook，/api/payment/config+create-intent+stripe-stats |
 | 2026-05-04 | PR-10合并：投资人看板接真实数据库数据（admin/stats增加stripeRevenue/stripeTransactions字段） |
 | 2026-05-04 | PR-13合并：价格多货币显示（USD/EUR/CNY/GBP等），/api/currency/rates+convert，www/js/currency.js前端格式化工具 |
+| 2026-05-04 | PR-06/07/08合并：GDPR横幅、IP地图切换、i18n英文fallback |
+| 2026-05-04 | PR-11/12合并：AES-256-GCM PII加密、index.html拆包瘦身 |
+| 2026-05-04 | A-03完成：Stripe账号已注册（测试模式运行中，待绑银行卡激活live） |
+| 2026-05-04 | PR-14/15/16完成：App图标SVG源文件、iOS权限描述(Info.plist)、Android权限声明(AndroidManifest) |
 
 ---
 

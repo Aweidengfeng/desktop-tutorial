@@ -14,7 +14,10 @@
     "db:seed": "node backend/db/seed.js",
     "build:vite": "vite build",
     "preview": "vite preview",
-    "test:load": "node backend/scripts/load-test.js"
+    "test:load": "node backend/scripts/load-test.js",
+    "generate:icons": "npx @capacitor/assets generate --ios --android",
+    "generate:icons:ios": "npx @capacitor/assets generate --ios",
+    "generate:icons:android": "npx @capacitor/assets generate --android"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
