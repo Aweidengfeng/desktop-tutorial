@@ -20,5 +20,5 @@
 ## 手动生成命令
 ```bash
 npm install -g @capacitor/assets
-npx capacitor-assets generate --ios --android
+capacitor-assets generate --ios --android
 ```
