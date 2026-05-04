@@ -4,6 +4,106 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { createPayment, verifyCallback, PROVIDER } = require('../middleware/payment');
 
+// ─── Stripe 支付（如已配置 STRIPE_SECRET_KEY）─────────────────────────────────
+if (process.env.STRIPE_SECRET_KEY) {
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+  // GET /api/payment/config — 返回前端公钥
+  router.get('/config', (req, res) => {
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '' });
+  });
+
+  // POST /api/payment/create-intent — 创建 Stripe 支付意图
+  router.post('/create-intent', auth, async (req, res) => {
+    try {
+      const { amount, currency = 'usd', orderId, orderType } = req.body;
+      if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency,
+        metadata: {
+          orderId: orderId || '',
+          orderType: orderType || 'general',
+          userId: String(req.user.id)
+        }
+      });
+
+      // 记录到数据库（stripe_payments 表）
+      await prisma.$executeRaw`
+        INSERT INTO stripe_payments (user_id, stripe_payment_intent_id, amount, currency, status, order_id, order_type, created_at, updated_at)
+        VALUES (${req.user.id}, ${paymentIntent.id}, ${amount}, ${currency}, ${'pending'}, ${orderId || null}, ${orderType || null}, datetime('now'), datetime('now'))
+        ON CONFLICT DO NOTHING
+      `.catch(err => console.warn('Stripe payment DB write failed (non-fatal):', err.message));
+
+      res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
+    } catch (err) {
+      console.error('create-intent error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/payment/stripe-webhook — Stripe Webhook（原始 body，已在 app.js 提前注册）
+  router.post('/stripe-webhook', async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+      if (process.env.STRIPE_WEBHOOK_SECRET && sig) {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      } else {
+        event = JSON.parse(req.body.toString());
+      }
+    } catch (err) {
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+
+    const pi = event.data?.object;
+    if (event.type === 'payment_intent.succeeded') {
+      await prisma.$executeRaw`
+        UPDATE stripe_payments SET status = 'paid', updated_at = datetime('now') WHERE stripe_payment_intent_id = ${pi.id}
+      `.catch(() => {});
+    } else if (event.type === 'payment_intent.payment_failed') {
+      await prisma.$executeRaw`
+        UPDATE stripe_payments SET status = 'failed', updated_at = datetime('now') WHERE stripe_payment_intent_id = ${pi.id}
+      `.catch(() => {});
+    }
+
+    res.json({ received: true });
+  });
+
+  // GET /api/payment/stripe-history — 用户 Stripe 支付记录
+  router.get('/stripe-history', auth, async (req, res) => {
+    try {
+      const payments = await prisma.$queryRaw`
+        SELECT * FROM stripe_payments WHERE user_id = ${req.user.id} ORDER BY created_at DESC LIMIT 50
+      `;
+      res.json(payments);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/payment/stripe-stats — Stripe 支付统计（用于投资人看板）
+  router.get('/stripe-stats', auth, async (req, res) => {
+    try {
+      const [totalRevenue, totalCount, byStatus] = await Promise.all([
+        prisma.$queryRaw`SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as cnt FROM stripe_payments WHERE status = 'paid'`,
+        prisma.$queryRaw`SELECT COUNT(*) as cnt FROM stripe_payments`,
+        prisma.$queryRaw`SELECT status, COUNT(*) as cnt FROM stripe_payments GROUP BY status`
+      ]);
+      res.json({
+        totalRevenue: Number(totalRevenue[0].total) || 0,
+        paidCount: Number(totalRevenue[0].cnt) || 0,
+        totalCount: Number(totalCount[0].cnt) || 0,
+        byStatus
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+}
+
 // GET /api/payment/provider — 当前支付提供商
 router.get('/provider', (req, res) => {
   res.json({ provider: PROVIDER, mock: PROVIDER === 'mock' });

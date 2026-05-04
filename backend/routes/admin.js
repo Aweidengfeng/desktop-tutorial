@@ -86,9 +86,16 @@ router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
     const pendingBookings = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM bookings WHERE status = 'pending'`)[0].c);
     let pendingSos = 0;
     let pendingWithdrawals = 0;
+    let stripeRevenue = 0;
+    let stripeTransactions = 0;
     try { pendingSos = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM sos_records WHERE status = 'pending'`)[0].c); } catch(e) {}
     try { pendingWithdrawals = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM withdrawal_requests WHERE status = 'pending'`)[0].c); } catch(e) {}
-    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings, pendingSos, pendingWithdrawals });
+    try {
+      const sr = (await prisma.$queryRaw`SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as cnt FROM stripe_payments WHERE status = 'paid'`)[0];
+      stripeRevenue = Number(sr.total) || 0;
+      stripeTransactions = Number(sr.cnt) || 0;
+    } catch(e) {}
+    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings, pendingSos, pendingWithdrawals, stripeRevenue, stripeTransactions });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

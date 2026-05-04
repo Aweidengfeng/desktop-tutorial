@@ -96,6 +96,7 @@ function createApp() {
   app.use('/api/coach',        require('../../backend/routes/coach'));
   app.use('/api/payment',      require('../../backend/routes/payment'));
   app.use('/api/admin/stats',  require('../../backend/routes/admin-stats'));
+  app.use('/api/currency',     require('../../backend/routes/currency'));
 
   // 健康检查
   app.get(['/api/health', '/health'], (req, res) => {
