@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 
-// 静态汇率（以 USD 为基准）
+// 静态汇率（以 USD 为基准，2026-05-04更新；真实项目可接入 Open Exchange Rates API）
 const BASE_RATES = {
   usd: 1,
   eur: 0.92,

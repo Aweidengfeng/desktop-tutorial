@@ -62,11 +62,11 @@ if (process.env.STRIPE_SECRET_KEY) {
     if (event.type === 'payment_intent.succeeded') {
       await prisma.$executeRaw`
         UPDATE stripe_payments SET status = 'paid', updated_at = datetime('now') WHERE stripe_payment_intent_id = ${pi.id}
-      `.catch(() => {});
+      `.catch(err => console.error('Webhook DB update (succeeded) failed:', err.message));
     } else if (event.type === 'payment_intent.payment_failed') {
       await prisma.$executeRaw`
         UPDATE stripe_payments SET status = 'failed', updated_at = datetime('now') WHERE stripe_payment_intent_id = ${pi.id}
-      `.catch(() => {});
+      `.catch(err => console.error('Webhook DB update (failed) failed:', err.message));
     }
 
     res.json({ received: true });

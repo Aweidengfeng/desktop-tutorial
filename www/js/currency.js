@@ -25,7 +25,8 @@ class CurrencyFormatter {
       const data = await res.json();
       this.rates = data.rates;
     } catch (e) {
-      this.rates = { usd: 1, eur: 0.92, cny: 7.24 };
+      // Fallback rates must match BASE_RATES in backend/routes/currency.js
+      this.rates = { usd: 1, eur: 0.92, cny: 7.24, gbp: 0.79, jpy: 149.5, aud: 1.53, cad: 1.36 };
     }
   }
 

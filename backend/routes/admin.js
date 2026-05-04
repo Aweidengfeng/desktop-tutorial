@@ -94,7 +94,7 @@ router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
       const sr = (await prisma.$queryRaw`SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as cnt FROM stripe_payments WHERE status = 'paid'`)[0];
       stripeRevenue = Number(sr.total) || 0;
       stripeTransactions = Number(sr.cnt) || 0;
-    } catch(e) {}
+    } catch(e) { console.warn('admin/stats stripe_payments query failed (non-fatal):', e.message); }
     res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings, pendingSos, pendingWithdrawals, stripeRevenue, stripeTransactions });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
