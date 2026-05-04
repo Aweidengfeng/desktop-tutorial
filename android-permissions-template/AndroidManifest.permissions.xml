@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android AndroidManifest.xml 权限声明模板
+  使用方法：将以下权限添加到 android/app/src/main/AndroidManifest.xml 的 <manifest> 内。
+  运行 `npx cap add android` 后，Android 项目会自动生成；然后将此文件内容合并进去。
+-->
+<manifest-permissions>
+
+  <!-- 网络 -->
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+  <!-- 位置（登山路线必须）-->
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
+  <!-- 相机 -->
+  <uses-permission android:name="android.permission.CAMERA"/>
+  <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
+  <!-- 存储（读写照片）-->
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+
+  <!-- 通知 -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <uses-permission android:name="android.permission.VIBRATE"/>
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+  <!-- 传感器（海拔/步数）-->
+  <uses-permission android:name="android.permission.BODY_SENSORS"/>
+  <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+
+  <!-- 保持唤醒（路线追踪）-->
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+
+</manifest-permissions>

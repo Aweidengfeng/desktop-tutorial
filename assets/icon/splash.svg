@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+  </defs>
+  <rect width="2732" height="2732" fill="url(#bg)"/>
+  <!-- 山峰 -->
+  <polygon points="600,2000 1366,800 2132,2000" fill="#0f3460" opacity="0.5"/>
+  <polygon points="300,2100 1100,900 1900,2100" fill="#0f3460"/>
+  <polygon points="1100,900 1000,1200 1200,1200" fill="white" opacity="0.9"/>
+  <!-- App名 -->
+  <text x="1366" y="2350" font-family="Arial, sans-serif" font-size="220" font-weight="bold" fill="white" text-anchor="middle">SummitLink</text>
+  <text x="1366" y="2550" font-family="Arial, sans-serif" font-size="100" fill="#e94560" text-anchor="middle">Connect. Climb. Conquer.</text>
+</svg>

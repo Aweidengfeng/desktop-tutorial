@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- 深色渐变背景 -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mountain" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0f3460;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#533483;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="peak" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- 圆角背景 -->
+  <rect width="1024" height="1024" rx="180" ry="180" fill="url(#bg)"/>
+  <!-- 后山 -->
+  <polygon points="200,780 512,280 824,780" fill="url(#mountain)" opacity="0.6"/>
+  <!-- 前山（主峰）-->
+  <polygon points="100,820 420,340 740,820" fill="url(#mountain)"/>
+  <!-- 雪顶 -->
+  <polygon points="420,340 370,480 470,480" fill="url(#peak)"/>
+  <!-- 连接线（象征link）-->
+  <circle cx="420" cy="340" r="18" fill="#e94560"/>
+  <circle cx="680" cy="500" r="14" fill="#e94560" opacity="0.8"/>
+  <line x1="420" y1="340" x2="680" y2="500" stroke="#e94560" stroke-width="8" stroke-dasharray="20,10" opacity="0.7"/>
+  <!-- 文字 SL -->
+  <text x="512" y="920" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white" text-anchor="middle" opacity="0.9">SL</text>
+</svg>

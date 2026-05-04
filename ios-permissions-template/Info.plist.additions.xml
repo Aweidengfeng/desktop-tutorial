@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  iOS Info.plist 权限描述模板
+  使用方法：将以下 <key>/<string> 对添加到 ios/App/App/Info.plist 的 <dict> 内。
+  运行 `npx cap add ios` 后，iOS 项目会自动生成；然后将此文件内容合并进去。
+-->
+<entries>
+
+  <!-- 位置权限（登山路线必须）-->
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>SummitLink needs your location to display climbing routes, nearby mountains, and connect you with local climbers.</string>
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>SummitLink uses your location in the background to track your climbing route and provide safety alerts.</string>
+  <key>NSLocationAlwaysUsageDescription</key>
+  <string>SummitLink tracks your route in the background to ensure your safety during climbs.</string>
+
+  <!-- 相机 -->
+  <key>NSCameraUsageDescription</key>
+  <string>SummitLink needs camera access to capture and share photos from your climbing adventures.</string>
+
+  <!-- 照片库 -->
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>SummitLink needs access to your photo library to upload climbing photos and your profile picture.</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>SummitLink saves your climbing photos to your photo library.</string>
+
+  <!-- 通知 -->
+  <key>NSUserNotificationsUsageDescription</key>
+  <string>SummitLink sends notifications for new expedition invitations, messages from fellow climbers, and safety alerts.</string>
+
+  <!-- 运动传感器（海拔/步数）-->
+  <key>NSMotionUsageDescription</key>
+  <string>SummitLink uses motion data to track elevation gain and steps during your climbs.</string>
+
+  <!-- 麦克风 -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>SummitLink needs microphone access to send voice messages to your climbing team.</string>
+
+  <!-- 本地网络（离线地图分享）-->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>SummitLink connects to local devices for offline map sharing with nearby climbers.</string>
+
+  <!-- 跟踪透明度（ATT）-->
+  <key>NSUserTrackingUsageDescription</key>
+  <string>We do not track you. This permission is required by iOS but SummitLink does not share your data with advertisers.</string>
+
+</entries>
