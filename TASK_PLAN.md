@@ -122,7 +122,6 @@
 | 2026-05-04 | PR-13合并：价格多货币显示（USD/EUR/CNY/GBP等），/api/currency/rates+convert，www/js/currency.js前端格式化工具 |
 | 2026-05-04 | PR-06/07/08合并：GDPR横幅、IP地图切换、i18n英文fallback |
 | 2026-05-04 | PR-11/12合并：AES-256-GCM PII加密、index.html拆包瘦身 |
-| 2026-05-04 | PR-119合并：法律页面（隐私政策/用户条款）+ App Store文案，C-03✅ |
 | 2026-05-04 | A-03完成：Stripe账号已注册（测试模式运行中，待绑银行卡激活live） |
 | 2026-05-04 | PR-14/15/16完成：App图标SVG源文件、iOS权限描述(Info.plist)、Android权限声明(AndroidManifest) |
 
