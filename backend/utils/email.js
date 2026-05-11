@@ -35,7 +35,9 @@ class EmailProvider {
  */
 class MockEmailProvider extends EmailProvider {
   async send(email, code) {
-    console.log(`📧 [Mock Email] ${email} → ${code}`);
+    // 脱敏：遮掩用户名中间部分（仅显示首尾字符）
+    const masked = String(email).replace(/^(.).+(@.+)$/, (_, a, b) => a + '****' + b);
+    console.log(`📧 [Mock Email] ${masked} → [验证码已生成]`);
     return { ok: true };
   }
 }
@@ -80,7 +82,7 @@ class SmtpEmailProvider extends EmailProvider {
       `,
       text: `您的 SummitLink 邮箱验证码为：${safeCode}，5 分钟内有效，请勿泄露给他人。`,
     });
-    console.log(`📧 [SMTP Email] ${email} → 验证码已发送`);
+    console.log(`📧 [SMTP Email] ${String(email).replace(/^(.).+(@.+)$/, (_, a, b) => a + '****' + b)} → 验证码已发送`);
     return { ok: true };
   }
 }

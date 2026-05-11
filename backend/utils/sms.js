@@ -33,7 +33,9 @@ class SmsProvider {
  */
 class MockSmsProvider extends SmsProvider {
   async send(phone, code) {
-    console.log(`📱 [Mock SMS] ${phone} → ${code}`);
+    // 脱敏：仅显示前3位和后2位，中间用 **** 替代
+    const masked = String(phone).replace(/^(\d{3})\d+(\d{2})$/, '$1****$2');
+    console.log(`📱 [Mock SMS] ${masked} → [验证码已生成]`);
     return { ok: true };
   }
 }
@@ -75,7 +77,7 @@ class AliyunSmsProvider extends SmsProvider {
     if (body.code !== 'OK') {
       throw new Error(`阿里云短信发送失败: ${body.code} - ${body.message}`);
     }
-    console.log(`📱 [Aliyun SMS] ${phone} → 验证码已发送 (RequestId: ${body.requestId})`);
+    console.log(`📱 [Aliyun SMS] ${String(phone).replace(/^(\d{3})\d+(\d{2})$/, '$1****$2')} → 验证码已发送 (RequestId: ${body.requestId})`);
     return { ok: true };
   }
 }

@@ -6,15 +6,51 @@ const configLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error
 
 /**
  * GET /api/config/map
- * 返回地图引擎配置（provider + token）。
+ * 根据用户 IP 所在地区自动返回合适的地图引擎配置。
  * 公开接口，无需鉴权。
- * 当 MAPBOX_TOKEN 环境变量存在时返回 mapbox，否则返回 amap。
+ *
+ * IP 检测优先级：
+ *   1. CF-IPCountry（Cloudflare 自动注入，最准确）
+ *   2. X-Country（自定义代理头）
+ *   3. 无法判断 → 默认高德（保守策略）
+ *
+ * 规则：
+ *   - 中国大陆 (CN) 或无法判断 → 高德地图 (AMap)
+ *   - 其他地区 且 MAPBOX_TOKEN 已配置 → Mapbox GL JS
+ *
+ * Response:
+ *   {
+ *     provider: 'mapbox' | 'amap',
+ *     token: string | null,        // mapbox 时返回 MAPBOX_TOKEN（前向兼容字段）
+ *     mapboxToken: string | null,  // 同 token，新字段名
+ *     amapKey: string | null,      // amap 时返回（可供 Capacitor 端直接使用）
+ *     country: string              // 检测到的国家代码，unknown 表示未检测到
+ *   }
  */
 router.get('/map', configLimiter, (req, res) => {
-  if (process.env.MAPBOX_TOKEN) {
-    return res.json({ provider: 'mapbox', token: process.env.MAPBOX_TOKEN });
-  }
-  return res.json({ provider: 'amap' });
+  // 读取 IP 国家代码（大写 ISO 3166-1 alpha-2）
+  const country = (
+    req.headers['cf-ipcountry'] ||
+    req.headers['x-country'] ||
+    ''
+  ).toUpperCase().trim();
+
+  // 中国大陆或无法判断时使用高德；其他地区且有 Mapbox Token 时切换 Mapbox
+  // XX = Cloudflare 标记的"无法确定"
+  const useMapbox = country && country !== 'CN' && country !== 'XX' && !!process.env.MAPBOX_TOKEN;
+
+  const mapboxToken = useMapbox ? (process.env.MAPBOX_TOKEN || null) : null;
+  const response = {
+    provider: useMapbox ? 'mapbox' : 'amap',
+    token: mapboxToken,         // 前向兼容（旧前端读 data.token）
+    mapboxToken,                // 新字段（新前端读 data.mapboxToken）
+    amapKey: !useMapbox ? (process.env.AMAP_KEY || null) : null,
+    country: country || 'unknown',
+  };
+
+  // 缓存 1 小时（IP 地区不会频繁变化）
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.json(response);
 });
 
 module.exports = router;

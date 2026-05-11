@@ -32,6 +32,15 @@
 | `OPENWEATHER_API_KEY` | 天气功能必需 | — | `abc123def456...` | OpenWeatherMap API Key。获取地址：[openweathermap.org/api](https://openweathermap.org/api)。免费套餐每分钟 60 次调用 |
 | `AMAP_KEY` | 地图功能必需 | — | `your_amap_key` | 高德地图 Web JS API Key。获取地址：[console.amap.com](https://console.amap.com/dev/key/app)。需申请 **Web端（JS API）** 类型 |
 | `AMAP_SECURITY_CODE` | 地图功能必需 | — | `your_security_code` | 高德 Web JS API 2.0 安全密钥（与 Key 配套）。未配置时地图无法初始化 |
+| `MAPBOX_TOKEN` | 否 | — | `pk.eyJ1IjoiZXhhbXBsZSIsImEi...` | Mapbox GL JS 访问令牌（[account.mapbox.com](https://account.mapbox.com/access-tokens/)）。**IP 自动切换**：中国大陆（CN）IP 或无法判断时使用高德；其他地区 IP 且此变量已配置时自动切换至 Mapbox。不填则所有用户均使用高德。 |
+
+### Stripe 支付（国际支付）
+
+| 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
+|--------|----------|--------|--------|------|
+| `STRIPE_SECRET_KEY` | Stripe 支付必需 | — | `sk_live_...` 或 `sk_test_...` | Stripe 后端密钥（[dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys)）。未设置时 `/api/payment/*` 路由返回未启用提示 |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe 支付必需 | — | `pk_live_...` 或 `pk_test_...` | Stripe 可公开密钥，通过 `/api/payment/config` 返回前端使用 |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Webhook 必需 | — | `whsec_...` | Webhook 签名验证密钥（Stripe Dashboard → Webhooks → 端点 → 签名密钥）。用于验证 `POST /api/payment/stripe-webhook` 请求的真实性 |
 
 ### 数据库与存储
 
