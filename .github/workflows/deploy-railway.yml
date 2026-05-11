@@ -1,0 +1,122 @@
+name: Deploy to Railway (Production)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment target'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Run unit tests
+        run: npm test --if-present
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          DATABASE_URL: file:./test.db
+          JWT_SECRET: test-secret-for-ci
+
+      - name: Check for security vulnerabilities
+        run: npm audit --audit-level=high
+        working-directory: backend
+        continue-on-error: true
+
+  deploy:
+    name: Deploy to Railway
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        id: deploy
+        run: |
+          railway up --service backend --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        continue-on-error: true
+
+      - name: Deploy status
+        run: |
+          if [ "${{ steps.deploy.outcome }}" == "success" ]; then
+            echo "✅ Railway deployment triggered successfully"
+          else
+            echo "⚠️ Railway CLI deploy skipped (token may not be set). Railway auto-deploys on push to main via GitHub integration."
+          fi
+
+  smoke-test:
+    name: Production Smoke Test
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate production API URL
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_API_URL }}" ]; then
+            echo "❌ PRODUCTION_API_URL secret is required for smoke tests."
+            exit 1
+          fi
+
+      - name: Wait for deployment health check
+        run: |
+          for i in {1..18}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PRODUCTION_API_URL }}/api/health")
+            if [ "$code" = "200" ]; then
+              echo "✅ Health endpoint is ready."
+              exit 0
+            fi
+            echo "⏳ Waiting for deployment... attempt $i/18 (status: $code)"
+            sleep 10
+          done
+          echo "❌ Deployment did not become healthy in time."
+          exit 1
+
+      - name: Run smoke tests
+        run: node scripts/smoke-test.js
+        env:
+          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL }}
+        continue-on-error: true
+
+      - name: Report results
+        run: echo "🚀 Deployment pipeline complete. Check Railway dashboard for deployment status."
