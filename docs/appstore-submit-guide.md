@@ -52,7 +52,7 @@
 | iPhone 6.5"（可选补充） | 1284×2778 px | 3–10 张 |
 | iPad Pro 12.9" (可选) | 2048×2732 px | 3–10 张 |
 
-> 说明：仓库 `screenshots/template-ios.html` 当前按 1290×2796 输出；最终以 App Store Connect 当次版本页面要求为准。
+> 说明：仓库 `screenshots/template-ios.html` 当前按 1290×2796 输出; 最终以 App Store Connect 当次版本页面要求为准。
 
 ### 截图内容建议（5张）
 1. **首页** — 地图 + 附近路线

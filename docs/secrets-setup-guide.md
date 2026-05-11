@@ -12,7 +12,7 @@
 | Secret 名称 | 获取方式 | 必需 |
 |------------|---------|------|
 | `RAILWAY_TOKEN` | Railway Dashboard → Account Settings → Tokens → New Token | 建议 |
-| `PRODUCTION_API_URL` | Railway 项目 → 你的服务 URL（如 `https://xxx.railway.app`）| ✅（冒烟测试必需） |
+| `PRODUCTION_API_URL` | Railway 项目 → 你的服务 URL（如 `https://xxx.railway.app`） | ✅（冒烟测试必需） |
 
 ## 健康检查（Health Check Workflow）
 
