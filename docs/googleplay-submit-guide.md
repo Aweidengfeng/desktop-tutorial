@@ -73,17 +73,17 @@
 
 ### 构建 Release AAB
 ```bash
-# 方法1：在 GitHub Actions 中手动触发 Android workflow（推荐）
-# 打开 Actions → 选择 Android / PR-17 相关 workflow
-# 使用 workflow_dispatch 手动运行，并选择需要构建的分支/版本
-# 构建完成后，从 Artifacts 下载 AAB
+# 方法1：使用 workflow_dispatch 手动触发（推荐）
+# GitHub → Actions → Build Android AAB → Run workflow
+# 可避免 tag 触发 iOS + Android 两个构建
 
-# 注意：如果 iOS/Android 两个 workflow 都使用 on.push.tags: 'v*'
-# 不要使用 git tag v1.0.0-android 这类方式仅构建 Android，
-# 否则会同时触发 iOS 和 Android workflow，造成额外 macOS 构建消耗
-# 只有在 tag pattern 已拆分为 v*-android / v*-ios 时，才建议使用平台后缀 tag
+# 方法2：tag 触发（会同时触发 iOS 与 Android workflow）
+git tag v1.0.0
+git push origin v1.0.0
 
-# 方法2：本地构建
+# 方法3：本地构建
+# 首次若不存在 android/ 目录：npx cap add android
+npx cap sync android
 cd android
 ./gradlew bundleRelease
 # 输出：android/app/build/outputs/bundle/release/app-release.aab
