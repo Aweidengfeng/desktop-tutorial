@@ -25,8 +25,8 @@ node screenshots/capture.js
 
 | 平台 | 尺寸 | 数量 | 格式 |
 |------|------|------|------|
-| iPhone 6.9" (15 Pro Max) | 1320×2868 | 5张 | PNG/JPG |
-| iPhone 6.7" (Plus) | 1290×2796 | 5张 | PNG/JPG |
+| iPhone 6.9"（新款 Pro Max 规格） | 1320×2868 | 5张 | PNG/JPG |
+| iPhone 6.7"（iPhone 15 Pro Max） | 1290×2796 | 5张 | PNG/JPG |
 | iPad Pro 13" | 2064×2752 | 5张 | PNG/JPG（可选）|
 | Android Phone | 1080×1920 | 5张 | PNG/JPG |
 | Android Tablet | 1200×1600 | 5张 | PNG/JPG（可选）|
