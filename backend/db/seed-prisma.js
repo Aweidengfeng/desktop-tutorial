@@ -15,6 +15,7 @@ if (process.env.SEED_ON_START !== 'true') {
 
 const bcrypt = require('bcrypt');
 const prisma = require('./prisma');
+const { encryptPII } = require('../utils/crypto');
 
 async function main() {
   // ── 检查是否已有数据 ──────────────────────────────────────
@@ -29,12 +30,12 @@ async function main() {
   // ── 管理员账号 ─────────────────────────────────────────────
   const passwordHash = await bcrypt.hash('123456', 10);
   await prisma.user.upsert({
-    where: { phone: '13800138000' },
+    where: { phone: encryptPII('13800138000') },
     update: {},
     create: {
       name: '张伟',
       username: '@zhangwei_climbs',
-      phone: '13800138000',
+      phone: encryptPII('13800138000'),
       password: passwordHash,
       avatar: 'https://i.pravatar.cc/150?u=zhangwei',
       level: '专业攀登者',
@@ -47,12 +48,12 @@ async function main() {
 
   const adminHash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123456', 10);
   await prisma.user.upsert({
-    where: { phone: '18888888888' },
+    where: { phone: encryptPII('18888888888') },
     update: {},
     create: {
       name: '平台管理员',
       username: '@platform_admin',
-      phone: '18888888888',
+      phone: encryptPII('18888888888'),
       password: adminHash,
       avatar: 'https://i.pravatar.cc/150?u=admin',
       level: '系统管理员',

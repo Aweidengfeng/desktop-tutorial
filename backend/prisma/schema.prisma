@@ -635,14 +635,14 @@ model Booking {
 
 model Order {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  userId    Int?     @map("user_id")
   orderNo   String   @unique @map("order_no")
   amount    Float?
   method    String?
   status    String   @default("pending")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("orders")
 }
