@@ -27,15 +27,20 @@ class SmsProvider {
   }
 }
 
+/** 手机号脱敏：保留前3位和后2位，中间用 **** 替代；不足6位则全部遮掩 */
+function maskPhone(phone) {
+  const str = String(phone);
+  if (str.length < 6) return '****';
+  return str.slice(0, 3) + '****' + str.slice(-2);
+}
+
 /**
  * @class MockSmsProvider
  * @description 模拟短信服务商 —— 仅打印到控制台，用于内测/开发阶段。
  */
 class MockSmsProvider extends SmsProvider {
   async send(phone, code) {
-    // 脱敏：仅显示前3位和后2位，中间用 **** 替代
-    const masked = String(phone).replace(/^(\d{3})\d+(\d{2})$/, '$1****$2');
-    console.log(`📱 [Mock SMS] ${masked} → [验证码已生成]`);
+    console.log(`📱 [Mock SMS] ${maskPhone(phone)} → [验证码已生成]`);
     return { ok: true };
   }
 }
@@ -77,7 +82,7 @@ class AliyunSmsProvider extends SmsProvider {
     if (body.code !== 'OK') {
       throw new Error(`阿里云短信发送失败: ${body.code} - ${body.message}`);
     }
-    console.log(`📱 [Aliyun SMS] ${String(phone).replace(/^(\d{3})\d+(\d{2})$/, '$1****$2')} → 验证码已发送 (RequestId: ${body.requestId})`);
+    console.log(`📱 [Aliyun SMS] ${maskPhone(phone)} → 验证码已发送 (RequestId: ${body.requestId})`);
     return { ok: true };
   }
 }

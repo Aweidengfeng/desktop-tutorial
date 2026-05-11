@@ -10074,8 +10074,9 @@ function alpineLink() {
 </div>
 <script>
 (function() {
+  // 仅已明确"接受"时跳过；"拒绝"或未答复时仍检测并显示（允许用户重新选择）
   var consent = localStorage.getItem('sl_gdpr_consent');
-  if (consent) return;
+  if (consent === 'accepted') return;
   var apiBase = window.__API_BASE__ || '';
   fetch(apiBase + '/api/gdpr/check')
     .then(function(r) { return r.json(); })

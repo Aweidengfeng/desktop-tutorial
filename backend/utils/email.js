@@ -29,15 +29,22 @@ class EmailProvider {
   }
 }
 
+/** 邮箱脱敏：仅显示首字符和域名部分，避免 ReDoS */
+function maskEmail(email) {
+  const str = String(email);
+  const atIndex = str.indexOf('@');
+  if (atIndex < 0) return '****';
+  return str[0] + '****' + str.slice(atIndex);
+}
+
 /**
  * @class MockEmailProvider
  * @description 模拟邮件服务商 —— 仅打印到控制台，用于内测/开发阶段。
  */
 class MockEmailProvider extends EmailProvider {
   async send(email, code) {
-    // 脱敏：遮掩用户名中间部分（仅显示首尾字符）
-    const masked = String(email).replace(/^(.).+(@.+)$/, (_, a, b) => a + '****' + b);
-    console.log(`📧 [Mock Email] ${masked} → [验证码已生成]`);
+    // 脱敏：遮掩用户名中间部分（仅显示首字符 + 域名）
+    console.log(`📧 [Mock Email] ${maskEmail(email)} → [验证码已生成]`);
     return { ok: true };
   }
 }
@@ -82,7 +89,7 @@ class SmtpEmailProvider extends EmailProvider {
       `,
       text: `您的 SummitLink 邮箱验证码为：${safeCode}，5 分钟内有效，请勿泄露给他人。`,
     });
-    console.log(`📧 [SMTP Email] ${String(email).replace(/^(.).+(@.+)$/, (_, a, b) => a + '****' + b)} → 验证码已发送`);
+    console.log(`📧 [SMTP Email] ${maskEmail(email)} → 验证码已发送`);
     return { ok: true };
   }
 }

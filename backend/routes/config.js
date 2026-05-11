@@ -36,8 +36,9 @@ router.get('/map', configLimiter, (req, res) => {
   ).toUpperCase().trim();
 
   // 中国大陆或无法判断时使用高德；其他地区且有 Mapbox Token 时切换 Mapbox
-  // XX = Cloudflare 标记的"无法确定"
-  const useMapbox = country && country !== 'CN' && country !== 'XX' && !!process.env.MAPBOX_TOKEN;
+  // country 为空字符串 = 无法检测（默认高德）
+  // country = 'XX' = Cloudflare 标记的"无法确定"（默认高德）
+  const useMapbox = country !== '' && country !== 'CN' && country !== 'XX' && !!process.env.MAPBOX_TOKEN;
 
   const mapboxToken = useMapbox ? (process.env.MAPBOX_TOKEN || null) : null;
   const response = {
