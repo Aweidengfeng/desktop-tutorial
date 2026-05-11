@@ -1184,7 +1184,7 @@ try {
       insertRoute.run('四姑娘山幺妹峰', '四姑娘山', '难', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', '四姑娘山最高峰，技术攀登路线，需要冰雪攀登经验', 6250, 10, '5月-6月, 10月', '四川');
     }
   }
-} catch (e) { /* 容忍：Prisma 创建的不同 schema 时跳过此 legacy seed */ }
+} catch (e) { console.warn('[climbing_routes seed skipped]', e.message); }
 
 // 种子数据：俱乐部-路线报价（依赖已有clubs数据）
 try {
@@ -1200,7 +1200,7 @@ try {
         '["许可证","BC食宿","运输","高山向导","氧气装备","保险"]', 60, 8);
     }
   }
-} catch (e) { /* 容忍：缺列时跳过 */ }
+} catch (e) { console.warn('[club_route_pricing seed skipped]', e.message); }
 
 // ── A2: peaks 表补充分类字段 ───────────────────────────────────
 const existingPeakColsA2 = db.pragma('table_info(peaks)').map(c => c.name);
@@ -2038,7 +2038,15 @@ if (!existingBookingColsPool.includes('pool')) {
   // 兼容 Prisma seed：上方块仅在表为空时执行；当 Prisma 已插入用户后，
   // 还需要单独补齐帖子/队伍 demo 数据，否则相关接口列表为空。
   // 通过 INSERT OR IGNORE + 独立的 count 判断保持幂等。
-  const zhangwei = db.prepare('SELECT id FROM users WHERE name = ? OR username = ? LIMIT 1').get('张伟', '@zhangwei_climbs');
+  // 先按加密手机号查找（Prisma seed 写入加密值），找不到再降级到名称匹配。
+  let zhangwei = null;
+  try {
+    const { encryptPII } = require('../utils/crypto');
+    zhangwei = db.prepare('SELECT id FROM users WHERE phone = ? LIMIT 1').get(encryptPII('13800138000'));
+  } catch (e) { /* utils/crypto 不可用时降级 */ }
+  if (!zhangwei) {
+    zhangwei = db.prepare('SELECT id FROM users WHERE name = ? OR username = ? LIMIT 1').get('张伟', '@zhangwei_climbs');
+  }
   if (zhangwei) {
     const userId = zhangwei.id;
     const postCount = db.prepare('SELECT COUNT(*) as cnt FROM posts').get();
