@@ -1,5 +1,5 @@
 # 📋 SummitLink 任务分工总表
-> **最后更新**：2026-05-11 (PR-21 一键图标生成脚本（iOS/Android/PWA全尺寸）+ 品牌占位SVG)
+> **最后更新**：2026-05-11 (PR-24 App Store 完整 metadata（EN+ZH）+ Fastlane 自动化发布 + Universal Links/App Links 深度链接)
 > **规则**：每次对话/PR完成后自动更新此文件，完成项打 ✅
 > **目标**：SummitLink 全球上架（iOS App Store + Google Play）
 
@@ -36,7 +36,7 @@
 | # | 任务 | 说明 | 状态 |
 |---|------|------|------|
 | C-01 | 准备 App Store 截图（5张）| iPhone 6.5寸，展示核心功能 | ✅ |
-| C-02 | 写 App Store 描述文案（英文+中文）| 简介、功能描述、关键词 | ⬜ |
+| C-02 | 写 App Store 描述文案（英文+中文）| 简介、功能描述、关键词 | ✅（fastlane/metadata/ EN+ZH 全套文案已就绪）|
 | C-03 | 确认隐私政策 URL | 使用 `/legal/privacy` 页面 URL | ✅ |
 | C-04 | App Store Connect 填写信息 | 年龄分级、类别(Sports/Travel)、联系方式 | ✅（文档已就绪，按 docs/appstore-submit-guide.md 操作）|
 | C-05 | 软件著作权申请 | [登记中心](http://www.ccopyright.com.cn)，周期1-3月 | ⬜ |
@@ -101,20 +101,30 @@
 
 ---
 
+### 🟣 第六批 — App 上架最终技术模块
+
+| # | PR 内容 | 涉及任务 | 前置条件 | 状态 |
+|---|---------|---------|---------|------|
+| PR-22 | Universal Links(iOS) + App Links(Android) + 深度链接后端路由 | App Store 审核必测 | A-01 | ✅ |
+| PR-23 | Fastlane 自动化发布（TestFlight + Google Play Internal） | C-04自动化 | A-01, A-02 | ✅ |
+| PR-24 | App Store 完整 metadata（EN+ZH 描述/关键词/发布说明），C-02 ✅ | C-02 | 无 | ✅ |
+
+---
+
 ## 📊 进度统计
 
 | 类别 | 总数 | 已完成 | 进度 |
 |------|------|--------|------|
 | 你来做 A类（账号）| 5 | 1 | 20% |
 | 你来做 B类（配置）| 5 | 0 | 0% |
-| 你来做 C类（上架）| 5 | 3 | 60% |
+| 你来做 C类（上架）| 5 | 4 | 80% |
 | 我来做 PR第一批 | 3 | 3 | 100% |
 | 我来做 PR第二批 | 5 | 5 | 100% |
 | 我来做 PR第三批 | 5 | 5 | 100% 🎉 |
 | 我来做 PR第四批 | 5 | 5 | 100% 🎉 |
-| 我来做 PR第五批 | 2 | 2 | 100% 🎉 |
-| 我来做 PR第六批 | 1 | 1 | 100% 🎉 |
-| **总计** | **36** | **25** | **69%** |
+| 我来做 PR第五批 | 3 | 3 | 100% 🎉 |
+| 我来做 PR第六批 | 3 | 3 | 100% 🎉 |
+| **总计** | **39** | **29** | **74%** |
 
 ---
 
@@ -143,6 +153,9 @@
 | 2026-05-11 | PR-19合并：Railway自动部署workflow + 冒烟测试脚本 + 发布前自检清单 + env变量检查器 |
 | 2026-05-11 | PR-20合并：App Store Connect提交指南 + Google Play提交指南 + GitHub Secrets配置文档，C-04文档就绪 |
 | 2026-05-11 | PR-21合并：一键生成所有平台图标（iOS 15尺寸 + Android 10尺寸 + PWA 8尺寸），generate-icons.js + 品牌占位SVG |
+| 2026-05-11 | PR-22合并：Universal Links(iOS) + App Links(Android) + deeplinks路由(/verify-email, /reset-password) + universalLinks中间件 + docs/universal-links-setup.md + nginx.conf更新 |
+| 2026-05-11 | PR-23合并：Fastlane自动化发布（fastlane/Appfile, Fastfile, Gemfile, Deliverfile）+ GitHub Actions workflow（fastlane-beta.yml，push tag v* 触发）+ docs/fastlane-setup.md |
+| 2026-05-11 | PR-24合并：App Store完整metadata（EN+ZH）：name/subtitle/description/keywords/promotional_text/release_notes/support_url/marketing_url + zh-Hans全套 + default/privacy_url，C-02✅ |
 
 ---
 

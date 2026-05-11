@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["TEAMID.app.summitlink"],
+        "components": [
+          { "/": "/verify-email*", "comment": "Email verification" },
+          { "/": "/reset-password*", "comment": "Password reset" },
+          { "/": "/expedition/*", "comment": "Expedition detail deep link" },
+          { "/": "/route/*", "comment": "Route detail deep link" },
+          { "/": "/profile/*", "comment": "User profile deep link" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.app.summitlink"]
+  }
+}

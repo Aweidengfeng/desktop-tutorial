@@ -1,0 +1,10 @@
+app_identifier("app.summitlink")
+
+# Replace with your Apple ID email address after registering at developer.apple.com (Task A-01)
+apple_id("PLACEHOLDER_APPLE_ID@email.com")
+
+# Replace with your App Store Connect team ID (found in App Store Connect → Users and Access → Keys)
+itc_team_id("PLACEHOLDER_ITC_TEAM_ID")
+
+# Replace with your Apple Developer Team ID (found at developer.apple.com → Membership → Team ID)
+team_id("PLACEHOLDER_TEAM_ID")

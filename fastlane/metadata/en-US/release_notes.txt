@@ -1,0 +1,8 @@
+v1.0.0 - Initial Release
+• Connect with climbers worldwide
+• Plan and join expeditions
+• Book certified mountain guides
+• GPS route tracking with offline support
+• Secure payments via Stripe
+• GDPR compliant data handling
+• Available in English and Chinese
