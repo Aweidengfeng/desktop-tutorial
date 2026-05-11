@@ -31,6 +31,8 @@ node screenshots/capture.js
 | Android Phone | 1080×1920 | 5张 | PNG/JPG |
 | Android Tablet | 1200×1600 | 5张 | PNG/JPG（可选）|
 
+> 当前仓库已提供的 iPhone 模板文件为 `template-ios.html`（1290×2796，6.7" / iPhone 15 Pro Max 规格）；如需 6.9" 规格，可在此模板基础上调整导出尺寸。
+
 ### 5张截图内容建议
 
 | # | 标题 | 展示功能 |
