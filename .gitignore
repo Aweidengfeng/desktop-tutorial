@@ -7,3 +7,4 @@ nohup.out
 backend/uploads/*
 !backend/uploads/.gitkeep
 dist/
+screenshots/output/
