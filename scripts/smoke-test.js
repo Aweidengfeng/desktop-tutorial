@@ -77,13 +77,13 @@ async function runTests() {
     assert(res.body?.status === 'ok', `Expected status:ok, got ${res.body?.status}`);
   });
 
-  const uniqueEmail = `smoke-test-${Date.now()}@example.com`;
   await test('POST /api/auth/register → not 404', async () => {
     const res = await request('/api/auth/register', {
       method: 'POST',
-      body: { email: uniqueEmail, password: 'TestPass123!', name: 'Smoke Test' },
+      body: {},
     });
     assert(res.status !== 404, 'Route not found (404)');
+    assert([400, 422].includes(res.status), `Expected validation error, got ${res.status}`);
   });
 
   await test('POST /api/auth/login → not 404', async () => {
