@@ -5,7 +5,7 @@
       "namespace": "android_app",
       "package_name": "app.summitlink",
       "sha256_cert_fingerprints": [
-        "PLACEHOLDER_REPLACE_WITH_YOUR_SHA256_FINGERPRINT"
+        "${ANDROID_SHA256_FINGERPRINT_LIST}"
       ]
     }
   }
