@@ -18,13 +18,9 @@
 
 | Secret 名称 | 获取方式 |
 |------------|---------|
-| `APPLE_CERTIFICATE_BASE64` | `base64 -i Certificates.p12 \| pbcopy` |
-| `APPLE_CERTIFICATE_PASSWORD` | 导出证书时设置的密码 |
-| `APPLE_PROVISIONING_PROFILE_BASE64` | `base64 -i profile.mobileprovision \| pbcopy` |
-| `APPLE_TEAM_ID` | developer.apple.com → 账号 → 看右上角（10位字母数字）|
-| `APP_STORE_CONNECT_API_KEY_ID` | App Store Connect → 用户与访问 → 密钥 → Key ID |
-| `APP_STORE_CONNECT_API_ISSUER_ID` | 同页面的 Issuer ID |
-| `APP_STORE_CONNECT_API_KEY_BASE64` | `base64 -i AuthKey_XXXXXX.p8 \| pbcopy` |
+| `IOS_CERTIFICATE_P12_BASE64` | `base64 -i Certificates.p12 \| pbcopy` |
+| `IOS_CERTIFICATE_PASSWORD` | 导出证书时设置的密码 |
+| `IOS_PROVISIONING_PROFILE_BASE64` | `base64 -i profile.mobileprovision \| pbcopy` |
 
 ---
 
