@@ -1,5 +1,5 @@
 # 📋 SummitLink 任务分工总表
-> **最后更新**：2026-05-11 (PR-18 App Store/Google Play 截图模板 + 自动截图脚本)
+> **最后更新**：2026-05-11 (PR-20 App Store Connect/Google Play 提交指南 + Secrets 配置文档)
 > **规则**：每次对话/PR完成后自动更新此文件，完成项打 ✅
 > **目标**：SummitLink 全球上架（iOS App Store + Google Play）
 
@@ -38,7 +38,7 @@
 | C-01 | 准备 App Store 截图（5张）| iPhone 6.5寸，展示核心功能 | ✅ |
 | C-02 | 写 App Store 描述文案（英文+中文）| 简介、功能描述、关键词 | ⬜ |
 | C-03 | 确认隐私政策 URL | 使用 `/legal/privacy` 页面 URL | ✅ |
-| C-04 | App Store Connect 填写信息 | 年龄分级、类别(Sports/Travel)、联系方式 | ⬜ |
+| C-04 | App Store Connect 填写信息 | 年龄分级、类别(Sports/Travel)、联系方式 | ✅（文档已就绪，按 docs/appstore-submit-guide.md 操作）|
 | C-05 | 软件著作权申请 | [登记中心](http://www.ccopyright.com.cn)，周期1-3月 | ⬜ |
 
 ---
@@ -91,18 +91,28 @@
 
 ---
 
+### ⚫ 第五批 — 生产就绪（文档与运维）
+
+| # | PR 内容 | 涉及任务 | 前置条件 | 状态 |
+|---|---------|---------|---------|------|
+| PR-19 | Railway自动部署CI + 冒烟测试 + 发布前自检 + env检查 | 运维 | 无 | ✅ |
+| PR-20 | App Store Connect 提交指南 + Google Play 提交指南 + Secrets 配置文档 | C-04 | A-01, A-02 | ✅ |
+
+---
+
 ## 📊 进度统计
 
 | 类别 | 总数 | 已完成 | 进度 |
 |------|------|--------|------|
 | 你来做 A类（账号）| 5 | 1 | 20% |
 | 你来做 B类（配置）| 5 | 0 | 0% |
-| 你来做 C类（上架）| 5 | 2 | 40% |
+| 你来做 C类（上架）| 5 | 3 | 60% |
 | 我来做 PR第一批 | 3 | 3 | 100% |
 | 我来做 PR第二批 | 5 | 5 | 100% |
 | 我来做 PR第三批 | 5 | 5 | 100% 🎉 |
 | 我来做 PR第四批 | 5 | 5 | 100% 🎉 |
-| **总计** | **33** | **21** | **64%** |
+| 我来做 PR第五批 | 2 | 2 | 100% 🎉 |
+| **总计** | **35** | **24** | **69%** |
 
 ---
 
@@ -128,6 +138,8 @@
 | 2026-05-04 | PR-14/15/16完成：App图标SVG源文件、iOS权限描述(Info.plist)、Android权限声明(AndroidManifest) |
 | 2026-05-11 | PR-17合并：Capacitor iOS/Android 打包 CI workflow + 移动端打包指南 |
 | 2026-05-11 | PR-18合并：App Store/Google Play截图模板(5张HTML模板+自动截图脚本)，C-01✅ |
+| 2026-05-11 | PR-19合并：Railway自动部署workflow + 冒烟测试脚本 + 发布前自检清单 + env变量检查器 |
+| 2026-05-11 | PR-20合并：App Store Connect提交指南 + Google Play提交指南 + GitHub Secrets配置文档，C-04文档就绪 |
 
 ---
 
