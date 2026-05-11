@@ -82,7 +82,7 @@ git tag v1.0.0
 git push origin v1.0.0
 
 # 方法3：本地构建
-# 首次若不存在 android/ 目录：npx cap add android
+# 首次若不存在 android/ 目录：npx @capacitor/cli add android
 npx cap sync android
 cd android
 ./gradlew bundleRelease
