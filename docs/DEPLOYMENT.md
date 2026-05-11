@@ -621,7 +621,7 @@ OSS_CDN_HOST=https://cdn.summitlink.app   # 可选，CDN 加速域名
 
 | # | 模块 | 测试步骤 | 预期结果 |
 |---|------|----------|----------|
-| 1 | **健康检查** | `curl https://your-app/api/health` | `{"status":"ok"}` |
+| 1 | **健康检查** | `curl https://your-app.railway.app/api/health` | `{"status":"ok"}` |
 | 2 | **用户注册** | 使用新手机号 / 邮箱完成注册流程 | 注册成功，返回 JWT |
 | 3 | **用户登录** | 使用已注册账号登录 | 登录成功，获取 Token |
 | 4 | **地图加载** | 打开首页，等待地图渲染 | 地图瓦片正常显示（高德或 Mapbox） |
