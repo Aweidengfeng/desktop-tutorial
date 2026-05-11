@@ -13,7 +13,7 @@
    - **平台**：iOS
    - **名称**：SummitLink
    - **主要语言**：简体中文（或 English）
-   - **Bundle ID**：`app.summitlink`（需在 Apple Developer 后台先注册）
+   - **Bundle ID**：`app.summitlink.app`（需在 Apple Developer 后台先注册）
    - **SKU**：`summitlink-v1`（唯一标识，不公开）
 4. 点击**创建**
 
@@ -48,11 +48,9 @@
 ### 必需尺寸
 | 设备 | 尺寸 | 数量 |
 |------|------|------|
-| iPhone 6.7"（仓库模板已提供） | 1290×2796 px | 3–10 张 |
-| iPhone 6.5"（可选补充） | 1284×2778 px | 3–10 张 |
+| iPhone 6.5"（必需） | 1284×2778 px | 3–10 张 |
+| iPhone 5.5"（必需） | 1242×2208 px | 3–10 张 |
 | iPad Pro 12.9" (可选) | 2048×2732 px | 3–10 张 |
-
-> 说明：仓库 `screenshots/template-ios.html` 当前按 1290×2796 输出; 最终以 App Store Connect 当次版本页面要求为准。
 
 ### 截图内容建议（5张）
 1. **首页** — 地图 + 附近路线
@@ -64,8 +62,8 @@
 ### 使用模板生成截图
 ```bash
 # 使用 PR-18 提供的截图工具
-node screenshots/capture.js
-# 或手动打开 screenshots/template-ios.html 逐张截图
+npm run screenshots  # 在 backend/ 目录下
+# 或手动打开 screenshots/template-ios.html
 ```
 
 ---
@@ -92,7 +90,7 @@ node screenshots/capture.js
 
 ---
 
-## 第五步：年龄分级
+## 第五步��年龄分级
 
 点击**年龄分级** → **编辑** → 问卷全部选**否** → 提交 → 结果：**4+**
 
@@ -119,21 +117,23 @@ open ios/App/App.xcworkspace
 # 4. Distribute App → App Store Connect → Upload
 ```
 
-### 使用 CI 自动构建 IPA 产物（可选加速）
-PR-17 已配置 `.github/workflows/build-ios.yml`，push tag 时自动构建 IPA artifact：
+### 使用 CI 自动上传（推荐）
+PR-17 已配置 `.github/workflows/build-ios.yml`，push tag 时自动构建并上传到 App Store Connect：
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-> 注意：该 workflow 目前是 **构建并上传 artifact**，不直接上传到 App Store Connect；最终仍需使用 Xcode/Transporter 手动提交。
-
 ### 配置所需 Secrets（GitHub → Settings → Secrets）
 | Secret | 获取方式 |
 |--------|---------|
-| `IOS_CERTIFICATE_P12_BASE64` | Xcode → Keychain → 导出 `.p12` → base64 |
-| `IOS_CERTIFICATE_PASSWORD` | 导出 `.p12` 时设置的密码 |
-| `IOS_PROVISIONING_PROFILE_BASE64` | Apple Developer → Profiles → 下载 `.mobileprovision` → base64 |
+| `APPLE_CERTIFICATE_BASE64` | Xcode → Keychain → 导出证书 → base64 |
+| `APPLE_CERTIFICATE_PASSWORD` | 导出时设置的密码 |
+| `APPLE_PROVISIONING_PROFILE_BASE64` | Apple Developer → Profiles → 下载 → base64 |
+| `APPLE_TEAM_ID` | Apple Developer 账号页面 |
+| `APP_STORE_CONNECT_API_KEY_ID` | App Store Connect → 用户与访问 → 密钥 |
+| `APP_STORE_CONNECT_API_ISSUER_ID` | 同上 |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | 下载 .p8 文件 → base64 |
 
 ---
 
@@ -169,7 +169,7 @@ git push origin v1.0.0
 
 - [ ] App 记录已创建
 - [ ] 所有文案已填写
-- [ ] 截图已上传（至少 iPhone 6.7"）
+- [ ] 截图已上传（至少 iPhone 6.5" 和 5.5"）
 - [ ] 隐私政策 URL 已填写并可访问
 - [ ] 数据收集声明已完成
 - [ ] 年龄分级已完成
