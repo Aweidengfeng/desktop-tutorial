@@ -119,7 +119,7 @@ open ios/App/App.xcworkspace
 # 4. Distribute App → App Store Connect → Upload
 ```
 
-### 使用 CI 自动构建产物（推荐）
+### 使用 CI 自动构建 IPA 产物（可选加速）
 PR-17 已配置 `.github/workflows/build-ios.yml`，push tag 时自动构建 IPA artifact：
 ```bash
 git tag v1.0.0
