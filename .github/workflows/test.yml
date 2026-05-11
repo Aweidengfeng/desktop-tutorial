@@ -37,8 +37,12 @@ jobs:
 
       # ── 生成 Prisma Client 并推送 schema（建表）────────────────────────────
       # 必须加 --push，否则 /tmp/ci.db 里没有表结构，所有接口返回 500
+      # CHECKPOINT_DISABLE=1 禁用 Prisma 遥测，避免 CI 防火墙拦截 checkpoint.prisma.io
       - name: Generate Prisma Client and push schema
         run: cd backend && DATABASE_PROVIDER=sqlite DATABASE_URL="file:/tmp/ci.db" node scripts/generate-prisma-client.js --push
+        env:
+          CHECKPOINT_DISABLE: "1"
+          PRISMA_TELEMETRY_INFORMATION: ""
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
@@ -61,6 +65,8 @@ jobs:
           DATABASE_URL: "file:/tmp/ci.db"
           DATABASE_PATH: "/tmp/ci.db"
           SEED_ON_START: "true"
+          CHECKPOINT_DISABLE: "1"
+          PRISMA_TELEMETRY_INFORMATION: ""
 
       # ── 等待服务器就绪 ────────────────────────────────────────────────────
       - name: Wait for backend to be ready
