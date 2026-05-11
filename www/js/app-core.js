@@ -183,9 +183,11 @@ async function detectMapProvider() {
     const res = await fetch('/api/config/map');
     if (res.ok) {
       const data = await res.json();
-      if (data.provider === 'mapbox' || !navigator.language.startsWith('zh')) {
+      // 后端返回 provider 字段；mapboxToken（新）或 token（旧）均支持
+      const mbToken = data.mapboxToken || data.token || '';
+      if (data.provider === 'mapbox') {
         window.__activeMapProvider = 'mapbox';
-        return { provider: 'mapbox', token: data.token || '' };
+        return { provider: 'mapbox', token: mbToken };
       }
     }
   } catch (e) {}

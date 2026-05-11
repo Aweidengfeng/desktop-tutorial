@@ -10061,4 +10061,46 @@ function alpineLink() {
 </div>
 
 </body>
+<!-- GDPR Cookie 同意横幅（欧盟/EEA 地区自动显示） -->
+<div id="gdpr-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e293b;color:#f1f5f9;padding:16px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,0.3);">
+  <div style="flex:1;min-width:200px;font-size:13px;line-height:1.6;">
+    🍪 We use cookies to improve your experience. By continuing, you agree to our
+    <a href="/legal/privacy" style="color:#60a5fa;text-decoration:underline;">Privacy Policy</a>.
+  </div>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="gdprAccept()" style="background:#3b82f6;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Accept</button>
+    <button onclick="gdprDecline()" style="background:transparent;color:#94a3b8;border:1px solid #475569;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;">Decline</button>
+  </div>
+</div>
+<script>
+(function() {
+  // 仅已明确"接受"时跳过；"拒绝"或未答复时仍检测并显示（允许用户重新选择）
+  var consent = localStorage.getItem('sl_gdpr_consent');
+  if (consent === 'accepted') return;
+  var apiBase = window.__API_BASE__ || '';
+  fetch(apiBase + '/api/gdpr/check')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.requiresGdpr) {
+        var banner = document.getElementById('gdpr-banner');
+        if (banner) banner.style.display = 'flex';
+      }
+    })
+    .catch(function() {});
+})();
+
+function gdprAccept() {
+  localStorage.setItem('sl_gdpr_consent', 'accepted');
+  localStorage.setItem('sl_gdpr_date', new Date().toISOString());
+  var banner = document.getElementById('gdpr-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function gdprDecline() {
+  localStorage.setItem('sl_gdpr_consent', 'declined');
+  localStorage.setItem('sl_gdpr_date', new Date().toISOString());
+  var banner = document.getElementById('gdpr-banner');
+  if (banner) banner.style.display = 'none';
+}
+</script>
 </html>

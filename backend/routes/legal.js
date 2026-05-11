@@ -152,8 +152,8 @@ ${PAGE_STYLE}
 </ul>
 <div class="callout">
   <strong>Exercise your rights via our in-app API:</strong><br>
-  Export: <code>GET /api/gdpr/export</code><br>
-  Delete account: <code>DELETE /api/gdpr/delete</code>
+  Export: <code>GET /api/users/me/data-export</code><br>
+  Delete account: <code>DELETE /api/users/me</code>
 </div>
 
 <h2>7. 儿童隐私 | Children's Privacy</h2>
@@ -255,7 +255,7 @@ ${PAGE_STYLE}
 <p>You retain ownership of content you upload. By posting content, you grant SummitLink a non-exclusive, worldwide, royalty-free licence to display and distribute that content solely within the platform. SummitLink's trademarks, logo, and proprietary software remain our exclusive property.</p>
 
 <h2>8. 终止 | Termination</h2>
-<p>You may delete your account at any time via Settings → Account → Delete Account (or via <code>DELETE /api/gdpr/delete</code>). We may suspend or terminate accounts that violate these Terms. Termination does not affect accrued rights or obligations.</p>
+<p>You may delete your account at any time via Settings → Account → Delete Account (or via <code>DELETE /api/users/me</code>). We may suspend or terminate accounts that violate these Terms. Termination does not affect accrued rights or obligations.</p>
 
 <h2>9. 争议解决 | Governing Law &amp; Dispute Resolution</h2>
 <p>These Terms are governed by the <strong>laws of the People's Republic of China</strong>. Any disputes shall first be resolved through good-faith negotiation. If unresolved within 30 days, disputes shall be submitted to the competent people's court at SummitLink's registered address.</p>
