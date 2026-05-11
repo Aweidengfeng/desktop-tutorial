@@ -6,6 +6,18 @@ const { createPayment, verifyCallback, PROVIDER } = require('../middleware/payme
 
 // ─── Stripe 支付（如已配置 STRIPE_SECRET_KEY）─────────────────────────────────
 if (process.env.STRIPE_SECRET_KEY) {
+  // Guard: refuse to start in production with a test-mode key
+  if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')
+  ) {
+    throw new Error(
+      '[Stripe] 生产环境禁止使用测试密钥（sk_test_...）。\n' +
+      '  请在 Railway → Variables 中将 STRIPE_SECRET_KEY 替换为正式密钥（sk_live_...）。\n' +
+      '  正式密钥可在 https://dashboard.stripe.com/apikeys 获取。'
+    );
+  }
+
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
   // GET /api/payment/config — 返回前端公钥
