@@ -13,7 +13,7 @@
    - **平台**：iOS
    - **名称**：SummitLink
    - **主要语言**：简体中文（或 English）
-   - **Bundle ID**：`app.summitlink.app`（需在 Apple Developer 后台先注册）
+   - **Bundle ID**：`app.summitlink`（需在 Apple Developer 后台先注册）
    - **SKU**：`summitlink-v1`（唯一标识，不公开）
 4. 点击**创建**
 
