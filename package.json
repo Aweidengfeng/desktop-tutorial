@@ -17,7 +17,12 @@
     "test:load": "node backend/scripts/load-test.js",
     "generate:icons": "npx @capacitor/assets generate --ios --android",
     "generate:icons:ios": "npx @capacitor/assets generate --ios",
-    "generate:icons:android": "npx @capacitor/assets generate --android"
+    "generate:icons:android": "npx @capacitor/assets generate --android",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android",
+    "build:android": "npx cap sync android && cd android && ./gradlew bundleRelease",
+    "build:ios": "npx cap sync ios && xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -archivePath ios/App/App.xcarchive archive"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",

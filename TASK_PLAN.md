@@ -1,5 +1,5 @@
 # 📋 SummitLink 任务分工总表
-> **最后更新**：2026-05-04 (PR-14 App图标SVG + PR-15 iOS权限描述 + PR-16 Android权限声明)
+> **最后更新**：2026-05-11 (PR-17 Capacitor iOS/Android 打包 CI workflow + 移动端打包指南)
 > **规则**：每次对话/PR完成后自动更新此文件，完成项打 ✅
 > **目标**：SummitLink 全球上架（iOS App Store + Google Play）
 
@@ -86,6 +86,7 @@
 | PR-14 | App 图标集（SVG源文件）+ 启动屏 + Capacitor配置 | C-01 | 无 | ✅ |
 | PR-15 | iOS Info.plist 权限描述（相机/位置/通知等） | C-04 | 无 | ✅ |
 | PR-16 | Android AndroidManifest 权限声明 | C-04 | 无 | ✅ |
+| PR-17 | Capacitor iOS/Android 打包 CI workflow + 移动端打包指南 | C-04 | 无 | ✅ |
 
 ---
 
@@ -99,8 +100,8 @@
 | 我来做 PR第一批 | 3 | 3 | 100% |
 | 我来做 PR第二批 | 5 | 5 | 100% |
 | 我来做 PR第三批 | 5 | 5 | 100% 🎉 |
-| 我来做 PR第四批 | 3 | 3 | 100% 🎉 |
-| **总计** | **31** | **18** | **58%** |
+| 我来做 PR第四批 | 4 | 4 | 100% 🎉 |
+| **总计** | **32** | **19** | **59%** |
 
 ---
 
@@ -124,6 +125,7 @@
 | 2026-05-04 | PR-11/12合并：AES-256-GCM PII加密、index.html拆包瘦身 |
 | 2026-05-04 | A-03完成：Stripe账号已注册（测试模式运行中，待绑银行卡激活live） |
 | 2026-05-04 | PR-14/15/16完成：App图标SVG源文件、iOS权限描述(Info.plist)、Android权限声明(AndroidManifest) |
+| 2026-05-11 | PR-17合并：Capacitor iOS/Android 打包 CI workflow + 移动端打包指南 |
 
 ---
 
