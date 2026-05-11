@@ -7,7 +7,7 @@
 1. 用 Chrome 打开 `template-ios.html`
 2. 按 F12 打开开发者工具
 3. 点击设备模拟图标（手机图标）
-4. 设置尺寸为 `1290 x 2796`（iPhone 15 Pro Max）
+4. 设置尺寸为 `1290 x 2796`（iPhone 6.7" 显示规格）
 5. 对每个 `#screen1` 到 `#screen5` 滚动到位置后截图
 6. 保存为 PNG
 
@@ -25,13 +25,12 @@ node screenshots/capture.js
 
 | 平台 | 尺寸 | 数量 | 格式 |
 |------|------|------|------|
-| iPhone 6.9"（新款 Pro Max 规格） | 1320×2868 | 5张 | PNG/JPG |
 | iPhone 6.7"（iPhone 15 Pro Max） | 1290×2796 | 5张 | PNG/JPG |
 | iPad Pro 13" | 2064×2752 | 5张 | PNG/JPG（可选）|
 | Android Phone | 1080×1920 | 5张 | PNG/JPG |
 | Android Tablet | 1200×1600 | 5张 | PNG/JPG（可选）|
 
-> 当前仓库已提供的 iPhone 模板文件为 `template-ios.html`（1290×2796，6.7" / iPhone 15 Pro Max 规格）；如需 6.9" 规格，可在此模板基础上调整导出尺寸。
+> 当前仓库已提供的 iPhone 模板文件为 `template-ios.html`（1290×2796，6.7" 显示规格 / iPhone 15 Pro Max 可用）；如后续需要其他 iPhone 显示规格，可在此模板基础上调整导出尺寸。
 
 ### 5张截图内容建议
 
