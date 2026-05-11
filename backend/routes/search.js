@@ -21,7 +21,7 @@ const IS_PG = (process.env.DATABASE_PROVIDER || 'sqlite') === 'postgresql';
 router.get('/', searchLimiter, async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
-    if (!q || q.length < 1) return res.json({ peaks: [], guides: [], clubs: [], posts: [], total: 0 });
+    if (!q || q.length < 1) return res.json([]);
 
     const type = req.query.type || 'all';
     const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
@@ -114,8 +114,14 @@ router.get('/', searchLimiter, async (req, res) => {
       }
     }
 
-    const total = Object.values(results).reduce((s, arr) => s + (arr?.length || 0), 0);
-    res.json({ ...results, query: q, total });
+    // 扁平化为带 type 字段的数组，匹配前端（www/js/app-core.js）与测试预期
+    const flat = [];
+    for (const p of (results.peaks  || [])) flat.push({ ...p, type: 'peak'  });
+    for (const g of (results.guides || [])) flat.push({ ...g, type: 'guide' });
+    for (const c of (results.clubs  || [])) flat.push({ ...c, type: 'club'  });
+    for (const po of (results.posts || [])) flat.push({ ...po, type: 'post' });
+    // 总返回数量不超过 limit
+    res.json(flat.slice(0, limit));
   } catch (e) {
     console.error('[search]', e.message);
     res.status(500).json({ error: '搜索失败' });
