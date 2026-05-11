@@ -54,6 +54,7 @@ for (const raw of lines) {
   const eqIdx = line.indexOf('=');
   if (eqIdx > 0) {
     const key = line.slice(0, eqIdx).trim();
+    // Only match conventional ALL_CAPS env var names (as used in .env.example)
     if (/^[A-Z][A-Z0-9_]*$/.test(key)) {
       entries.push({ key, comment: lastComment });
     }
@@ -79,8 +80,7 @@ for (const { key, comment } of entries) {
     missing.push({ key, comment });
     console.warn(`⚠️  MISSING  ${key}${comment ? `  — ${comment}` : ''}`);
   } else {
-    const preview = val.length > 24 ? `${val.slice(0, 8)}...` : '***';
-    console.log(`✅  OK       ${key} = ${preview}`);
+    console.log(`✅  OK       ${key} = ***`);
   }
 }
 
