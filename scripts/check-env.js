@@ -5,7 +5,7 @@
  */
 
 const REQUIRED = [
-  { key: 'DATABASE_URL', desc: 'PostgreSQL连接字符串' },
+  { key: 'DATABASE_URL', desc: 'PostgreSQL 连接字符串' },
   { key: 'JWT_SECRET', desc: 'JWT签名密钥（最少32字符）' },
 ];
 

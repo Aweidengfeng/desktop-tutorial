@@ -35,9 +35,9 @@ function request(path, options = {}) {
       });
       res.on('end', () => {
         try {
-          resolve({ status: res.statusCode, body: JSON.parse(data), raw: data });
+          resolve({ status: res.statusCode, body: JSON.parse(data), raw: data, headers: res.headers });
         } catch {
-          resolve({ status: res.statusCode, body: null, raw: data });
+          resolve({ status: res.statusCode, body: null, raw: data, headers: res.headers });
         }
       });
     });
@@ -77,10 +77,11 @@ async function runTests() {
     assert(res.body?.status === 'ok', `Expected status:ok, got ${res.body?.status}`);
   });
 
+  const uniqueEmail = `smoke-test-${Date.now()}@example.com`;
   await test('POST /api/auth/register → not 404', async () => {
     const res = await request('/api/auth/register', {
       method: 'POST',
-      body: { email: 'smoke-test@example.com', password: 'TestPass123!', name: 'Smoke Test' },
+      body: { email: uniqueEmail, password: 'TestPass123!', name: 'Smoke Test' },
     });
     assert(res.status !== 404, 'Route not found (404)');
   });
@@ -133,6 +134,8 @@ async function runTests() {
   await test('Security: /api/health has security headers', async () => {
     const res = await request('/api/health');
     assert(res.status === 200, 'Health check failed');
+    assert(!!res.headers?.['x-content-type-options'], 'Missing X-Content-Type-Options');
+    assert(!!res.headers?.['x-frame-options'], 'Missing X-Frame-Options');
   });
 
   await test('GET /api/payment/config → not 404', async () => {

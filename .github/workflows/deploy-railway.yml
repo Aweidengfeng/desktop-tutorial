@@ -15,6 +15,9 @@ on:
           - production
           - staging
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Tests
@@ -88,13 +91,31 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Wait for deployment
-        run: sleep 30
+      - name: Validate production API URL
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_API_URL }}" ]; then
+            echo "❌ PRODUCTION_API_URL secret is required for smoke tests."
+            exit 1
+          fi
+
+      - name: Wait for deployment health check
+        run: |
+          for i in {1..30}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PRODUCTION_API_URL }}/api/health")
+            if [ "$code" = "200" ]; then
+              echo "✅ Health endpoint is ready."
+              exit 0
+            fi
+            echo "⏳ Waiting for deployment... attempt $i/30 (status: $code)"
+            sleep 10
+          done
+          echo "❌ Deployment did not become healthy in time."
+          exit 1
 
       - name: Run smoke tests
         run: node scripts/smoke-test.js
         env:
-          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL || 'https://your-app.railway.app' }}
+          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL }}
         continue-on-error: true
 
       - name: Report results
