@@ -61,8 +61,8 @@
 
 ### 使用模板生成截图
 ```bash
-# 使用 PR-18 提供的截图工具
-npm run screenshots  # 在 backend/ 目录下
+# 使用仓库中的截图工具生成截图
+node screenshots/capture.js
 # 或手动打开 screenshots/template-ios.html
 ```
 
