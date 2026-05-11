@@ -15,8 +15,11 @@ const express = require('express');
 const router = express.Router();
 
 const APP_SCHEME = 'summitlink://';
-const APP_STORE_URL = 'https://apps.apple.com/app/summitlink/id0000000000'; // Replace with real App Store ID
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.summitlink';
+// 商店链接可通过环境变量覆盖（避免硬编码占位 App Store ID）
+// APP_STORE_URL 例: https://apps.apple.com/app/summitlink/id1234567890
+// PLAY_STORE_URL 例: https://play.google.com/store/apps/details?id=app.summitlink
+const APP_STORE_URL = process.env.APP_STORE_URL || 'https://apps.apple.com/app/summitlink/id0000000000';
+const PLAY_STORE_URL = process.env.PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=app.summitlink';
 
 /**
  * Build a simple HTML fallback page that attempts to open the App

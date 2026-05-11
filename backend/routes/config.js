@@ -24,6 +24,7 @@ const configLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error
  *     token: string | null,        // mapbox 时返回 MAPBOX_TOKEN（前向兼容字段）
  *     mapboxToken: string | null,  // 同 token，新字段名
  *     amapKey: string | null,      // amap 时返回（可供 Capacitor 端直接使用）
+ *     amapSecurityCode: string | null, // amap 时返回（高德官方要求与 Key 配对使用）
  *     country: string              // 检测到的国家代码，unknown 表示未检测到
  *   }
  */
@@ -46,6 +47,7 @@ router.get('/map', configLimiter, (req, res) => {
     token: mapboxToken,         // 前向兼容（旧前端读 data.token）
     mapboxToken,                // 新字段（新前端读 data.mapboxToken）
     amapKey: !useMapbox ? (process.env.AMAP_KEY || null) : null,
+    amapSecurityCode: !useMapbox ? (process.env.AMAP_SECURITY_CODE || null) : null,
     country: country || 'unknown',
   };
 

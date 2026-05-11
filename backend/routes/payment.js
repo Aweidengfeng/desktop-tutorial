@@ -63,6 +63,9 @@ if (process.env.STRIPE_SECRET_KEY) {
     try {
       if (process.env.STRIPE_WEBHOOK_SECRET && sig) {
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      } else if (process.env.NODE_ENV === 'production') {
+        // 生产环境必须验证签名，禁止接受未签名事件
+        return res.status(400).json({ error: 'Webhook signature required in production' });
       } else {
         event = JSON.parse(req.body.toString());
       }

@@ -15,9 +15,37 @@
   <meta name="theme-color" content="#2b6579">
   <meta property="og:title" content="巅峰探索 / SummitLink">
   <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
-  <!-- 高德地图 Web JS API v2 — 上线前请将 YOUR_AMAP_KEY 替换为真实 Key（见 README） -->
-  <script>window._AMapSecurityConfig = { securityJsCode: 'YOUR_AMAP_SECURITY_CODE' };</script>
-  <script src="https://webapi.amap.com/maps?v=2.0&key=YOUR_AMAP_KEY"></script>
+  <!-- 高德地图 Web JS API v2 — 运行时根据 /api/config/map 动态加载，避免在 Capacitor bundle 中硬编码 Key -->
+  <script>
+  (function() {
+    // 仅在用户被路由到 amap provider 时才加载，且 Key 来自后端环境变量
+    var apiBase = window.__API_BASE__ || '';
+    try {
+      fetch(apiBase + '/api/config/map')
+        .then(function(r) {
+          if (!r.ok) {
+            console.warn('[SummitLink] /api/config/map returned', r.status);
+            return null;
+          }
+          return r.json();
+        })
+        .then(function(data) {
+          if (!data || data.provider !== 'amap' || !data.amapKey) return;
+          if (data.amapSecurityCode) {
+            window._AMapSecurityConfig = { securityJsCode: data.amapSecurityCode };
+          }
+          var s = document.createElement('script');
+          s.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(data.amapKey);
+          // 异步加载，不阻塞页面渲染；地图初始化代码会等待 window.AMap 就绪
+          s.async = true;
+          document.head.appendChild(s);
+        })
+        .catch(function(err) {
+          console.warn('[SummitLink] 无法加载地图配置：', err && err.message);
+        });
+    } catch (e) { /* no-op */ }
+  })();
+  </script>
   <script>
     tailwind.config = {
       theme: {
@@ -10074,9 +10102,9 @@ function alpineLink() {
 </div>
 <script>
 (function() {
-  // 仅已明确"接受"时跳过；"拒绝"或未答复时仍检测并显示（允许用户重新选择）
+  // 与 index.html 保持一致：已 accept 或 decline 后都不再弹出
   var consent = localStorage.getItem('sl_gdpr_consent');
-  if (consent === 'accepted') return;
+  if (consent) return;
   var apiBase = window.__API_BASE__ || '';
   fetch(apiBase + '/api/gdpr/check')
     .then(function(r) { return r.json(); })

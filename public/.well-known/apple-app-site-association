@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appIDs": ["TEAMID.app.summitlink"],
+        "appIDs": ["${APPLE_TEAM_ID}.app.summitlink"],
         "components": [
           { "/": "/verify-email*", "comment": "Email verification" },
           { "/": "/reset-password*", "comment": "Password reset" },
@@ -15,6 +15,6 @@
     ]
   },
   "webcredentials": {
-    "apps": ["TEAMID.app.summitlink"]
+    "apps": ["${APPLE_TEAM_ID}.app.summitlink"]
   }
 }
