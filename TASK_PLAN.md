@@ -1,5 +1,5 @@
 # 📋 SummitLink 任务分工总表
-> **最后更新**：2026-05-11 (PR-20 App Store Connect/Google Play 提交指南 + Secrets 配置文档)
+> **最后更新**：2026-05-11 (PR-21 一键图标生成脚本（iOS/Android/PWA全尺寸）+ 品牌占位SVG)
 > **规则**：每次对话/PR完成后自动更新此文件，完成项打 ✅
 > **目标**：SummitLink 全球上架（iOS App Store + Google Play）
 
@@ -97,6 +97,7 @@
 |---|---------|---------|---------|------|
 | PR-19 | Railway自动部署CI + 冒烟测试 + 发布前自检 + env检查 | 运维 | 无 | ✅ |
 | PR-20 | App Store Connect 提交指南 + Google Play 提交指南 + Secrets 配置文档 | C-04 | A-01, A-02 | ✅ |
+| PR-21 | 一键图标生成脚本（iOS/Android/PWA全尺寸）+ 品牌占位SVG | C-01辅助 | 无 | ✅ |
 
 ---
 
@@ -112,7 +113,8 @@
 | 我来做 PR第三批 | 5 | 5 | 100% 🎉 |
 | 我来做 PR第四批 | 5 | 5 | 100% 🎉 |
 | 我来做 PR第五批 | 2 | 2 | 100% 🎉 |
-| **总计** | **35** | **24** | **69%** |
+| 我来做 PR第六批 | 1 | 1 | 100% 🎉 |
+| **总计** | **36** | **25** | **69%** |
 
 ---
 
@@ -140,6 +142,7 @@
 | 2026-05-11 | PR-18合并：App Store/Google Play截图模板(5张HTML模板+自动截图脚本)，C-01✅ |
 | 2026-05-11 | PR-19合并：Railway自动部署workflow + 冒烟测试脚本 + 发布前自检清单 + env变量检查器 |
 | 2026-05-11 | PR-20合并：App Store Connect提交指南 + Google Play提交指南 + GitHub Secrets配置文档，C-04文档就绪 |
+| 2026-05-11 | PR-21合并：一键生成所有平台图标（iOS 15尺寸 + Android 10尺寸 + PWA 8尺寸），generate-icons.js + 品牌占位SVG |
 
 ---
 

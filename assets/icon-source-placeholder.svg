@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="0" fill="#1a56db"/>
+
+  <!-- Mountain shape (main) -->
+  <polygon points="512,180 760,620 264,620" fill="white" opacity="0.95"/>
+
+  <!-- Mountain shape (secondary, left) -->
+  <polygon points="280,560 420,340 560,560" fill="white" opacity="0.6"/>
+
+  <!-- Summit dot / link indicator -->
+  <circle cx="512" cy="180" r="32" fill="#fbbf24"/>
+
+  <!-- Link chain element (bottom) -->
+  <rect x="380" y="680" width="120" height="50" rx="25" fill="white" opacity="0.9"/>
+  <rect x="524" y="680" width="120" height="50" rx="25" fill="white" opacity="0.9"/>
+  <rect x="440" y="672" width="144" height="30" rx="0" fill="#1a56db"/>
+
+  <!-- App name (small, for reference only - not visible at small sizes) -->
+  <text x="512" y="820" font-family="Arial, sans-serif" font-size="72" font-weight="bold"
+        fill="white" text-anchor="middle" opacity="0.9">SummitLink</text>
+</svg>
