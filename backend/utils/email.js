@@ -29,7 +29,9 @@ class EmailProvider {
   }
 }
 
-/** 邮箱脱敏：仅显示首字符和域名部分，避免 ReDoS */
+/** 邮箱脱敏：仅显示首字符和域名部分。
+ *  使用 indexOf 而非正则，避免在畸形输入（如 'aa@aa@...'）上触发多项式回溯（ReDoS）。
+ */
 function maskEmail(email) {
   const str = String(email);
   const atIndex = str.indexOf('@');
