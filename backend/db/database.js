@@ -822,6 +822,26 @@ if (!existingTeamCols.includes('difficulty')) {
 if (!existingTeamCols.includes('fee')) {
   db.exec('ALTER TABLE teams ADD COLUMN fee TEXT');
 }
+// 兼容 Prisma 模式：teams 表去除了 leader/leader_avatar 反范式列，但部分路由
+// 仍按 legacy 查询，这里按需补回，保持向后兼容。
+if (!existingTeamCols.includes('leader')) {
+  db.exec('ALTER TABLE teams ADD COLUMN leader TEXT');
+}
+if (!existingTeamCols.includes('leader_avatar')) {
+  db.exec('ALTER TABLE teams ADD COLUMN leader_avatar TEXT');
+}
+
+// 兼容 Prisma 模式：team_members 同样去除了 name/avatar/status 反范式列。
+const existingTeamMemberColsLegacy = db.pragma('table_info(team_members)').map(c => c.name);
+if (!existingTeamMemberColsLegacy.includes('name')) {
+  db.exec('ALTER TABLE team_members ADD COLUMN name TEXT');
+}
+if (!existingTeamMemberColsLegacy.includes('avatar')) {
+  db.exec('ALTER TABLE team_members ADD COLUMN avatar TEXT');
+}
+if (!existingTeamMemberColsLegacy.includes('status')) {
+  db.exec("ALTER TABLE team_members ADD COLUMN status TEXT DEFAULT 'pending'");
+}
 
 // 新增表：俱乐部活动/商业套餐
 db.exec(`
@@ -1146,32 +1166,41 @@ if (!existingBookingCols2.includes('booking_type')) {
   db.exec("ALTER TABLE bookings ADD COLUMN booking_type TEXT DEFAULT 'commercial'");
 }
 
-// 种子数据：登山线路
-const routeCount = db.prepare('SELECT COUNT(*) as cnt FROM climbing_routes').get();
-if (routeCount.cnt === 0) {
-  const insertRoute = db.prepare(`
-    INSERT INTO climbing_routes (name, peak, difficulty, cover, description, altitude, duration_days, best_season, region)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  insertRoute.run('珠峰南坡标准线', '珠穆朗玛峰', '极难', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800', '经昆布冰瀑、西库姆冰斗，经4个营地攀登至顶峰，全程约2个月', 8849, 60, '4月-5月', '喜马拉雅');
-  insertRoute.run('K2阿布鲁兹山脊', 'K2', '极难', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', '经阿布鲁兹山脊标准路线攀登，含黑色金字塔和瓶颈段', 8611, 55, '6月-7月', '喀喇昆仑');
-  insertRoute.run('珠峰北坡标准线', '珠穆朗玛峰', '极难', 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800', '经西藏北坡，过北坳、第二台阶，中国队经典路线', 8849, 55, '5月', '西藏');
-  insertRoute.run('四姑娘山幺妹峰', '四姑娘山', '难', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', '四姑娘山最高峰，技术攀登路线，需要冰雪攀登经验', 6250, 10, '5月-6月, 10月', '四川');
-}
+// 种子数据：登山线路（仅当表使用 legacy 列模式时运行）
+try {
+  const routeCount = db.prepare('SELECT COUNT(*) as cnt FROM climbing_routes').get();
+  if (routeCount.cnt === 0) {
+    // 仅当存在 legacy 的 `peak` 列时执行 seed；
+    // Prisma 模式下表只有 `peak_id`，此时跳过避免 SQLite 抛错。
+    const routeCols = db.prepare("PRAGMA table_info(climbing_routes)").all().map(c => c.name);
+    if (routeCols.includes('peak') && routeCols.includes('cover') && routeCols.includes('region')) {
+      const insertRoute = db.prepare(`
+        INSERT INTO climbing_routes (name, peak, difficulty, cover, description, altitude, duration_days, best_season, region)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      insertRoute.run('珠峰南坡标准线', '珠穆朗玛峰', '极难', 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800', '经昆布冰瀑、西库姆冰斗，经4个营地攀登至顶峰，全程约2个月', 8849, 60, '4月-5月', '喜马拉雅');
+      insertRoute.run('K2阿布鲁兹山脊', 'K2', '极难', 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800', '经阿布鲁兹山脊标准路线攀登，含黑色金字塔和瓶颈段', 8611, 55, '6月-7月', '喀喇昆仑');
+      insertRoute.run('珠峰北坡标准线', '珠穆朗玛峰', '极难', 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800', '经西藏北坡，过北坳、第二台阶，中国队经典路线', 8849, 55, '5月', '西藏');
+      insertRoute.run('四姑娘山幺妹峰', '四姑娘山', '难', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', '四姑娘山最高峰，技术攀登路线，需要冰雪攀登经验', 6250, 10, '5月-6月, 10月', '四川');
+    }
+  }
+} catch (e) { console.warn('[climbing_routes seed skipped]', e.message); }
 
 // 种子数据：俱乐部-路线报价（依赖已有clubs数据）
-const pricingCount = db.prepare('SELECT COUNT(*) as cnt FROM club_route_pricing').get();
-if (pricingCount.cnt === 0) {
-  const firstClub = db.prepare("SELECT id FROM clubs LIMIT 1").get();
-  const firstRoute = db.prepare("SELECT id FROM climbing_routes LIMIT 1").get();
-  if (firstClub && firstRoute) {
-    db.prepare(`
-      INSERT OR IGNORE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(firstClub.id, firstRoute.id, 280000,
-      '["许可证","BC食宿","运输","高山向导","氧气装备","保险"]', 60, 8);
+try {
+  const pricingCount = db.prepare('SELECT COUNT(*) as cnt FROM club_route_pricing').get();
+  if (pricingCount.cnt === 0) {
+    const firstClub = db.prepare("SELECT id FROM clubs LIMIT 1").get();
+    const firstRoute = db.prepare("SELECT id FROM climbing_routes LIMIT 1").get();
+    if (firstClub && firstRoute) {
+      db.prepare(`
+        INSERT OR IGNORE INTO club_route_pricing (club_id, route_id, price, includes, duration, max_people)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(firstClub.id, firstRoute.id, 280000,
+        '["许可证","BC食宿","运输","高山向导","氧气装备","保险"]', 60, 8);
+    }
   }
-}
+} catch (e) { console.warn('[club_route_pricing seed skipped]', e.message); }
 
 // ── A2: peaks 表补充分类字段 ───────────────────────────────────
 const existingPeakColsA2 = db.pragma('table_info(peaks)').map(c => c.name);
@@ -2004,9 +2033,24 @@ if (!existingBookingColsPool.includes('pool')) {
       '专业攀登者', 12, 8, 1247, 386
     );
     console.log('✅ 内置用户数据填充完成');
+  }
 
-    // ── 内置帖子（首次启动时自动填充，须在用户之后）
-    const userId = db.prepare('SELECT id FROM users WHERE phone = ?').get('13800138000').id;
+  // 兼容 Prisma seed：上方块仅在表为空时执行；当 Prisma 已插入用户后，
+  // 还需要单独补齐帖子/队伍 demo 数据，否则相关接口列表为空。
+  // 通过 INSERT OR IGNORE + 独立的 count 判断保持幂等。
+  // 先按加密手机号查找（Prisma seed 写入加密值），找不到再降级到名称匹配。
+  let zhangwei = null;
+  try {
+    const { encryptPII } = require('../utils/crypto');
+    zhangwei = db.prepare('SELECT id FROM users WHERE phone = ? LIMIT 1').get(encryptPII('13800138000'));
+  } catch (e) { /* utils/crypto 不可用时降级 */ }
+  if (!zhangwei) {
+    zhangwei = db.prepare('SELECT id FROM users WHERE name = ? OR username = ? LIMIT 1').get('张伟', '@zhangwei_climbs');
+  }
+  if (zhangwei) {
+    const userId = zhangwei.id;
+    const postCount = db.prepare('SELECT COUNT(*) as cnt FROM posts').get();
+    if (postCount.cnt === 0) {
     const insertBuiltinPost = db.prepare(`
       INSERT OR IGNORE INTO posts (user_id, author_name, author_avatar, content, location, likes, comments)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -2062,8 +2106,10 @@ if (!existingBookingColsPool.includes('pool')) {
     insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
       '夜间攀登技巧：头灯选择、黑暗中辨别路线、疲劳管理。大多数珠峰登顶都在凌晨1-3点出发，必须学会', '技术分享', 234, 47);
     console.log('✅ 内置帖子数据填充完成');
+    }
 
-    // ── 内置队伍（首次启动时自动填充，须在用户之后）
+    const teamCount = db.prepare('SELECT COUNT(*) as cnt FROM teams').get();
+    if (teamCount.cnt === 0) {
     const insertBuiltinTeam = db.prepare(`
       INSERT OR IGNORE INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -2078,6 +2124,7 @@ if (!existingBookingColsPool.includes('pool')) {
       '张伟', 'https://i.pravatar.cc/150?u=zhangwei', userId,
       '西欧最高峰（4808m），Goûter路线，需要基本冰雪技术，行程5天含适应期', 'recruiting');
     console.log('✅ 内置队伍数据填充完成');
+    }
   }
 }
 

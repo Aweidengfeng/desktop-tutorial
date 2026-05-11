@@ -2,6 +2,13 @@
  * SummitLink PII 字段加密工具
  * 使用 AES-256-GCM 对称加密，密钥来自环境变量 PII_ENCRYPTION_KEY
  * 格式：iv(24 hex):authTag(32 hex):encryptedData(hex)
+ *
+ * 注意：PII 字段（手机号、邮箱等）需要支持等值查找（如登录、唯一性校验），
+ * 因此采用**确定性加密**——IV 由 HMAC(key, plaintext) 派生而非随机生成。
+ * 这样同一明文每次产出相同密文，便于以密文直接 WHERE 等值匹配。
+ * 该模式（类似 AES-GCM-SIV 思路）会泄露"两条记录是否相同"的信息，
+ * 但对 `@unique` 的手机号/邮箱字段而言这本就是公开属性，
+ * 仍可在数据库泄漏场景下保障明文机密性与完整性。
  */
 const crypto = require('crypto');
 
@@ -21,17 +28,22 @@ function getKey() {
   return buf;
 }
 
+// 从明文派生确定性 IV（96 位，HMAC-SHA256 截断）
+function deriveIv(key, plaintext) {
+  return crypto.createHmac('sha256', key).update(plaintext, 'utf8').digest().subarray(0, 12);
+}
+
 /**
- * 加密 PII 字段
+ * 加密 PII 字段（确定性）
  * @param {string} plaintext
  * @returns {string} "iv:authTag:encrypted" 格式的密文
  */
 function encryptPII(plaintext) {
   if (!plaintext) return plaintext;
   const key = getKey();
-  const iv = crypto.randomBytes(12); // 96-bit IV for GCM
+  const iv = deriveIv(key, String(plaintext));
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([cipher.update(String(plaintext), 'utf8'), cipher.final()]);
   const authTag = cipher.getAuthTag();
   return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
 }
