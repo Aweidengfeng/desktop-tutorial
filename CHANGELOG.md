@@ -2,6 +2,21 @@
 
 All notable changes to SummitLink are documented here.
 
+## [Unreleased] — PR-19: Production Deployment Checklist & Stripe Live-Mode Switch
+
+### Added
+- **Stripe live-mode guard**: `backend/routes/payment.js` now throws a clear startup error when `STRIPE_SECRET_KEY` starts with `sk_test_` in a `NODE_ENV=production` environment, preventing accidental test-mode charges in production.
+- **`scripts/validate-env.js`**: New startup validation script that parses `.env.example`, checks every declared key exists in `process.env`, and exits with a descriptive list of missing variables in production. Supports `DRY_RUN=1` mode for CI self-testing.
+- **`docs/DEPLOYMENT.md`** additions:
+  - Stripe live-mode activation steps (key rotation, Webhook endpoint setup, signature secret)
+  - Aliyun OSS Bucket CORS configuration table and Railway env var list
+  - iOS / Android release signing brief (referencing `MOBILE_BUILD_GUIDE.md`)
+  - 10-item production smoke-test checklist covering auth, payment, map, GDPR, and push notifications
+
+### Changed
+- **`.env.example`**: Fixed header brand name (AlpineLink → SummitLink).
+- **`.github/workflows/deploy-railway.yml`**: Added `env-check` job that runs `validate-env.js` with `DRY_RUN=1` and dummy required vars to verify the script itself is parseable on every push.
+
 ## [1.0.0] - 2026-04-29
 
 ### 🎉 Initial Production Release

@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "postinstall": "DATABASE_URL=\"file:/tmp/build.db\" node scripts/generate-prisma-client.js || true",
-    "prestart": "node ../scripts/check-env.js",
+    "prestart": "node ../scripts/validate-env.js",
     "start": "node db/seed.js && node app.js",
     "dev": "node db/seed.js && node app.js",
     "seed": "node db/seed.js",

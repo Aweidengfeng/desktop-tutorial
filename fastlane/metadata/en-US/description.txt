@@ -1,0 +1,77 @@
+SummitLink – The Global Platform for Climbers & Mountain Adventurers
+
+Connect with climbers worldwide, plan your next expedition, book certified mountain guides, and share your greatest summits — all in one app built for the mountain community.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏔️ CONNECT WITH CLIMBERS GLOBALLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SummitLink is the social platform where climbers, trekkers, alpinists, and mountain guides come together. Whether you're a weekend hiker or an 8,000-metre veteran, find your tribe, share your stories, and inspire others to reach new heights.
+
+• Build a profile with your climbing history and certifications
+• Follow fellow climbers and stay updated on their expeditions
+• Share photos, GPS tracks, and summit reports
+• Earn achievement badges for milestones and summits
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🗺️ PLAN EXPEDITIONS & ROUTES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Discover thousands of curated routes contributed by the community. Plan your next adventure with interactive maps, elevation profiles, and detailed route notes.
+
+• Browse routes by difficulty, mountain range, country, or season
+• Save routes for offline use — no signal required on the mountain
+• Record GPS tracks and share them with the community
+• View live weather conditions and forecasts for any summit
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👥 BUILD YOUR EXPEDITION TEAM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Finding the right team makes or breaks an expedition. SummitLink makes it easy to form groups, coordinate logistics, and communicate in real time.
+
+• Create expedition plans and invite team members
+• Group chat with your team throughout the trip
+• Share real-time location during active expeditions
+• Set emergency contacts and share your itinerary with loved ones
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧭 BOOK CERTIFIED MOUNTAIN GUIDES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Safety is paramount in the mountains. Browse verified, certified guides with reviews from fellow climbers and book your guide directly through the app.
+
+• Filter guides by mountain, language, certification, and price
+• Read detailed profiles, certifications, and verified reviews
+• Secure booking with Stripe payment processing
+• Multi-currency support: USD, EUR, CNY, GBP, and more
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 SAFETY & EMERGENCY FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Your safety is our priority. SummitLink includes features designed to keep you connected and safe in remote terrain.
+
+• GPS tracking with offline map caching (works without internet)
+• Emergency contact notifications with last known location
+• Mountain rescue coordination tools
+• Weather alerts for your active expeditions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏅 CLUBS & COMMUNITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Join or create climbing clubs, participate in challenges, and celebrate achievements with the global community.
+
+• Create and manage climbing clubs with custom roles
+• Participate in community challenges and leaderboards
+• Earn badges and summit certificates
+• Browse and contribute to the community article library
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 TECHNOLOGY & PRIVACY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Built with modern technology for reliability in the field:
+
+• Full offline support using IndexedDB — plan offline, sync when connected
+• Available in English and Chinese (Simplified)
+• Secure authentication: Email, Apple Sign In, and Google OAuth
+• GDPR compliant — you control your data
+• End-to-end encrypted personal information storage
+• Stripe-powered payments with industry-standard security
+
+Ready to reach new summits? Join the SummitLink community and start connecting with climbers around the world.

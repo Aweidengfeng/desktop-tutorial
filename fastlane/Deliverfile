@@ -1,0 +1,33 @@
+app_identifier "app.summitlink"
+
+# Pricing: 0 = Free
+price_tier 0
+
+# App Store categories
+primary_category "SPORTS"
+secondary_category "TRAVEL"
+
+# Privacy policy URL
+privacy_url({
+  "default" => "https://summitlink.app/legal/privacy",
+  "en-US"   => "https://summitlink.app/legal/privacy",
+  "zh-Hans" => "https://summitlink.app/legal/privacy"
+})
+
+# Support URL
+support_url({
+  "default" => "https://summitlink.app/support",
+  "en-US"   => "https://summitlink.app/support",
+  "zh-Hans" => "https://summitlink.app/support"
+})
+
+# Marketing URL
+marketing_url({
+  "default" => "https://summitlink.app",
+  "en-US"   => "https://summitlink.app",
+  "zh-Hans" => "https://summitlink.app"
+})
+
+# Age rating – no violence, no adult content, suitable for 4+
+# Fastlane deliver will use the interactive questionnaire on first run
+# if this block is left empty.

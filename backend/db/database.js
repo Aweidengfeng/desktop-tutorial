@@ -2433,7 +2433,11 @@ if (badgeCount.cnt === 0) {
         name, username, phone, testHash('test1234'),
         avatar, level, summits, expeditions, followers, following
       );
-      console.log('✅ 测试账号已创建:', phone, name);
+      // 脱敏：仅打印手机号前3位和后2位，避免明文 PII 进入日志
+      const maskedPhone = String(phone).length >= 6
+        ? String(phone).slice(0, 3) + '****' + String(phone).slice(-2)
+        : '****';
+      console.log('✅ 测试账号已创建:', maskedPhone, name);
     }
     return db.prepare('SELECT id FROM users WHERE phone = ?').get(phone).id;
   };
@@ -2454,7 +2458,7 @@ if (badgeCount.cnt === 0) {
       '平台管理员', '@admin', '13800000099', testHash('admin1234'),
       'https://i.pravatar.cc/150?u=admin', '管理员', 0, 0, 0, 0
     );
-    console.log('✅ 管理员账号已创建: 13800000099');
+    console.log('✅ 管理员账号已创建: 138****99');
   }
 
   // Make guide user an approved guide if not already

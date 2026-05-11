@@ -85,8 +85,16 @@ if (!process.env.API_BASE) {
   console.warn('⚠️  API_BASE 环境变量未设置，移动端(Capacitor)将无法正确访问API。请在 Railway 中设置 API_BASE=https://你的服务URL');
 }
 
+// Universal Links (iOS) + App Links (Android) – must be registered before static middleware
+// so Apple CDN and Google probes hit the JSON handlers directly without any redirect.
+const { mountUniversalLinks } = require('./middleware/universalLinks');
+mountUniversalLinks(app);
+
 // 静态文件服务 - 根目录
 app.use(express.static(rootPath));
+// 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
+// 因此显式映射 `/js` → `<rootPath>/www/js`，避免 404 导致整个 SPA 加载失败。
+app.use('/js', express.static(path.join(rootPath, 'www', 'js')));
 
 // 上传文件静态服务（支持 UPLOADS_DIR 环境变量覆盖路径）
 const uploadsPath = process.env.UPLOADS_DIR
@@ -224,6 +232,11 @@ app.use('/api/payment', require('./routes/payment'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/gdpr', require('./routes/gdpr'));
 app.use('/api/currency', require('./routes/currency'));
+
+// Deep link handlers (email verification, password reset)
+// These routes are also intercepted by iOS Universal Links / Android App Links
+// when the SummitLink App is installed on the device.
+app.use('/', require('./routes/deeplinks'));
 
 // Admin 面板（注入 SENTRY_DSN）
 const adminHtmlFile = path.join(rootPath, 'admin.html');

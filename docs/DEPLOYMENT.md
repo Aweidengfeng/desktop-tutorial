@@ -511,3 +511,129 @@ Sentry 通过 `SENTRY_DSN` 环境变量控制启用，**未设置时完全无副
    - 中国大陆 → 国内节点
    - 海外 → HK/SG 节点
 3. 数据库使用 PostgreSQL 主从复制（主节点写，从节点读）
+
+---
+
+## Stripe 生产模式切换
+
+### 前置条件
+
+- Stripe 账号已完成身份验证（企业 / 个人信息 + 银行账户绑定）
+- 税务信息已填写（[Stripe Tax 设置](https://dashboard.stripe.com/settings/tax)）
+
+### 步骤
+
+1. **获取正式密钥**  
+   登录 [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys)，切换页面右上角到 **Live mode**，复制：
+   - `sk_live_...` → `STRIPE_SECRET_KEY`
+   - `pk_live_...` → `STRIPE_PUBLISHABLE_KEY`
+
+2. **在 Railway 更新环境变量**
+
+   ```
+   STRIPE_SECRET_KEY=sk_live_...
+   STRIPE_PUBLISHABLE_KEY=pk_live_...
+   ```
+
+   > ⚠️ 生产服务器启动时如检测到 `STRIPE_SECRET_KEY` 以 `sk_test_` 开头，将**拒绝启动**并打印明确错误信息。
+
+3. **配置 Webhook**  
+   在 [dashboard.stripe.com/webhooks](https://dashboard.stripe.com/webhooks) 点击 **+ Add endpoint**：
+   - 端点 URL：`https://your-app.railway.app/api/payment/stripe-webhook`
+   - 监听事件：`payment_intent.succeeded`、`payment_intent.payment_failed`
+   - 保存后复制 **Signing secret**（`whsec_...`）
+
+4. **在 Railway 添加 Webhook 密钥**
+
+   ```
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+
+5. **测试正式模式**  
+   使用 Stripe CLI 或 Dashboard 的 **Test webhook** 功能向端点发送测试事件，验证签名校验通过。
+
+---
+
+## 阿里云 OSS Bucket CORS 配置
+
+当使用阿里云 OSS 存储图片时，需配置 CORS 规则，否则浏览器会因跨域拒绝请求。
+
+### 步骤
+
+1. 登录 [aliyun.com](https://www.aliyun.com) → **对象存储 OSS** → 进入目标 Bucket
+2. 左侧菜单 **数据安全 → 跨域设置** → **创建规则**
+3. 填写如下规则：
+
+| 字段 | 值 |
+|------|----|
+| 来源（Origins） | `https://summitlink.app` `https://www.summitlink.app` `https://*.railway.app` |
+| 允许 Methods | `GET` `PUT` `POST` `DELETE` `HEAD` |
+| 允许 Headers | `*` |
+| 暴露 Headers | `ETag` `x-oss-request-id` |
+| 缓存时间（Max Age） | `3600` |
+
+4. 确认 Bucket 读写权限（ACL）已配置为**私有**，上传通过后端签名 URL 进行。
+
+### Railway 侧环境变量
+
+```
+OSS_BUCKET=your-bucket-name
+OSS_REGION=oss-cn-hangzhou
+OSS_ACCESS_KEY_ID=LTAIxxxxxxxxxxxx
+OSS_ACCESS_KEY_SECRET=<AccessKeySecret>
+OSS_CDN_HOST=https://cdn.summitlink.app   # 可选，CDN 加速域名
+```
+
+---
+
+## iOS / Android 签名配置（简述）
+
+> 详细步骤见 [MOBILE_BUILD_GUIDE.md](../MOBILE_BUILD_GUIDE.md)。
+
+### iOS（Apple 开发者账号必需）
+
+1. 在 Apple Developer Portal 创建 **App ID**、**Distribution Certificate**（`.p12`）和 **Provisioning Profile**
+2. 将证书和 Profile 转为 Base64 后存入 GitHub Secrets：
+   ```
+   IOS_CERTIFICATE_P12_BASE64=<base64>
+   IOS_CERTIFICATE_PASSWORD=<password>
+   IOS_PROVISIONING_PROFILE_BASE64=<base64>
+   ```
+3. CI 流程（`.github/workflows/build-ios.yml`）会自动解码、安装证书并调用 `xcodebuild archive`
+
+### Android（Google Play 必需）
+
+1. 在 Android Studio 生成 **Keystore 文件**（`.jks`）
+2. 转为 Base64 并存入 GitHub Secrets：
+   ```
+   ANDROID_KEYSTORE_BASE64=<base64>
+   ANDROID_KEY_ALIAS=<alias>
+   ANDROID_KEYSTORE_PASSWORD=<password>
+   ANDROID_KEY_PASSWORD=<password>
+   ```
+3. CI 流程自动解码 Keystore 并通过 `./gradlew bundleRelease` 打包签名 AAB
+
+---
+
+## 生产冒烟测试清单（10 项）
+
+部署完成后，按以下顺序逐项验证：
+
+| # | 模块 | 测试步骤 | 预期结果 |
+|---|------|----------|----------|
+| 1 | **健康检查** | `curl https://your-app.railway.app/api/health` | `{"status":"ok"}` |
+| 2 | **用户注册** | 使用新手机号 / 邮箱完成注册流程 | 注册成功，返回 JWT |
+| 3 | **用户登录** | 使用已注册账号登录 | 登录成功，获取 Token |
+| 4 | **地图加载** | 打开首页，等待地图渲染 | 地图瓦片正常显示（高德或 Mapbox） |
+| 5 | **路线查看** | 点击任意探险路线查看详情 | 路线详情页面正常展示，无 500 错误 |
+| 6 | **Stripe 支付** | 选择付费服务 → Stripe 支付页 | 显示支付表单，币种正确 |
+| 7 | **GDPR 横幅** | 无痕浏览器访问首页 | 显示 Cookie 同意横幅 |
+| 8 | **GDPR 数据导出** | 登录后请求 `GET /api/users/me/data-export` | 返回用户数据 JSON |
+| 9 | **Push 通知权限** | iOS / Android 设备首次打开 App | 弹出推送权限请求对话框 |
+| 10 | **错误监控** | 触发一个已知的 API 错误（如访问不存在的路由） | Sentry Dashboard 中出现新事件 |
+
+运行自动化冒烟测试脚本：
+
+```bash
+API_BASE_URL=https://your-app.railway.app node scripts/smoke-test.js
+```
