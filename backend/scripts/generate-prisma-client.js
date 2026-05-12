@@ -63,11 +63,26 @@ try {
   generated = true;
 
   if (process.argv.includes('--push')) {
-    console.log('[generate-prisma-client] 正在推送 schema 到数据库...');
-    execSync('npx prisma db push --schema=prisma/schema.prisma', {
+    console.log('[generate-prisma-client] 正在执行 order_no 重复数据预清洗...');
+    const fixScriptPath = path.join(__dirname, 'fix-duplicate-order-no.js');
+    execSync(`node "${fixScriptPath}"`, {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
     });
+
+    console.log('[generate-prisma-client] 正在推送 schema 到数据库...');
+    try {
+      execSync('npx prisma db push --schema=prisma/schema.prisma', {
+        stdio: 'inherit',
+        cwd: path.join(__dirname, '..'),
+      });
+    } catch (error) {
+      console.error('[generate-prisma-client] prisma db push 失败。');
+      console.error(
+        '[generate-prisma-client] 已自动执行 order_no 清洗；若仍是 expedition_orders.order_no 唯一约束冲突，请手动执行：node scripts/fix-duplicate-order-no.js --dry-run（确认）后再执行 node scripts/fix-duplicate-order-no.js'
+      );
+      throw error;
+    }
   }
 } finally {
   // 无论成功或失败，始终还原原始 schema
