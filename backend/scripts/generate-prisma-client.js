@@ -21,6 +21,12 @@
  *   下，它期望引擎在 backend/node_modules/.prisma/client/。
  *   生成时将 output 临时改为 "../node_modules/.prisma/client"
  *   以确保文件写入正确位置。
+ *
+ * --push 流程：
+ *   1. 执行 fix-duplicate-order-no.js（清洗所有目标表的重复 order_no）
+ *   2. 执行 precheckUniqueConstraints()（检查所有目标表是否还有重复）
+ *   3. 若 allSafe=true  → prisma db push --accept-data-loss（安全执行）
+ *      若 allSafe=false → 打印明细并 exit 1（保留 fail-fast 保护）
  */
 
 const { execSync } = require('child_process');
@@ -51,43 +57,79 @@ patched = patched.replace(
   `$1"../node_modules/.prisma/client"`
 );
 
-let generated = false;
-try {
-  fs.writeFileSync(schemaPath, patched, 'utf8');
-  console.log(`[generate-prisma-client] provider=${provider}，正在生成 Prisma Client...`);
+async function main() {
+  let generated = false;
+  try {
+    fs.writeFileSync(schemaPath, patched, 'utf8');
+    console.log(`[generate-prisma-client] provider=${provider}，正在生成 Prisma Client...`);
 
-  execSync('npx prisma generate --schema=prisma/schema.prisma', {
-    stdio: 'inherit',
-    cwd: path.join(__dirname, '..'),
-  });
-  generated = true;
-
-  if (process.argv.includes('--push')) {
-    console.log('[generate-prisma-client] 正在执行 order_no 重复数据预清洗...');
-    const fixScriptPath = path.join(__dirname, 'fix-duplicate-order-no.js');
-    execSync(`node "${fixScriptPath}"`, {
+    execSync('npx prisma generate --schema=prisma/schema.prisma', {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
     });
+    generated = true;
 
-    console.log('[generate-prisma-client] 正在推送 schema 到数据库...');
-    try {
-      execSync('npx prisma db push --schema=prisma/schema.prisma', {
+    if (process.argv.includes('--push')) {
+      console.log('[generate-prisma-client] 正在执行 order_no 重复数据预清洗...');
+      const fixScriptPath = path.join(__dirname, 'fix-duplicate-order-no.js');
+      execSync(`node "${fixScriptPath}"`, {
         stdio: 'inherit',
         cwd: path.join(__dirname, '..'),
       });
-    } catch (error) {
-      console.error('[generate-prisma-client] prisma db push 失败。');
-      console.error(
-        '[generate-prisma-client] 已自动执行 order_no 清洗；若仍是 expedition_orders.order_no 唯一约束冲突，请手动执行：node scripts/fix-duplicate-order-no.js --dry-run（确认）后再执行 node scripts/fix-duplicate-order-no.js'
-      );
-      throw error;
+
+      console.log('[generate-prisma-client] 正在执行前置安全检查...');
+      // 懒加载：prisma generate 完成后才能实例化 PrismaClient
+      // eslint-disable-next-line global-require
+      const { PrismaClient } = require('@prisma/client');
+      // eslint-disable-next-line global-require
+      const { precheckUniqueConstraints, TARGETS } = require('./fix-duplicate-order-no');
+
+      const prismaClient = new PrismaClient();
+      let precheckResult;
+      try {
+        precheckResult = await precheckUniqueConstraints({ prisma: prismaClient });
+      } finally {
+        await prismaClient.$disconnect();
+      }
+
+      const { allSafe, details } = precheckResult;
+      const needsCleanupDetails = details.filter((d) => d.status === 'needs_cleanup');
+      const noExistCount = details.filter((d) => d.reason === 'table does not exist').length;
+      const noDupCount = details.filter((d) => d.reason === 'no duplicates').length;
+
+      if (allSafe) {
+        console.log(
+          `[generate-prisma-client] 前置安全检查通过：${TARGETS.length} 张目标表` +
+          `（${needsCleanupDetails.length} 张需清洗，${noExistCount} 张不存在/空，${noDupCount} 张已清洗）`
+        );
+        console.log('[generate-prisma-client] 安全执行 prisma db push --accept-data-loss');
+        execSync('npx prisma db push --schema=prisma/schema.prisma --accept-data-loss', {
+          stdio: 'inherit',
+          cwd: path.join(__dirname, '..'),
+        });
+      } else {
+        for (const d of needsCleanupDetails) {
+          console.error(
+            `[generate-prisma-client] ❌ ${d.table}.${d.column} 仍有 ${d.rowCount} 组重复（已清洗失败/未尝试清洗）`
+          );
+        }
+        console.error(
+          '[generate-prisma-client] 前置安全检查未通过，跳过 db push。' +
+          '请手动执行：node scripts/fix-duplicate-order-no.js --dry-run（确认）后再执行 node scripts/fix-duplicate-order-no.js'
+        );
+        throw new Error(`前置安全检查未通过：${needsCleanupDetails.length} 张表仍有重复数据`);
+      }
+    }
+  } finally {
+    // 无论成功或失败，始终还原原始 schema
+    fs.writeFileSync(schemaPath, original, 'utf8');
+    if (!generated) {
+      process.exit(1);
     }
   }
-} finally {
-  // 无论成功或失败，始终还原原始 schema
-  fs.writeFileSync(schemaPath, original, 'utf8');
-  if (!generated) {
-    process.exit(1);
-  }
 }
+
+main().catch((err) => {
+  console.error('[generate-prisma-client] 执行失败:', err.message || err);
+  process.exit(1);
+});
