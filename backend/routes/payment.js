@@ -20,13 +20,24 @@ if (process.env.STRIPE_SECRET_KEY) {
 
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-  // 内部订单类型 → 表/金额列/状态列 映射
-  // ⚠️ 安全要点：金额必须从数据库重新计算，绝不能信任前端传来的 amount
-  const ORDER_TABLES = {
+  // 内部订单类型 → 表/金额列 映射
+  // ⚠️ 安全要点：
+  //   - 表名 / 列名是硬编码白名单，绝不能从用户输入派生
+  //   - 金额必须从数据库重新计算，绝不能信任前端传来的 amount
+  const ORDER_TABLES = Object.freeze({
     expedition:    { table: 'expedition_orders',    amountColumn: 'total'  },
     activity:      { table: 'activity_orders',      amountColumn: 'amount' },
     guide_service: { table: 'guide_service_orders', amountColumn: 'amount' },
-  };
+  });
+  // 允许在 $executeRawUnsafe / $queryRawUnsafe 中拼接的表名 / 列名白名单
+  const ALLOWED_TABLES   = new Set(Object.values(ORDER_TABLES).map(m => m.table));
+  const ALLOWED_AMOUNT_COLUMNS = new Set(Object.values(ORDER_TABLES).map(m => m.amountColumn));
+  function getOrderMapping(orderType) {
+    if (!Object.prototype.hasOwnProperty.call(ORDER_TABLES, orderType)) return null;
+    const m = ORDER_TABLES[orderType];
+    if (!ALLOWED_TABLES.has(m.table) || !ALLOWED_AMOUNT_COLUMNS.has(m.amountColumn)) return null;
+    return m;
+  }
 
   // 状态机：哪些订单状态允许发起支付
   const PAYABLE_STATUSES = new Set(['pending_payment', 'pending']);
@@ -52,7 +63,7 @@ if (process.env.STRIPE_SECRET_KEY) {
   router.post('/create-intent', auth, async (req, res) => {
     try {
       const { orderId, orderType, currency = 'usd' } = req.body || {};
-      const mapping = ORDER_TABLES[orderType];
+      const mapping = getOrderMapping(orderType);
       if (!mapping || !orderId) {
         return res.status(400).json({ error: 'orderType 或 orderId 缺失或不支持' });
       }
@@ -61,6 +72,10 @@ if (process.env.STRIPE_SECRET_KEY) {
         return res.status(400).json({ error: 'orderId 不合法' });
       }
       // 服务端按订单表重新查询金额（不信任前端）
+      // 二次防御：表名 / 列名再次断言命中白名单后再拼接到 SQL
+      if (!ALLOWED_TABLES.has(mapping.table) || !ALLOWED_AMOUNT_COLUMNS.has(mapping.amountColumn)) {
+        return res.status(400).json({ error: 'orderType 不合法' });
+      }
       const rows = await prisma.$queryRawUnsafe(
         `SELECT id, user_id, status, ${mapping.amountColumn} AS amount FROM ${mapping.table} WHERE id = ? AND user_id = ?`,
         orderIdNum,
@@ -151,18 +166,30 @@ if (process.env.STRIPE_SECRET_KEY) {
     async function updateInternalOrder(metadata, nextStatus) {
       const orderType = metadata && metadata.orderType;
       const orderId = metadata && metadata.orderId;
-      const mapping = orderType ? ORDER_TABLES[orderType] : null;
+      const mapping = orderType ? getOrderMapping(orderType) : null;
       if (!mapping || !orderId) return;
+      // 二次防御：拼接前断言表名 / 列名命中白名单
+      if (!ALLOWED_TABLES.has(mapping.table)) return;
       const orderIdNum = Number(orderId);
       if (!Number.isInteger(orderIdNum) || orderIdNum <= 0) return;
+      // 仅允许已知状态字符串，避免间接被注入到日志/字符串拼接
+      const ALLOWED_NEXT = new Set(['paid', 'refunded', 'failed', 'canceled']);
+      if (!ALLOWED_NEXT.has(nextStatus)) return;
       try {
+        // 兼容性：旧代码在 expedition_orders/activity_orders/guide_service_orders 等表中
+        // 既写过英式 'cancelled' 也写过美式 'canceled'（Stripe 事件用美式拼写：
+        // payment_intent.canceled），因此 WHERE 子句同时排除两种拼写，避免误把已取消单回滚为 paid。
+        // 推荐后续统一为 'cancelled'（英式，仓库现状用得多）；映射工作不在本 PR 范围。
         await prisma.$executeRawUnsafe(
           `UPDATE ${mapping.table} SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('refunded','cancelled','canceled')`,
           nextStatus,
           orderIdNum,
         );
       } catch (err) {
-        console.error(`Webhook internal order update failed (${orderType}#${orderIdNum} → ${nextStatus}):`, err.message);
+        // 不把外部数据放进格式串，避免 tainted-format-string
+        console.error('Webhook internal order update failed', {
+          orderType, orderId: orderIdNum, nextStatus, error: err && err.message,
+        });
       }
     }
 

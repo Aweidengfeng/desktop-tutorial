@@ -85,54 +85,74 @@ router.get('/me/data-export', usersReadLimiter, auth, async (req, res) => {
 //      重置可识别字段；具体策略由后续合规需求决定，本次只删除最敏感的关联。
 //   3) 最后匿名化 users 行，清空 phone/email/password/avatar/name，并标记 deleted_at。
 //
-// 注意：使用每张表独立 try/catch，对老库缺表/缺列做容错；表名是硬编码白名单，
-// 没有用户可控输入，因此使用 $executeRawUnsafe 不引入注入。
+// 注意：表名 / 列名是**冻结的常量白名单**，并在拼接前用 Set 二次断言；
+// 没有用户可控输入参与 SQL 字符串构造，因此使用 $executeRawUnsafe 不引入注入风险。
+//
+// 保留策略（GDPR）：
+//   下列表本次不清理，原因：
+//   - posts / comments / tracks：被其他用户（点赞、评论、回复）引用，直接 DELETE 会破坏外键完整性，
+//     需要由"保留并匿名化作者引用"任务处理（后续 PR）。
+//   - orders / expedition_orders / activity_orders / guide_service_orders / stripe_payments：
+//     用于税务、风控、退款追溯，按 GDPR 第 17(3)(e) 条"合法义务豁免"保留，
+//     由独立的归档任务在到期后清理。
+//   - 当事人的金融/支付历史会通过匿名化 user_id（指向 deleted_at 标记的占位 users 行）
+//     断开与可识别信息的关联。
+const GDPR_PURGE_USER_ID_TABLES = Object.freeze([
+  'emergency_contacts',
+  'medical_info',
+  'sos_records',
+  'sms_codes',
+  'email_codes',
+  'notifications',
+  'messages',
+  'follows',                // follower_id = userId
+  'favorites',
+  'comment_likes',
+  'likes',
+  'user_achievements',
+  'user_badges',
+  'mountain_wishlists',
+  'mountain_footprints',
+  'post_saves',
+  'message_reads',
+  'conversation_members',
+  'location_shares',
+  'group_chat_members',
+  'feed_scores',
+  'expedition_subscribers',
+]);
+const GDPR_PURGE_BIDIRECTIONAL = Object.freeze([
+  { table: 'follows', columns: Object.freeze(['follower_id', 'following_id']) },
+]);
+const GDPR_ALLOWED_TABLES = new Set([
+  ...GDPR_PURGE_USER_ID_TABLES,
+  ...GDPR_PURGE_BIDIRECTIONAL.map(i => i.table),
+]);
+const GDPR_ALLOWED_COLUMNS = new Set([
+  'user_id',
+  ...GDPR_PURGE_BIDIRECTIONAL.flatMap(i => i.columns),
+]);
+
 router.delete('/me', usersWriteLimiter, auth, async (req, res) => {
   const userId = req.user.id;
-  // 1) 最敏感的 PII 关联（紧急联系人、医疗信息、SOS、验证码、私信、通知）
-  //    + 用户行为关系（关注、收藏、点赞、徽章、足迹/愿望、签到等）
-  const purgeUserIdTables = [
-    'emergency_contacts',
-    'medical_info',
-    'sos_records',
-    'sms_codes',
-    'email_codes',
-    'notifications',
-    'messages',
-    'follows',                // follower_id = userId
-    'favorites',
-    'comment_likes',
-    'likes',
-    'user_achievements',
-    'user_badges',
-    'mountain_wishlists',
-    'mountain_footprints',
-    'post_saves',
-    'message_reads',
-    'conversation_members',
-    'location_shares',
-    'group_chat_members',
-    'feed_scores',
-    'expedition_subscribers',
-  ];
-  // follows 还需要按 following_id 清理
-  const purgeBidirectional = [
-    { table: 'follows', columns: ['follower_id', 'following_id'] },
-  ];
-
   try {
-    for (const table of purgeUserIdTables) {
+    for (const table of GDPR_PURGE_USER_ID_TABLES) {
+      // 二次防御：拼接前断言表名命中白名单
+      if (!GDPR_ALLOWED_TABLES.has(table)) continue;
       await prisma.$executeRawUnsafe(`DELETE FROM ${table} WHERE user_id = ?`, userId)
-        .catch(() => { /* 老库/缺表，忽略 */ });
+        .catch(() => { /* 老库 / 缺表，忽略 */ });
     }
-    for (const item of purgeBidirectional) {
+    for (const item of GDPR_PURGE_BIDIRECTIONAL) {
+      if (!GDPR_ALLOWED_TABLES.has(item.table)) continue;
       for (const col of item.columns) {
+        if (!GDPR_ALLOWED_COLUMNS.has(col)) continue;
         await prisma.$executeRawUnsafe(`DELETE FROM ${item.table} WHERE ${col} = ?`, userId)
           .catch(() => {});
       }
     }
 
     // 2) 匿名化 users 主表（清空 PII、保留 id 以维持外键）
+    const anonymizedUsername = `@deleted_${userId}`;
     await prisma.$executeRaw`
       UPDATE users
       SET deleted_at = ${new Date()},
@@ -140,7 +160,7 @@ router.delete('/me', usersWriteLimiter, auth, async (req, res) => {
           email = NULL,
           password = NULL,
           name = '[已注销用户]',
-          username = ${'@deleted_' + userId},
+          username = ${anonymizedUsername},
           avatar = NULL,
           bio = NULL,
           settings = NULL,
