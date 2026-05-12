@@ -15,7 +15,7 @@ set -euo pipefail
 
 APP_VERSION="${VERSION:-$(cat "$(dirname "$0")/../VERSION" 2>/dev/null || echo '1.3.0')}"
 BUNDLE_ID="${IOS_BUNDLE_ID:-app.summitlink.SummitLink}"
-ANDROID_PACKAGE="${ANDROID_PACKAGE_NAME:-app.summitlink}"
+export ANDROID_PACKAGE_NAME="${ANDROID_PACKAGE_NAME:-app.summitlink}"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
