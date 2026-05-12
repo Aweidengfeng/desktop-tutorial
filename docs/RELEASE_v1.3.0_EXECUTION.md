@@ -31,7 +31,7 @@
 
 ### T+0h 🟢 后端先行（Railway）
 - [ ] **Railway 部署 v1.3.0** — 等 [`.github/workflows/deploy-railway.yml`](../.github/workflows/deploy-railway.yml) 跑完
-- [ ] **冒烟测试** — `node scripts/smoke-test.js` 全部 ✅
+- [ ] **冒烟测试** — `API_BASE_URL=https://api.summitlink.app node scripts/smoke-test.js` 全部 ✅（必须显式指定生产域名，禁止使用默认 `http://localhost:3000`）
 - [ ] **健康检查** — `curl https://api.summitlink.app/api/health` 返回 `200`
 - [ ] **PostgreSQL 连接正常** — 检查 Railway logs 无 DB 连接错误
 - [ ] **Sentry release 创建成功** — Sentry 后台能看到 `summitlink-backend@1.3.0`
