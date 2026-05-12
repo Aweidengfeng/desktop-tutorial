@@ -62,3 +62,9 @@ and this project follows [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
 ### Security
 - 补齐安全验收自动化、GDPR 用户权利支持与内容安全能力，强化首发合规基线（[#106](https://github.com/gaoshanyindi/desktop-tutorial/pull/106))
+
+---
+
+## 📚 历史档案 / Legacy Archive
+
+采用 SemVer 之前、使用旧版日历版本号体系（`2026.0.4` ~ `2026.2.0`）的变更记录已归档至 **[docs/CHANGELOG.md](docs/CHANGELOG.md)**，仅作历史参考，不再更新。
