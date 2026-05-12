@@ -11,7 +11,7 @@
 - 相关材料入口：[`CHANGELOG.md`](../CHANGELOG.md) / [`docs/releases/v1.3.0.md`](./releases/v1.3.0.md) / [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md) / [`docs/appstore-submit-guide.md`](./appstore-submit-guide.md) / [`docs/googleplay-submit-guide.md`](./googleplay-submit-guide.md)
 
 ## 🔴 阻断项一览（一眼看完）
-- [ ] `VERSION=1.3.0` 且与 [`CHANGELOG.md`](../CHANGELOG.md) 顶部版本一致
+- [ ] `VERSION` 文件内容为 `1.3.0` 且与 [`CHANGELOG.md`](../CHANGELOG.md) 顶部版本一致
 - [ ] iOS `CFBundleShortVersionString` / `CFBundleVersion` 已递增（🔍 当前仓库仅模板：[`ios-permissions-template/Info.plist.additions.xml`](../ios-permissions-template/Info.plist.additions.xml)）
 - [ ] Android `versionName` / `versionCode` 已递增（🔍 待补充 `android/app/build.gradle`）
 - [ ] 生产环境 Stripe 密钥为 `sk_live_*`，并完成 webhook 签名校验
