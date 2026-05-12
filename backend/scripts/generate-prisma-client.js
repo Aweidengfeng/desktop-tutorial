@@ -64,7 +64,8 @@ try {
 
   if (process.argv.includes('--push')) {
     console.log('[generate-prisma-client] 正在执行 order_no 重复数据预清洗...');
-    execSync('node scripts/fix-duplicate-order-no.js', {
+    const fixScriptPath = path.join(__dirname, 'fix-duplicate-order-no.js');
+    execSync(`node "${fixScriptPath}"`, {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
     });
@@ -78,7 +79,7 @@ try {
     } catch (error) {
       console.error('[generate-prisma-client] prisma db push 失败。');
       console.error(
-        '[generate-prisma-client] 若是 expedition_orders.order_no 唯一约束冲突，请先执行：node scripts/fix-duplicate-order-no.js --dry-run（确认）后再执行 node scripts/fix-duplicate-order-no.js'
+        '[generate-prisma-client] 已自动执行 order_no 清洗；若仍是 expedition_orders.order_no 唯一约束冲突，请手动执行：node scripts/fix-duplicate-order-no.js --dry-run（确认）后再执行 node scripts/fix-duplicate-order-no.js'
       );
       throw error;
     }

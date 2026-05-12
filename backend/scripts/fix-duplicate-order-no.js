@@ -62,7 +62,7 @@ async function fixDuplicateOrderNo({
     }
 
     const summary = summarizeDuplicateRows(duplicateRows);
-    const sample = duplicateRows.slice(0, Math.max(0, sampleSize));
+    const sample = duplicateRows.slice(0, sampleSize);
     logger.log(
       `[fix-duplicate-order-no] dry-run：发现 ${summary.duplicateRows} 行重复 order_no，涉及 ${summary.preservedOriginalRows} 组。`
     );
