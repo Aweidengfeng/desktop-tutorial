@@ -165,9 +165,7 @@ async function fixAllTargets({
           logger,
         });
       } catch (err) {
-        logger.warn
-          ? logger.warn(`[fix-duplicate-unique-columns] ${table}: 清洗失败: ${err.message}`)
-          : logger.log(`[fix-duplicate-unique-columns] ${table}: 清洗失败: ${err.message}`);
+        (logger.warn || logger.log).call(logger, `[fix-duplicate-unique-columns] ${table}: 清洗失败: ${err.message}`);
         results[table] = { error: err.message, skipped: false, duplicateRows: 0, fixedRows: 0, preservedOriginalRows: 0 };
       }
     }
@@ -199,9 +197,10 @@ async function precheckUniqueConstraints({
       try {
         assertSafeIdentifier(table, 'table');
         assertSafeIdentifier(column, 'column');
-        const sql = `SELECT COUNT(*) AS cnt FROM ${table} WHERE ${column} IN (SELECT ${column} FROM ${table} GROUP BY ${column} HAVING COUNT(*) > 1)`;
+        const sql = `WITH dups AS (SELECT ${column} FROM ${table} GROUP BY ${column} HAVING COUNT(*) > 1) SELECT COUNT(*) AS cnt FROM ${table} t INNER JOIN dups d ON t.${column} = d.${column}`;
         const rows = await client.$queryRawUnsafe(sql);
-        const cnt = Number(rows[0]?.cnt !== undefined ? rows[0].cnt : (rows[0]?.CNT !== undefined ? rows[0].CNT : 0));
+        const rawCount = rows[0]?.cnt ?? rows[0]?.CNT ?? 0;
+        const cnt = Number(rawCount);
         if (cnt === 0) {
           details.push({ table, column, status: 'safe', reason: 'no duplicates', rowCount: 0 });
           logger.log(`[precheck] ✅ ${table}.${column}: 无重复（安全）`);
