@@ -7,6 +7,8 @@
 const fs = require('fs');
 
 module.exports = async function globalSetup() {
+  // 保持既有测试用例行为：默认开启支付能力（生产默认仍由代码控制为 false）
+  process.env.PAYMENTS_ENABLED = process.env.PAYMENTS_ENABLED || 'true';
   const dbPath = process.env.TEST_DB_PATH || '/tmp/test-summitlink.db';
   // 删除旧的测试数据库，确保每次 CI 从干净状态开始
   if (fs.existsSync(dbPath)) {

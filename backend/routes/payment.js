@@ -16,8 +16,8 @@ const stripeDisabledReason = stripeDisabledByFlag
 
 function makeDisabledHandler(reason) {
   return (req, res) => res.status(503).json({
-    error: 'payments_disabled',
-    message: 'Payments are not yet available in this region. Please check back soon.',
+    error: 'payment_unavailable',
+    message: '支付功能暂未开放，请稍后再试',
     reason,
   });
 }

@@ -35,6 +35,7 @@ describe('payment degraded mode', () => {
   beforeEach(() => {
     resetProcessEnv();
     resetPaymentModule();
+    process.env.PAYMENTS_ENABLED = 'true';
     process.env.STRIPE_DISABLED = '';
     process.env.STRIPE_SECRET_KEY = '';
   });

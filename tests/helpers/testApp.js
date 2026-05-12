@@ -13,6 +13,7 @@ process.env.DATABASE_PROVIDER = process.env.DATABASE_PROVIDER || 'sqlite';
 process.env.JWT_SECRET      = process.env.JWT_SECRET      || 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD  = process.env.ADMIN_PASSWORD  || 'test-admin-password';
 process.env.ADMIN_USERNAME  = process.env.ADMIN_USERNAME  || 'admin';
+process.env.PAYMENTS_ENABLED = process.env.PAYMENTS_ENABLED || 'true';
 process.env.NODE_ENV        = 'test';
 
 const express = require('express');
