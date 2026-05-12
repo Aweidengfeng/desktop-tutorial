@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
+const { decryptPII } = require('../utils/crypto');
 
 const usersReadLimiter = rateLimit({
   windowMs: 60 * 1000, max: 60,
@@ -14,6 +15,8 @@ const usersWriteLimiter = rateLimit({
 });
 
 // GET /api/users/me/data-export — GDPR 数据导出（需要JWT）
+// 注意：phone/email 在数据库中是 AES-256-GCM 密文，导出前必须解密为明文，
+// 否则导出文件对当事人不可读，不符合 GDPR 第 15/20 条"可读、可移植"要求。
 router.get('/me/data-export', usersReadLimiter, auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -24,21 +27,47 @@ router.get('/me/data-export', usersReadLimiter, auth, async (req, res) => {
     `;
     if (!user) return res.status(404).json({ error: '用户不存在' });
 
+    // 解密 PII 字段（手机号、邮箱）为可读明文
+    const safeDecrypt = (v) => {
+      try { return v ? decryptPII(v) : v; } catch { return null; }
+    };
+    user.phone = safeDecrypt(user.phone);
+    user.email = safeDecrypt(user.email);
+
     const posts = await prisma.$queryRaw`
       SELECT id, content, image, created_at FROM posts WHERE user_id = ${userId} ORDER BY created_at DESC
-    `;
+    `.catch(() => []);
     const tracks = await prisma.$queryRaw`
       SELECT id, name, peak_name, date, distance_km, elevation_gain, duration_minutes, notes, created_at
       FROM tracks WHERE user_id = ${userId} ORDER BY created_at DESC
-    `;
+    `.catch(() => []);
     const orders = await prisma.$queryRaw`
       SELECT id, status, created_at FROM orders WHERE user_id = ${userId} ORDER BY created_at DESC
     `.catch(() => []);
     const comments = await prisma.$queryRaw`
       SELECT id, content, created_at FROM comments WHERE user_id = ${userId} ORDER BY created_at DESC
     `.catch(() => []);
+    const emergencyContacts = await prisma.$queryRaw`
+      SELECT id, name, phone, relationship, created_at FROM emergency_contacts WHERE user_id = ${userId}
+    `.catch(() => []);
+    const summits = await prisma.$queryRaw`
+      SELECT id, peak_name, altitude, date, notes, created_at FROM user_summits WHERE user_id = ${userId}
+    `.catch(() => []);
+    const expeditionsRecords = await prisma.$queryRaw`
+      SELECT id, name, description, date, created_at FROM user_expeditions WHERE user_id = ${userId}
+    `.catch(() => []);
 
-    const exportData = { user, posts, tracks, orders, comments, exportedAt: new Date().toISOString() };
+    const exportData = {
+      user,
+      posts,
+      tracks,
+      orders,
+      comments,
+      emergency_contacts: emergencyContacts,
+      summits,
+      expeditions: expeditionsRecords,
+      exportedAt: new Date().toISOString(),
+    };
 
     res.setHeader('Content-Disposition', 'attachment; filename="summitlink-data-export.json"');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -48,15 +77,77 @@ router.get('/me/data-export', usersReadLimiter, auth, async (req, res) => {
   }
 });
 
-// DELETE /api/users/me — 软删除账号（GDPR 注销，需要JWT）
+// DELETE /api/users/me — GDPR 账户注销（需要JWT）
+// 实现策略：
+//   1) 删除当事人产生的 PII 重灾区（emergency_contacts、medical_info、sos_records、
+//      sms_codes、email_codes、notifications、messages、follows、收藏等），无法恢复。
+//   2) 对必须保留以维持外键完整性的内容（posts、comments、tracks 等），
+//      重置可识别字段；具体策略由后续合规需求决定，本次只删除最敏感的关联。
+//   3) 最后匿名化 users 行，清空 phone/email/password/avatar/name，并标记 deleted_at。
+//
+// 注意：使用每张表独立 try/catch，对老库缺表/缺列做容错；表名是硬编码白名单，
+// 没有用户可控输入，因此使用 $executeRawUnsafe 不引入注入。
 router.delete('/me', usersWriteLimiter, auth, async (req, res) => {
+  const userId = req.user.id;
+  // 1) 最敏感的 PII 关联（紧急联系人、医疗信息、SOS、验证码、私信、通知）
+  //    + 用户行为关系（关注、收藏、点赞、徽章、足迹/愿望、签到等）
+  const purgeUserIdTables = [
+    'emergency_contacts',
+    'medical_info',
+    'sos_records',
+    'sms_codes',
+    'email_codes',
+    'notifications',
+    'messages',
+    'follows',                // follower_id = userId
+    'favorites',
+    'comment_likes',
+    'likes',
+    'user_achievements',
+    'user_badges',
+    'mountain_wishlists',
+    'mountain_footprints',
+    'post_saves',
+    'message_reads',
+    'conversation_members',
+    'location_shares',
+    'group_chat_members',
+    'feed_scores',
+    'expedition_subscribers',
+  ];
+  // follows 还需要按 following_id 清理
+  const purgeBidirectional = [
+    { table: 'follows', columns: ['follower_id', 'following_id'] },
+  ];
+
   try {
+    for (const table of purgeUserIdTables) {
+      await prisma.$executeRawUnsafe(`DELETE FROM ${table} WHERE user_id = ?`, userId)
+        .catch(() => { /* 老库/缺表，忽略 */ });
+    }
+    for (const item of purgeBidirectional) {
+      for (const col of item.columns) {
+        await prisma.$executeRawUnsafe(`DELETE FROM ${item.table} WHERE ${col} = ?`, userId)
+          .catch(() => {});
+      }
+    }
+
+    // 2) 匿名化 users 主表（清空 PII、保留 id 以维持外键）
     await prisma.$executeRaw`
       UPDATE users
-      SET deleted_at = ${new Date()}, phone = NULL, email = NULL, password = NULL,
-          name = '[已注销用户]', avatar = NULL
-      WHERE id = ${req.user.id}
+      SET deleted_at = ${new Date()},
+          phone = NULL,
+          email = NULL,
+          password = NULL,
+          name = '[已注销用户]',
+          username = ${'@deleted_' + userId},
+          avatar = NULL,
+          bio = NULL,
+          settings = NULL,
+          privacy = NULL
+      WHERE id = ${userId}
     `;
+
     res.clearCookie('token');
     res.json({ success: true, message: '账号已注销' });
   } catch (e) {
