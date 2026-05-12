@@ -3,16 +3,20 @@
 # SummitLink – Fastlane Automation
 #
 # Available lanes:
-#   fastlane beta_ios       – Build & upload to TestFlight
-#   fastlane beta_android   – Build & upload to Google Play Internal Testing
-#   fastlane beta           – Both iOS + Android
-#   fastlane release_ios    – Build & upload to App Store (manual review required)
+#   fastlane ios beta_ios              – Build & upload to TestFlight
+#   fastlane android beta_android      – Build & upload to Google Play Internal Testing
+#   fastlane android rollout_android   – Adjust staged rollout % (pass percent:N)
+#   fastlane android halt_android      – Halt staged rollout (set rollout to 0)
+#   fastlane beta                      – Both iOS + Android (TestFlight + Internal)
+#   fastlane ios release_ios           – Build & upload to App Store (manual review required)
 #
 # Required environment variables / secrets (set in CI or ~/.env):
 #   APPLE_API_KEY_ID        – App Store Connect API Key ID
 #   APPLE_API_ISSUER_ID     – App Store Connect API Issuer ID
 #   APPLE_API_KEY_CONTENT   – Base64-encoded .p8 key file content
 #   GOOGLE_PLAY_JSON_KEY    – Path to Google Play service account JSON key file
+#   ANDROID_KEYSTORE_PATH   – Path to Android release keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD
 
 default_platform(:ios)
 
@@ -93,7 +97,7 @@ end
 # ── Android lanes ────────────────────────────────────────────────────────────
 
 platform :android do
-  desc "Build and upload a new beta AAB to Google Play Internal Testing"
+  desc "构建并上传到 Google Play Internal Testing track（内测，≤100 人，无需审核）"
   lane :beta_android do
     gradle(
       task: "bundle",
@@ -114,6 +118,54 @@ platform :android do
       release_status: "draft",
       version_name: lane_context[SharedValues::GRADLE_VERSION_NAME]
     )
+  end
+
+  # 用法：bundle exec fastlane android rollout_android percent:5
+  # 将当前已发布到 Production 的版本的 staged rollout 百分比调整到指定值（1/5/25/50/100）。
+  # 不重新上传 AAB，仅修改 Google Play 上的分发比例。
+  # percent 参数为必填（无默认值，避免意外分发）。
+  desc "调整生产 staged rollout 百分比（用法: fastlane android rollout_android percent:5）"
+  lane :rollout_android do |options|
+    UI.user_error!("请传入 percent 参数，例如: fastlane android rollout_android percent:5") unless options[:percent]
+    percent = options[:percent].to_f
+    UI.user_error!("percent 必须在 1–100 之间") unless percent >= 1 && percent <= 100
+    UI.user_error!("GOOGLE_PLAY_JSON_KEY 环境变量未设置，请参考 docs/GRADUAL_ROLLOUT.md §2 配置") if ENV["GOOGLE_PLAY_JSON_KEY"].nil? || ENV["GOOGLE_PLAY_JSON_KEY"].empty?
+
+    upload_to_play_store(
+      track: "production",
+      rollout: (percent / 100.0).to_s,
+      json_key: ENV["GOOGLE_PLAY_JSON_KEY"],
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+
+    UI.success("✅ Android staged rollout 已调整至 #{percent.to_i}%")
+  end
+
+  # Google Play 没有专用的 halt API；将 rollout 设为 0.0 即可停止向新用户分发。
+  # 已安装新版本的用户不会自动回退，仍保留新版本。
+  # rollout: "0.0" 与 rollout_android lane 中的 (percent/100.0).to_s 是同一语义，
+  # 此处直接硬编码 "0.0" 以明确表达"完全暂停"的意图，避免计算歧义。
+  desc "暂停生产 staged rollout（halt）——将分发比例设为 0，新用户不再收到新版本"
+  lane :halt_android do
+    UI.user_error!("GOOGLE_PLAY_JSON_KEY 环境变量未设置，请参考 docs/GRADUAL_ROLLOUT.md §2 配置") if ENV["GOOGLE_PLAY_JSON_KEY"].nil? || ENV["GOOGLE_PLAY_JSON_KEY"].empty?
+    upload_to_play_store(
+      track: "production",
+      rollout: "0.0",
+      json_key: ENV["GOOGLE_PLAY_JSON_KEY"],
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+
+    UI.success("🛑 Android staged rollout 已暂停（rollout=0）。已安装新版本的用户保持现状。")
   end
 end
 

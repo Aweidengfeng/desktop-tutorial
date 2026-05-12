@@ -98,11 +98,15 @@
 ### 8. 🧪 测试与质量
 - [ ] CI 全绿（单测/集成/E2E/压测）（[`.github/workflows/test.yml`](../.github/workflows/test.yml), [`.github/workflows/load-test.yml`](../.github/workflows/load-test.yml), [`.github/workflows/deploy-railway.yml`](../.github/workflows/deploy-railway.yml)）
 - [ ] 手动 smoke test 已通过（PR #126 脚本：[`scripts/smoke-test.js`](../scripts/smoke-test.js), [`.github/workflows/deploy-railway.yml`](../.github/workflows/deploy-railway.yml), [PR #126](../../pull/126)）
-- [ ] 在 TestFlight / Play 内测轨道完成至少 24 小时灰度（P2-A 会细化；参考 [`fastlane/Fastfile`](../fastlane/Fastfile), [`docs/fastlane-setup.md`](./fastlane-setup.md)）
+- [ ] 在 TestFlight / Play 内测轨道完成至少 48 小时灰度，无崩溃（详见 [`docs/GRADUAL_ROLLOUT.md §1`](./GRADUAL_ROLLOUT.md#1-ios-灰度发布app-store)、[`§2`](./GRADUAL_ROLLOUT.md#2-android-灰度发布google-play)；命令：`bundle exec fastlane ios beta_ios` / `bundle exec fastlane android beta_android`）
+- [ ] 灰度状态可查询（命令：`bash scripts/rollout-status.sh`；详见 [`docs/GRADUAL_ROLLOUT.md §6`](./GRADUAL_ROLLOUT.md#6-命令速查)）
+- [ ] 第 4 节监控指标（Crash-free ≥ 99.5%、5xx < 1%、支付成功率 ≥ 90%）在灰度期间无超阈值（[`docs/GRADUAL_ROLLOUT.md §4`](./GRADUAL_ROLLOUT.md#4-监控与决策指标)）
 
 ### 9. 📞 应急
-- [ ] 回滚命令已记录（Railway revert / fastlane rollback）（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md), [`docs/RUNBOOK.md`](./RUNBOOK.md), [`fastlane/Fastfile`](../fastlane/Fastfile)）
-- [ ] 主要负责人电话 + 备用联系人已更新（🔍 待补充值班通讯录）
+- [ ] 回滚 SOP 已阅读（[`docs/GRADUAL_ROLLOUT.md §5`](./GRADUAL_ROLLOUT.md#5-回滚-sop一页)；含 iOS Phased Release 暂停 + Android halt + Railway revert 完整步骤）
+- [ ] Android staged rollout halt 命令已验证（`bundle exec fastlane android halt_android`；参考 [`docs/GRADUAL_ROLLOUT.md §2.4`](./GRADUAL_ROLLOUT.md#24-android-回滚)）
+- [ ] App Store Phased Release 暂停方式已知晓（App Store Connect → 版本 → Pause；参考 [`docs/GRADUAL_ROLLOUT.md §1.3`](./GRADUAL_ROLLOUT.md#13-ios-回滚)）
+- [ ] 主要负责人电话 + 备用联系人已更新（[`docs/GRADUAL_ROLLOUT.md §5.3`](./GRADUAL_ROLLOUT.md#53-联系人待补充)；🔍 待补充值班通讯录）
 - [ ] Stripe / Apple / Google 官方 support 链接已整理（[`docs/RUNBOOK.md`](./RUNBOOK.md), [`docs/appstore-submit-guide.md`](./appstore-submit-guide.md), [`docs/googleplay-submit-guide.md`](./googleplay-submit-guide.md)）
 
 ### 10. 📄 法律与运营
