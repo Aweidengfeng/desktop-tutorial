@@ -62,7 +62,7 @@
 - [ ] Webhook endpoint 在 Stripe Dashboard 配置为生产域名（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md), [`docs/appstore-submit-guide.md`](./appstore-submit-guide.md)）
 - [ ] Webhook 签名校验代码已启用（[`backend/routes/payment.js#L127-L141`](../backend/routes/payment.js#L127-L141)）
 - [ ] Live Mode 守卫（PR #129）确认 `NODE_ENV=production` 且 key 前缀检测通过（[PR #129](../../pull/129), [`backend/routes/payment.js#L9-L17`](../backend/routes/payment.js#L9-L17), [`scripts/validate-env.js`](../scripts/validate-env.js)）
-- [ ] 退款 / 失败 / 重复扣款的客服流程已写入运营手册（[`docs/RUNBOOK.md`](./RUNBOOK.md), [`backend/routes/payment.js#L214-L235`](../backend/routes/payment.js#L214-L235)）
+- [ ] 退款 / 失败 / 重复扣款的客服流程已写入运营手册（[`docs/RUNBOOK.md`](./RUNBOOK.md)）
 - [ ] 测试模式完成至少 3 笔成功支付 + 1 笔退款 E2E 验证（🔍 待补充测试记录）
 
 ### 5. 🔐 安全与合规
