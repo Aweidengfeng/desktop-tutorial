@@ -5,6 +5,10 @@
 [![CI](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml)
 [![Load Test](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml)
 
+## 🚀 发布准备
+
+- 上架前终审清单：[`docs/RELEASE_READINESS_CHECKLIST.md`](docs/RELEASE_READINESS_CHECKLIST.md)
+
 ## 📦 发布历史
 
 | 版本 | 日期 | 主题 | 发布说明 |
@@ -153,4 +157,3 @@ npm run test:load
 ## 📄 许可证
 
 MIT © 2026 SummitLink
-
