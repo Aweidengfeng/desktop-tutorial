@@ -5,9 +5,33 @@
 [![CI](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml)
 [![Load Test](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml)
 
-## 🚀 发布准备
+## 🚀 发布准备（TL;DR）
 
-- 上架前终审清单：[`docs/RELEASE_READINESS_CHECKLIST.md`](docs/RELEASE_READINESS_CHECKLIST.md)
+上架前请按 **「终审清单 → 灰度发布 → Sentry 告警 → 发布执行单」** 顺序走完：
+
+| # | 文档 | 用途 | 何时看 |
+|---|---|---|---|
+| 1 | [`docs/RELEASE_READINESS_CHECKLIST.md`](docs/RELEASE_READINESS_CHECKLIST.md) | 上架前终审清单（10 章 ~50 项，含 🔴 阻断项 10 条） | 提审前 **48h** 完整核对 |
+| 2 | [`docs/GRADUAL_ROLLOUT.md`](docs/GRADUAL_ROLLOUT.md) | 真机灰度发布方案（iOS Phased Release + Android Staged Rollout） | 提审通过、准备放量时 |
+| 3 | [`docs/SENTRY_ALERTS.md`](docs/SENTRY_ALERTS.md) | Sentry 告警规则与 PII 脱敏 | 灰度期间监控指标 |
+| 4 | [`docs/RELEASE_v1.3.0_EXECUTION.md`](docs/RELEASE_v1.3.0_EXECUTION.md) | **v1.3.0 实际发布执行单**（可勾选的 D-Day 操作流水） | 发布当天逐项执行 |
+| 5 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | 生产应急手册（值班、回滚、联系人） | 灰度 + 全量后 7 天值班期 |
+
+**核心命令速查：**
+
+```bash
+# 查看当前灰度状态（iOS TestFlight + Android Google Play）
+bash scripts/rollout-status.sh
+
+# 生产冒烟测试
+node scripts/smoke-test.js
+
+# 调整 Android staged rollout 比例（1/5/25/50/100）
+bundle exec fastlane android rollout_android percent:5
+
+# 紧急暂停 Android 灰度
+bundle exec fastlane android halt_android
+```
 
 ## 📦 发布历史
 
