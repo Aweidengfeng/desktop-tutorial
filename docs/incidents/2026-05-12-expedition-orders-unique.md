@@ -29,3 +29,40 @@
 - PR 模板新增检查项：
   - “是否引入 unique 约束？”
   - “若是，是否已在生产数据上验证无重复或已提供数据迁移脚本？”
+
+---
+
+## 续：PR #142 修复不完整（2026-05-12 后续）
+
+### 新发现
+1. `activity_orders` 表同样在 schema 中添加了 `order_no @unique` 约束，但 PR #142 的清洗脚本只覆盖了 `expedition_orders`。
+2. 生产 DB 是全新部署（表不存在），但 Prisma 保守地对任何"加 unique 约束"的 diff 发出 data-loss 警告并拒绝执行，即使表为空。
+
+### 修复方案（续）
+PR #143 引入：
+1. `TARGETS` 数组作为单一信息源，一次性涵盖 `expedition_orders` 和 `activity_orders`。
+2. `precheckUniqueConstraints()`：在 `prisma db push` 前检查所有目标表，若全部为空/不存在/无重复，则自动加 `--accept-data-loss`；否则 fail-fast。
+3. `fixAllTargets()`：独立处理每张表，单表失败不影响其他表。
+
+### 教训（Lesson Learned）
+
+> **教训**：未来在 Prisma schema 中添加 `@unique` 约束时，必须在 PR 描述中列出**所有受影响的 (表, 列)**，否则清洗脚本可能遗漏其他表。已在 `scripts/fix-duplicate-order-no.js` 引入 `TARGETS` 数组作为单一信息源，新加列只需追加 1 行。
+
+### 部署后预期 Railway 日志
+```
+[generate-prisma-client] 正在执行 order_no 重复数据预清洗...
+[fix-duplicate-unique-columns] expedition_orders.order_no: 表不存在，跳过
+[fix-duplicate-unique-columns] activity_orders.order_no:   表不存在，跳过
+[generate-prisma-client] 正在执行前置安全检查...
+[precheck] ✅ expedition_orders.order_no: 表不存在（全新部署，安全）
+[precheck] ✅ activity_orders.order_no: 表不存在（全新部署，安全）
+[generate-prisma-client] 前置安全检查通过：2 张目标表（0 张需清洗，2 张不存在/空，0 张已清洗）
+[generate-prisma-client] 安全执行 prisma db push --accept-data-loss
+🚀  Your database is now in sync with your Prisma schema.
+```
+
+### 运维手动验证恢复
+
+```bash
+curl -s https://desktop-tutorial-production-182a.up.railway.app/api/health | jq .
+```

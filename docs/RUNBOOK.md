@@ -155,3 +155,25 @@ Railway Dashboard → Deployments → 选择上一个成功的 deployment → Ro
 | 项目负责人 | support@summitlink.app |
 | Railway 支持 | https://railway.app/help |
 | 高德技术支持 | https://lbs.amap.com/support |
+
+---
+
+## Prisma unique 约束 data-loss 警告导致部署崩溃
+
+### 症状
+- Railway 部署日志出现：`Error: Use the --accept-data-loss flag`
+- 服务状态：Crashed
+
+### 根因
+Prisma 检测到 schema 中新增 `@unique` 约束时，无论目标表是否为空，都会保守地发出 data-loss 警告并拒绝 `db push`。
+
+### 处理步骤
+1. **检查** `backend/scripts/fix-duplicate-order-no.js` 中的 `TARGETS` 数组是否包含所有受影响的 (表, 列)。
+2. 如有遗漏，追加一行并合并 PR，Railway 自动重新部署。
+3. 部署成功后验证服务：
+   ```bash
+   curl -s https://desktop-tutorial-production-182a.up.railway.app/api/health | jq .
+   ```
+
+### 教训
+> 未来在 Prisma schema 中添加 `@unique` 约束时，必须在 PR 描述中列出**所有受影响的 (表, 列)**，并在 `TARGETS` 数组中同步更新。
