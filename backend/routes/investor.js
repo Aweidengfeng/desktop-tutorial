@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 
@@ -105,13 +106,26 @@ const INVESTOR_NARRATIVE = {
   ],
 };
 
+function timingSafeStringEqual(a, b) {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) {
+    // 仍执行一次等长比较，避免早返回造成时序泄露
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function investorAuth(req, res, next) {
-  const token = req.headers['x-investor-token'] || req.query.token;
-  const expectedToken = process.env.INVESTOR_TOKEN || process.env.ADMIN_PASSWORD;
+  // 仅从请求头读取 token，禁止使用 query 参数（避免凭证泄露到日志/代理/Referer）
+  const token = req.headers['x-investor-token'];
+  const expectedToken = process.env.INVESTOR_TOKEN;
   if (!expectedToken) {
+    // 必须显式配置 INVESTOR_TOKEN，禁止复用 ADMIN_PASSWORD
     return res.status(503).json({ error: '投资者令牌未配置，请联系管理员' });
   }
-  if (!token || token !== expectedToken) {
+  if (!token || !timingSafeStringEqual(token, expectedToken)) {
     return res.status(401).json({ error: '需要投资者访问令牌' });
   }
   next();

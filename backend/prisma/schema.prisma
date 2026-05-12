@@ -95,7 +95,7 @@ model User {
   moderationLogs       ModerationLog[]
   expeditionOrders     ExpeditionOrder[]
   activityOrders       ActivityOrder[]
-  guideServices        GuideService[]
+  guideServiceOrders   GuideServiceOrder[]
   stripePayments       StripePayment[]
 
   @@map("users")
@@ -392,17 +392,27 @@ model GuidePhoto {
 }
 
 model GuideService {
-  id          Int      @id @default(autoincrement())
-  guideId     Int?     @map("guide_id")
-  userId      Int?     @map("user_id")
-  title       String?
-  description String?
-  price       Float?
-  duration    String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           Int      @id @default(autoincrement())
+  guideId      Int?     @map("guide_id")
+  title        String?
+  description  String?
+  cover        String?
+  type         String?  @default("guided_climb")
+  mountain     String?
+  region       String?
+  price        Float?   @default(0)
+  priceUnit    String?  @default("per_person") @map("price_unit")
+  durationDays Int?     @default(1) @map("duration_days")
+  maxClients   Int?     @default(6) @map("max_clients")
+  difficulty   String?
+  includes     String?
+  startDate    String?  @map("start_date")
+  endDate      String?  @map("end_date")
+  status       String?  @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   guide Guide? @relation(fields: [guideId], references: [id], onDelete: SetNull)
-  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("guide_services")
 }
@@ -690,14 +700,33 @@ model Expedition {
 }
 
 model ExpeditionOrder {
-  id           Int      @id @default(autoincrement())
-  userId       Int      @map("user_id")
-  expeditionId Int      @map("expedition_id")
-  amount       Float?
-  status       String   @default("pending")
-  paymentState String?  @map("payment_state")
-  notes        String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  id               Int       @id @default(autoincrement())
+  orderNo          String?   @unique @map("order_no")
+  userId           Int       @map("user_id")
+  expeditionId     Int       @map("expedition_id")
+  participants     Int?      @default(1)
+  selectedAddons   String?   @map("selected_addons")
+  subtotal         Float?    @default(0)
+  discount         Float?    @default(0)
+  total            Float?    @default(0)
+  platformFee      Float?    @default(0) @map("platform_fee")
+  publisherIncome  Float?    @default(0) @map("publisher_income")
+  amount           Float?
+  status           String    @default("pending_payment")
+  statusHistory    String?   @map("status_history")
+  paymentState     String?   @map("payment_state")
+  contactName      String?   @map("contact_name")
+  contactPhone     String?   @map("contact_phone")
+  emergencyContact String?   @map("emergency_contact")
+  emergencyPhone   String?   @map("emergency_phone")
+  notes            String?
+  refundReason     String?   @map("refund_reason")
+  refundAmount     Int?      @map("refund_amount")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  paidAt           DateTime? @map("paid_at")
+  confirmedAt      DateTime? @map("confirmed_at")
+  cancelledAt      DateTime? @map("cancelled_at")
+  refundedAt       DateTime? @map("refunded_at")
 
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   expedition Expedition @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
@@ -707,16 +736,55 @@ model ExpeditionOrder {
 }
 
 model ActivityOrder {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  activityId Int?     @map("activity_id")
-  amount     Float?
-  status     String   @default("pending")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id                     Int       @id @default(autoincrement())
+  orderNo                String?   @unique @map("order_no")
+  userId                 Int       @map("user_id")
+  activityId             Int?      @map("activity_id")
+  clubId                 Int?      @map("club_id")
+  amount                 Float?    @default(0)
+  status                 String    @default("pending_payment")
+  statusHistory          String?   @map("status_history")
+  emergencyContactName   String?   @map("emergency_contact_name")
+  emergencyContactPhone  String?   @map("emergency_contact_phone")
+  agreedWaiver           Int?      @default(0) @map("agreed_waiver")
+  agreedWaiverVersion    String?   @map("agreed_waiver_version")
+  refundReason           String?   @map("refund_reason")
+  refundAmount           Float?    @map("refund_amount")
+  refundedAt             DateTime? @map("refunded_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("activity_orders")
+}
+
+model GuideServiceOrder {
+  id                    Int       @id @default(autoincrement())
+  orderNo               String?   @unique @map("order_no")
+  serviceId             Int       @map("service_id")
+  guideId               Int       @map("guide_id")
+  userId                Int       @map("user_id")
+  amount                Float?    @default(0)
+  status                String    @default("pending_payment")
+  statusHistory         String?   @map("status_history")
+  emergencyContactName  String?   @map("emergency_contact_name")
+  emergencyContactPhone String?   @map("emergency_contact_phone")
+  agreedWaiver          Int?      @default(0) @map("agreed_waiver")
+  waiverVersion         String?   @map("waiver_version")
+  startDate             String?   @map("start_date")
+  clientNotes           String?   @map("client_notes")
+  refundReason          String?   @map("refund_reason")
+  refundAmount          Float?    @map("refund_amount")
+  refundedAt            DateTime? @map("refunded_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("guide_service_orders")
 }
 
 // ─────────────────────────────────────────

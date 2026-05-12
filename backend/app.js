@@ -6,12 +6,47 @@ const { randomUUID } = require('crypto');
 
 const logger = pino({
   level: process.env.LOG_LEVEL || 'info',
+  // 防止日志中泄露 PII / 凭证（手机号、邮箱、token、密码、Stripe 签名等）
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'req.headers["set-cookie"]',
+      'req.headers["x-investor-token"]',
+      'req.headers["x-admin-token"]',
+      'req.headers["x-api-key"]',
+      'req.headers["stripe-signature"]',
+      'res.headers["set-cookie"]',
+      '*.password',
+      '*.token',
+      '*.refreshToken',
+      '*.refresh_token',
+      '*.accessToken',
+      '*.access_token',
+      '*.jwt',
+      '*.secret',
+      '*.apiKey',
+      '*.api_key',
+      '*.phone',
+      '*.email',
+      '*.mobile',
+      '*.idCard',
+      '*.id_card',
+      '*.cardNumber',
+      '*.card_number',
+      '*.cvc',
+      '*.cvv',
+      '*.pin',
+    ],
+    censor: '[Filtered]',
+  },
   transport: process.env.NODE_ENV !== 'production'
     ? { target: 'pino-pretty', options: { colorize: true } }
     : undefined,
 });
 
 const express = require('express');
+const helmet = require('helmet');
 const { initSentry, sentryRequestHandler, sentryErrorHandler } = require('./middleware/sentry');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -66,6 +101,69 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 });
+
+// Helmet：补齐缺失的安全响应头（HSTS / CSP / 防 MIME 嗅探 / Origin-Agent-Cluster 等）
+// 注意事项：
+//  1) 前端目前仍依赖 CDN（Tailwind / Alpine / AMap / Mapbox）与少量内联脚本，
+//     因此 CSP 暂用宽松策略 + 'unsafe-inline'；后续把内联脚本全部外提后可收紧到 nonce/hash。
+//  2) crossOriginEmbedderPolicy 关闭，避免影响 Service Worker / 第三方图片资源。
+//  3) HSTS 仅在生产开启（避免本地 HTTP 调试时浏览器卡死在 https）。
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      // 业务现状：CDN 脚本 + 少量 inline 脚本；后续外提完毕可移除 unsafe-inline
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "'unsafe-eval'", // Alpine.js x-data 内嵌表达式编译需要
+        'https://cdn.tailwindcss.com',
+        'https://cdn.jsdelivr.net',
+        'https://webapi.amap.com',
+        'https://*.amap.com',
+        'https://api.mapbox.com',
+        'https://*.mapbox.com',
+        'https://js.stripe.com',
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        'https://cdn.jsdelivr.net',
+        'https://fonts.googleapis.com',
+        'https://api.mapbox.com',
+      ],
+      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdn.jsdelivr.net'],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      connectSrc: [
+        "'self'",
+        'https://*.amap.com',
+        'https://restapi.amap.com',
+        'https://api.mapbox.com',
+        'https://*.mapbox.com',
+        'https://events.mapbox.com',
+        'https://api.stripe.com',
+        'https://*.sentry.io',
+        'https://*.ingest.sentry.io',
+        'wss:',
+        'ws:',
+      ],
+      frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com'],
+      workerSrc: ["'self'", 'blob:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // HSTS 仅生产开启
+  strictTransportSecurity: process.env.NODE_ENV === 'production'
+    ? { maxAge: 15552000, includeSubDomains: true, preload: false }
+    : false,
+}));
 app.use(cookieParser());
 // Stripe webhook 需要 raw body（必须在 express.json() 之前注册）
 app.use('/api/payment/stripe-webhook', express.raw({ type: 'application/json' }));
