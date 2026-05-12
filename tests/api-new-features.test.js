@@ -625,3 +625,34 @@ describe('12. 请求 ID 链路（x-request-id）', () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ── 13. 地图配置降级（MAPBOX_TOKEN 缺失）──────────────────────────────────────
+describe('13. GET /api/config/map OSM fallback', () => {
+  const originalMapboxToken = process.env.MAPBOX_TOKEN;
+  let app;
+
+  beforeAll(() => {
+    process.env.MAPBOX_TOKEN = '';
+    clearDbCache();
+    app = createApp();
+  });
+
+  afterAll(() => {
+    if (originalMapboxToken === undefined) {
+      delete process.env.MAPBOX_TOKEN;
+    } else {
+      process.env.MAPBOX_TOKEN = originalMapboxToken;
+    }
+  });
+
+  test('非中国地区且 MAPBOX_TOKEN 为空时返回 osm provider', async () => {
+    const res = await request(app)
+      .get('/api/config/map')
+      .set('x-country', 'US');
+
+    expect(res.status).toBe(200);
+    expect(res.body.provider).toBe('osm');
+    expect(res.body.tileUrl).toBe('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    expect(res.body.attribution).toBe('© OpenStreetMap contributors');
+  });
+});

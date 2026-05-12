@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
+const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 
 const payLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -13,6 +14,7 @@ const payLimiter = rateLimit({
 
 // POST /api/pay/create
 router.post('/create', async (req, res) => {
+  if (!paymentsEnabled()) return paymentsDisabledResponse(res);
   try {
     const { amount, method } = req.body;
     const orderNo = 'SL' + Date.now();

@@ -10,6 +10,7 @@ router.get('/', async (req, res) => {
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0',
     region: process.env.REGION || 'default',
+    sentry: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
   };
 
   // DB 连通性检查

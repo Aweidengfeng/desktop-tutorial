@@ -18,13 +18,6 @@ const prisma = require('./prisma');
 const { encryptPII } = require('../utils/crypto');
 
 async function main() {
-  // ── 检查是否已有数据 ──────────────────────────────────────
-  const peakCount = await prisma.peak.count();
-  if (peakCount > 0) {
-    console.log('ℹ️  数据库已有数据，跳过填充。');
-    return;
-  }
-
   console.log('📦 开始填充示例数据 (Prisma)...');
 
   // ── 管理员账号 ─────────────────────────────────────────────
@@ -61,7 +54,14 @@ async function main() {
     },
   });
 
+  const demoUser = await prisma.user.findFirst({
+    where: { phone: encryptPII('13800138000') },
+    select: { id: true, name: true, avatar: true },
+  });
+
   // ── 山峰：8000米巨峰 ──────────────────────────────────────
+  const peakCount = await prisma.peak.count();
+  if (peakCount === 0) {
   const peaks8000 = [
     { name: '珠穆朗玛峰', nameEn: 'Mount Everest', altitude: 8849, country: '中国/尼泊尔', continent: '亚洲', difficulty: '极难', image: 'https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=800', type: '8000ers', category: 'eight_thousanders', description: '世界最高峰，位于中尼边境，是无数攀登者毕生的梦想。', bestSeason: '5月、10月', successRate: '29%', firstAscent: '1953年5月29日', deaths: 310, latitude: 27.98, longitude: 86.92, annualClimbers: 800, commercialTeams: 35, seasonDetail: '春季窗口期4月下旬至5月中旬，秋季窗口10月', supplementalOxygen: true, mainRoute: '东南山脊(南坡)/东北山脊(北坡)' },
     { name: 'K2', nameEn: 'K2', altitude: 8611, country: '巴基斯坦/中国', continent: '亚洲', difficulty: '极难', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800', type: '8000ers', category: 'eight_thousanders', description: '世界第二高峰，被誉为"野蛮巨峰"，技术难度极高。', bestSeason: '7月-8月', successRate: '25%', firstAscent: '1954年7月31日', deaths: 87, latitude: 35.88, longitude: 76.51, annualClimbers: 150, commercialTeams: 12, seasonDetail: '夏季窗口期7月中旬至8月中旬', supplementalOxygen: false, mainRoute: 'Abruzzi山脊路线' },
@@ -97,22 +97,18 @@ async function main() {
     { name: '玉龙雪山', nameEn: 'Yulong Snow Mountain', altitude: 5596, country: '中国', continent: '亚洲', difficulty: '中等', image: 'https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=800', type: 'china', category: 'china_classic', description: '云南丽江，世界上纬度最低的海洋性冰川之一，风景壮美。', bestSeason: '3月-6月、9月-11月', successRate: '60%', firstAscent: '1987年', deaths: 0, latitude: 27.10, longitude: 100.22, annualClimbers: 5000, commercialTeams: 100 },
   ];
 
-  // 批量创建所有山峰（使用 upsert 避免重复）
-  const allPeaks = [
-    ...peaks8000,
-    ...continentalPeaks,
-    ...chinaPeaks,
-  ];
+    // 批量创建所有山峰（仅首次空库填充，避免重复）
+    const allPeaks = [
+      ...peaks8000,
+      ...continentalPeaks,
+      ...chinaPeaks,
+    ];
 
-  for (const peak of allPeaks) {
-    await prisma.peak.upsert({
-      where: { id: 0 }, // placeholder – use name+altitude as logical key
-      update: {},
-      create: peak,
-    }).catch(() => {
-      // 若 upsert where 条件不匹配则直接 create
-      return prisma.peak.create({ data: peak }).catch(() => {});
-    });
+    for (const peak of allPeaks) {
+      await prisma.peak.create({ data: peak }).catch(() => {});
+    }
+  } else {
+    console.log(`ℹ️  山峰数据已存在 (${peakCount})，跳过山峰填充。`);
   }
 
   // ── 救援联系人 ────────────────────────────────────────────
@@ -140,6 +136,63 @@ async function main() {
 
   for (const plan of insurancePlans) {
     await prisma.insurancePlan.create({ data: plan }).catch(() => {});
+  }
+
+  // ── 帖子 ──────────────────────────────────────────────────
+  const postCount = await prisma.post.count();
+  if (postCount === 0 && demoUser) {
+    await prisma.post.createMany({
+      data: [
+        {
+          userId: demoUser.id,
+          authorName: demoUser.name,
+          authorAvatar: demoUser.avatar,
+          content: '珠峰南坡冲顶窗口预计在本月下旬开启，大家注意风速变化。',
+          location: '珠穆朗玛峰大本营',
+          likes: 18,
+          comments: 4,
+        },
+        {
+          userId: demoUser.id,
+          authorName: demoUser.name,
+          authorAvatar: demoUser.avatar,
+          content: 'K2 阿布鲁齐山脊今天积雪偏深，建议谨慎推进。',
+          location: 'K2 C2 营地',
+          likes: 23,
+          comments: 6,
+        },
+        {
+          userId: demoUser.id,
+          authorName: demoUser.name,
+          authorAvatar: demoUser.avatar,
+          content: '阿空加瓜普通线补给点已恢复，南美线队伍可正常补水。',
+          location: '阿空加瓜',
+          likes: 11,
+          comments: 2,
+        },
+        {
+          userId: demoUser.id,
+          authorName: demoUser.name,
+          authorAvatar: demoUser.avatar,
+          content: '贡嘎山海螺沟方向天气转好，周末训练可安排。',
+          location: '贡嘎山',
+          likes: 16,
+          comments: 5,
+        },
+      ],
+    }).catch(() => {});
+  }
+
+  // ── 队伍 ──────────────────────────────────────────────────
+  const teamCount = await prisma.team.count();
+  if (teamCount === 0 && demoUser) {
+    await prisma.$executeRaw`
+      INSERT INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, status)
+      VALUES
+        ('珠峰南坡适应队', '珠穆朗玛峰', '2026-05-20', 3, 5, '高级', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '目标南坡 C3 适应+冲顶窗口观测', 'recruiting'),
+        ('K2 技术训练队', 'K2', '2026-06-10', 2, 4, '专业', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '冰壁与固定绳技术训练，需 6000m 以上经验', 'recruiting'),
+        ('贡嘎山周末拉练', '贡嘎山', '2026-05-25', 4, 6, '中级', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '两日拉练，含高海拔徒步与营地协作', 'recruiting')
+    `.catch(() => {});
   }
 
   console.log('✅ 种子数据填充完成！');

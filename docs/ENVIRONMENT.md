@@ -32,7 +32,7 @@
 | `OPENWEATHER_API_KEY` | 天气功能必需 | — | `abc123def456...` | OpenWeatherMap API Key。获取地址：[openweathermap.org/api](https://openweathermap.org/api)。免费套餐每分钟 60 次调用 |
 | `AMAP_KEY` | 地图功能必需 | — | `your_amap_key` | 高德地图 Web JS API Key。获取地址：[console.amap.com](https://console.amap.com/dev/key/app)。需申请 **Web端（JS API）** 类型 |
 | `AMAP_SECURITY_CODE` | 地图功能必需 | — | `your_security_code` | 高德 Web JS API 2.0 安全密钥（与 Key 配套）。未配置时地图无法初始化 |
-| `MAPBOX_TOKEN` | 否 | — | `pk.eyJ1IjoiZXhhbXBsZSIsImEi...` | Mapbox GL JS 访问令牌（[account.mapbox.com](https://account.mapbox.com/access-tokens/)）。**IP 自动切换**：中国大陆（CN）IP 或无法判断时使用高德；其他地区 IP 且此变量已配置时自动切换至 Mapbox。不填则所有用户均使用高德。 |
+| `MAPBOX_TOKEN` | 否 | — | `pk.eyJ1IjoiZXhhbXBsZSIsImEi...` | Mapbox GL JS 访问令牌（[account.mapbox.com](https://account.mapbox.com/access-tokens/)）。中国大陆（CN）IP 或无法判断时使用高德；非中国地区在 token 缺失/占位值（如 `pk.xxx`）时自动降级到 OSM，避免地图黑屏。 |
 
 ### Stripe 支付（国际支付）
 
@@ -42,6 +42,7 @@
 | `STRIPE_PUBLISHABLE_KEY` | Stripe 支付必需 | — | `pk_live_...` 或 `pk_test_...` | Stripe 可公开密钥，通过 `/api/payment/config` 返回前端使用 |
 | `STRIPE_WEBHOOK_SECRET` | Stripe Webhook 必需 | — | `whsec_...` | Webhook 签名验证密钥（Stripe Dashboard → Webhooks → 端点 → 签名密钥）。用于验证 `POST /api/payment/stripe-webhook` 请求的真实性 |
 | `STRIPE_DISABLED` | 否 | — | `true` | Stripe 优雅降级开关。设为 `true` 时跳过 Stripe SDK 初始化，所有 `/api/payment/*` 返回 `503`。用于 Stripe Live 密钥未就绪时临时恢复生产；拿到 `sk_live_*` 后应删除该变量（或设为 `false`） |
+| `PAYMENTS_ENABLED` | 否 | `false` | `true` | 支付总开关。仅当为 `true` 时开放前端付费入口与后端支付相关接口；为 `false` 时接口返回 `503 payments_disabled`，用于免费版提审阶段。 |
 
 ### 数据库与存储
 
@@ -66,7 +67,7 @@
 
 | 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
 |--------|----------|--------|--------|------|
-| `SENTRY_DSN` | 否 | — | `https://example@o0.ingest.sentry.io/0` | Sentry 项目 DSN。**未设置时 Sentry 完全不启用**，无任何副作用。设置后后端自动接入错误追踪，前端也会通过模板注入加载 Sentry Browser SDK |
+| `SENTRY_DSN` | 否 | — | `https://example@o0.ingest.sentry.io/0` | Sentry 项目 DSN。**未设置时 Sentry 完全静默不启用**。设置后后端启用并在启动时输出 `[sentry] enabled...`，前端按需加载 Sentry SDK。 |
 | `SENTRY_RELEASE` | 否 | — | `v1.0.0` 或 git commit hash | Sentry 发布版本标识，用于关联代码版本与错误。推荐使用 CI 中的 git commit hash |
 
 ### 短信服务（B2 阶段）

@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
+const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 
 const ordersLimiter = rateLimit({ windowMs: 60*1000, max: 60 });
 const orderWriteLimiter = rateLimit({ windowMs: 60*1000, max: 20 });
@@ -37,6 +38,7 @@ router.get('/:id', ordersLimiter, auth, async (req, res) => {
 
 // POST /api/orders/:id/pay
 router.post('/:id/pay', orderWriteLimiter, auth, async (req, res) => {
+  if (!paymentsEnabled()) return paymentsDisabledResponse(res);
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });

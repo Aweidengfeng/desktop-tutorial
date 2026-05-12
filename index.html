@@ -82,7 +82,7 @@
       if (!window.__sentryInitialized) console.warn('[SummitLink] 未处理 Promise 拒绝:', e.reason);
     });
     // 仅当后端注入了有效 DSN 时才加载 Sentry SDK
-    var dsn = window.__SENTRY_DSN;
+    var dsn = (window.__SENTRY_DSN || '').trim();
     if (!dsn) return;
     var script = document.createElement('script');
     script.src = 'https://browser.sentry-cdn.com/8.0.0/bundle.min.js';
@@ -936,10 +936,11 @@
                     查看营地天气
                   </button>
                 </template>
-                <button @click="openCommercialBooking(peak)" class="w-full mt-2 py-2 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1">
+                <button x-show="paymentsEnabled" @click="openCommercialBooking(peak)" class="w-full mt-2 py-2 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1">
                   <span class="material-symbols-outlined text-sm">calendar_add_on</span>
                   预约攀登
                 </button>
+                <span x-show="!paymentsEnabled" class="block w-full mt-2 py-2 text-center text-gray-400 text-xs font-semibold">即将上线 (Coming Soon)</span>
               </div>
             </template>
           </div>
@@ -2054,7 +2055,7 @@
         <p class="text-slate-500 text-[11px] mt-1.5">💡 款项托管于平台，服务确认后结算给服务方</p>
       </div>
       <!-- Payment Methods -->
-      <div class="space-y-3 mb-5">
+      <div x-show="paymentsEnabled" class="space-y-3 mb-5">
         <button @click="paymentMethod='alipay'" class="w-full flex items-center gap-3 p-4 rounded-2xl transition-all" :class="paymentMethod==='alipay' ? 'bg-blue-500/20 border border-blue-400/50' : 'bg-slate-800 border border-transparent'">
           <span class="text-2xl">💙</span>
           <div class="text-left flex-1">
@@ -2096,7 +2097,8 @@
           </div>
         </button>
       </div>
-      <button @click="confirmPayment()" class="w-full bg-primary hover:bg-primary-light text-white py-4 rounded-2xl font-bold text-base transition-colors">
+      <div x-show="!paymentsEnabled" class="text-center text-gray-400 text-sm font-medium mb-5">即将上线 (Coming Soon)</div>
+      <button x-show="paymentsEnabled" @click="confirmPayment()" class="w-full bg-primary hover:bg-primary-light text-white py-4 rounded-2xl font-bold text-base transition-colors">
         确认支付
       </button>
     </div>
@@ -2466,7 +2468,8 @@
                 </div>
               </template>
               <div class="flex gap-3">
-                <button @click="showPeakDetail=false;openCommercialBooking(selectedPeak)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
+                <button x-show="paymentsEnabled" @click="showPeakDetail=false;openCommercialBooking(selectedPeak)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
+                <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
                 <button class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors">
                   <span class="material-symbols-outlined">bookmark</span>
                 </button>
@@ -2544,7 +2547,8 @@
           </div>
           <div class="flex gap-3 mt-5">
             <button @click="showBooking=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
-            <button @click="submitBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+            <button x-show="paymentsEnabled" @click="submitBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+            <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
         </div>
       </div>
@@ -3390,9 +3394,10 @@
               </div>
             </div>
             <p class="text-slate-400 text-xs mb-4 text-center">支付方式：微信支付 / 支付宝（演示模式）</p>
-            <button @click="submitGearPurchase()" :disabled="gearPurchaseLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors disabled:opacity-50">
+            <button x-show="paymentsEnabled" @click="submitGearPurchase()" :disabled="gearPurchaseLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors disabled:opacity-50">
               <span x-text="gearPurchaseLoading ? '处理中...' : '立即支付 ¥' + (gearPurchaseItem.price || 0).toLocaleString('zh-CN')"></span>
             </button>
+            <span x-show="!paymentsEnabled" class="block w-full text-center text-gray-400 py-4 text-sm font-medium">即将上线 (Coming Soon)</span>
           </div>
         </template>
       </div>
@@ -3450,10 +3455,12 @@
                 </div>
                 <p class="text-xs text-slate-500 mb-2">承保方：<span class="text-slate-300" x-text="plan.provider"></span></p>
                 <template x-if="plan.buy_url">
-                  <a :href="plan.buy_url" target="_blank" class="block w-full text-center bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">立即购买</a>
+                  <a x-show="paymentsEnabled" :href="plan.buy_url" target="_blank" class="block w-full text-center bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">立即购买</a>
+                  <span x-show="!paymentsEnabled" class="block w-full text-center text-gray-400 py-2 text-sm font-semibold">即将上线 (Coming Soon)</span>
                 </template>
                 <template x-if="!plan.buy_url">
-                  <button @click="openInsuranceInquiry(plan)" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">询价购买</button>
+                  <button x-show="paymentsEnabled" @click="openInsuranceInquiry(plan)" class="w-full bg-primary hover:bg-primary-light text-white py-2 rounded-xl text-sm font-semibold transition-colors">询价购买</button>
+                  <span x-show="!paymentsEnabled" class="block w-full text-center text-gray-400 py-2 text-sm font-semibold">即将上线 (Coming Soon)</span>
                 </template>
               </div>
             </template>
@@ -3781,7 +3788,8 @@
             </div>
             <div class="flex gap-3">
               <button @click="showGuideDetail=false;openChatWithUser(selectedGuide.name,selectedGuide.avatar);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">私信向导</button>
-              <button @click="showGuideDetail=false;bookGuideService(selectedGuide)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
+              <button x-show="paymentsEnabled" @click="showGuideDetail=false;bookGuideService(selectedGuide)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
+              <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
             </div>
           </div>
         </template>
@@ -4059,7 +4067,8 @@
                   </div>
                   <p x-show="svc.description" class="text-slate-500 text-xs mb-2 leading-relaxed" x-text="svc.description"></p>
                   <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id !== currentUser.id">
-                    <button @click="openGuideServiceEnroll(currentGuideProfile, svc)" class="w-full bg-primary/20 hover:bg-primary/40 text-primary-light py-1.5 rounded-lg text-xs font-semibold transition-colors">立即预约</button>
+                    <button x-show="paymentsEnabled" @click="openGuideServiceEnroll(currentGuideProfile, svc)" class="w-full bg-primary/20 hover:bg-primary/40 text-primary-light py-1.5 rounded-lg text-xs font-semibold transition-colors">立即预约</button>
+                    <span x-show="!paymentsEnabled" class="block w-full text-center text-gray-400 py-1.5 text-xs font-semibold">即将上线 (Coming Soon)</span>
                   </template>
                   <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
                     <button @click="deleteMyGuideService(currentGuideProfile.id, svc.id)" class="w-full bg-red-900/30 hover:bg-red-900/50 text-red-400 py-1.5 rounded-lg text-xs font-semibold transition-colors">删除服务</button>
@@ -4071,7 +4080,8 @@
           <!-- Guide action buttons -->
           <div class="flex gap-3 pb-2">
             <button @click="showGuideProfileModal=false;openChatWithUser(currentGuideProfile.name,currentGuideProfile.avatar);currentPage='chat'" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">私信向导</button>
-            <button @click="openBookingForGuide(currentGuideProfile)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
+            <button x-show="paymentsEnabled" @click="openBookingForGuide(currentGuideProfile)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约向导</button>
+            <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
           <!-- Guide owner: commercial apply -->
           <template x-if="currentUser && currentGuideProfile && currentGuideProfile.user_id === currentUser.id">
@@ -4164,7 +4174,8 @@
                       <span x-show="act.difficulty" :class="getDifficultyClass(act.difficulty)" class="text-xs" x-text="act.difficulty"></span>
                       <span class="text-xs text-slate-400" x-text="'已报 ' + (act.current_members || 0) + '/' + (act.max_members || 10)"></span>
                     </div>
-                    <button @click="bookClubActivity(currentClubProfile, act)" class="mt-2 w-full bg-primary/20 hover:bg-primary/40 text-primary-light py-1.5 rounded-lg text-xs font-semibold transition-colors">立即报名</button>
+                    <button x-show="paymentsEnabled" @click="bookClubActivity(currentClubProfile, act)" class="mt-2 w-full bg-primary/20 hover:bg-primary/40 text-primary-light py-1.5 rounded-lg text-xs font-semibold transition-colors">立即报名</button>
+                    <span x-show="!paymentsEnabled" class="block mt-2 w-full text-center text-gray-400 py-1.5 text-xs font-semibold">即将上线 (Coming Soon)</span>
                   </div>
                 </div>
               </template>
@@ -4399,11 +4410,12 @@
           </div>
           <div class="flex gap-3">
             <button @click="showActivityEnrollModal=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
-            <button @click="submitActivityEnroll()" :disabled="enrollLoading || !enrollForm.agreed_waiver"
+            <button x-show="paymentsEnabled" @click="submitActivityEnroll()" :disabled="enrollLoading || !enrollForm.agreed_waiver"
                     :class="(!enrollForm.agreed_waiver||enrollLoading)?'opacity-50 cursor-not-allowed':''"
                     class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
               <span x-text="enrollLoading ? '提交中…' : '确认报名'"></span>
             </button>
+            <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
         </div>
       </template>
@@ -4455,11 +4467,12 @@
           </div>
           <div class="flex gap-3">
             <button @click="showGuideServiceEnrollModal=false" class="flex-1 bg-slate-700 text-white font-bold py-3 rounded-xl">取消</button>
-            <button @click="submitGuideServiceBook()" :disabled="guideServiceEnrollLoading || !guideServiceEnrollForm.agreed_waiver"
+            <button x-show="paymentsEnabled" @click="submitGuideServiceBook()" :disabled="guideServiceEnrollLoading || !guideServiceEnrollForm.agreed_waiver"
                     :class="(!guideServiceEnrollForm.agreed_waiver||guideServiceEnrollLoading)?'opacity-50 cursor-not-allowed':''"
                     class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">
               <span x-text="guideServiceEnrollLoading ? '提交中…' : '确认预约'"></span>
             </button>
+            <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
         </div>
       </template>
@@ -5259,7 +5272,8 @@
           <p class="text-slate-500 text-xs text-center">💡 款项托管于平台，服务完成后结算给运营商</p>
           <div class="flex gap-3">
             <button @click="commercialStep=2" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">← 返回</button>
-            <button @click="submitCommercialBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+            <button x-show="paymentsEnabled" @click="submitCommercialBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+            <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
         </div>
       </div>
@@ -5327,7 +5341,8 @@
             </div>
             <div class="flex gap-2">
               <template x-if="order.status==='待支付'">
-                <button @click="payOrder(order)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs transition-colors">立即支付</button>
+                <button x-show="paymentsEnabled" @click="payOrder(order)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs transition-colors">立即支付</button>
+                <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-xs font-medium py-2">即将上线 (Coming Soon)</span>
               </template>
               <template x-if="order.status==='服务中'">
                 <button @click="confirmOrderComplete(order)" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded-xl text-xs transition-colors">确认完成</button>
@@ -5380,7 +5395,8 @@
             </div>
             <div class="flex gap-2">
               <template x-if="order.status==='pending_payment'">
-                <button @click="payActivityOrder(order.id)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs">立即支付</button>
+                <button x-show="paymentsEnabled" @click="payActivityOrder(order.id)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs">立即支付</button>
+                <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-xs font-medium py-2">即将上线 (Coming Soon)</span>
               </template>
               <template x-if="order.status==='pending_payment'||order.status==='paid'">
                 <button @click="cancelActivityOrder(order.id)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 rounded-xl text-xs">取消</button>
@@ -5416,7 +5432,8 @@
             </div>
             <div class="flex gap-2">
               <template x-if="order.status==='pending_payment'">
-                <button @click="payGuideServiceOrder(order.id)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs">立即支付</button>
+                <button x-show="paymentsEnabled" @click="payGuideServiceOrder(order.id)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-2 rounded-xl text-xs">立即支付</button>
+                <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-xs font-medium py-2">即将上线 (Coming Soon)</span>
               </template>
               <template x-if="order.status==='pending_payment'||order.status==='paid'">
                 <button @click="cancelGuideServiceOrder(order.id)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 rounded-xl text-xs">取消</button>

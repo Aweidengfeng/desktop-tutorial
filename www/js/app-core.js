@@ -189,6 +189,14 @@ async function detectMapProvider() {
         window.__activeMapProvider = 'mapbox';
         return { provider: 'mapbox', token: mbToken };
       }
+      if (data.provider === 'osm') {
+        window.__activeMapProvider = 'osm';
+        return {
+          provider: 'osm',
+          tileUrl: data.tileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          attribution: data.attribution || '© OpenStreetMap contributors',
+        };
+      }
     }
   } catch (e) {}
   window.__activeMapProvider = 'amap';
@@ -209,6 +217,25 @@ function loadMapboxGL(token) {
     document.head.appendChild(script);
   });
 }
+
+function loadLeaflet() {
+  return new Promise((resolve, reject) => {
+    if (window.L) { resolve(); return; }
+    const existingCss = document.querySelector('link[data-map="leaflet"]');
+    if (!existingCss) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.setAttribute('data-map', 'leaflet');
+      document.head.appendChild(link);
+    }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => resolve();
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function alpineLink() {
@@ -216,6 +243,7 @@ function alpineLink() {
     currentPage: 'home',
     currentUser: null,
     authToken: localStorage.getItem('summitlink_token') || null,
+    paymentsEnabled: false,
     showLogin: false,
     showRegister: false,
     loginLoading: false,
@@ -1297,6 +1325,20 @@ function alpineLink() {
           });
         } catch(e) { return null; }
       }
+      if (window.__activeMapProvider === 'osm' && window.L) {
+        try {
+          const map = window.L.map(containerId).setView(
+            (options.center && options.center.length === 2)
+              ? [options.center[1], options.center[0]]
+              : [27.988, 86.925],
+            options.zoom || 13,
+          );
+          const tileUrl = window.__osmTileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+          const attribution = window.__osmAttribution || '© OpenStreetMap contributors';
+          window.L.tileLayer(tileUrl, { attribution }).addTo(map);
+          return map;
+        } catch(e) { return null; }
+      }
       return this.initAMap(containerId, options);
     },
 
@@ -1317,6 +1359,13 @@ function alpineLink() {
             paint: { 'line-color': '#3d8a9e', 'line-width': 4 } });
         }
         return;
+      }
+      if (window.__activeMapProvider === 'osm' && window.L && typeof map.addLayer === 'function') {
+        try {
+          const latlngs = points.map(p => [p.lat, p.lng]);
+          window.L.polyline(latlngs, { color: '#3d8a9e', weight: 4 }).addTo(map);
+          return;
+        } catch(e) {}
       }
       // 高德路径
       if (typeof AMap !== 'undefined') {
@@ -3491,6 +3540,7 @@ function alpineLink() {
       };
       window.addEventListener('summitlink:session-expired', onSessionExpired);
       this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
+      this.loadPublicConfig();
       // Initialize public tracks
       this.filteredPublicTracks = this.publicTracks;
       // Verify token and load initial data
@@ -3521,6 +3571,11 @@ function alpineLink() {
       detectMapProvider().then(cfg => {
         if (cfg.provider === 'mapbox' && cfg.token) {
           loadMapboxGL(cfg.token).catch(() => {});
+        } else if (cfg.provider === 'osm') {
+          window.__osmTileUrl = cfg.tileUrl;
+          window.__osmAttribution = cfg.attribution;
+          console.warn('[map] MAPBOX_TOKEN not configured, falling back to OSM. Configure MAPBOX_TOKEN in Railway Variables before 5/15 launch.');
+          loadLeaflet().catch(() => {});
         }
       });
       // Watch gearMode changes to reload gear (reset category first to avoid double-call)
@@ -3566,6 +3621,14 @@ function alpineLink() {
           } catch(e) {}
         });
       }
+    },
+    async loadPublicConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (!res.ok) return;
+        const data = await res.json();
+        this.paymentsEnabled = !!data.paymentsEnabled;
+      } catch (e) {}
     },
   };
 }

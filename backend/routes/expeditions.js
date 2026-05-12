@@ -20,6 +20,7 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const devOnly = require('../middleware/devOnly');
+const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 
 // 下单限流：每分钟最多20次，防止刷单
 const orderLimiter = rateLimit({
@@ -63,6 +64,7 @@ router.get('/orders/my', auth, async (req, res) => {
 // POST /api/expeditions/orders/:id/mock-pay — 模拟支付（内测，生产环境已禁用）
 // TODO: B2 阶段替换为真实支付（支付宝/Stripe）
 router.post('/orders/:id/mock-pay', devOnly, auth, async (req, res) => {
+  if (!paymentsEnabled()) return paymentsDisabledResponse(res);
   try {
     const orderId = parseInt(req.params.id);
     const [order] = await prisma.$queryRaw`SELECT * FROM expedition_orders WHERE id = ${orderId} AND user_id = ${req.user.id}`;
