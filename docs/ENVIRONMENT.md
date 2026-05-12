@@ -41,6 +41,7 @@
 | `STRIPE_SECRET_KEY` | Stripe 支付必需 | — | `sk_live_...` 或 `sk_test_...` | Stripe 后端密钥（[dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys)）。未设置时 `/api/payment/*` 路由返回未启用提示 |
 | `STRIPE_PUBLISHABLE_KEY` | Stripe 支付必需 | — | `pk_live_...` 或 `pk_test_...` | Stripe 可公开密钥，通过 `/api/payment/config` 返回前端使用 |
 | `STRIPE_WEBHOOK_SECRET` | Stripe Webhook 必需 | — | `whsec_...` | Webhook 签名验证密钥（Stripe Dashboard → Webhooks → 端点 → 签名密钥）。用于验证 `POST /api/payment/stripe-webhook` 请求的真实性 |
+| `STRIPE_DISABLED` | 否 | — | `true` | Stripe 优雅降级开关。设为 `true` 时跳过 Stripe SDK 初始化，所有 `/api/payment/*` 返回 `503`。用于 Stripe Live 密钥未就绪时临时恢复生产；拿到 `sk_live_*` 后应删除该变量（或设为 `false`） |
 
 ### 数据库与存储
 

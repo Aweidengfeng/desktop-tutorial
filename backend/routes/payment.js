@@ -4,21 +4,52 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { createPayment, verifyCallback, PROVIDER } = require('../middleware/payment');
 
-// ─── Stripe 支付（如已配置 STRIPE_SECRET_KEY）─────────────────────────────────
-if (process.env.STRIPE_SECRET_KEY) {
-  // Guard: refuse to start in production with a test-mode key
-  if (
-    process.env.NODE_ENV === 'production' &&
-    process.env.STRIPE_SECRET_KEY.startsWith('sk_test_')
-  ) {
-    throw new Error(
-      '[Stripe] 生产环境禁止使用测试密钥（sk_test_...）。\n' +
-      '  请在 Railway → Variables 中将 STRIPE_SECRET_KEY 替换为正式密钥（sk_live_...）。\n' +
-      '  正式密钥可在 https://dashboard.stripe.com/apikeys 获取。'
-    );
-  }
+const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+const stripeDisabledByFlag = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+const stripeDisabledByMissingKey = !stripeKey;
+const stripeDisabled = stripeDisabledByFlag || stripeDisabledByMissingKey;
+const stripeDisabledReason = stripeDisabledByFlag
+  ? 'STRIPE_DISABLED=true'
+  : 'STRIPE_SECRET_KEY missing';
 
-  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+function makeDisabledHandler(reason) {
+  return (req, res) => res.status(503).json({
+    error: 'payment_unavailable',
+    message: '支付功能暂未开放，请稍后再试',
+    reason,
+  });
+}
+
+if (!stripeDisabled && process.env.NODE_ENV === 'production' && stripeKey.startsWith('sk_test_')) {
+  throw new Error(
+    '[Stripe] 生产环境禁止使用测试密钥（sk_test_...）。\n' +
+    '  请在 Railway → Variables 中将 STRIPE_SECRET_KEY 替换为正式密钥（sk_live_...）。\n' +
+    '  正式密钥可在 https://dashboard.stripe.com/apikeys 获取。\n' +
+    '  如需临时禁用支付让服务恢复，请在 Railway Variables 设置 STRIPE_DISABLED=true。'
+  );
+}
+
+if (stripeDisabled) {
+  const disabledHandler = makeDisabledHandler(stripeDisabledReason);
+  const routes = [
+    ['get', '/config'],
+    ['post', '/create-intent'],
+    ['post', '/create-payment-intent'],
+    ['post', '/stripe-webhook'],
+    ['get', '/stripe-history'],
+    ['get', '/stripe-stats'],
+    ['get', '/provider'],
+    ['post', '/create'],
+    ['get', '/mock-pay'],
+    ['post', '/mock-confirm'],
+    ['post', '/notify/wechat'],
+  ];
+  for (const [method, path] of routes) {
+    router[method](path, disabledHandler);
+  }
+  console.warn(`[Stripe] ⚠️ 支付功能已降级（503）。原因: ${stripeDisabledReason}`);
+} else {
+  const stripe = require('stripe')(stripeKey);
 
   // 内部订单类型 → 表/金额列 映射
   // ⚠️ 安全要点：
@@ -60,7 +91,7 @@ if (process.env.STRIPE_SECRET_KEY) {
   //  1) 必须提供 orderType + orderId，服务端按订单表重算金额（拒绝信任前端 amount）
   //  2) 校验订单归属当前用户，且订单处于可支付状态
   //  3) 使用 Stripe idempotencyKey 防止同一订单生成多个 intent
-  router.post('/create-intent', auth, async (req, res) => {
+  const createIntentHandler = async (req, res) => {
     try {
       const { orderId, orderType, currency = 'usd' } = req.body || {};
       const mapping = getOrderMapping(orderType);
@@ -117,7 +148,9 @@ if (process.env.STRIPE_SECRET_KEY) {
       console.error('create-intent error:', err.message);
       res.status(500).json({ error: 'create-intent failed' });
     }
-  });
+  };
+  router.post('/create-intent', auth, createIntentHandler);
+  router.post('/create-payment-intent', auth, createIntentHandler);
 
   // POST /api/payment/stripe-webhook — Stripe Webhook（原始 body，已在 app.js 提前注册）
   // 安全要点：
