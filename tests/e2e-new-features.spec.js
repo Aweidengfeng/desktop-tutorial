@@ -297,14 +297,10 @@ test.describe('7. Footer 链接', () => {
  */
 test.describe('8. admin.html — 订单管理', () => {
   test('admin.html 可访问，包含管理后台入口', async ({ page }) => {
-    await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
-    // 应该显示登录表单或管理界面
-    const body = await page.textContent('body');
-    expect(body.length).toBeGreaterThan(50);
-    // 页面标题应包含"管理"或相关字样
-    const title = await page.title();
-    expect(title).toBeTruthy();
+    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+    // admin 页会在初始化时触发多条后台请求，避免使用 networkidle 造成误超时
+    await expect(page).toHaveTitle(/管理|Admin|SummitLink/i);
+    await expect(page.locator('body')).toContainText(/管理|Admin|SummitLink/i);
   });
 
   test('expedition-orders API 管理员接口可访问', async ({ page }) => {

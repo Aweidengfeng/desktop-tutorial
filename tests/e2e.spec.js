@@ -79,30 +79,36 @@ test.describe('页面基础加载', () => {
 
 test.describe('山峰数据加载', () => {
   test('山峰卡片应从 API 动态加载（非硬编码）', async ({ page }) => {
-    // 监听 /api/peaks 请求（在导航前注册）
-    const peaksResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/peaks') && resp.status() === 200,
+    // 监听页面初始化阶段是否触发山峰请求（避免仅验证直连 API）
+    const peaksRequest = page.waitForRequest(
+      req => req.url().includes('/api/peaks') && req.method() === 'GET',
       { timeout: 30000 }
     );
     await page.goto('/summitlink');
-    // 等待 API 响应
-    const resp = await peaksResponse;
+    await peaksRequest;
+    // 用直连 API 兜底验证返回结构，避免 304 缓存响应导致 waitForResponse 误超时
+    const resp = await page.request.get('/api/peaks');
+    expect(resp.status()).toBe(200);
     const data = await resp.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
   });
 
   test('点击「8000米巨峰」Tab 应过滤显示对应山峰', async ({ page }) => {
-    // 在导航前注册监听，以捕获页面初始化时发起的请求（init() 自动调用 loadPeaks('8000ers')）
-    const filteredResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/peaks?type=8000ers') && resp.status() === 200,
+    // 在导航前注册监听，以捕获页面初始化时发起的过滤请求
+    const filteredRequest = page.waitForRequest(
+      req => {
+        if (req.method() !== 'GET') return false;
+        const url = new URL(req.url());
+        return url.pathname === '/api/peaks' && url.searchParams.get('type') === '8000ers';
+      },
       { timeout: 30000 }
     );
 
     await page.goto('/summitlink');
-
-    // 等待过滤请求
-    const resp = await filteredResponse;
+    await filteredRequest;
+    const resp = await page.request.get('/api/peaks?type=8000ers');
+    expect(resp.status()).toBe(200);
     const data = await resp.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
@@ -127,12 +133,14 @@ test.describe('登录流程', () => {
 
 test.describe('帖子功能', () => {
   test('帖子列表应从 API 加载', async ({ page }) => {
-    const postsResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/posts') && resp.status() === 200,
+    const postsRequest = page.waitForRequest(
+      req => req.url().includes('/api/posts') && req.method() === 'GET',
       { timeout: 30000 }
     );
     await page.goto('/summitlink');
-    const resp = await postsResponse;
+    await postsRequest;
+    const resp = await page.request.get('/api/posts');
+    expect(resp.status()).toBe(200);
     const data = await resp.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
@@ -273,12 +281,14 @@ test.describe('帖子功能', () => {
 
 test.describe('队伍功能', () => {
   test('队伍列表应从 API 加载', async ({ page }) => {
-    const teamsResponse = page.waitForResponse(
-      resp => resp.url().includes('/api/teams') && resp.status() === 200,
+    const teamsRequest = page.waitForRequest(
+      req => req.url().includes('/api/teams') && req.method() === 'GET',
       { timeout: 30000 }
     );
     await page.goto('/summitlink');
-    const resp = await teamsResponse;
+    await teamsRequest;
+    const resp = await page.request.get('/api/teams');
+    expect(resp.status()).toBe(200);
     const data = await resp.json();
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
