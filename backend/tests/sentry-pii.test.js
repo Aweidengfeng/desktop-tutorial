@@ -49,4 +49,33 @@ describe('sentry beforeSend PII 脱敏', () => {
       id: expect.stringMatching(/^[a-f0-9]{12}$/),
     });
   });
+
+  test('已知噪声应返回 null（不发送到 Sentry）', () => {
+    const noiseEvent = {
+      message: 'GET /favicon.ico failed with networkerror when attempting to fetch resource',
+    };
+
+    expect(sentryBeforeSend(noiseEvent)).toBeNull();
+  });
+
+  test('空对象与嵌套字段应安全处理', () => {
+    expect(sentryBeforeSend({})).toEqual({});
+
+    const nested = {
+      request: {
+        data: {
+          profile: {
+            email: 'abc@test.com',
+            note: 'contact 13800138000 and token sk_test_abc123',
+          },
+        },
+      },
+    };
+
+    const out = sentryBeforeSend(nested);
+    expect(out.request.data.profile.email).toBe('[REDACTED]');
+    expect(out.request.data.profile.note).toContain('[REDACTED]');
+    expect(out.request.data.profile.note).not.toContain('13800138000');
+    expect(out.request.data.profile.note).not.toContain('sk_test_abc123');
+  });
 });
