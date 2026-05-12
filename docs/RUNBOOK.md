@@ -117,6 +117,7 @@ Railway Dashboard → Deployments → 选择上一个成功的 deployment → Ro
 - 环境变量缺失：在 Railway → Variables 检查必要变量
 - 端口冲突：确认 `PORT` 环境变量已设置或使用默认 8080
 - 启动安全校验失败：生产环境需设置 `JWT_SECRET` 和 `ADMIN_PASSWORD`（非默认值）
+- `expedition_orders.order_no` 唯一约束冲突：先运行 `node backend/scripts/fix-duplicate-order-no.js --dry-run` 预检，再运行 `node backend/scripts/fix-duplicate-order-no.js` 修复重复值，随后 redeploy
 
 ---
 
