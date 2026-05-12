@@ -58,6 +58,7 @@
 
 ### 4. 💳 Stripe 生产切换
 - [ ] `STRIPE_SECRET_KEY` 在 Railway 已配置为 `sk_live_*`（[`scripts/validate-env.js`](../scripts/validate-env.js), [`docs/ENVIRONMENT.md`](./ENVIRONMENT.md), [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)）
+- [ ] 生产环境 `STRIPE_DISABLED` 未设置或为 false（参考 [`docs/incidents/2026-05-12-stripe-degraded-mode.md`](./incidents/2026-05-12-stripe-degraded-mode.md)）
 - [ ] `STRIPE_WEBHOOK_SECRET` 已切换为生产 endpoint secret（[`docs/ENVIRONMENT.md`](./ENVIRONMENT.md), [`backend/routes/payment.js#L132-L137`](../backend/routes/payment.js#L132-L137)）
 - [ ] Webhook endpoint 在 Stripe Dashboard 配置为生产域名（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md), [`docs/appstore-submit-guide.md`](./appstore-submit-guide.md)）
 - [ ] Webhook 签名校验代码已启用（[`backend/routes/payment.js#L127-L141`](../backend/routes/payment.js#L127-L141)）

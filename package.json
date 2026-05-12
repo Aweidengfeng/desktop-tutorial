@@ -61,6 +61,7 @@
       "**/tests/api-routes-teams.test.js",
       "**/tests/api-coverage.test.js",
       "**/backend/tests/fix-duplicate-order-no.test.js",
+      "**/backend/tests/payment-degraded.test.js",
       "**/backend/tests/security.test.js",
       "**/backend/tests/sentry-pii.test.js",
       "**/backend/tests/concurrency.test.js",

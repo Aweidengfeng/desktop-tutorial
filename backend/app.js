@@ -331,6 +331,41 @@ app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/gdpr', require('./routes/gdpr'));
 app.use('/api/currency', require('./routes/currency'));
 
+function getStripeStartupStatus() {
+  const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+  const stripeDisabledByFlag = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+  const stripeDisabledByMissingKey = !stripeKey;
+  if (stripeDisabledByFlag || stripeDisabledByMissingKey) {
+    const reason = stripeDisabledByFlag ? 'STRIPE_DISABLED=true' : 'STRIPE_SECRET_KEY missing';
+    return { message: `⚠️ 降级模式 (${reason}) — 支付不可用`, degraded: true };
+  }
+  if (process.env.NODE_ENV === 'production' && stripeKey.startsWith('sk_live_')) {
+    return { message: '✅ Enabled (live mode)', degraded: false };
+  }
+  if (process.env.NODE_ENV !== 'production' && stripeKey.startsWith('sk_test_')) {
+    return { message: '✅ Enabled (test mode)', degraded: false };
+  }
+  return { message: '✅ Enabled', degraded: false };
+}
+
+const databaseStatus = process.env.DATABASE_PROVIDER === 'postgresql'
+  ? '✅ Connected (PostgreSQL)'
+  : '✅ Connected (SQLite)';
+const sentryStatus = process.env.SENTRY_DSN
+  ? `✅ Enabled (env=${process.env.NODE_ENV || 'development'})`
+  : '⚪ Disabled';
+const stripeStatus = getStripeStartupStatus();
+console.log('========== SummitLink Backend 启动摘要 ==========');
+console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
+console.log(`端口: ${process.env.PORT || 8080}`);
+console.log(`Database: ${databaseStatus}`);
+console.log(`Stripe: ${stripeStatus.message}`);
+if (stripeStatus.degraded) {
+  console.log('       恢复方法: 设置 STRIPE_SECRET_KEY=sk_live_... 并删除 STRIPE_DISABLED');
+}
+console.log(`Sentry: ${sentryStatus}`);
+console.log('====================================================');
+
 // Deep link handlers (email verification, password reset)
 // These routes are also intercepted by iOS Universal Links / Android App Links
 // when the SummitLink App is installed on the device.
