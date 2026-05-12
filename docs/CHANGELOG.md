@@ -1,6 +1,14 @@
-# Changelog
+> ## 📦 已归档 / ARCHIVED
+>
+> 本文件记录的是 SummitLink 在 v1.0.0 之前使用的早期日历版本号体系（`2026.0.4` ~ `2026.2.0`，对应 PR #70 ~ #102 时期）下的变更历史，**仅作历史档案保留**，不再更新。
+>
+> 自 2026-04-30 起，项目改用 [Semantic Versioning](https://semver.org/lang/zh-CN/) 并遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，请前往仓库根目录的 **[CHANGELOG.md](../CHANGELOG.md)** 查看 v1.0.0 起的最新变更记录。
 
-All notable changes to SummitLink are documented in this file.
+---
+
+# Changelog (Legacy / 历史档案)
+
+All notable changes to SummitLink **prior to v1.0.0** are documented in this file.
 
 ## [2026.2.0] - 2026-05-01
 
