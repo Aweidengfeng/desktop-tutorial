@@ -20,42 +20,95 @@ if (process.env.STRIPE_SECRET_KEY) {
 
   const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+  // 内部订单类型 → 表/金额列/状态列 映射
+  // ⚠️ 安全要点：金额必须从数据库重新计算，绝不能信任前端传来的 amount
+  const ORDER_TABLES = {
+    expedition:    { table: 'expedition_orders',    amountColumn: 'total'  },
+    activity:      { table: 'activity_orders',      amountColumn: 'amount' },
+    guide_service: { table: 'guide_service_orders', amountColumn: 'amount' },
+  };
+
+  // 状态机：哪些订单状态允许发起支付
+  const PAYABLE_STATUSES = new Set(['pending_payment', 'pending']);
+
+  // 状态机：哪些 stripe_payments 状态允许被 webhook 推进到 paid
+  // （避免把 refunded / canceled 反向变回 paid）
+  function canTransitionTo(current, next) {
+    if (current === next) return false;
+    if (current === 'refunded' || current === 'canceled') return false;
+    return true;
+  }
+
   // GET /api/payment/config — 返回前端公钥
   router.get('/config', (req, res) => {
     res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '' });
   });
 
   // POST /api/payment/create-intent — 创建 Stripe 支付意图
+  // 安全要点：
+  //  1) 必须提供 orderType + orderId，服务端按订单表重算金额（拒绝信任前端 amount）
+  //  2) 校验订单归属当前用户，且订单处于可支付状态
+  //  3) 使用 Stripe idempotencyKey 防止同一订单生成多个 intent
   router.post('/create-intent', auth, async (req, res) => {
     try {
-      const { amount, currency = 'usd', orderId, orderType } = req.body;
-      if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      const { orderId, orderType, currency = 'usd' } = req.body || {};
+      const mapping = ORDER_TABLES[orderType];
+      if (!mapping || !orderId) {
+        return res.status(400).json({ error: 'orderType 或 orderId 缺失或不支持' });
+      }
+      const orderIdNum = Number(orderId);
+      if (!Number.isInteger(orderIdNum) || orderIdNum <= 0) {
+        return res.status(400).json({ error: 'orderId 不合法' });
+      }
+      // 服务端按订单表重新查询金额（不信任前端）
+      const rows = await prisma.$queryRawUnsafe(
+        `SELECT id, user_id, status, ${mapping.amountColumn} AS amount FROM ${mapping.table} WHERE id = ? AND user_id = ?`,
+        orderIdNum,
+        req.user.id,
+      );
+      const order = Array.isArray(rows) ? rows[0] : null;
+      if (!order) {
+        return res.status(404).json({ error: '订单不存在或不属于当前用户' });
+      }
+      if (!PAYABLE_STATUSES.has(order.status)) {
+        return res.status(409).json({ error: `订单状态不可支付：${order.status}` });
+      }
+      const amount = Number(order.amount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return res.status(409).json({ error: '订单金额无效' });
+      }
 
+      // Stripe idempotencyKey 保证同一订单 + 用户重复请求时返回同一 intent，避免重复扣款
+      const idempotencyKey = `intent:${orderType}:${orderIdNum}:${req.user.id}`;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100),
         currency,
         metadata: {
-          orderId: orderId || '',
-          orderType: orderType || 'general',
-          userId: String(req.user.id)
-        }
-      });
+          orderId: String(orderIdNum),
+          orderType,
+          userId: String(req.user.id),
+        },
+      }, { idempotencyKey });
 
       // 记录到数据库（stripe_payments 表）
       await prisma.$executeRaw`
         INSERT INTO stripe_payments (user_id, stripe_payment_intent_id, amount, currency, status, order_id, order_type, created_at, updated_at)
-        VALUES (${req.user.id}, ${paymentIntent.id}, ${amount}, ${currency}, ${'pending'}, ${orderId || null}, ${orderType || null}, datetime('now'), datetime('now'))
+        VALUES (${req.user.id}, ${paymentIntent.id}, ${amount}, ${currency}, ${'pending'}, ${String(orderIdNum)}, ${orderType}, datetime('now'), datetime('now'))
         ON CONFLICT DO NOTHING
       `.catch(err => console.warn('Stripe payment DB write failed (non-fatal):', err.message));
 
       res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
     } catch (err) {
       console.error('create-intent error:', err.message);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'create-intent failed' });
     }
   });
 
   // POST /api/payment/stripe-webhook — Stripe Webhook（原始 body，已在 app.js 提前注册）
+  // 安全要点：
+  //  1) 生产环境必须校验签名
+  //  2) 通过 stripe_webhook_events.stripe_event_id UNIQUE 防重放（Stripe 网络抖动会重发同一事件）
+  //  3) 处理 succeeded / failed / canceled / charge.refunded，并按 metadata 同步内部订单状态
   router.post('/stripe-webhook', async (req, res) => {
     const sig = req.headers['stripe-signature'];
     let event;
@@ -73,15 +126,85 @@ if (process.env.STRIPE_SECRET_KEY) {
       return res.status(400).json({ error: `Webhook Error: ${err.message}` });
     }
 
-    const pi = event.data?.object;
-    if (event.type === 'payment_intent.succeeded') {
+    if (!event || !event.id) {
+      return res.status(400).json({ error: 'Invalid event' });
+    }
+
+    // 幂等/防重放：UNIQUE(stripe_event_id) 约束保证同一 event.id 只处理一次
+    const pi = event.data && event.data.object ? event.data.object : null;
+    const piId = pi && pi.id ? String(pi.id) : null;
+    try {
       await prisma.$executeRaw`
-        UPDATE stripe_payments SET status = 'paid', updated_at = datetime('now') WHERE stripe_payment_intent_id = ${pi.id}
-      `.catch(err => console.error('Webhook DB update (succeeded) failed:', err.message));
-    } else if (event.type === 'payment_intent.payment_failed') {
+        INSERT INTO stripe_webhook_events (stripe_event_id, type, payment_intent_id, received_at)
+        VALUES (${event.id}, ${event.type || ''}, ${piId}, datetime('now'))
+      `;
+    } catch (err) {
+      // UNIQUE 冲突 = 重复事件 → 直接返回 200，避免 Stripe 持续重试
+      if (err && /UNIQUE|duplicate|constraint/i.test(err.message || '')) {
+        return res.json({ received: true, duplicate: true });
+      }
+      console.error('Webhook idempotency record failed:', err.message);
+      // 不阻塞处理，但需要后续观察
+    }
+
+    // 根据事件类型推进 stripe_payments 与内部订单状态
+    async function updateInternalOrder(metadata, nextStatus) {
+      const orderType = metadata && metadata.orderType;
+      const orderId = metadata && metadata.orderId;
+      const mapping = orderType ? ORDER_TABLES[orderType] : null;
+      if (!mapping || !orderId) return;
+      const orderIdNum = Number(orderId);
+      if (!Number.isInteger(orderIdNum) || orderIdNum <= 0) return;
+      try {
+        await prisma.$executeRawUnsafe(
+          `UPDATE ${mapping.table} SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status NOT IN ('refunded','cancelled','canceled')`,
+          nextStatus,
+          orderIdNum,
+        );
+      } catch (err) {
+        console.error(`Webhook internal order update failed (${orderType}#${orderIdNum} → ${nextStatus}):`, err.message);
+      }
+    }
+
+    async function setStripePaymentStatus(paymentIntentId, nextStatus) {
+      if (!paymentIntentId) return null;
+      // 读取当前状态，做状态机保护
+      const rows = await prisma.$queryRaw`
+        SELECT status, order_type, order_id FROM stripe_payments WHERE stripe_payment_intent_id = ${paymentIntentId}
+      `.catch(() => []);
+      const cur = Array.isArray(rows) ? rows[0] : null;
+      if (cur && !canTransitionTo(cur.status, nextStatus)) {
+        return cur;
+      }
       await prisma.$executeRaw`
-        UPDATE stripe_payments SET status = 'failed', updated_at = datetime('now') WHERE stripe_payment_intent_id = ${pi.id}
-      `.catch(err => console.error('Webhook DB update (failed) failed:', err.message));
+        UPDATE stripe_payments SET status = ${nextStatus}, updated_at = datetime('now')
+        WHERE stripe_payment_intent_id = ${paymentIntentId}
+      `.catch(err => console.error(`Webhook DB update (${nextStatus}) failed:`, err.message));
+      return cur;
+    }
+
+    try {
+      if (event.type === 'payment_intent.succeeded' && pi) {
+        const prev = await setStripePaymentStatus(pi.id, 'paid');
+        // 用 metadata 优先，回退到 stripe_payments 记录
+        const meta = (pi.metadata && pi.metadata.orderType) ? pi.metadata
+          : (prev ? { orderType: prev.order_type, orderId: prev.order_id } : null);
+        if (meta) await updateInternalOrder(meta, 'paid');
+      } else if (event.type === 'payment_intent.payment_failed' && pi) {
+        await setStripePaymentStatus(pi.id, 'failed');
+      } else if (event.type === 'payment_intent.canceled' && pi) {
+        await setStripePaymentStatus(pi.id, 'canceled');
+      } else if (event.type === 'charge.refunded' && pi) {
+        // charge.refunded 的 object 是 charge；payment_intent 字段指向对应 PI
+        const refundedPiId = pi.payment_intent ? String(pi.payment_intent) : null;
+        const prev = await setStripePaymentStatus(refundedPiId, 'refunded');
+        if (prev) {
+          await updateInternalOrder({ orderType: prev.order_type, orderId: prev.order_id }, 'refunded');
+        }
+      }
+    } catch (err) {
+      console.error('Webhook handler error:', err.message);
+      // 仍返回 200，避免 Stripe 永久重试；已持久化 event.id，可后续人工补偿
     }
 
     res.json({ received: true });

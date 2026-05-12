@@ -2436,6 +2436,15 @@ CREATE TABLE IF NOT EXISTS stripe_payments (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
+-- Stripe webhook 事件幂等表（防重放）：Stripe 在网络抖动时会重发同一 event.id
+CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stripe_event_id TEXT UNIQUE NOT NULL,
+  type TEXT,
+  payment_intent_id TEXT,
+  payload TEXT,
+  received_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // Seed badges
