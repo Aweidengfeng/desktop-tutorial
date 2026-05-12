@@ -8,7 +8,7 @@
 
 # Changelog (Legacy / 历史档案)
 
-All notable changes to SummitLink **prior to v1.0.0** are documented in this file.
+All notable changes to SummitLink under the **legacy calendar versioning scheme** are documented in this file.
 
 ## [2026.2.0] - 2026-05-01
 
