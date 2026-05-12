@@ -6,7 +6,7 @@
 > **最后更新**: 2026-05-12
 
 ## ✅ 总览
-- 共计 **65** 项；🔴 阻断项 **16** 项；⚠️ 强烈建议项 **19** 项。
+- 本清单包含 🔴 阻断项 与 ⚠️ 强烈建议项，发布前请逐项核对并勾选。
 - 阻断项任意一条未勾选 → **禁止提审**。
 - 相关材料入口：[`CHANGELOG.md`](../CHANGELOG.md) / [`docs/releases/v1.3.0.md`](./releases/v1.3.0.md) / [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md) / [`docs/appstore-submit-guide.md`](./appstore-submit-guide.md) / [`docs/googleplay-submit-guide.md`](./googleplay-submit-guide.md)
 
