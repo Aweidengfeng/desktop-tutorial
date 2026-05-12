@@ -23,8 +23,8 @@
 # 查看当前灰度状态（iOS TestFlight + Android Google Play）
 bash scripts/rollout-status.sh
 
-# 生产冒烟测试
-node scripts/smoke-test.js
+# 生产/预发冒烟测试（需先设置 API_BASE_URL，避免默认打到 http://localhost:3000）
+API_BASE_URL=https://api.example.com node scripts/smoke-test.js
 
 # 调整 Android staged rollout 比例（1/5/25/50/100）
 bundle exec fastlane android rollout_android percent:5
