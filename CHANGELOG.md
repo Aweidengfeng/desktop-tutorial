@@ -67,4 +67,4 @@ and this project follows [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
 ## 📚 历史档案 / Legacy Archive
 
-v1.0.0 之前的早期版本（使用日历版本号 `2026.0.4` ~ `2026.2.0`）变更记录已归档至 **[docs/CHANGELOG.md](docs/CHANGELOG.md)**，仅作历史参考，不再更新。
+采用 SemVer 之前、使用旧版日历版本号体系（`2026.0.4` ~ `2026.2.0`）的变更记录已归档至 **[docs/CHANGELOG.md](docs/CHANGELOG.md)**，仅作历史参考，不再更新。
