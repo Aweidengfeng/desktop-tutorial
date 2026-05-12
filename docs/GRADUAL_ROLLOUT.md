@@ -133,8 +133,8 @@
 
 - **当前部署架构**：Railway 单实例部署（见 [`.github/workflows/deploy-railway.yml`](../.github/workflows/deploy-railway.yml)），不支持原生金丝雀/蓝绿。
 - **替代方案**：在应用层实现 Feature Flag：
-  - 环境变量开关：`FEATURE_NEW_CHAT=on` / `off`（Railway Dashboard 实时生效，无需重启）
-  - 用户 hash 分流：`if (userId % 100 < rolloutPercent) { /* 新功能 */ }`
+  - 环境变量开关：`FEATURE_NEW_CHAT=on` / `off`（通过 Railway Dashboard 修改后**不会在当前运行实例中实时生效**；如开关依赖环境变量，需触发一次 redeploy/重新部署，具体与 [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md) 保持一致）
+  - 用户 hash 分流：`if (userId % 100 < rolloutPercent) { /* 新功能 */ }`（若希望**实时**调整比例，`rolloutPercent` 应来自数据库/远程配置等运行时配置；若同样来自环境变量，则也需要 redeploy）
 - 后端回滚：Railway Dashboard → 选择上一个成功的 Deployment → "Rollback"（或在 CI 触发 revert commit）。
 
 ### 3.2 数据库迁移灰度
