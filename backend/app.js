@@ -337,15 +337,15 @@ function getStripeStartupStatus() {
   const stripeDisabledByMissingKey = !stripeKey;
   if (stripeDisabledByFlag || stripeDisabledByMissingKey) {
     const reason = stripeDisabledByFlag ? 'STRIPE_DISABLED=true' : 'STRIPE_SECRET_KEY missing';
-    return `⚠️ 降级模式 (${reason}) — 支付不可用`;
+    return { message: `⚠️ 降级模式 (${reason}) — 支付不可用`, degraded: true };
   }
   if (process.env.NODE_ENV === 'production' && stripeKey.startsWith('sk_live_')) {
-    return '✅ Enabled (live mode)';
+    return { message: '✅ Enabled (live mode)', degraded: false };
   }
   if (process.env.NODE_ENV !== 'production' && stripeKey.startsWith('sk_test_')) {
-    return '✅ Enabled (test mode)';
+    return { message: '✅ Enabled (test mode)', degraded: false };
   }
-  return '✅ Enabled';
+  return { message: '✅ Enabled', degraded: false };
 }
 
 const databaseStatus = process.env.DATABASE_PROVIDER === 'postgresql'
@@ -359,8 +359,8 @@ console.log('========== SummitLink Backend 启动摘要 ==========');
 console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
 console.log(`端口: ${process.env.PORT || 8080}`);
 console.log(`Database: ${databaseStatus}`);
-console.log(`Stripe: ${stripeStatus}`);
-if (stripeStatus.includes('降级模式')) {
+console.log(`Stripe: ${stripeStatus.message}`);
+if (stripeStatus.degraded) {
   console.log('       恢复方法: 设置 STRIPE_SECRET_KEY=sk_live_... 并删除 STRIPE_DISABLED');
 }
 console.log(`Sentry: ${sentryStatus}`);
