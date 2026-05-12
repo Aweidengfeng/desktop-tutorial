@@ -82,7 +82,7 @@
 **查询命令：**
 ```bash
 bash scripts/rollout-status.sh   # 当前两端灰度状态
-node scripts/smoke-test.js       # 后端冒烟
+API_BASE_URL="https://<target-api-host>" node scripts/smoke-test.js   # 后端冒烟（将 <target-api-host> 替换为当前灰度目标环境）
 ```
 
 ---
