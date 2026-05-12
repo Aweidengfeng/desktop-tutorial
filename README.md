@@ -5,6 +5,17 @@
 [![CI](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml)
 [![Load Test](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml)
 
+## 📦 发布历史
+
+| 版本 | 日期 | 主题 | 发布说明 |
+|---|---|---|---|
+| v1.3.0 | 2026-05-11 | 移动端上架 + Stripe 生产化 | [详情](docs/releases/v1.3.0.md) |
+| v1.2.0 | 2026-05-02 | AI Coach + 管理后台 | [详情](docs/releases/v1.2.0.md) |
+| v1.1.0 | 2026-05-02 | 全文搜索 + 通知 | [详情](docs/releases/v1.1.0.md) |
+| v1.0.0 | 2026-04-30 | 首发版本 | [详情](docs/releases/v1.0.0.md) |
+
+完整变更见 [CHANGELOG.md](CHANGELOG.md)。
+
 ## ✨ 核心功能
 
 | 模块 | 功能 |
