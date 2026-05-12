@@ -87,6 +87,7 @@
 - [ ] Railway 部署冒烟链路可执行（[`.github/workflows/deploy-railway.yml`](../.github/workflows/deploy-railway.yml), [`scripts/smoke-test.js`](../scripts/smoke-test.js)）
 
 ### 7. 📊 监控与告警
+- [ ] Sentry 告警策略文档已审阅并执行（[`docs/SENTRY_ALERTS.md`](./SENTRY_ALERTS.md)）
 - [ ] Sentry DSN 已在生产配置（[`docs/ENVIRONMENT.md`](./ENVIRONMENT.md), [`backend/middleware/sentry.js#L12-L13`](../backend/middleware/sentry.js#L12-L13)）
 - [ ] Sentry release 与版本号关联（[`backend/middleware/sentry.js#L81-L82`](../backend/middleware/sentry.js#L81-L82), [`VERSION`](../VERSION)）
 - [ ] Sentry 环境标签 = `production`（[`backend/middleware/sentry.js#L80-L81`](../backend/middleware/sentry.js#L80-L81), [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)）

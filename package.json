@@ -61,6 +61,7 @@
       "**/tests/api-routes-teams.test.js",
       "**/tests/api-coverage.test.js",
       "**/backend/tests/security.test.js",
+      "**/backend/tests/sentry-pii.test.js",
       "**/backend/tests/concurrency.test.js",
       "**/backend/tests/jwt.test.js",
       "**/backend/tests/performance.test.js",
