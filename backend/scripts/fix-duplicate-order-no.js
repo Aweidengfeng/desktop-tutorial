@@ -12,10 +12,25 @@ const TARGETS = [
   { table: 'activity_orders',   column: 'order_no' },
 ];
 
+// Allowlist of valid SQL identifier characters (letters, digits, underscore)
+const SAFE_IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+/**
+ * Validates that a table/column name is a safe SQL identifier.
+ * Prevents SQL injection if this pattern is reused with external input.
+ */
+function assertSafeIdentifier(value, label) {
+  if (!SAFE_IDENTIFIER_RE.test(value)) {
+    throw new Error(`Unsafe SQL identifier for ${label}: "${value}"`);
+  }
+}
+
 // Backward-compat export (expedition_orders only)
 const FIND_DUPLICATE_ROWS_SQL = buildDuplicateRowsSql('expedition_orders', 'order_no');
 
 function buildDuplicateRowsSql(table, column) {
+  assertSafeIdentifier(table, 'table');
+  assertSafeIdentifier(column, 'column');
   return `
 WITH ranked AS (
   SELECT
@@ -182,6 +197,8 @@ async function precheckUniqueConstraints({
   try {
     for (const { table, column } of TARGETS) {
       try {
+        assertSafeIdentifier(table, 'table');
+        assertSafeIdentifier(column, 'column');
         const sql = `SELECT COUNT(*) AS cnt FROM ${table} WHERE ${column} IN (SELECT ${column} FROM ${table} GROUP BY ${column} HAVING COUNT(*) > 1)`;
         const rows = await client.$queryRawUnsafe(sql);
         const cnt = Number(rows[0]?.cnt !== undefined ? rows[0].cnt : (rows[0]?.CNT !== undefined ? rows[0].CNT : 0));

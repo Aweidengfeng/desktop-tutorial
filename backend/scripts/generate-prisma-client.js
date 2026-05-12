@@ -100,7 +100,7 @@ async function main() {
       if (allSafe) {
         console.log(
           `[generate-prisma-client] 前置安全检查通过：${TARGETS.length} 张目标表` +
-          `（${needsCleanupDetails.length} 张需清洗，${noExistCount} 张不存在/空，${noDupCount} 张已清洗）`
+          `（${noExistCount} 张不存在/未创建，${noDupCount} 张无重复）`
         );
         console.log('[generate-prisma-client] 安全执行 prisma db push --accept-data-loss');
         execSync('npx prisma db push --schema=prisma/schema.prisma --accept-data-loss', {
