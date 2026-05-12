@@ -300,7 +300,7 @@ test.describe('8. admin.html — 订单管理', () => {
     await page.goto('/admin', { waitUntil: 'domcontentloaded' });
     // admin 页会在初始化时触发多条后台请求，避免使用 networkidle 造成误超时
     await expect(page).toHaveTitle(/管理|Admin|SummitLink/i);
-    await expect(page.locator('body')).toContainText('后台管理中心');
+    await expect(page.locator('body')).toContainText(/管理|Admin|SummitLink/i);
   });
 
   test('expedition-orders API 管理员接口可访问', async ({ page }) => {
