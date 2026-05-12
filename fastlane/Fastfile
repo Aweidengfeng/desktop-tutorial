@@ -129,6 +129,7 @@ platform :android do
     UI.user_error!("请传入 percent 参数，例如: fastlane android rollout_android percent:5") unless options[:percent]
     percent = options[:percent].to_f
     UI.user_error!("percent 必须在 1–100 之间") unless percent >= 1 && percent <= 100
+    UI.user_error!("GOOGLE_PLAY_JSON_KEY 环境变量未设置，请参考 docs/GRADUAL_ROLLOUT.md §2 配置") if ENV["GOOGLE_PLAY_JSON_KEY"].nil? || ENV["GOOGLE_PLAY_JSON_KEY"].empty?
 
     upload_to_play_store(
       track: "production",
@@ -151,6 +152,7 @@ platform :android do
   # 此处直接硬编码 "0.0" 以明确表达"完全暂停"的意图，避免计算歧义。
   desc "暂停生产 staged rollout（halt）——将分发比例设为 0，新用户不再收到新版本"
   lane :halt_android do
+    UI.user_error!("GOOGLE_PLAY_JSON_KEY 环境变量未设置，请参考 docs/GRADUAL_ROLLOUT.md §2 配置") if ENV["GOOGLE_PLAY_JSON_KEY"].nil? || ENV["GOOGLE_PLAY_JSON_KEY"].empty?
     upload_to_play_store(
       track: "production",
       rollout: "0.0",
