@@ -13,6 +13,8 @@ const path = require('path');
 const crypto = require('crypto');
 const { uploadFile } = require('../lib/storage');
 
+const SAFE_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+
 const CLOUD_STORAGE_ENABLED = !!(
   process.env.COS_BUCKET &&
   process.env.COS_REGION &&
@@ -29,7 +31,8 @@ const CLOUD_STORAGE_ENABLED = !!(
  * @returns {Promise<string>} 公开 URL
  */
 async function uploadBufferToStorage(buffer, originalname, folder = 'uploads', contentType = 'application/octet-stream') {
-  const ext = path.extname(originalname) || '.jpg';
+  const rawExt = path.extname(originalname || '').toLowerCase();
+  const ext = SAFE_IMAGE_EXTENSIONS.has(rawExt) ? rawExt : '.jpg';
   const key = `${folder}/${crypto.randomUUID()}${ext}`;
   const result = await uploadFile(buffer, key, { region: 'cn', contentType });
   return result.url;
@@ -44,7 +47,13 @@ async function uploadBufferToStorage(buffer, originalname, folder = 'uploads', c
 function safeReadFile(filePath, allowedDir) {
   const fs = require('fs');
   const normalizedDir = path.normalize(path.resolve(allowedDir));
-  const safeName = path.basename(String(filePath || ''));
+  const candidatePath = path.normalize(path.resolve(String(filePath || '')));
+  if (!candidatePath.startsWith(normalizedDir + path.sep) && candidatePath !== normalizedDir) {
+    console.error('[storage] 路径越界，拒绝读取:', candidatePath);
+    return null;
+  }
+
+  const safeName = path.basename(candidatePath);
   if (!safeName || safeName === '.' || safeName === '..') {
     console.error('[storage] 文件名非法，拒绝读取:', filePath);
     return null;
