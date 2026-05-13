@@ -184,6 +184,12 @@
       .replaceAll('>', '&gt;')
       .replaceAll('\"', '&quot;')
       .replaceAll(\"'\", '&#39;');
+    const safeUrl = (v, fallback = '') => {
+      const value = String(v || '').trim();
+      if (!value) return fallback;
+      if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')) return value;
+      return fallback;
+    };
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
     const regionSwitch = document.getElementById('regionSwitch');
@@ -243,7 +249,7 @@
         <span class="badge">Risk: ${'★'.repeat(risk)}${'☆'.repeat(5-risk)}</span>
         <span class="badge">${t('fromPrice')}: ${formatMoney(data.base_price, data.currency)}</span>`;
       const gallery = (Array.isArray(data.gallery) && data.gallery.length ? data.gallery : [data.cover_image || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600']).filter(Boolean);
-      document.getElementById('heroTrack').innerHTML = gallery.map(u => `<img src="${u}" alt="hero" loading="lazy">`).join('');
+      document.getElementById('heroTrack').innerHTML = gallery.map(u => `<img src="${safeUrl(u, 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600')}" alt="hero" loading="lazy">`).join('');
 
       const key = [
         ['周期', `${data.total_days || '-'} 天`], ['最佳季节', data.best_season || '4-5 月'], ['起始营地', data.meeting_point || '加德满都'],
@@ -254,10 +260,10 @@
 
       const skus = Array.isArray(data.skus) && data.skus.length ? data.skus : [{ id:'default', tier:'standard', price:data.base_price||0, currency:data.currency||'USD', departure_date:data.start_date, availability:'available', slots_left: Math.max(0,(data.max_participants||0)-(data.current_participants||0)) }];
       const skuSelect = document.getElementById('skuSelect');
-      skuSelect.innerHTML = skus.map((s, i) => `<option value="${i}">${formatDate(s.departure_date)} · ${s.tier || 'standard'}</option>`).join('');
+      skuSelect.innerHTML = skus.map((s, i) => `<option value="${i}">${esc(formatDate(s.departure_date))} · ${esc(s.tier || 'standard')}</option>`).join('');
       const updateSku = () => {
         const s = skus[Number(skuSelect.value)||0];
-        document.getElementById('skuTable').innerHTML = `<tr><th>Tier</th><th>Price</th><th>Availability</th></tr><tr><td>${s.tier||'standard'}</td><td>${formatMoney(s.price,s.currency)}</td><td>${s.availability==='sold_out'?'已满':'可报名'}</td></tr>`;
+        document.getElementById('skuTable').innerHTML = `<tr><th>Tier</th><th>Price</th><th>Availability</th></tr><tr><td>${esc(s.tier||'standard')}</td><td>${esc(formatMoney(s.price,s.currency))}</td><td>${s.availability==='sold_out'?'已满':'可报名'}</td></tr>`;
         document.getElementById('seatsBadge').textContent = s.slots_left > 0 ? `剩 ${s.slots_left} 席` : '已满';
         document.getElementById('earlyBird').textContent = s.early_bird_price ? `早鸟价 ${formatMoney(s.early_bird_price,s.currency)} 截止 ${formatDate(s.early_bird_deadline)}` : '';
         document.getElementById('mobilePrice').textContent = `${formatMoney(s.price,s.currency)} 起`;
@@ -265,25 +271,25 @@
       skuSelect.onchange = updateSku; updateSku();
 
       const itinerary = Array.isArray(data.itinerary) ? data.itinerary : [];
-      document.getElementById('itinerary').innerHTML = (itinerary.length ? itinerary : [{ day:1,title:'集合',desc:'报到，安全培训',camp_alt:'1400m' }]).map((d,idx)=>`<div class="timeline-item"><strong>Day ${d.day||idx+1}: ${d.title||''}</strong><div class="meter"><span style="width:${Math.min(100, 20*(idx+1))}%"></span></div><div class="muted">${d.desc||d.description||''}</div><div>${d.camp_alt||d.altitude||''}</div></div>`).join('');
+      document.getElementById('itinerary').innerHTML = (itinerary.length ? itinerary : [{ day:1,title:'集合',desc:'报到，安全培训',camp_alt:'1400m' }]).map((d,idx)=>`<div class="timeline-item"><strong>Day ${esc(d.day||idx+1)}: ${esc(d.title||'')}</strong><div class="meter"><span style="width:${Math.min(100, 20*(idx+1))}%"></span></div><div class="muted">${esc(d.desc||d.description||'')}</div><div>${esc(d.camp_alt||d.altitude||'')}</div></div>`).join('');
 
-      document.getElementById('equipment').innerHTML = `<p>✅ 平台提供：${(data.included_services||[]).slice(0,3).join('、') || '后勤支持、基础通讯、公共氧气计划'}</p><p>✅ 向导/俱乐部提供：向导服务、营地组织</p><p>📋 自备：高海拔羽绒服、冰爪、头盔、手套</p><p class="muted">推荐品牌：Mammut / Black Diamond / Arc'teryx（仅参考）</p>`;
+      document.getElementById('equipment').innerHTML = `<p>✅ 平台提供：${(data.included_services||[]).slice(0,3).map(esc).join('、') || '后勤支持、基础通讯、公共氧气计划'}</p><p>✅ 向导/俱乐部提供：向导服务、营地组织</p><p>📋 自备：高海拔羽绒服、冰爪、头盔、手套</p><p class="muted">推荐品牌：Mammut / Black Diamond / Arc'teryx（仅参考）</p>`;
       document.getElementById('risk').innerHTML = `<p>风险等级说明：1★低风险，5★极高风险。当前：${'★'.repeat(risk)}${'☆'.repeat(5-risk)}</p><p>必备保险：医疗 + 救援 + 行程取消</p><p>紧急救援预案：卫星通讯 + 当地救援队联动</p><p class="muted">保险合作方仅展示，不绑定购买。</p>`;
-      document.getElementById('cancellation').innerHTML = `<p>${data.cancel_policy || '出发前60天全额退，30天50%退，15天后不退（不可抗力按平台仲裁）'}</p>`;
-      document.getElementById('merchant').innerHTML = `<div class="row"><img src="${(data.merchant&&data.merchant.avatar)||'https://i.pravatar.cc/80?u=merchant'}" alt="merchant" width="56" height="56" style="border-radius:999px;object-fit:cover"><div><strong>${(data.merchant&&data.merchant.name)||'商家'}</strong><div class="muted">${(data.merchant&&data.merchant.type)||'-'} · ${(data.merchant&&data.merchant.review_count)||0} reviews</div><div class="row"><a href="/merchant/${(data.merchant&&data.merchant.id)||''}">查看主页</a><button class="book-btn" onclick="alert('IM 功能即将上线')">私信咨询</button></div></div></div>`;
+      document.getElementById('cancellation').innerHTML = `<p>${esc(data.cancel_policy || '出发前60天全额退，30天50%退，15天后不退（不可抗力按平台仲裁）')}</p>`;
+      document.getElementById('merchant').innerHTML = `<div class="row"><img src="${safeUrl((data.merchant&&data.merchant.avatar),'https://i.pravatar.cc/80?u=merchant')}" alt="merchant" width="56" height="56" style="border-radius:999px;object-fit:cover"><div><strong>${esc((data.merchant&&data.merchant.name)||'商家')}</strong><div class="muted">${esc((data.merchant&&data.merchant.type)||'-')} · ${esc((data.merchant&&data.merchant.review_count)||0)} reviews</div><div class="row"><a href="/merchant/${encodeURIComponent((data.merchant&&data.merchant.id)||'')}">查看主页</a><button class="book-btn" onclick="alert('IM 功能即将上线')">私信咨询</button></div></div></div>`;
 
       const summary = data.review_summary || { average:0,total:0,distribution:{1:0,2:0,3:0,4:0,5:0} };
       document.getElementById('reviewSummary').textContent = `⭐ ${summary.average || 0} / 5 · ${summary.total || 0} reviews`;
       document.getElementById('reviewBars').innerHTML = [5,4,3,2,1].map(s=>`<div class="row"><span style="width:20px">${s}</span><div class="meter" style="flex:1"><span style="width:${summary.total?((summary.distribution[s]||0)*100/summary.total):0}%"></span></div><span>${summary.distribution[s]||0}</span></div>`).join('');
       const reviews = (data.reviews || []).slice(0,5);
-      document.getElementById('reviews').innerHTML = reviews.length ? reviews.map(r=>`<div class="recommend"><div class="row"><img src="${(r.user&&r.user.avatar)||'https://i.pravatar.cc/40?u=u'+r.id}" width="32" height="32" style="border-radius:999px"> <strong>${(r.user&&r.user.name)||'匿名'}</strong> <span class="muted">${'★'.repeat(Math.round(r.rating||0))}</span> <span class="muted">${formatDate(r.created_at)}</span></div><div>${r.content || ''}</div></div>`).join('') : '<div class="muted">暂无评价</div>';
+      document.getElementById('reviews').innerHTML = reviews.length ? reviews.map(r=>`<div class="recommend"><div class="row"><img src="${safeUrl((r.user&&r.user.avatar), 'https://i.pravatar.cc/40?u=u'+encodeURIComponent(r.id))}" width="32" height="32" style="border-radius:999px"> <strong>${esc((r.user&&r.user.name)||'匿名')}</strong> <span class="muted">${'★'.repeat(Math.round(r.rating||0))}</span> <span class="muted">${esc(formatDate(r.created_at))}</span></div><div>${esc(r.content || '')}</div></div>`).join('') : '<div class="muted">暂无评价</div>';
 
       const faqs = Array.isArray(data.faqs) && data.faqs.length ? data.faqs : [{q:'体能要求？',a:'建议具备高海拔连续行进能力。'},{q:'是否可定制行程？',a:'可与商家沟通后定制。'}];
       document.getElementById('faq').innerHTML = faqs.map((f,i)=>`<div class="faq-item" style="margin-bottom:8px"><button type="button" data-i="${i}">${esc(f.q)}</button><div id="faq-${i}" class="muted" style="display:none;padding:6px 10px">${esc(f.a)}</div></div>`).join('');
       document.querySelectorAll('.faq-item button').forEach(b=>b.onclick=()=>{const i=b.dataset.i;const panel=document.getElementById('faq-'+i);panel.style.display=panel.style.display==='none'?'block':'none';});
 
       const recs = data.recommendations || [];
-      document.getElementById('recommendations').innerHTML = recs.length ? recs.map(r=>`<a class="recommend" href="/expedition/${r.id}"><strong>${r.title}</strong><div class="muted">${r.difficulty||'-'} · ${formatMoney(r.base_price,r.currency)}</div></a>`).join('') : '<div class="muted">暂无类似路线</div>';
+      document.getElementById('recommendations').innerHTML = recs.length ? recs.map(r=>`<a class="recommend" href="/expedition/${encodeURIComponent(r.id)}"><strong>${esc(r.title)}</strong><div class="muted">${esc(r.difficulty||'-')} · ${esc(formatMoney(r.base_price,r.currency))}</div></a>`).join('') : '<div class="muted">暂无类似路线</div>';
 
       setSeo(data);
     }
