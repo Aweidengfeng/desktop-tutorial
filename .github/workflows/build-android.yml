@@ -120,6 +120,10 @@ jobs:
           path: android/app/build/outputs/bundle/debug/*.aab
           retention-days: 30
 
+      - name: Cleanup keystore file
+        if: always() && env.KEYSTORE_FILE != ''
+        run: rm -f "$KEYSTORE_FILE"
+
       - name: Diagnostics on failure
         if: failure()
         run: |
