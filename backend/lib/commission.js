@@ -142,6 +142,10 @@ function computeCommission(order, merchant, region) {
   const commission_rate = getEffectiveRate(merchant, region);
   const platform_fee    = round2(gross * commission_rate);
   const merchant_payout = round2(gross - platform_fee);
+
+  if (merchant_payout < 0) {
+    throw new Error('merchant_payout cannot be negative (commission_rate > 1 or rounding error)');
+  }
   const currency        = (COMMISSION_RATES[region] || {}).currency || 'USD';
 
   return { gross, commission_rate, platform_fee, merchant_payout, currency };

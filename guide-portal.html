@@ -523,7 +523,7 @@
                     <span :class="getRouteStatusClass(r.status)" class="px-2 py-0.5 rounded-full text-xs" x-text="getRouteStatusLabel(r.status)"></span>
                   </div>
                   <p class="text-xs text-slate-400" x-text="(r.peakName || '') + (r.country ? ' · ' + r.country : '') + (r.durationDays ? ' · ' + r.durationDays + '天' : '')"></p>
-                  <p class="text-xs text-red-400 mt-1" x-show="r.rejectReason || r.reject_reason" x-text="'拒绝原因：' + (r.rejectReason || r.reject_reason)"></p>
+                  <p class="text-xs text-red-400 mt-1" x-show="r.rejectReason" x-text="'拒绝原因：' + r.rejectReason"></p>
                 </div>
                 <div class="flex gap-2 ml-3 flex-shrink-0">
                   <button @click="openEditRouteForm(r)" x-show="r.status === 'draft' || r.status === 'rejected'" class="px-2 py-1 glass rounded text-xs">编辑</button>

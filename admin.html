@@ -1857,6 +1857,7 @@
           us: { guide_standard: 0.12, guide_certified: 0.10, guide_new: 0.00, club: 0.08 },
           cn: { guide_standard: 0.08, guide_certified: 0.10, guide_new: 0.00, club: 0.06 },
         },
+        commissionRatesLoading: false,
         customRateTarget: { merchantId: '', rate: '' },
 
         // Invite Codes
@@ -1968,7 +1969,7 @@
           else if (this.page === 'platform-routes') this.loadPlatformRoutes();
           else if (this.page === 'invite-codes') this.loadInviteCodes();
           else if (this.page === 'gmv-reports') this.loadGmvReports();
-          else if (this.page === 'commission-config') {}
+          else if (this.page === 'commission-config') this.loadCommissionRates();
           else if (this.page === 'disputes') this.loadDisputes();
           else if (this.page === 'traffic') { this.loadFeaturedSlots(); this.loadBanners(); }
         },
@@ -2574,6 +2575,15 @@
             this.showToast('自定义费率已保存');
             this.customRateTarget = { merchantId: '', rate: '' };
           } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async loadCommissionRates() {
+          this.commissionRatesLoading = true;
+          try {
+            const d = await this.api('GET', '/commission-rates');
+            if (d && d.us && d.cn) this.commissionRates = d;
+          } catch(e) {
+            // Fallback to hardcoded defaults if endpoint not yet deployed
+          } finally { this.commissionRatesLoading = false; }
         },
       };
     }
