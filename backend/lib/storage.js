@@ -68,6 +68,7 @@ async function uploadToS3(buffer, key) {
   try {
     ({ S3Client, PutObjectCommand } = require('@aws-sdk/client-s3'));
   } catch (_) {
+    console.warn('[storage] @aws-sdk/client-s3 is not installed, fallback to local storage.');
     return uploadToLocal(buffer, key);
   }
 

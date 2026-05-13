@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
   const checks = {
     status: 'ok',
     region,
-    version: process.env.npm_package_version || '1.4.0',
+    version: process.env.npm_package_version || 'unknown',
     deploy_target: regionConfig.deployTarget || process.env.DEPLOY_TARGET || 'railway',
     db_connected: true,
     stripe_enabled: stripeEnabled,
