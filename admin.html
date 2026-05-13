@@ -1272,10 +1272,439 @@
         </div>
       </div>
 
+      <!-- ── Merchant KYC Queue ── -->
+      <div x-show="page==='merchant-kyc'" class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-lg">🔍 商家 KYC 审核队列</h2>
+          <div class="flex gap-2">
+            <select x-model="merchantKycFilter" @change="loadMerchantKyc()" class="bg-slate-700 text-white rounded-xl px-3 py-1.5 text-sm outline-none">
+              <option value="kyc_review">待审核</option>
+              <option value="pending_kyc">已退回</option>
+              <option value="active">已通过</option>
+              <option value="suspended">已暂停</option>
+              <option value="">全部</option>
+            </select>
+            <button @click="loadMerchantKyc()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄 刷新</button>
+          </div>
+        </div>
+        <div x-show="merchantKycLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!merchantKycLoading && merchantKyc.length === 0" class="text-center py-8 text-slate-400">暂无待审核商家 🎉</div>
+        <table class="w-full text-sm" x-show="!merchantKycLoading && merchantKyc.length > 0">
+          <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+            <th class="pb-2">商家</th><th class="pb-2">类型</th><th class="pb-2">区域</th><th class="pb-2">层级</th><th class="pb-2">状态</th><th class="pb-2">操作</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="m in merchantKyc" :key="m.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2">
+                  <div x-text="m.displayName || m.display_name" class="font-medium"></div>
+                  <div x-text="m.email" class="text-xs text-slate-400"></div>
+                </td>
+                <td class="py-2 text-slate-300" x-text="m.type === 'guide' ? '向导' : '俱乐部'"></td>
+                <td class="py-2"><span :class="m.region==='cn'?'text-red-300':'text-blue-300'" x-text="m.region.toUpperCase()"></span></td>
+                <td class="py-2 text-slate-300" x-text="m.tier || 'standard'"></td>
+                <td class="py-2">
+                  <span :class="{'bg-yellow-500/20 text-yellow-300':m.status==='kyc_review','bg-emerald-500/20 text-emerald-300':m.status==='active','bg-red-500/20 text-red-300':m.status==='suspended'||m.status==='banned','bg-slate-500/20 text-slate-300':m.status==='pending_kyc'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'kyc_review':'待审核','pending_kyc':'已退回','active':'已激活','suspended':'已暂停','banned':'已封禁'}[m.status]||m.status"></span>
+                </td>
+                <td class="py-2">
+                  <button @click="openMerchantKycDrawer(m)" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs">审核</button>
+                  <button @click="suspendMerchant(m)" x-show="m.status==='active'" class="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-xs ml-1">暂停</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-400 mt-2" x-show="merchantKycTotal > 0" x-text="`共 ${merchantKycTotal} 条记录`"></p>
+      </div>
+
+      <!-- ── Platform Route Review ── -->
+      <div x-show="page==='platform-routes'" class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-lg">🗺️ 平台路线审核队列</h2>
+          <button @click="loadPlatformRoutes()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄 刷新</button>
+        </div>
+        <div x-show="platformRoutesLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!platformRoutesLoading && platformRoutes.length === 0" class="text-center py-8 text-slate-400">暂无待审核路线 🎉</div>
+        <table class="w-full text-sm" x-show="!platformRoutesLoading && platformRoutes.length > 0">
+          <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+            <th class="pb-2">路线</th><th class="pb-2">商家</th><th class="pb-2">区域</th><th class="pb-2">状态</th><th class="pb-2">操作</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="r in platformRoutes" :key="r.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2">
+                  <div x-text="r.title" class="font-medium"></div>
+                  <div x-text="r.peakName || '—'" class="text-xs text-slate-400"></div>
+                </td>
+                <td class="py-2 text-slate-300 text-xs" x-text="r.merchantId"></td>
+                <td class="py-2"><span :class="r.region==='cn'?'text-red-300':'text-blue-300'" x-text="(r.region||'—').toUpperCase()"></span></td>
+                <td class="py-2"><span class="bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full text-xs">待审核</span></td>
+                <td class="py-2">
+                  <button @click="openRouteReviewDrawer(r)" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs">审核</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <p class="text-xs text-slate-400 mt-2" x-show="platformRoutesTotal > 0" x-text="`共 ${platformRoutesTotal} 条待审核路线`"></p>
+      </div>
+
+      <!-- ── Invite Codes ── -->
+      <div x-show="page==='invite-codes'" class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="font-bold text-lg mb-4">🎟️ 生成邀请码</h2>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">区域</label>
+              <select x-model="inviteCodeForm.region" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                <option value="cn">🇨🇳 中国 (CNY)</option>
+                <option value="us">🇺🇸 国际 (USD)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">层级</label>
+              <select x-model="inviteCodeForm.tier" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                <option value="seed">🌱 种子向导 (首页推荐位候选)</option>
+                <option value="normal">普通</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">前缀（可选，如 IFMGA-）</label>
+              <input x-model="inviteCodeForm.prefix" placeholder="SEED-EVE-" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">生成数量</label>
+              <input x-model.number="inviteCodeForm.count" type="number" min="1" max="50" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">有效期（可选）</label>
+              <input x-model="inviteCodeForm.expiresAt" type="date" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">备注（给谁的）</label>
+              <input x-model="inviteCodeForm.notes" placeholder="e.g. 贡嘎南壁 IFMGA 向导" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+          </div>
+          <button @click="generateInviteCodes()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold">生成邀请码</button>
+          <div x-show="generatedCodes.length > 0" class="mt-4 p-3 bg-slate-800/50 rounded-xl">
+            <p class="text-sm text-slate-400 mb-2">已生成 <span x-text="generatedCodes.length" class="text-white font-bold"></span> 个邀请码：</p>
+            <pre class="text-green-400 text-sm font-mono" x-text="generatedCodes.join('\n')"></pre>
+            <div class="flex gap-2 mt-2">
+              <button @click="copyInviteCodes()" class="px-3 py-1 glass rounded text-xs">📋 复制</button>
+              <button @click="exportInviteCodesCsv()" class="px-3 py-1 glass rounded text-xs">📥 导出 CSV</button>
+            </div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-lg">邀请码记录</h2>
+            <button @click="loadInviteCodes()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄 刷新</button>
+          </div>
+          <div x-show="inviteCodesLoading" class="text-center py-4 text-slate-400">加载中…</div>
+          <table class="w-full text-sm" x-show="!inviteCodesLoading">
+            <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+              <th class="pb-2">邀请码</th><th class="pb-2">区域</th><th class="pb-2">层级</th><th class="pb-2">使用状态</th><th class="pb-2">备注</th>
+            </tr></thead>
+            <tbody>
+              <template x-for="c in inviteCodes" :key="c.code">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="py-2 font-mono text-green-400 text-xs" x-text="c.code"></td>
+                  <td class="py-2" x-text="c.region.toUpperCase()"></td>
+                  <td class="py-2"><span :class="c.tier==='seed'?'text-green-300':'text-slate-300'" x-text="c.tier==='seed'?'🌱 种子':'普通'"></span></td>
+                  <td class="py-2"><span :class="c.used_by?'text-slate-400':'text-emerald-300'" x-text="c.used_by?'已使用':'可用'"></span></td>
+                  <td class="py-2 text-slate-400 text-xs" x-text="c.notes || '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── GMV Reports ── -->
+      <div x-show="page==='gmv-reports'" class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-lg">💹 GMV 报表</h2>
+          <div class="flex gap-2">
+            <select x-model="gmvRegion" @change="loadGmvReports()" class="bg-slate-700 text-white rounded-xl px-3 py-1.5 text-sm outline-none">
+              <option value="all">全部区域</option>
+              <option value="cn">🇨🇳 中国</option>
+              <option value="us">🇺🇸 国际</option>
+            </select>
+            <select x-model="gmvPeriod" @change="loadGmvReports()" class="bg-slate-700 text-white rounded-xl px-3 py-1.5 text-sm outline-none">
+              <option value="7d">近 7 天</option>
+              <option value="30d">近 30 天</option>
+              <option value="90d">近 90 天</option>
+            </select>
+            <button @click="loadGmvReports()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄</button>
+          </div>
+        </div>
+        <div x-show="gmvLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!gmvLoading && !gmvData" class="text-center py-8 text-slate-400">
+          <p class="text-2xl mb-2">📊</p>
+          <p>GMV 报表功能即将上线</p>
+          <p class="text-xs mt-2">需要真实订单数据和 /api/admin/gmv 端点</p>
+        </div>
+        <div x-show="!gmvLoading && gmvData" class="grid grid-cols-2 gap-4">
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">总 GMV</p>
+            <p class="text-2xl font-bold text-green-400 mt-1" x-text="(gmvData?.currency||'') + ' ' + (gmvData?.totalGmv||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">平台收入</p>
+            <p class="text-2xl font-bold text-blue-400 mt-1" x-text="(gmvData?.currency||'') + ' ' + (gmvData?.platformRevenue||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">待付分账</p>
+            <p class="text-2xl font-bold text-yellow-400 mt-1" x-text="(gmvData?.currency||'') + ' ' + (gmvData?.pendingPayout||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">已完成分账</p>
+            <p class="text-2xl font-bold text-emerald-400 mt-1" x-text="(gmvData?.currency||'') + ' ' + (gmvData?.completedPayout||0).toLocaleString()"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Commission Config ── -->
+      <div x-show="page==='commission-config'" class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="font-bold text-lg mb-4">⚙️ 双区域佣金费率表</h2>
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <h3 class="font-semibold text-blue-300 mb-3">🇺🇸 美国/国际区域 (USD)</h3>
+              <table class="w-full text-sm">
+                <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+                  <th class="pb-2">层级</th><th class="pb-2">费率</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="border-b border-white/5"><td class="py-2">向导 · 标准</td><td class="py-2 text-yellow-300 font-mono" x-text="(commissionRates.us.guide_standard*100).toFixed(0)+'%'"></td></tr>
+                  <tr class="border-b border-white/5"><td class="py-2">向导 · 认证 (IFMGA等)</td><td class="py-2 text-green-300 font-mono" x-text="(commissionRates.us.guide_certified*100).toFixed(0)+'%'"></td></tr>
+                  <tr class="border-b border-white/5"><td class="py-2">向导 · 新手 (前3单)</td><td class="py-2 text-emerald-300 font-mono">0%</td></tr>
+                  <tr><td class="py-2">俱乐部</td><td class="py-2 text-blue-300 font-mono" x-text="(commissionRates.us.club*100).toFixed(0)+'%'"></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3 class="font-semibold text-red-300 mb-3">🇨🇳 中国大陆区域 (CNY)</h3>
+              <table class="w-full text-sm">
+                <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+                  <th class="pb-2">层级</th><th class="pb-2">费率</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="border-b border-white/5"><td class="py-2">向导 · 标准</td><td class="py-2 text-yellow-300 font-mono" x-text="(commissionRates.cn.guide_standard*100).toFixed(0)+'%'"></td></tr>
+                  <tr class="border-b border-white/5"><td class="py-2">向导 · 认证 (中登协L5等)</td><td class="py-2 text-orange-300 font-mono" x-text="(commissionRates.cn.guide_certified*100).toFixed(0)+'%'"></td></tr>
+                  <tr class="border-b border-white/5"><td class="py-2">向导 · 新手 (前3单)</td><td class="py-2 text-emerald-300 font-mono">0%</td></tr>
+                  <tr><td class="py-2">俱乐部</td><td class="py-2 text-blue-300 font-mono" x-text="(commissionRates.cn.club*100).toFixed(0)+'%'"></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-4">💡 费率调整需修改 <code class="text-blue-300">backend/lib/commission.js</code> 中的 COMMISSION_RATES 常量，并部署新版本。</p>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <h2 class="font-bold text-lg mb-4">🎯 个性化费率（特殊合作伙伴）</h2>
+          <div class="flex gap-3 items-end">
+            <div class="flex-1">
+              <label class="text-xs text-slate-400 mb-1 block">商家 ID</label>
+              <input x-model="customRateTarget.merchantId" placeholder="clxxxxxxxx (Merchant ID)" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div class="w-32">
+              <label class="text-xs text-slate-400 mb-1 block">费率（如 0.05）</label>
+              <input x-model="customRateTarget.rate" type="number" step="0.01" min="0" max="1" placeholder="0.05" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <button @click="saveCustomRate()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold">保存</button>
+          </div>
+          <p class="text-xs text-slate-400 mt-2">设为空可恢复自动层级费率。自定义费率优先级最高。</p>
+        </div>
+      </div>
+
+      <!-- ── Disputes ── -->
+      <div x-show="page==='disputes'" class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-bold text-lg">⚖️ 争议处理</h2>
+          <div class="flex gap-2">
+            <select x-model="disputesFilter" @change="loadDisputes()" class="bg-slate-700 text-white rounded-xl px-3 py-1.5 text-sm outline-none">
+              <option value="open">待处理</option>
+              <option value="resolved">已解决</option>
+              <option value="">全部</option>
+            </select>
+            <button @click="loadDisputes()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄</button>
+          </div>
+        </div>
+        <div x-show="disputesLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!disputesLoading && disputes.length === 0" class="text-center py-8 text-slate-400">
+          <p class="text-2xl mb-2">⚖️</p>
+          <p x-text="disputesFilter==='open' ? '暂无待处理纠纷 🎉' : '暂无纠纷记录'"></p>
+        </div>
+        <table class="w-full text-sm" x-show="!disputesLoading && disputes.length > 0">
+          <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+            <th class="pb-2">订单/用户</th><th class="pb-2">类型</th><th class="pb-2">状态</th><th class="pb-2">创建时间</th><th class="pb-2">操作</th>
+          </tr></thead>
+          <tbody>
+            <template x-for="d in disputes" :key="d.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2">
+                  <div x-text="d.orderNo || d.order_no || d.id" class="font-mono text-xs"></div>
+                  <div x-text="d.userName || d.user_name || '—'" class="text-xs text-slate-400"></div>
+                </td>
+                <td class="py-2 text-slate-300 text-xs" x-text="d.type || '投诉'"></td>
+                <td class="py-2"><span :class="d.status==='open'?'bg-yellow-500/20 text-yellow-300':'bg-emerald-500/20 text-emerald-300'" class="px-2 py-0.5 rounded-full text-xs" x-text="d.status==='open'?'待处理':'已解决'"></span></td>
+                <td class="py-2 text-slate-400 text-xs" x-text="d.createdAt ? new Date(d.createdAt).toLocaleDateString('zh-CN') : '—'"></td>
+                <td class="py-2">
+                  <button @click="openDisputeDrawer(d)" x-show="d.status==='open'" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs">仲裁</button>
+                  <span x-show="d.status!=='open'" class="text-slate-500 text-xs">已处理</span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Traffic / Featured Slots ── -->
+      <div x-show="page==='traffic'" class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="font-bold text-lg mb-4">🚀 首页推荐位管理</h2>
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <h3 class="font-semibold text-blue-300 mb-3">🇺🇸 国际区（6 个槽位）</h3>
+              <div x-show="featuredLoading" class="text-slate-400 text-sm">加载中…</div>
+              <div x-show="!featuredLoading && featuredSlots.us.length === 0" class="text-slate-400 text-sm">暂无推荐位配置</div>
+              <div class="space-y-2" x-show="!featuredLoading">
+                <template x-for="(slot, i) in featuredSlots.us" :key="i">
+                  <div class="glass-dark rounded-xl p-3 flex items-center gap-3">
+                    <span class="text-slate-400 text-sm font-mono w-4" x-text="i+1"></span>
+                    <span class="flex-1 text-sm" x-text="slot.displayName || slot.merchantId || '空'"></span>
+                    <span :class="slot.isSeed?'text-green-300':'text-slate-400'" class="text-xs" x-text="slot.isSeed?'🌱 种子':''"></span>
+                  </div>
+                </template>
+                <div x-show="featuredSlots.us.length < 6" class="text-xs text-slate-400 italic" x-text="`${6 - featuredSlots.us.length} 个空置槽位`"></div>
+              </div>
+            </div>
+            <div>
+              <h3 class="font-semibold text-red-300 mb-3">🇨🇳 中国区（6 个槽位）</h3>
+              <div x-show="featuredLoading" class="text-slate-400 text-sm">加载中…</div>
+              <div x-show="!featuredLoading && featuredSlots.cn.length === 0" class="text-slate-400 text-sm">暂无推荐位配置</div>
+              <div class="space-y-2" x-show="!featuredLoading">
+                <template x-for="(slot, i) in featuredSlots.cn" :key="i">
+                  <div class="glass-dark rounded-xl p-3 flex items-center gap-3">
+                    <span class="text-slate-400 text-sm font-mono w-4" x-text="i+1"></span>
+                    <span class="flex-1 text-sm" x-text="slot.displayName || slot.merchantId || '空'"></span>
+                    <span :class="slot.isSeed?'text-green-300':'text-slate-400'" class="text-xs" x-text="slot.isSeed?'🌱 种子':''"></span>
+                  </div>
+                </template>
+                <div x-show="featuredSlots.cn.length < 6" class="text-xs text-slate-400 italic" x-text="`${6 - featuredSlots.cn.length} 个空置槽位`"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-4">💡 推荐位配置 API：<code class="text-blue-300">PUT /api/admin/featured-slots</code>（即将上线）</p>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-lg">Banner 管理</h2>
+            <button @click="loadBanners()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄 刷新</button>
+          </div>
+          <div x-show="bannersLoading" class="text-center py-4 text-slate-400">加载中…</div>
+          <div x-show="!bannersLoading && banners.length === 0" class="text-center py-4 text-slate-400">暂无 Banner</div>
+          <table class="w-full text-sm" x-show="!bannersLoading && banners.length > 0">
+            <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+              <th class="pb-2">标题</th><th class="pb-2">链接</th><th class="pb-2">排序</th><th class="pb-2">状态</th><th class="pb-2">操作</th>
+            </tr></thead>
+            <tbody>
+              <template x-for="b in banners" :key="b.id">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="py-2" x-text="b.title"></td>
+                  <td class="py-2 text-xs text-slate-400" x-text="b.linkTarget||'—'"></td>
+                  <td class="py-2 text-slate-400 text-xs" x-text="b.sortOrder||b.sort_order"></td>
+                  <td class="py-2"><span :class="(b.isActive||b.is_active)?'text-emerald-300':'text-slate-400'" x-text="(b.isActive||b.is_active)?'✅ 显示':'⬜ 隐藏'"></span></td>
+                  <td class="py-2">
+                    <button @click="toggleBanner(b)" class="px-2 py-1 glass rounded text-xs" x-text="(b.isActive||b.is_active)?'隐藏':'显示'"></button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </main>
+  <div x-show="merchantKycDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="merchantKycDrawer.open=false">
+    <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4">
+      <h3 class="font-bold text-lg mb-1">商家 KYC 审核</h3>
+      <template x-if="merchantKycDrawer.item">
+        <div>
+          <p class="text-slate-400 text-sm mb-4" x-text="merchantKycDrawer.item.displayName + ' (' + merchantKycDrawer.item.type + ' · ' + merchantKycDrawer.item.region.toUpperCase() + ')'"></p>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">拒绝原因（如需拒绝请选择）</label>
+              <select x-model="merchantKycDrawer.rejectReason" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                <option value="">— 请选择 —</option>
+                <option value="id_expired">证件已过期</option>
+                <option value="id_unclear">证件照片不清晰</option>
+                <option value="cert_expired">资质证书已过期</option>
+                <option value="cert_unrecognized">认证机构不在认可列表</option>
+                <option value="selfie_mismatch">手持证件照与证件不符</option>
+                <option value="biz_scope_mismatch">营业执照范围不符</option>
+              </select>
+            </div>
+            <textarea x-model="merchantKycDrawer.customNote" placeholder="自定义说明（可选）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" rows="2"></textarea>
+            <div class="flex gap-2">
+              <button @click="merchantKycDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
+              <button @click="rejectMerchant(merchantKycDrawer.item)" class="flex-1 bg-red-600 hover:bg-red-500 py-2 rounded-lg text-sm font-bold">❌ 拒绝</button>
+              <button @click="approveMerchant(merchantKycDrawer.item)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg text-sm font-bold">✅ 通过</button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
   </div>
 
-  <!-- 商业资质审核抽屉 -->
+  <!-- ── Platform Ops: Route Review Drawer ── -->
+  <div x-show="platformRouteDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="platformRouteDrawer.open=false">
+    <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4">
+      <h3 class="font-bold text-lg mb-1">路线审核</h3>
+      <template x-if="platformRouteDrawer.item">
+        <div>
+          <p class="text-slate-400 text-sm mb-4" x-text="platformRouteDrawer.item.title + ' — ' + (platformRouteDrawer.item.peakName || '')"></p>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">拒绝原因模板</label>
+              <select x-model="platformRouteDrawer.rejectCode" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                <option value="">— 请选择 —</option>
+                <template x-for="r in platformRouteRejectReasons" :key="r.code">
+                  <option :value="r.code" x-text="r.label"></option>
+                </template>
+              </select>
+            </div>
+            <textarea x-model="platformRouteDrawer.rejectNote" placeholder="自定义拒绝说明（覆盖模板）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" rows="2"></textarea>
+            <div class="flex gap-2">
+              <button @click="platformRouteDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
+              <button @click="rejectRoute(platformRouteDrawer.item)" class="flex-1 bg-red-600 hover:bg-red-500 py-2 rounded-lg text-sm font-bold">❌ 拒绝</button>
+              <button @click="approveRoute(platformRouteDrawer.item)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg text-sm font-bold">✅ 发布</button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ── Platform Ops: Dispute Drawer ── -->
+  <div x-show="disputeDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="disputeDrawer.open=false">
+    <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4">
+      <h3 class="font-bold text-lg mb-1">纠纷仲裁</h3>
+      <template x-if="disputeDrawer.item">
+        <div>
+          <p class="text-slate-400 text-sm mb-4" x-text="'订单：' + (disputeDrawer.item.orderNo || disputeDrawer.item.id)"></p>
+          <div class="space-y-3">
+            <input x-model="disputeDrawer.refundAmount" type="number" placeholder="退款金额（0 = 不退款）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            <textarea x-model="disputeDrawer.resolution" placeholder="处理结论（必填）" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" rows="3"></textarea>
+            <div class="flex gap-2">
+              <button @click="disputeDrawer.open=false" class="flex-1 glass py-2 rounded-lg text-sm">取消</button>
+              <button @click="resolveDispute(disputeDrawer.item)" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">确认仲裁</button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
   <div x-show="commercialReviewDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="commercialReviewDrawer.open=false">
     <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
       <h3 class="font-bold text-lg mb-2">审核商业资质</h3>
@@ -1306,6 +1735,13 @@
 
         navItems: [
           { id: 'stats',           icon: '📊', label: '数据总览' },
+          { id: 'merchant-kyc',    icon: '🔍', label: '商家 KYC 审核' },
+          { id: 'platform-routes', icon: '🗺️', label: '路线审核' },
+          { id: 'invite-codes',    icon: '🎟️', label: '邀请码管理' },
+          { id: 'gmv-reports',     icon: '💹', label: 'GMV 报表' },
+          { id: 'commission-config', icon: '⚙️', label: '佣金配置' },
+          { id: 'disputes',        icon: '⚖️', label: '争议处理' },
+          { id: 'traffic',         icon: '🚀', label: '流量分发' },
           { id: 'users',           icon: '👥', label: '用户管理' },
           { id: 'posts',           icon: '📝', label: '内容审核' },
           { id: 'guides',          icon: '🧭', label: '向导审核' },
@@ -1398,6 +1834,48 @@
         // Withdrawal Requests
         withdrawals: [], withdrawalsTotal: 0, withdrawalsPage: 1, withdrawalsLoading: false, withdrawalsFilter: '',
 
+        // ── Platform Operations (P0) ─────────────────────────────────────────
+
+        // Merchant KYC Queue
+        merchantKyc: [], merchantKycTotal: 0, merchantKycLoading: false, merchantKycFilter: 'kyc_review',
+        merchantKycDrawer: { open: false, item: null, rejectReason: '', customNote: '' },
+
+        // Platform Route Review
+        platformRoutes: [], platformRoutesTotal: 0, platformRoutesLoading: false,
+        platformRouteDrawer: { open: false, item: null, rejectCode: '', rejectNote: '' },
+        platformRouteRejectReasons: [
+          { code: 'price_unreasonable', label: '价格虚高' },
+          { code: 'description_misleading', label: '描述虚假/不实' },
+          { code: 'missing_risk_disclosure', label: '缺少必要风险提示' },
+          { code: 'incomplete_equipment', label: '装备清单不完整' },
+          { code: 'image_quality', label: '图片质量差/侵权' },
+          { code: 'no_cancellation_policy', label: '缺少退订政策' },
+        ],
+
+        // Commission Config
+        commissionRates: {
+          us: { guide_standard: 0.12, guide_certified: 0.10, guide_new: 0.00, club: 0.08 },
+          cn: { guide_standard: 0.08, guide_certified: 0.10, guide_new: 0.00, club: 0.06 },
+        },
+        commissionRatesLoading: false,
+        customRateTarget: { merchantId: '', rate: '' },
+
+        // Invite Codes
+        inviteCodes: [], inviteCodesTotal: 0, inviteCodesLoading: false,
+        inviteCodeForm: { region: 'cn', tier: 'seed', count: 1, prefix: '', expiresAt: '', notes: '' },
+        generatedCodes: [],
+
+        // GMV Reports
+        gmvData: null, gmvLoading: false, gmvRegion: 'all', gmvPeriod: '7d',
+
+        // Disputes
+        disputes: [], disputesTotal: 0, disputesLoading: false, disputesFilter: 'open',
+        disputeDrawer: { open: false, item: null, resolution: '', refundAmount: '' },
+
+        // Traffic / Featured Slots
+        featuredSlots: { us: [], cn: [] }, featuredLoading: false,
+        banners: [], bannersLoading: false,
+
         async init() {
           try {
             const cfg = await fetch('/api/config');
@@ -1487,6 +1965,13 @@
           else if (this.page === 'guide-commercial') this.loadGuideCommercial();
           else if (this.page === 'sos-records') this.loadSosRecords(1);
           else if (this.page === 'withdrawals') this.loadWithdrawals(1);
+          else if (this.page === 'merchant-kyc') this.loadMerchantKyc();
+          else if (this.page === 'platform-routes') this.loadPlatformRoutes();
+          else if (this.page === 'invite-codes') this.loadInviteCodes();
+          else if (this.page === 'gmv-reports') this.loadGmvReports();
+          else if (this.page === 'commission-config') this.loadCommissionRates();
+          else if (this.page === 'disputes') this.loadDisputes();
+          else if (this.page === 'traffic') { this.loadFeaturedSlots(); this.loadBanners(); }
         },
 
         async loadStats() {
@@ -1917,6 +2402,188 @@
             w.status = 'rejected';
             this.showToast('已拒绝提现申请');
           } catch(e) { this.showToast(e.message,'error'); }
+        },
+
+        // ── Platform Operations Methods ──────────────────────────────────────
+
+        // Merchant KYC
+        async loadMerchantKyc() {
+          this.merchantKycLoading = true;
+          try {
+            const qs = this.merchantKycFilter ? `?status=${this.merchantKycFilter}` : '';
+            const d = await this.api('GET', `/merchants${qs}`);
+            this.merchantKyc = d.merchants || d || [];
+            this.merchantKycTotal = d.total || this.merchantKyc.length;
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.merchantKycLoading = false; }
+        },
+        openMerchantKycDrawer(item) {
+          this.merchantKycDrawer = { open: true, item, rejectReason: '', customNote: '' };
+        },
+        async approveMerchant(item) {
+          try {
+            await this.api('PUT', `/merchants/${item.id}/status`, { status: 'active' });
+            item.status = 'active';
+            this.merchantKycDrawer.open = false;
+            this.showToast('已通过 KYC 审核，商家已激活');
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async rejectMerchant(item) {
+          const reason = this.merchantKycDrawer.rejectReason || this.merchantKycDrawer.customNote;
+          if (!reason) { this.showToast('请选择或填写拒绝原因', 'error'); return; }
+          try {
+            await this.api('PUT', `/merchants/${item.id}/status`, { status: 'pending_kyc', reject_reason: reason });
+            item.status = 'pending_kyc';
+            this.merchantKycDrawer.open = false;
+            this.showToast('已拒绝，向导将收到邮件通知');
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async suspendMerchant(item) {
+          if (!confirm('确认暂停该商家？')) return;
+          try {
+            await this.api('PUT', `/merchants/${item.id}/status`, { status: 'suspended' });
+            item.status = 'suspended';
+            this.showToast('已暂停商家账户');
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+
+        // Platform Route Review
+        async loadPlatformRoutes() {
+          this.platformRoutesLoading = true;
+          try {
+            const d = await this.api('GET', '/platform-expeditions?status=pending_review');
+            this.platformRoutes = d.expeditions || d || [];
+            this.platformRoutesTotal = d.total || this.platformRoutes.length;
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.platformRoutesLoading = false; }
+        },
+        openRouteReviewDrawer(item) {
+          this.platformRouteDrawer = { open: true, item, rejectCode: '', rejectNote: '' };
+        },
+        async approveRoute(item) {
+          try {
+            await this.api('PUT', `/platform-expeditions/${item.id}/review`, { status: 'published' });
+            item.status = 'published';
+            this.platformRouteDrawer.open = false;
+            this.showToast('路线已通过审核并发布');
+            this.platformRoutes = this.platformRoutes.filter(r => r.id !== item.id);
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async rejectRoute(item) {
+          const code = this.platformRouteDrawer.rejectCode;
+          const note = this.platformRouteDrawer.rejectNote;
+          const rejectReason = note || (this.platformRouteRejectReasons.find(r => r.code === code) || {}).label || '';
+          if (!rejectReason) { this.showToast('请选择拒绝原因', 'error'); return; }
+          try {
+            await this.api('PUT', `/platform-expeditions/${item.id}/review`, { status: 'rejected', reject_reason: rejectReason });
+            item.status = 'rejected';
+            this.platformRouteDrawer.open = false;
+            this.showToast('路线已拒绝，向导将收到通知');
+            this.platformRoutes = this.platformRoutes.filter(r => r.id !== item.id);
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+
+        // Invite Codes
+        async loadInviteCodes() {
+          this.inviteCodesLoading = true;
+          try {
+            const d = await this.api('GET', '/invite-codes');
+            this.inviteCodes = d.codes || d || [];
+            this.inviteCodesTotal = d.total || this.inviteCodes.length;
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.inviteCodesLoading = false; }
+        },
+        async generateInviteCodes() {
+          try {
+            const d = await this.api('POST', '/invite-codes/generate', this.inviteCodeForm);
+            this.generatedCodes = d.codes || [];
+            this.showToast(`已生成 ${this.generatedCodes.length} 个邀请码`);
+            this.loadInviteCodes();
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        copyInviteCodes() {
+          const text = this.generatedCodes.join('\n');
+          navigator.clipboard.writeText(text).then(() => this.showToast('已复制到剪贴板'));
+        },
+        exportInviteCodesCsv() {
+          const csv = ['code,region,tier,notes', ...this.generatedCodes.map(c => `${c},${this.inviteCodeForm.region},${this.inviteCodeForm.tier},${this.inviteCodeForm.notes}`)].join('\n');
+          const a = document.createElement('a');
+          a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+          a.download = `invite-codes-${Date.now()}.csv`;
+          a.click();
+        },
+
+        // GMV Reports
+        async loadGmvReports() {
+          this.gmvLoading = true;
+          try {
+            const d = await this.api('GET', `/gmv?region=${this.gmvRegion}&period=${this.gmvPeriod}`);
+            this.gmvData = d;
+          } catch(e) {
+            this.gmvData = null;
+            this.showToast('GMV 数据加载失败（功能即将上线）', 'error');
+          } finally { this.gmvLoading = false; }
+        },
+
+        // Disputes
+        async loadDisputes() {
+          this.disputesLoading = true;
+          try {
+            const d = await this.api('GET', `/disputes?status=${this.disputesFilter}`);
+            this.disputes = d.disputes || d || [];
+            this.disputesTotal = d.total || this.disputes.length;
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.disputesLoading = false; }
+        },
+        openDisputeDrawer(item) {
+          this.disputeDrawer = { open: true, item, resolution: '', refundAmount: '' };
+        },
+        async resolveDispute(item) {
+          const { resolution, refundAmount } = this.disputeDrawer;
+          if (!resolution) { this.showToast('请填写处理结论', 'error'); return; }
+          try {
+            await this.api('PUT', `/disputes/${item.id}/resolve`, { resolution, refund_amount: refundAmount });
+            this.disputeDrawer.open = false;
+            this.showToast('纠纷已处理');
+            this.loadDisputes();
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+
+        // Traffic / Featured Slots
+        async loadFeaturedSlots() {
+          this.featuredLoading = true;
+          try {
+            const d = await this.api('GET', '/featured-slots');
+            this.featuredSlots = d.slots || { us: [], cn: [] };
+          } catch(e) { this.showToast('推荐位数据加载失败（功能即将上线）', 'error'); } finally { this.featuredLoading = false; }
+        },
+        async loadBanners() {
+          this.bannersLoading = true;
+          try {
+            const d = await this.api('GET', '/banners');
+            this.banners = d.banners || d || [];
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.bannersLoading = false; }
+        },
+        async toggleBanner(b) {
+          try {
+            await this.api('PUT', `/banners/${b.id}`, { is_active: !b.isActive });
+            b.isActive = !b.isActive;
+            this.showToast('Banner 状态已更新');
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async saveCustomRate() {
+          const { merchantId, rate } = this.customRateTarget;
+          if (!merchantId || rate === '') { this.showToast('请填写商家 ID 和费率', 'error'); return; }
+          try {
+            await this.api('PUT', `/merchants/${merchantId}/custom-rate`, { custom_rate: parseFloat(rate) });
+            this.showToast('自定义费率已保存');
+            this.customRateTarget = { merchantId: '', rate: '' };
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async loadCommissionRates() {
+          this.commissionRatesLoading = true;
+          try {
+            const d = await this.api('GET', '/commission-rates');
+            if (d && d.us && d.cn) this.commissionRates = d;
+          } catch(e) {
+            // Fallback to hardcoded defaults if endpoint not yet deployed
+          } finally { this.commissionRatesLoading = false; }
         },
       };
     }

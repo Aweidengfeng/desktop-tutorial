@@ -501,9 +501,178 @@
       </div>
     </div>
 
-  </div>
+    <!-- ── Route Management ── -->
+    <div x-show="page === 'routes'" x-init="page === 'routes' && loadPlatformRoutes()">
+      <div class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold">🗺️ 路线管理</h2>
+            <button @click="openNewRouteForm(); page = 'routes'" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold">➕ 新建路线</button>
+          </div>
+          <div x-show="platformRoutesLoading" class="text-center py-6 text-slate-400">加载中…</div>
+          <div x-show="!platformRoutesLoading && platformRoutes.length === 0" class="text-center py-6 text-slate-400">
+            <p class="text-2xl mb-2">🗺️</p>
+            <p>还没有路线，点击"新建路线"开始上架</p>
+          </div>
+          <div class="space-y-3" x-show="!platformRoutesLoading && platformRoutes.length > 0">
+            <template x-for="r in platformRoutes" :key="r.id">
+              <div class="glass-dark rounded-xl p-4 flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-semibold" x-text="r.title"></span>
+                    <span :class="getRouteStatusClass(r.status)" class="px-2 py-0.5 rounded-full text-xs" x-text="getRouteStatusLabel(r.status)"></span>
+                  </div>
+                  <p class="text-xs text-slate-400" x-text="(r.peakName || '') + (r.country ? ' · ' + r.country : '') + (r.durationDays ? ' · ' + r.durationDays + '天' : '')"></p>
+                  <p class="text-xs text-red-400 mt-1" x-show="r.rejectReason" x-text="'拒绝原因：' + r.rejectReason"></p>
+                </div>
+                <div class="flex gap-2 ml-3 flex-shrink-0">
+                  <button @click="openEditRouteForm(r)" x-show="r.status === 'draft' || r.status === 'rejected'" class="px-2 py-1 glass rounded text-xs">编辑</button>
+                  <button @click="submitRouteForReview(r)" x-show="r.status === 'draft' || r.status === 'rejected'" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs">提交审核</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
 
-  <script>
+        <!-- Route Form Modal -->
+        <div x-show="showRouteForm" class="glass rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold" x-text="routeFormMode === 'create' ? '新建路线' : '编辑路线'"></h3>
+            <button @click="showRouteForm=false" class="text-slate-400 hover:text-white">✕</button>
+          </div>
+          <form @submit.prevent="savePlatformRoute()" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">路线标题 *</label>
+                <input x-model="routeForm.title" required placeholder="如：珠峰南坡攀登向导" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">山峰名称</label>
+                <input x-model="routeForm.peakName" placeholder="如：珠穆朗玛峰" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">国家 / 地区</label>
+                <input x-model="routeForm.country" placeholder="China / Nepal" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">难度</label>
+                <select x-model="routeForm.difficultyRating" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10">
+                  <option value="">请选择</option>
+                  <option value="F">F - 容易 (Easy)</option>
+                  <option value="PD">PD - 较容易 (Peu Difficile)</option>
+                  <option value="AD">AD - 较难 (Assez Difficile)</option>
+                  <option value="D">D - 困难 (Difficile)</option>
+                  <option value="TD">TD - 非常困难 (Très Difficile)</option>
+                  <option value="ED">ED - 极难 (Extrêmement Difficile)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">行程天数</label>
+                <input x-model.number="routeForm.durationDays" type="number" min="1" placeholder="7" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">最佳季节</label>
+                <input x-model="routeForm.bestSeason" placeholder="5月-6月，9月-10月" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 mb-1 block">最大参团人数</label>
+                <input x-model.number="routeForm.maxParticipants" type="number" min="1" placeholder="10" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">路线简介</label>
+              <textarea x-model="routeForm.description" rows="3" placeholder="描述路线特点、难点、亮点…" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400 resize-none"></textarea>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">价格档位（JSON 格式）</label>
+              <textarea x-model="routeForm.priceTiers" rows="3" placeholder='[{"tier":"standard","price":5000,"currency":"CNY"}]' class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400 resize-none font-mono text-xs"></textarea>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">退订政策</label>
+              <textarea x-model="routeForm.cancellationPolicy" rows="2" placeholder="出发前30天全退；7天内不退款…" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400 resize-none"></textarea>
+            </div>
+            <div class="flex gap-3">
+              <button type="button" @click="showRouteForm=false" class="flex-1 glass py-2.5 rounded-xl text-sm">取消</button>
+              <button type="submit" :disabled="routeFormLoading" class="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 py-2.5 rounded-xl text-sm font-semibold">
+                <span x-text="routeFormLoading ? '保存中…' : '保存草稿'"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Finance Center ── -->
+    <div x-show="page === 'finance'" x-init="page === 'finance' && loadFinanceData()">
+      <div class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="text-lg font-bold mb-4">💰 资金中心</h2>
+          <div x-show="financeLoading" class="text-center py-6 text-slate-400">加载中…</div>
+          <div x-show="!financeLoading && !financeData" class="text-center py-6 text-slate-400">
+            <p class="text-2xl mb-2">💰</p>
+            <p>资金中心功能即将上线</p>
+            <p class="text-xs mt-1">需要绑定收款账户（Stripe Connect / 微信商户号）</p>
+          </div>
+          <div x-show="!financeLoading && financeData" class="space-y-4">
+            <div class="grid grid-cols-3 gap-4">
+              <div class="glass-dark rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400">待结算余额</p>
+                <p class="text-xl font-bold text-yellow-400 mt-1" x-text="(financeData?.currency||'CNY') + ' ' + (financeData?.pendingBalance||0).toLocaleString()"></p>
+              </div>
+              <div class="glass-dark rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400">可提现余额</p>
+                <p class="text-xl font-bold text-green-400 mt-1" x-text="(financeData?.currency||'CNY') + ' ' + (financeData?.availableBalance||0).toLocaleString()"></p>
+              </div>
+              <div class="glass-dark rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400">累计已到账</p>
+                <p class="text-xl font-bold text-blue-400 mt-1" x-text="(financeData?.currency||'CNY') + ' ' + (financeData?.totalPaid||0).toLocaleString()"></p>
+              </div>
+            </div>
+            <div class="glass-dark rounded-xl p-4">
+              <h3 class="font-semibold mb-3 text-sm">申请提现</h3>
+              <div class="flex gap-3">
+                <input x-model="payoutRequest.amount" type="number" min="100" placeholder="最低提现金额：100" class="flex-1 bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+                <button @click="requestPayout()" :disabled="payoutLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold" x-text="payoutLoading ? '提交中…' : '申请提现'"></button>
+              </div>
+              <p class="text-xs text-slate-400 mt-2">· 国际区每周自动到账（Stripe Connect）· 国内行程完成后到账（微信分账）</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Dashboard ── -->
+    <div x-show="page === 'dashboard'" x-init="page === 'dashboard' && loadDashboardData()">
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-bold mb-4">📊 数据看板</h2>
+        <div x-show="dashboardLoading" class="text-center py-6 text-slate-400">加载中…</div>
+        <div x-show="!dashboardLoading && !dashboardData" class="text-center py-6 text-slate-400">
+          <p class="text-2xl mb-2">📊</p>
+          <p>数据看板功能即将上线</p>
+          <p class="text-xs mt-1">需要有真实订单数据才能展示统计信息</p>
+        </div>
+        <div x-show="!dashboardLoading && dashboardData" class="grid grid-cols-2 gap-4">
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">路线浏览量</p>
+            <p class="text-2xl font-bold mt-1" x-text="(dashboardData?.totalViews||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">平均评分</p>
+            <p class="text-2xl font-bold mt-1 text-yellow-400" x-text="(dashboardData?.avgRating||0).toFixed(1) + ' ⭐'"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">月度 GMV</p>
+            <p class="text-2xl font-bold mt-1 text-green-400" x-text="(dashboardData?.currency||'CNY') + ' ' + (dashboardData?.monthlyGmv||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">复购率</p>
+            <p class="text-2xl font-bold mt-1 text-blue-400" x-text="((dashboardData?.repeatRate||0)*100).toFixed(0) + '%'"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
   function guidePortalApp() {
     return {
       loading: true,
@@ -514,7 +683,10 @@
       tabs: [
         { id: 'activities', icon: '📋', label: '已发布服务' },
         { id: 'publish',    icon: '➕', label: '发布服务' },
+        { id: 'routes',     icon: '🗺️', label: '路线管理' },
         { id: 'orders',     icon: '📦', label: '订单管理' },
+        { id: 'finance',    icon: '💰', label: '资金中心' },
+        { id: 'dashboard',  icon: '📊', label: '数据看板' },
         { id: 'commercial', icon: '🏆', label: '商业资质' },
       ],
       activities: [],
@@ -534,6 +706,29 @@
       commercialUploading: false,
       showPromoBanner: true,
       toasts: [],
+
+      // ── Platform Merchant Features ──────────────────────────────────────
+
+      // Route Management (platform expeditions)
+      platformRoutes: [], platformRoutesLoading: false,
+      routeForm: {
+        title: '', peakName: '', description: '', difficultyRating: '', durationDays: 7,
+        bestSeason: '', maxParticipants: 10, country: '', cancellationPolicy: '',
+        itinerary: '', equipmentList: '', includedServices: '', excludedServices: '',
+        priceTiers: '[{"tier":"standard","price":0,"currency":"CNY"}]',
+      },
+      routeFormMode: 'create', // 'create' | 'edit'
+      routeFormLoading: false,
+      showRouteForm: false,
+      selectedRoute: null,
+
+      // Finance Center
+      financeData: null, financeLoading: false,
+      payoutRequest: { amount: '' },
+      payoutLoading: false,
+
+      // Dashboard
+      dashboardData: null, dashboardLoading: false,
 
       async init() {
         await this.loadLevels();
@@ -806,6 +1001,146 @@
       toast(msg, type = 'success') {
         this.toasts.push({ msg, type });
         setTimeout(() => this.toasts.shift(), 3500);
+      },
+
+      // ── Platform Route Management ──────────────────────────────────────────
+
+      async loadPlatformRoutes() {
+        this.platformRoutesLoading = true;
+        const token = this.getAuthToken();
+        try {
+          const r = await fetch('/api/platform/expeditions/mine', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            const d = await r.json();
+            this.platformRoutes = Array.isArray(d) ? d : (d.expeditions || []);
+          }
+        } catch(e) {} finally { this.platformRoutesLoading = false; }
+      },
+
+      async savePlatformRoute() {
+        const token = this.getAuthToken();
+        if (!token) { this.toast('请先登录', 'error'); return; }
+        this.routeFormLoading = true;
+        try {
+          const method = this.routeFormMode === 'edit' && this.selectedRoute ? 'PUT' : 'POST';
+          const url = method === 'PUT' ? `/api/platform/expeditions/${this.selectedRoute.id}` : '/api/platform/expeditions';
+          const r = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(this.routeForm),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast(method === 'POST' ? '路线已保存为草稿' : '路线已更新');
+            this.showRouteForm = false;
+            this.loadPlatformRoutes();
+          } else {
+            this.toast(d.error || '保存失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误，请重试', 'error'); } finally { this.routeFormLoading = false; }
+      },
+
+      async submitRouteForReview(route) {
+        const token = this.getAuthToken();
+        try {
+          const r = await fetch(`/api/platform/expeditions/${route.id}/submit`, {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + token },
+          });
+          const d = await r.json();
+          if (r.ok) {
+            route.status = 'pending_review';
+            this.toast('已提交审核，平台将在24小时内处理');
+          } else {
+            this.toast(d.error || '提交失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); }
+      },
+
+      openNewRouteForm() {
+        this.routeForm = {
+          title: '', peakName: '', description: '', difficultyRating: '', durationDays: 7,
+          bestSeason: '', maxParticipants: 10, country: '', cancellationPolicy: '',
+          itinerary: '', equipmentList: '', includedServices: '', excludedServices: '',
+          priceTiers: '[{"tier":"standard","price":0,"currency":"CNY"}]',
+        };
+        this.routeFormMode = 'create';
+        this.selectedRoute = null;
+        this.showRouteForm = true;
+      },
+
+      openEditRouteForm(route) {
+        this.routeForm = { ...route };
+        this.routeFormMode = 'edit';
+        this.selectedRoute = route;
+        this.showRouteForm = true;
+      },
+
+      getRouteStatusLabel(status) {
+        const labels = {
+          draft: '草稿', pending_review: '审核中', published: '已发布',
+          rejected: '已拒绝', paused: '已暂停',
+        };
+        return labels[status] || status;
+      },
+
+      getRouteStatusClass(status) {
+        const classes = {
+          draft: 'bg-slate-500/20 text-slate-300',
+          pending_review: 'bg-yellow-500/20 text-yellow-300',
+          published: 'bg-emerald-500/20 text-emerald-300',
+          rejected: 'bg-red-500/20 text-red-300',
+          paused: 'bg-orange-500/20 text-orange-300',
+        };
+        return classes[status] || 'bg-slate-500/20 text-slate-300';
+      },
+
+      // ── Finance Center ─────────────────────────────────────────────────────
+
+      async loadFinanceData() {
+        const token = this.getAuthToken();
+        this.financeLoading = true;
+        try {
+          const r = await fetch('/api/platform/merchant/finance', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) this.financeData = await r.json();
+        } catch(e) {
+          this.financeData = null;
+        } finally { this.financeLoading = false; }
+      },
+
+      async requestPayout() {
+        const token = this.getAuthToken();
+        const amount = parseFloat(this.payoutRequest.amount);
+        if (!amount || amount <= 0) { this.toast('请输入有效提现金额', 'error'); return; }
+        this.payoutLoading = true;
+        try {
+          const r = await fetch('/api/platform/merchant/payout-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ amount }),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast('提现申请已提交');
+            this.payoutRequest.amount = '';
+            this.loadFinanceData();
+          } else {
+            this.toast(d.error || '提现申请失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); } finally { this.payoutLoading = false; }
+      },
+
+      // ── Dashboard ──────────────────────────────────────────────────────────
+
+      async loadDashboardData() {
+        const token = this.getAuthToken();
+        this.dashboardLoading = true;
+        try {
+          const r = await fetch('/api/platform/merchant/dashboard', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) this.dashboardData = await r.json();
+        } catch(e) {
+          this.dashboardData = null;
+        } finally { this.dashboardLoading = false; }
       },
     };
   }
