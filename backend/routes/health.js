@@ -1,17 +1,33 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../db/prisma');
+const prismaModule = require('../db/prisma');
+const { getPrismaClient } = prismaModule;
 
 // GET /api/health — 基础健康检查（已存在，保持兼容）
 router.get('/', async (req, res) => {
   const start = Date.now();
+  const region = req.region || 'us';
+  const regionConfig = req.regionConfig || {};
+  const prisma = req.prisma || getPrismaClient(region);
+  const stripeEnabled = !!regionConfig.stripeEnabled;
+  const wechatEnabled = region === 'cn' && (
+    (Array.isArray(regionConfig.paymentProviders) && regionConfig.paymentProviders.includes('wechat')) ||
+    !!process.env.WECHAT_APP_ID
+  );
   const checks = {
     status: 'ok',
+    region,
+    version: process.env.npm_package_version || '1.4.0',
+    deploy_target: regionConfig.deployTarget || process.env.DEPLOY_TARGET || 'railway',
+    db_connected: true,
+    stripe_enabled: stripeEnabled,
+    wechat_enabled: wechatEnabled,
     timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0',
-    region: process.env.REGION || 'default',
     sentry: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
   };
+  if (region === 'cn') {
+    checks.icp_number = regionConfig.icpNumber || process.env.ICP_NUMBER || '京ICP备XXXXXXXX号（备案中）';
+  }
 
   // DB 连通性检查
   try {
@@ -19,6 +35,7 @@ router.get('/', async (req, res) => {
     checks.db = 'ok';
   } catch (e) {
     checks.db = 'error';
+    checks.db_connected = false;
     checks.status = 'degraded';
   }
 
@@ -33,6 +50,7 @@ router.get('/', async (req, res) => {
 // GET /api/health/ready — K8s readiness probe
 router.get('/ready', async (req, res) => {
   try {
+    const prisma = req.prisma || getPrismaClient(req.region || 'us');
     await prisma.$queryRaw`SELECT 1`;
     res.json({ ready: true });
   } catch (e) {

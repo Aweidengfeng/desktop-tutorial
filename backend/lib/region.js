@@ -1,0 +1,73 @@
+const CN_REGIONS = ['CN', 'HK', 'MO', 'TW'];
+
+function normalizeRegion(input) {
+  const value = String(input || '').trim().toLowerCase();
+  return value === 'cn' ? 'cn' : (value === 'us' ? 'us' : null);
+}
+
+function detectRegion(req) {
+  const queryRegion = normalizeRegion(req && req.query && req.query.region);
+  if (queryRegion) return queryRegion;
+
+  const cookieRegion = normalizeRegion(req && req.cookies && req.cookies.user_region);
+  if (cookieRegion) return cookieRegion;
+
+  const country = String(
+    (req && req.headers && (
+      req.headers['cf-ipcountry'] ||
+      req.headers['x-vercel-ip-country'] ||
+      req.headers['x-country-code'] ||
+      req.headers['x-country']
+    )) || ''
+  ).trim().toUpperCase();
+  if (country && CN_REGIONS.includes(country)) return 'cn';
+  if (country && country.length === 2) return 'us';
+
+  const language = String(req && req.headers && req.headers['accept-language'] || '').toLowerCase();
+  if (language.includes('zh')) return 'cn';
+
+  return 'us';
+}
+
+function getDatabaseUrl(region) {
+  if (region === 'cn') {
+    return process.env.DATABASE_URL_CN || process.env.DATABASE_URL;
+  }
+  return process.env.DATABASE_URL_US || process.env.DATABASE_URL;
+}
+
+function getRegionConfig(region) {
+  return {
+    cn: {
+      apiBaseUrl: process.env.API_BASE_URL_CN || 'https://api-cn.unsummit.cn',
+      cdnHost: process.env.OSS_CDN_HOST || process.env.CDN_HOST_US || '',
+      paymentProviders: ['wechat', 'alipay'],
+      stripeEnabled: false,
+      legalEntity: '未登峰（北京）科技有限公司',
+      legalEntityEn: 'Unsummit (Beijing) Technology Co., Ltd.',
+      socialCreditCode: '91110112MAKCMPQ75F',
+      icpNumber: process.env.ICP_NUMBER || '京ICP备XXXXXXXX号（备案中）',
+      icpPoliceNumber: process.env.ICP_POLICE_NUMBER || '京公网安备XXXXXXXXXXXXX号（备案中）',
+      deployTarget: 'aliyun',
+    },
+    us: {
+      apiBaseUrl: process.env.API_BASE_URL_US || 'https://api.unsummit.com',
+      cdnHost: process.env.CDN_HOST_US || process.env.OSS_CDN_HOST || '',
+      paymentProviders: ['stripe'],
+      stripeEnabled: process.env.STRIPE_DISABLED !== 'true',
+      legalEntity: 'Unsummit Technology Limited',
+      legalEntityEn: 'Unsummit Technology Limited',
+      deployTarget: 'railway',
+    },
+  }[region] || {
+    apiBaseUrl: process.env.API_BASE_URL_US || 'https://api.unsummit.com',
+    cdnHost: process.env.CDN_HOST_US || '',
+    paymentProviders: ['stripe'],
+    stripeEnabled: process.env.STRIPE_DISABLED !== 'true',
+    legalEntity: 'Unsummit Technology Limited',
+    legalEntityEn: 'Unsummit Technology Limited',
+    deployTarget: 'railway',
+  };
+}
+
+module.exports = { detectRegion, getDatabaseUrl, getRegionConfig, CN_REGIONS };

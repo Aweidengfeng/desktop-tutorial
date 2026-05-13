@@ -10,22 +10,10 @@
  *   DATABASE_URL="postgresql://..."       ← 生产（配合将 schema.prisma provider 改为 postgresql）
  */
 
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient, getDefaultRegion } = require('../lib/db');
 
-let prisma;
-
-if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient({
-    log: ['warn', 'error'],
-  });
-} else {
-  // 开发/测试环境：复用全局单例，避免热重载时连接泄漏
-  if (!global.__prisma) {
-    global.__prisma = new PrismaClient({
-      log: process.env.NODE_ENV === 'test' ? [] : ['query', 'warn', 'error'],
-    });
-  }
-  prisma = global.__prisma;
-}
+const defaultRegion = getDefaultRegion();
+const prisma = getPrismaClient(defaultRegion);
 
 module.exports = prisma;
+module.exports.getPrismaClient = getPrismaClient;

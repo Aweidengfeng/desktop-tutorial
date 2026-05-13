@@ -79,6 +79,11 @@ const PAGE_STYLE = `
   </style>`;
 
 router.get('/privacy', legalLimiter, (req, res) => {
+  const region = req.region || 'us';
+  const regionHint = region === 'cn' ? '中国大陆节点（阿里云）' : '国际节点（Railway）';
+  const entityRows = `
+  <tr><td><strong>中国大陆主体</strong></td><td>未登峰（北京）科技有限公司</td><td>91110112MAKCMPQ75F</td><td>北京市通州区玉桥北里47号1层A2247号</td></tr>
+  <tr><td><strong>海外主体</strong></td><td>Unsummit Technology Limited</td><td>US Registration Pending</td><td>United States</td></tr>`;
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,6 +101,11 @@ ${PAGE_STYLE}
 
 <h2>1. 数据控制者 | Data Controller</h2>
 <p>SummitLink operates the SummitLink mobile and web platform ("Service"). Questions about this policy can be directed to <a href="mailto:privacy@summitlink.app">privacy@summitlink.app</a>.</p>
+<p><strong>Current request region:</strong> ${region}（${regionHint}）</p>
+<table>
+  <thead><tr><th>Entity Type</th><th>Legal Entity</th><th>Registration ID</th><th>Registered Address</th></tr></thead>
+  <tbody>${entityRows}</tbody>
+</table>
 
 <h2>2. 数据收集 | Data We Collect</h2>
 <p>We collect only the data necessary to provide, secure, and improve the Service:</p>
@@ -175,6 +185,10 @@ ${FOOTER}
 });
 
 router.get('/terms', legalLimiter, (req, res) => {
+  const region = req.region || 'us';
+  const currentEntity = region === 'cn'
+    ? '未登峰（北京）科技有限公司'
+    : 'Unsummit Technology Limited';
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -189,6 +203,7 @@ ${PAGE_STYLE}
   <p>SummitLink — Summit Together &nbsp;|&nbsp; Effective date: 2026-05-03</p>
 </header>
 <div class="container">
+<div class="callout"><strong>Contracting entity for this region:</strong> ${currentEntity}</div>
 
 <h2>1. 服务描述 | About SummitLink</h2>
 <p>SummitLink is a social and logistics platform for climbers and mountaineers. The platform enables users to:</p>
@@ -233,7 +248,7 @@ ${PAGE_STYLE}
 
 <h2>5. 付款条款 | Payments &amp; Refunds</h2>
 <ul>
-  <li>Guide bookings and premium features are processed by <strong>Stripe, Inc.</strong> under Stripe's terms of service.</li>
+  <li>International payments may be processed by <strong>Stripe, Inc.</strong>; China mainland payments may be processed through <strong>WeChat Pay</strong> or <strong>Alipay</strong> subject to local compliance.</li>
   <li>All prices are displayed inclusive of applicable taxes where required by law.</li>
   <li><strong>Refund policy:</strong> Full refunds are available if cancelled more than 72 hours before the scheduled activity. Cancellations within 72 hours are subject to a 50% cancellation fee. No refund is issued for no-shows.</li>
   <li>Guides may set their own additional cancellation terms, which take precedence if more restrictive.</li>
