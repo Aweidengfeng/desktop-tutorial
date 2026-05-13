@@ -17,9 +17,11 @@ function hasValidMapboxToken(token) {
 }
 
 router.get('/', configLimiter, (_req, res) => {
+  const paymentsEnabled = isPaymentsEnabled();
   res.setHeader('Cache-Control', 'public, max-age=60');
   res.json({
-    paymentsEnabled: isPaymentsEnabled(),
+    paymentsEnabled,
+    stripePublishableKey: paymentsEnabled ? String(process.env.STRIPE_PUBLISHABLE_KEY || '').trim() : '',
   });
 });
 

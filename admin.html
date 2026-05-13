@@ -24,13 +24,24 @@
     window.addEventListener('unhandledrejection', function(e) {
       if (!window.__sentryInitialized) console.warn('[SummitLink Admin] 未处理 Promise 拒绝:', e.reason);
     });
-    if (window.__SENTRY_DSN__) {
+    var dsn = (window.__SENTRY_DSN || window.__SENTRY_DSN__ || '').trim();
+    if (dsn) {
       var s = document.createElement('script');
-      s.src = 'https://browser.sentry-cdn.com/8/bundle.min.js';
+      s.src = 'https://browser.sentry-cdn.com/8/browser.min.js';
       s.crossOrigin = 'anonymous';
       s.onload = function() {
         try {
-          Sentry.init({ dsn: window.__SENTRY_DSN__, tracesSampleRate: 0.1 });
+          Sentry.init({
+            dsn: dsn,
+            environment: window.__ENV || 'production',
+            tracesSampleRate: 0.1,
+            integrations: function(defaultIntegrations) {
+              return (defaultIntegrations || []).filter(function(integration) {
+                var name = String((integration && integration.name) || '').toLowerCase();
+                return name.indexOf('replay') === -1 && name.indexOf('feedback') === -1 && name.indexOf('widget') === -1;
+              });
+            }
+          });
           window.__sentryInitialized = true;
         } catch(e) { console.warn('[SummitLink Admin] Sentry 初始化失败:', e); }
       };

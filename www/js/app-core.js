@@ -297,6 +297,8 @@ function alpineLink() {
     currentUser: null,
     authToken: localStorage.getItem('summitlink_token') || null,
     paymentsEnabled: false,
+    stripePublishableKey: '',
+    stripeClient: null,
     showLogin: false,
     showRegister: false,
     loginLoading: false,
@@ -3579,7 +3581,7 @@ function alpineLink() {
       );
     },
 
-    init() {
+    async init() {
       // Auto-rotate hero carousel every 5 seconds
       setInterval(() => {
         this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
@@ -3593,7 +3595,14 @@ function alpineLink() {
       };
       window.addEventListener('summitlink:session-expired', onSessionExpired);
       this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
-      this.loadPublicConfig();
+      await this.loadPublicConfig();
+      if (this.paymentsEnabled) {
+        try {
+          await this.ensureStripeLoaded();
+        } catch (e) {
+          console.warn('[payments] Stripe SDK load skipped:', e && e.message ? e.message : e);
+        }
+      }
       // Initialize public tracks
       this.filteredPublicTracks = this.publicTracks;
       // Verify token and load initial data
@@ -3681,7 +3690,36 @@ function alpineLink() {
         if (!res.ok) return;
         const data = await res.json();
         this.paymentsEnabled = !!data.paymentsEnabled;
+        this.stripePublishableKey = (data.stripePublishableKey || '').trim();
       } catch (e) {}
+    },
+    async ensureStripeLoaded() {
+      if (!this.paymentsEnabled) return null;
+      const key = (this.stripePublishableKey || '').trim();
+      if (!key) return null;
+      if (this.stripeClient) return this.stripeClient;
+      if (window.Stripe) {
+        this.stripeClient = window.Stripe(key);
+        return this.stripeClient;
+      }
+      await new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-sdk="stripe-v3"]');
+        if (existing) {
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', reject, { once: true });
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://js.stripe.com/v3/';
+        script.async = true;
+        script.setAttribute('data-sdk', 'stripe-v3');
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      if (!window.Stripe) return null;
+      this.stripeClient = window.Stripe(key);
+      return this.stripeClient;
     },
   };
 }

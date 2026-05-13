@@ -656,3 +656,40 @@ describe('13. GET /api/config/map OSM fallback', () => {
     expect(res.body.attribution).toBe('© OpenStreetMap contributors');
   });
 });
+
+// ── 14. /api/config 支付配置按开关返回 ─────────────────────────────────────────
+describe('14. GET /api/config payments gating', () => {
+  const originalPaymentsEnabled = process.env.PAYMENTS_ENABLED;
+  const originalStripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+
+  afterAll(() => {
+    if (originalPaymentsEnabled === undefined) delete process.env.PAYMENTS_ENABLED;
+    else process.env.PAYMENTS_ENABLED = originalPaymentsEnabled;
+    if (originalStripePublishableKey === undefined) delete process.env.STRIPE_PUBLISHABLE_KEY;
+    else process.env.STRIPE_PUBLISHABLE_KEY = originalStripePublishableKey;
+  });
+
+  test('PAYMENTS_ENABLED=false 时隐藏 stripePublishableKey', async () => {
+    process.env.PAYMENTS_ENABLED = 'false';
+    process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_hidden_when_disabled';
+    clearDbCache();
+    const app = createApp();
+
+    const res = await request(app).get('/api/config');
+    expect(res.status).toBe(200);
+    expect(res.body.paymentsEnabled).toBe(false);
+    expect(res.body.stripePublishableKey).toBe('');
+  });
+
+  test('PAYMENTS_ENABLED=true 时返回 stripePublishableKey', async () => {
+    process.env.PAYMENTS_ENABLED = 'true';
+    process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_visible_when_enabled';
+    clearDbCache();
+    const app = createApp();
+
+    const res = await request(app).get('/api/config');
+    expect(res.status).toBe(200);
+    expect(res.body.paymentsEnabled).toBe(true);
+    expect(res.body.stripePublishableKey).toBe('pk_test_visible_when_enabled');
+  });
+});
