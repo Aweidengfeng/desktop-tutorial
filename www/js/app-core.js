@@ -221,18 +221,38 @@ function loadMapboxGL(token) {
 function loadLeaflet() {
   return new Promise((resolve, reject) => {
     if (window.L) { resolve(); return; }
+
+    const leafletCssUrl = '/vendor/leaflet/leaflet.css';
+    const leafletJsUrl = '/vendor/leaflet/leaflet.js';
+
     const existingCss = document.querySelector('link[data-map="leaflet"]');
     if (!existingCss) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.href = leafletCssUrl;
       link.setAttribute('data-map', 'leaflet');
       document.head.appendChild(link);
     }
+
+    const existingScript = document.querySelector('script[data-map="leaflet"]');
+    if (existingScript) {
+      if (window.L) { resolve(); return; }
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Leaflet failed to load from local assets: ' + leafletJsUrl)), { once: true });
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => resolve();
-    script.onerror = reject;
+    script.src = leafletJsUrl;
+    script.setAttribute('data-map', 'leaflet');
+    script.onload = () => {
+      if (window.L) {
+        resolve();
+        return;
+      }
+      reject(new Error('Leaflet loaded but window.L is unavailable.'));
+    };
+    script.onerror = () => reject(new Error('Leaflet failed to load from local assets: ' + leafletJsUrl));
     document.head.appendChild(script);
   });
 }
