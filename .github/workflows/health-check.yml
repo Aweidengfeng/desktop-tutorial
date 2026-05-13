@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Check Railway production
         run: |
-          HEALTH_URL="${{ vars.PRODUCTION_URL || 'https://alpinelink.up.railway.app' }}/api/health"
+          HEALTH_URL="${{ vars.PRODUCTION_URL || 'https://desktop-tutorial-production-182a.up.railway.app' }}/api/health"
           echo "Checking: $HEALTH_URL"
           RESPONSE=$(curl -sf --max-time 10 "$HEALTH_URL" || echo '{"status":"error"}')
           echo "Response: $RESPONSE"
