@@ -55,6 +55,8 @@ const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 const { defaultLimiter } = require('./middleware/rateLimits');
 const { cacheMiddleware, noCache } = require('./middleware/cache');
+const { detectRegion, getRegionConfig } = require('./lib/region');
+const { getPrismaClient } = require('./lib/db');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
 const htmlPageLimiter = rateLimit({
@@ -165,6 +167,13 @@ app.use(helmet({
     : false,
 }));
 app.use(cookieParser());
+app.use((req, res, next) => {
+  req.region = detectRegion(req);
+  req.regionConfig = getRegionConfig(req.region);
+  req.prisma = getPrismaClient(req.region);
+  res.setHeader('X-Region', req.region);
+  next();
+});
 // Stripe webhook 需要 raw body（必须在 express.json() 之前注册）
 app.use('/api/payment/stripe-webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
@@ -279,6 +288,24 @@ app.use('/api', defaultLimiter);
 
 // HTTP 缓存头（在路由挂载之前）
 app.use(cacheMiddleware);
+
+app.get('/api/region', (req, res) => {
+  const payload = {
+    region: req.region || 'us',
+    providers: (req.regionConfig && req.regionConfig.paymentProviders) || ['stripe'],
+    stripeEnabled: !!(req.regionConfig && req.regionConfig.stripeEnabled),
+    legalEntity: req.regionConfig && req.regionConfig.legalEntity,
+    legalEntityEn: req.regionConfig && req.regionConfig.legalEntityEn,
+    socialCreditCode: req.regionConfig && req.regionConfig.socialCreditCode,
+    deployTarget: req.regionConfig && req.regionConfig.deployTarget,
+  };
+  if (payload.region === 'cn') {
+    payload.icpNumber = req.regionConfig && req.regionConfig.icpNumber;
+    payload.icpPoliceNumber = req.regionConfig && req.regionConfig.icpPoliceNumber;
+  }
+  res.setHeader('Cache-Control', 'private, max-age=60');
+  res.json(payload);
+});
 
 // 挂载路由
 app.use('/api/auth', noCache, require('./routes/auth'));

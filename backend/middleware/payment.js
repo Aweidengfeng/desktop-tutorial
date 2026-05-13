@@ -16,6 +16,12 @@
 
 const PROVIDER = process.env.PAYMENT_PROVIDER || 'mock';
 
+function normalizeProvider(provider) {
+  const value = String(provider || '').toLowerCase().trim();
+  if (value === 'wechat' || value === 'alipay' || value === 'mock') return value;
+  return PROVIDER;
+}
+
 /**
  * 创建支付订单
  * @param {object} options
@@ -27,7 +33,12 @@ const PROVIDER = process.env.PAYMENT_PROVIDER || 'mock';
  * @returns {Promise<{provider, payParams}>}
  */
 async function createPayment({ orderNo, amount, description, openid, returnUrl }) {
-  if (PROVIDER === 'mock' || process.env.NODE_ENV === 'test') {
+  return createPaymentWithProvider(PROVIDER, { orderNo, amount, description, openid, returnUrl });
+}
+
+async function createPaymentWithProvider(provider, { orderNo, amount, description, openid, returnUrl }) {
+  const resolvedProvider = normalizeProvider(provider);
+  if (resolvedProvider === 'mock' || process.env.NODE_ENV === 'test') {
     // Mock 支付：直接返回模拟支付参数
     return {
       provider: 'mock',
@@ -41,15 +52,15 @@ async function createPayment({ orderNo, amount, description, openid, returnUrl }
     };
   }
 
-  if (PROVIDER === 'wechat') {
+  if (resolvedProvider === 'wechat') {
     return createWechatPayment({ orderNo, amount, description, openid });
   }
 
-  if (PROVIDER === 'alipay') {
+  if (resolvedProvider === 'alipay') {
     return createAlipayPayment({ orderNo, amount, description, returnUrl });
   }
 
-  throw new Error(`不支持的支付提供商: ${PROVIDER}`);
+  throw new Error(`不支持的支付提供商: ${resolvedProvider}`);
 }
 
 async function createWechatPayment({ orderNo, amount, description, openid }) {
@@ -91,4 +102,4 @@ async function verifyCallback(provider, headers, body) {
   return { valid: false, error: '回调验证框架占位' };
 }
 
-module.exports = { createPayment, verifyCallback, PROVIDER };
+module.exports = { createPayment, createPaymentWithProvider, verifyCallback, PROVIDER };

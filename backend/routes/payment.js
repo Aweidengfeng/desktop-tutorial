@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
-const { createPayment, verifyCallback, PROVIDER } = require('../middleware/payment');
+const { createPaymentWithProvider, verifyCallback, PROVIDER } = require('../middleware/payment');
 const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 
 const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
@@ -20,6 +20,22 @@ function makeDisabledHandler(reason) {
     message: '支付功能暂未开放，请稍后再试',
     reason,
   });
+}
+
+function resolveProvider(req) {
+  const forced = String((req.query && req.query.provider) || (req.body && req.body.provider) || '').toLowerCase().trim();
+  if (forced === 'stripe' || forced === 'wechat' || forced === 'alipay' || forced === 'mock') {
+    return forced;
+  }
+  const available = Array.isArray(req.regionConfig && req.regionConfig.paymentProviders)
+    ? req.regionConfig.paymentProviders
+    : [];
+  if (req.region === 'cn') {
+    if (available.includes('wechat')) return 'wechat';
+    if (available.includes('alipay')) return 'alipay';
+  }
+  if (req.region === 'us' && available.includes('stripe')) return 'stripe';
+  return PROVIDER;
 }
 
 if (!stripeDisabled && process.env.NODE_ENV === 'production' && stripeKey.startsWith('sk_test_')) {
@@ -312,7 +328,11 @@ if (paymentsFeatureDisabled || stripeDisabled) {
 
 // GET /api/payment/provider — 当前支付提供商
 router.get('/provider', (req, res) => {
-  res.json({ provider: PROVIDER, mock: PROVIDER === 'mock' });
+  const provider = resolveProvider(req);
+  const providers = Array.isArray(req.regionConfig && req.regionConfig.paymentProviders)
+    ? req.regionConfig.paymentProviders
+    : [provider];
+  res.json({ region: req.region || 'us', provider, providers, mock: provider === 'mock' });
 });
 
 // POST /api/payment/create — 创建支付订单
@@ -322,6 +342,7 @@ router.post('/create', auth, async (req, res) => {
     if (!order_id || !amount || amount <= 0) {
       return res.status(400).json({ error: '订单信息不完整' });
     }
+    const selectedProvider = resolveProvider(req);
 
     // 生成订单号
     const orderNo = `AL${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -329,11 +350,23 @@ router.post('/create', auth, async (req, res) => {
     // 记录支付意向
     await prisma.$executeRaw`
       INSERT INTO payment_orders (order_no, user_id, order_type, order_ref_id, amount, status, provider, created_at)
-      VALUES (${orderNo}, ${req.user.id}, ${order_type || 'general'}, ${String(order_id)}, ${amount}, ${'pending'}, ${PROVIDER}, datetime('now'))
+      VALUES (${orderNo}, ${req.user.id}, ${order_type || 'general'}, ${String(order_id)}, ${amount}, ${'pending'}, ${selectedProvider}, datetime('now'))
       ON CONFLICT DO NOTHING
     `.catch(() => {}); // 表不存在时静默（迁移前）
 
-    const result = await createPayment({
+    if (selectedProvider === 'stripe') {
+      return res.json({
+        orderNo,
+        provider: 'stripe',
+        payParams: {
+          action: 'create_intent',
+          endpoint: '/api/payment/create-intent',
+        },
+        message: 'Use /api/payment/create-intent to create a Stripe PaymentIntent（请使用 /api/payment/create-intent 创建 Stripe 支付意图）',
+      });
+    }
+
+    const result = await createPaymentWithProvider(selectedProvider, {
       orderNo,
       amount: Math.round(amount * 100), // 转为分
       description: description || 'SummitLink 订单',
