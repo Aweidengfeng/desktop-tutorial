@@ -421,9 +421,78 @@
       </div>
     </div>
 
-  </div>
+    <!-- ── Club Guide Members ── -->
+    <div x-show="page === 'guides'" x-init="page === 'guides' && loadClubGuides()">
+      <div class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="text-lg font-bold mb-4">🧭 旗下向导管理</h2>
+          <div class="flex gap-3 mb-4">
+            <input x-model="inviteGuideEmail" type="email" placeholder="向导邮箱（邀请挂靠）" class="flex-1 bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+            <button @click="inviteGuide()" :disabled="inviteGuideLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold" x-text="inviteGuideLoading ? '发送中…' : '邀请向导'"></button>
+          </div>
+          <p class="text-xs text-slate-400 mb-4">被邀请向导接受后，将出现在下方列表。俱乐部佣金率适用于所有挂靠向导的团报订单。</p>
+          <div x-show="clubGuidesLoading" class="text-center py-4 text-slate-400">加载中…</div>
+          <div x-show="!clubGuidesLoading && clubGuides.length === 0" class="text-center py-4 text-slate-400">暂无旗下向导，使用上方邀请功能添加</div>
+          <div class="space-y-2" x-show="!clubGuidesLoading && clubGuides.length > 0">
+            <template x-for="g in clubGuides" :key="g.id">
+              <div class="glass-dark rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <span class="font-medium text-sm" x-text="g.displayName || g.display_name || g.email"></span>
+                  <span class="text-xs text-slate-400 ml-2" x-text="g.tier === 'certified' ? '🏅 认证' : g.tier === 'seed' ? '🌱 种子' : '标准'"></span>
+                </div>
+                <button @click="removeGuide(g)" class="px-2 py-1 glass rounded text-xs text-red-300 hover:bg-red-900/30">移除</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <script>
+    <!-- ── License / KYC ── -->
+    <div x-show="page === 'license'">
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-bold mb-4">📄 营业执照 / 俱乐部 KYC</h2>
+        <div x-show="licenseStatus === 'pending'" class="glass-dark rounded-xl p-3 text-sm text-yellow-400 mb-4">
+          ⏳ KYC 材料审核中，预计 48 小时内完成
+        </div>
+        <div x-show="licenseStatus === 'approved'" class="glass-dark rounded-xl p-3 text-sm text-green-400 mb-4">
+          ✅ KYC 审核已通过
+        </div>
+        <form @submit.prevent="submitLicenseKyc()" class="space-y-4">
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">营业执照（扫描件/拍照）*</label>
+            <input type="file" accept="image/*,.pdf" @change="licenseFiles.businessLicense = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+            <p class="text-xs text-slate-500 mt-1">末登峰（北京）科技有限公司 | 统一社会信用代码: 91110112MAKCMPQ75F</p>
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">法人身份证（正反面）*</label>
+            <input type="file" accept="image/*,.pdf" @change="licenseFiles.legalRepId = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">对公银行账户信息</label>
+            <input x-model="licenseForm.bankAccountInfo" type="text" placeholder="开户行 + 账号（用于分账）"
+                   class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+          </div>
+          <div>
+            <label class="text-sm text-slate-400 mb-1 block">商业保险证明（推荐）</label>
+            <input type="file" accept="image/*,.pdf" @change="licenseFiles.insuranceCert = $event.target.files[0]"
+                   class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+          </div>
+          <div x-show="licenseUploading" class="glass-dark rounded-xl p-3 text-sm text-yellow-400 flex items-center gap-2">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            正在上传文件，请稍候…
+          </div>
+          <button type="submit" :disabled="licenseLoading || licenseUploading || licenseStatus === 'pending' || licenseStatus === 'approved'"
+                  class="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 disabled:opacity-50 rounded-xl py-3 font-semibold transition">
+            <span x-text="licenseLoading ? '提交中…' : licenseUploading ? '上传中…' : '提交 KYC 材料'"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
   function clubPortalApp() {
     return {
       loading: true,
@@ -435,6 +504,8 @@
         { id: 'activities', icon: '📋', label: '已发布活动' },
         { id: 'publish',    icon: '➕', label: '发布活动' },
         { id: 'orders',     icon: '📦', label: '报名管理' },
+        { id: 'guides',     icon: '🧭', label: '旗下向导' },
+        { id: 'license',    icon: '📄', label: '营业执照/KYC' },
       ],
       activities: [],
       activitiesLoading: false,
@@ -447,6 +518,23 @@
       payLoading: false,
       showPromoBanner: true,
       toasts: [],
+
+      // ── Club Merchant Features ────────────────────────────────────────────
+
+      // Guide members
+      clubGuides: [], clubGuidesLoading: false,
+      inviteGuideEmail: '',
+      inviteGuideLoading: false,
+
+      // License / KYC documents
+      licenseForm: {
+        businessLicenseUrl: '', legalRepIdUrl: '', bankAccountInfo: '',
+        insuranceCertUrl: '',
+      },
+      licenseFiles: { businessLicense: null, legalRepId: null, insuranceCert: null },
+      licenseLoading: false,
+      licenseUploading: false,
+      licenseStatus: null,
 
       async init() {
         await this.loadLevels();
@@ -620,6 +708,106 @@
       toast(msg, type = 'success') {
         this.toasts.push({ msg, type });
         setTimeout(() => this.toasts.shift(), 3500);
+      },
+
+      // ── Club Guide Members ─────────────────────────────────────────────────
+
+      async loadClubGuides() {
+        const token = this.getAuthToken();
+        this.clubGuidesLoading = true;
+        try {
+          const r = await fetch('/api/platform/club/guides', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            const d = await r.json();
+            this.clubGuides = Array.isArray(d) ? d : (d.guides || []);
+          }
+        } catch(e) {} finally { this.clubGuidesLoading = false; }
+      },
+
+      async inviteGuide() {
+        const token = this.getAuthToken();
+        if (!this.inviteGuideEmail) { this.toast('请输入向导邮箱', 'error'); return; }
+        this.inviteGuideLoading = true;
+        try {
+          const r = await fetch('/api/platform/club/invite-guide', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ email: this.inviteGuideEmail }),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast('邀请已发送，向导确认后将出现在列表中');
+            this.inviteGuideEmail = '';
+            this.loadClubGuides();
+          } else {
+            this.toast(d.error || '邀请失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); } finally { this.inviteGuideLoading = false; }
+      },
+
+      async removeGuide(guide) {
+        if (!confirm(`确认将 ${guide.displayName || guide.email} 移出俱乐部？`)) return;
+        const token = this.getAuthToken();
+        try {
+          const r = await fetch(`/api/platform/club/guides/${guide.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            this.clubGuides = this.clubGuides.filter(g => g.id !== guide.id);
+            this.toast('已移除向导');
+          } else {
+            const d = await r.json();
+            this.toast(d.error || '操作失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); }
+      },
+
+      // ── License / KYC ─────────────────────────────────────────────────────
+
+      async uploadFile(file) {
+        const token = this.getAuthToken();
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch('/api/upload', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd });
+        if (!r.ok) throw new Error('上传失败');
+        const d = await r.json();
+        return d.url;
+      },
+
+      async submitLicenseKyc() {
+        const token = this.getAuthToken();
+        this.licenseLoading = true;
+        this.licenseUploading = true;
+        try {
+          const uploads = [
+            ['businessLicense', 'businessLicenseUrl'],
+            ['legalRepId', 'legalRepIdUrl'],
+            ['insuranceCert', 'insuranceCertUrl'],
+          ];
+          for (const [fileKey, urlKey] of uploads) {
+            if (this.licenseFiles[fileKey]) {
+              try {
+                this.licenseForm[urlKey] = await this.uploadFile(this.licenseFiles[fileKey]);
+              } catch(e) {
+                this.toast(`上传失败：${fileKey} — ${e.message}`, 'error');
+                this.licenseLoading = false; this.licenseUploading = false; return;
+              }
+            }
+          }
+          this.licenseUploading = false;
+          const r = await fetch('/api/platform/club/kyc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(this.licenseForm),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.licenseStatus = 'pending';
+            this.toast('KYC 材料已提交，平台将在 48 小时内审核');
+          } else {
+            this.toast(d.error || '提交失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); } finally {
+          this.licenseUploading = false; this.licenseLoading = false;
+        }
       },
     };
   }

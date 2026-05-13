@@ -59,7 +59,7 @@ describe('region detection', () => {
     const usConfig = getRegionConfig('us');
 
     expect(cnConfig.paymentProviders).toEqual(['wechat', 'alipay']);
-    expect(cnConfig.legalEntity).toContain('未登峰');
+    expect(cnConfig.legalEntity).toContain('末登峰');
     expect(cnConfig.socialCreditCode).toBe('91110112MAKCMPQ75F');
 
     expect(usConfig.paymentProviders).toEqual(['stripe']);

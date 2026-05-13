@@ -67,7 +67,9 @@
       "**/backend/tests/concurrency.test.js",
       "**/backend/tests/jwt.test.js",
       "**/backend/tests/performance.test.js",
-      "**/backend/tests/weak-network.test.js"
+      "**/backend/tests/weak-network.test.js",
+      "**/backend/tests/commission.test.js",
+      "**/backend/tests/region.test.js"
     ],
     "testTimeout": 15000
   }

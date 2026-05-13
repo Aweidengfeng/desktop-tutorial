@@ -1304,3 +1304,224 @@ model StripePayment {
 
   @@map("stripe_payments")
 }
+
+// ─────────────────────────────────────────
+// 平台商家（向导 / 俱乐部）统一模型
+// ─────────────────────────────────────────
+
+model Merchant {
+  id               String    @id @default(cuid())
+  region           String    // 'us' | 'cn'
+  type             String    // 'guide' | 'club'
+  status           String    @default("pending_kyc")
+                             // 'pending_kyc' | 'kyc_review' | 'active' | 'suspended' | 'banned'
+  email            String    @unique
+  phone            String?
+  legalName        String    @map("legal_name")
+  displayName      String    @map("display_name")
+  bioZh            String?   @map("bio_zh")
+  bioEn            String?   @map("bio_en")
+  avatarUrl        String?   @map("avatar_url")
+
+  // 认证矩阵 [{ type, issued_at, expires_at, cert_no, file_url }, ...]
+  certifications   String?   // JSON stored as text (SQLite compat)
+
+  // 商家分类
+  tier             String    @default("standard")  // 'standard' | 'certified' | 'new' | 'seed'
+  completedOrders  Int       @default(0) @map("completed_orders")
+
+  // 财务
+  payoutMethod     String?   @map("payout_method")  // 'stripe_connect' | 'wechat_split' | 'alipay_zhitongche'
+  payoutAccount    String?   @map("payout_account")  // JSON: { stripe_account_id } | { wechat_mch_id, openid }
+  customRate       Float?    @map("custom_rate")    // admin-set override rate
+
+  // 邀请 / 冷启动
+  inviteCode       String?   @unique @map("invite_code")
+  invitedBy        String?   @map("invited_by")
+  isSeed           Boolean   @default(false) @map("is_seed")
+
+  // 俱乐部挂靠
+  parentClubId     String?   @map("parent_club_id")
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  reviewedAt       DateTime? @map("reviewed_at")
+  reviewedBy       String?   @map("reviewed_by")
+
+  platformExpeditions PlatformExpedition[]
+  payouts             Payout[]
+
+  @@map("merchants")
+}
+
+// ─────────────────────────────────────────
+// 平台远征路线（商家自主上架）
+// ─────────────────────────────────────────
+
+model PlatformExpedition {
+  id                  String    @id @default(cuid())
+  merchantId          String    @map("merchant_id")
+  merchant            Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  // 基本信息
+  peakName            String?   @map("peak_name")
+  title               String
+  description         String?
+  difficultyRating    String?   @map("difficulty_rating")
+  durationDays        Int?      @map("duration_days")
+  bestSeason          String?   @map("best_season")
+  maxParticipants     Int       @default(10) @map("max_participants")
+  country             String?
+  latitude            Float?
+  longitude           Float?
+
+  // 价格档位 JSON [{ tier: 'standard', price, currency, includes: [] }]
+  priceTiers          String?   @map("price_tiers")
+
+  // 行程 / 装备 JSON
+  itinerary           String?   // JSON
+  equipmentList       String?   @map("equipment_list")  // JSON
+  includedServices    String?   @map("included_services")  // JSON
+  excludedServices    String?   @map("excluded_services")  // JSON
+  cancellationPolicy  String?   @map("cancellation_policy")
+
+  // 多图
+  gallery             String?   // JSON array of URLs
+
+  // 审核流程
+  status              String    @default("draft")
+                                // 'draft' | 'pending_review' | 'published' | 'rejected' | 'paused'
+  reviewedBy          String?   @map("reviewed_by")
+  reviewedAt          DateTime? @map("reviewed_at")
+  rejectReason        String?   @map("reject_reason")
+
+  // 平台运营
+  isFeatured          Boolean   @default(false) @map("is_featured")
+  featuredUntil       DateTime? @map("featured_until")
+  seoKeywords         String?   @map("seo_keywords")  // JSON array
+  viewCount           Int       @default(0) @map("view_count")
+  conversionRate      Float?    @map("conversion_rate")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  skus                ExpeditionSku[]
+  platformOrders      PlatformOrder[]
+
+  @@map("platform_expeditions")
+}
+
+// ─────────────────────────────────────────
+// 出发日期 SKU
+// ─────────────────────────────────────────
+
+model ExpeditionSku {
+  id               String             @id @default(cuid())
+  expeditionId     String             @map("expedition_id")
+  expedition       PlatformExpedition @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+
+  departureDate    String             @map("departure_date")
+  deadlineDate     String?            @map("deadline_date")
+  maxSlots         Int                @default(10) @map("max_slots")
+  bookedSlots      Int                @default(0) @map("booked_slots")
+  singleRoomSurcharge Float?          @map("single_room_surcharge")
+  earlyBirdPrice   Float?             @map("early_bird_price")
+  earlyBirdDeadline String?           @map("early_bird_deadline")
+  availability     String             @default("available")
+                                      // 'available' | 'limited' | 'sold_out' | 'closed'
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  platformOrders   PlatformOrder[]
+
+  @@map("expedition_skus")
+}
+
+// ─────────────────────────────────────────
+// 平台订单（含佣金拆分字段）
+// ─────────────────────────────────────────
+
+model PlatformOrder {
+  id                 String             @id @default(cuid())
+  orderNo            String             @unique @map("order_no")
+
+  expeditionId       String             @map("expedition_id")
+  expedition         PlatformExpedition @relation(fields: [expeditionId], references: [id])
+  skuId              String?            @map("sku_id")
+  sku                ExpeditionSku?     @relation(fields: [skuId], references: [id])
+
+  merchantId         String             @map("merchant_id")
+  region             String             // 'us' | 'cn'
+
+  // 用户信息（不关联 User 表，以支持访客下单）
+  userEmail          String?            @map("user_email")
+  userName           String?            @map("user_name")
+  userPhone          String?            @map("user_phone")
+  participants       Int                @default(1)
+
+  // 金额拆分
+  grossAmount        Float              @map("gross_amount")
+  platformFee        Float              @map("platform_fee")
+  gatewayFee         Float              @default(0) @map("gateway_fee")
+  merchantPayout     Float              @map("merchant_payout")
+  commissionRate     Float              @map("commission_rate")
+  currency           String             // 'USD' | 'CNY'
+
+  // 支付
+  paymentGateway     String             @map("payment_gateway")  // 'stripe' | 'wechat' | 'alipay'
+  paymentIntentId    String?            @map("payment_intent_id")
+  status             String             @default("pending_payment")
+  payoutStatus       String             @default("pending") @map("payout_status")
+                                        // 'pending' | 'scheduled' | 'paid' | 'failed'
+  paidAt             DateTime?          @map("paid_at")
+  payoutAt           DateTime?          @map("payout_at")
+  payoutTransferId   String?            @map("payout_transfer_id")
+
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  @@index([merchantId])
+  @@index([region])
+  @@map("platform_orders")
+}
+
+// ─────────────────────────────────────────
+// 分账记录
+// ─────────────────────────────────────────
+
+model Payout {
+  id                String    @id @default(cuid())
+  merchantId        String    @map("merchant_id")
+  merchant          Merchant  @relation(fields: [merchantId], references: [id])
+  region            String
+  currency          String
+  amount            Float
+  status            String    // 'pending' | 'processing' | 'paid' | 'failed' | 'reversed'
+  gateway           String    // 'stripe_connect' | 'wechat_split'
+  gatewayTransferId String?   @map("gateway_transfer_id")
+  orderIds          String    // JSON array of PlatformOrder IDs
+  scheduledAt       DateTime  @map("scheduled_at")
+  paidAt            DateTime? @map("paid_at")
+  failureReason     String?   @map("failure_reason")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@map("payouts")
+}
+
+// ─────────────────────────────────────────
+// 邀请码
+// ─────────────────────────────────────────
+
+model InviteCode {
+  code        String    @id  // 6-8 位大写字母数字
+  region      String    // 'us' | 'cn'
+  tier        String    // 'seed' | 'normal'
+  createdBy   String    @map("created_by")
+  usedBy      String?   @map("used_by")
+  usedAt      DateTime? @map("used_at")
+  expiresAt   DateTime? @map("expires_at")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("invite_codes")
+}
