@@ -4,6 +4,25 @@ const rateLimit = require('express-rate-limit');
 
 const configLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '请求太频繁' }, standardHeaders: true, legacyHeaders: false });
 
+function isPaymentsEnabled() {
+  return String(process.env.PAYMENTS_ENABLED || 'false').toLowerCase() === 'true';
+}
+
+function hasValidMapboxToken(token) {
+  const normalized = String(token || '').trim();
+  if (!normalized) return false;
+  if (/^pk\.xxx/i.test(normalized)) return false;
+  if (/your[_-]?mapbox/i.test(normalized)) return false;
+  return normalized.startsWith('pk.');
+}
+
+router.get('/', configLimiter, (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.json({
+    paymentsEnabled: isPaymentsEnabled(),
+  });
+});
+
 /**
  * GET /api/config/map
  * 根据用户 IP 所在地区自动返回合适的地图引擎配置。
@@ -36,18 +55,22 @@ router.get('/map', configLimiter, (req, res) => {
     ''
   ).toUpperCase().trim();
 
-  // 中国大陆或无法判断时使用高德；其他地区且有 Mapbox Token 时切换 Mapbox
+  // 中国大陆或无法判断时使用高德；其他地区优先 Mapbox，无 token 时降级 OSM
   // country 为空字符串 = 无法检测（默认高德）
   // country = 'XX' = Cloudflare 标记的"无法确定"（默认高德）
-  const useMapbox = country !== '' && country !== 'CN' && country !== 'XX' && !!process.env.MAPBOX_TOKEN;
+  const isNonChina = country !== '' && country !== 'CN' && country !== 'XX';
+  const mapboxToken = String(process.env.MAPBOX_TOKEN || '').trim();
+  const useMapbox = isNonChina && hasValidMapboxToken(mapboxToken);
+  const useOsmFallback = isNonChina && !useMapbox;
 
-  const mapboxToken = useMapbox ? (process.env.MAPBOX_TOKEN || null) : null;
   const response = {
-    provider: useMapbox ? 'mapbox' : 'amap',
-    token: mapboxToken,         // 前向兼容（旧前端读 data.token）
-    mapboxToken,                // 新字段（新前端读 data.mapboxToken）
-    amapKey: !useMapbox ? (process.env.AMAP_KEY || null) : null,
-    amapSecurityCode: !useMapbox ? (process.env.AMAP_SECURITY_CODE || null) : null,
+    provider: useMapbox ? 'mapbox' : (useOsmFallback ? 'osm' : 'amap'),
+    token: useMapbox ? mapboxToken : null,         // 前向兼容（旧前端读 data.token）
+    mapboxToken: useMapbox ? mapboxToken : null,   // 新字段（新前端读 data.mapboxToken）
+    amapKey: !useMapbox && !useOsmFallback ? (process.env.AMAP_KEY || null) : null,
+    amapSecurityCode: !useMapbox && !useOsmFallback ? (process.env.AMAP_SECURITY_CODE || null) : null,
+    tileUrl: useOsmFallback ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : null,
+    attribution: useOsmFallback ? '© OpenStreetMap contributors' : null,
     country: country || 'unknown',
   };
 

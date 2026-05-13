@@ -1,72 +1,67 @@
-# SummitLink App Store 文案
+# SummitLink App Store Copy (v1.0 Free Tier)
 
-## App 名称
-SummitLink — Summit Together
+## App Name
+SummitLink — Climbers' Global Network
 
-## 副标题（30字以内）
-Connect with climbers worldwide
+## Subtitle (EN, <=30 chars)
+Connect. Climb. Conquer.
 
-## 描述（英文，4000字以内）
+## 副标题（中文）
+攀登者的全球连接平台
 
-SummitLink is the ultimate platform for climbers and mountaineers worldwide. Whether you're planning your next Himalayan expedition or looking for a local climbing partner, SummitLink connects you with the global climbing community.
+## Promotional Text (EN, <=170 chars)
+Free global climbing community with 14x8000m peaks, Seven Summits, team recruitment, live weather windows, rescue contacts, and map-based expedition planning.
 
-**🏔️ FIND YOUR NEXT SUMMIT**
-Discover thousands of peaks with detailed route information, difficulty ratings, and real climber reviews. From beginner-friendly trails to technical alpine routes.
+## Description (EN)
+SummitLink is a free global platform for climbers, mountaineers, and expedition teams.
 
-**👥 CONNECT WITH CLIMBERS**
-Build your climbing profile, share your achievements, and connect with climbers who share your passion. Follow routes, exchange beta, and find partners for your next adventure.
+Explore verified mountain data for the world’s most iconic peaks, including all 14 eight-thousanders and the Seven Summits. Check route context, altitude, seasonal windows, and planning references in one place.
 
-**🧭 CERTIFIED GUIDES**
-Book verified mountain guides for your expedition. Browse profiles, reviews, and certifications. Communicate directly before booking.
+Join a real climbing community:
+- Share expedition updates and field notes
+- Discover posts from climbers across regions
+- Build your profile and connect with experienced partners
 
-**🏕️ CLUB & EXPEDITION MANAGEMENT**
-Join climbing clubs, organize group expeditions, manage team gear lists, and coordinate logistics all in one place.
+Coordinate teams more efficiently:
+- Browse recruiting teams and apply to join
+- Publish your own team and manage slots
+- Track participation and preparation progress
 
-**📍 REAL-TIME LOCATION SHARING**
-Share your location with your team during expeditions for safety. Emergency rescue coordination built in.
+Plan safer expeditions:
+- Monitor weather and summit window indicators
+- Access emergency rescue contact references
+- Use map-based views for route and location context
 
-**🗺️ DUAL MAP ENGINE**
-Seamlessly switches between AMap (China) and Mapbox (international) based on your location for the best coverage everywhere.
+What makes v1.0 different:
+- Fully free core experience
+- Community + mountain database + maps + team tools
+- Designed for global climbers and mixed-language teams
 
-**📱 WORKS OFFLINE**
-Download route data and maps for offline use. Never lose your way in areas without signal.
+Premium features coming soon.
 
-**🔒 PRIVACY FIRST**
-Your data is encrypted with AES-256-GCM. Full GDPR compliance. Export or delete your data anytime.
+## Keywords (<=100 chars)
+climbing,mountain,peak,8000,everest,k2,community,team,expedition,alpine,weather,gps
 
-## 关键词（100字符以内）
-climbing,mountaineering,summit,hiking,guides,expedition,alpine,peaks,outdoor,trekking
+## Description (Simplified Chinese)
+SummitLink 是一个面向全球攀登者的免费平台，聚焦「社区 + 山峰数据库 + 地图 + 队伍协作」四个核心场景。
 
-## 分类
-Primary: Sports
-Secondary: Travel
+你可以在一个应用里完成从灵感到组队的完整流程：
+- 查看全球经典山峰数据（含 14 座 8000 米巨峰与七大洲最高峰）
+- 浏览路线与季节窗口参考信息
+- 在社区中发布动态、交流经验、寻找队友
+- 加入招募中的队伍，或创建自己的攀登队伍
+- 结合天气信息与地图视图做出发前准备
+- 查询救援联系人信息，提升户外安全准备
 
-## 年龄分级
-4+ (No objectionable content)
+v1.0 为免费版，重点提供稳定、可用、可协作的攀登基础功能，适合个人攀登者、俱乐部成员与远征队沟通协作。
 
-## 隐私政策 URL
-https://summitlink.app/legal/privacy
+我们会持续迭代社区互动、山峰资料质量与地图体验，帮助攀登者更高效地连接、计划与出发。
 
-## 支持 URL
-https://summitlink.app/legal/terms
+Premium features coming soon.
 
----
+## Demo Account (for App Review)
+- Phone: `13800138000`
+- Password: `123456`
 
-## 中文描述（用于中国区）
-
-SummitLink 是面向全球攀登者的社交平台。无论你是计划喜马拉雅探险，还是寻找本地攀岩搭档，SummitLink 都能连接你与全球攀登社区。
-
-**🏔️ 发现你的下一座顶峰**
-探索数千座山峰，获取详细路线信息、难度评级和真实攀登者评价。
-
-**👥 连接攀登者**
-建立你的攀登档案，分享成就，与志同道合的攀登者建立联系。
-
-**🧭 认证向导**
-预订经过认证的高山向导。浏览资料、评价和认证信息，直接沟通后预订。
-
-**📍 实时位置共享**
-探险期间与团队共享位置，保障安全。内置紧急救援协调功能。
-
-**🔒 隐私优先**
-数据采用 AES-256-GCM 加密存储。完全符合 GDPR 要求，随时可导出或删除数据。
+## Review Notes
+This is v1.0 (free tier). Payment features intentionally disabled and will be enabled in v1.1 after our HK entity payment processor approval (~June 2026). All payment-related code is feature-flagged behind PAYMENTS_ENABLED env var.

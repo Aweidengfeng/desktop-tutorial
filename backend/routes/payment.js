@@ -3,11 +3,13 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { createPayment, verifyCallback, PROVIDER } = require('../middleware/payment');
+const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 
 const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
 const stripeDisabledByFlag = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
 const stripeDisabledByMissingKey = !stripeKey;
 const stripeDisabled = stripeDisabledByFlag || stripeDisabledByMissingKey;
+const paymentsFeatureDisabled = !paymentsEnabled();
 const stripeDisabledReason = stripeDisabledByFlag
   ? 'STRIPE_DISABLED=true'
   : 'STRIPE_SECRET_KEY missing';
@@ -29,8 +31,10 @@ if (!stripeDisabled && process.env.NODE_ENV === 'production' && stripeKey.starts
   );
 }
 
-if (stripeDisabled) {
-  const disabledHandler = makeDisabledHandler(stripeDisabledReason);
+if (paymentsFeatureDisabled || stripeDisabled) {
+  const disabledHandler = paymentsFeatureDisabled
+    ? (req, res) => paymentsDisabledResponse(res)
+    : makeDisabledHandler(stripeDisabledReason);
   const routes = [
     ['get', '/config'],
     ['post', '/create-intent'],
@@ -47,7 +51,11 @@ if (stripeDisabled) {
   for (const [method, path] of routes) {
     router[method](path, disabledHandler);
   }
-  console.warn(`[Stripe] ⚠️ 支付功能已降级（503）。原因: ${stripeDisabledReason}`);
+  if (paymentsFeatureDisabled) {
+    console.log('[payments] PAYMENTS_ENABLED=false, payment routes return 503');
+  } else {
+    console.warn(`[Stripe] ⚠️ 支付功能已降级（503）。原因: ${stripeDisabledReason}`);
+  }
 } else {
   const stripe = require('stripe')(stripeKey);
 

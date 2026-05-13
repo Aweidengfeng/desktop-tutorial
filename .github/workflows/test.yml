@@ -54,7 +54,7 @@ jobs:
 
       # ── 启动后端服务器（本地测试用）──────────────────────────────────────────
       - name: Start backend server
-        run: cd backend && node db/seed.js && node app.js &
+        run: cd backend && node db/seed-prisma.js && node app.js &
         env:
           NODE_ENV: test
           PORT: 8080
@@ -71,6 +71,28 @@ jobs:
       # ── 等待服务器就绪 ────────────────────────────────────────────────────
       - name: Wait for backend to be ready
         run: npx wait-on http://localhost:8080/api/health --timeout 30000
+
+      # ── 校验种子数据已真正就绪（非空）───────────────────────────────────────
+      - name: Verify seeded API data
+        run: |
+          check_non_empty_array() {
+            local endpoint="$1"
+            for i in {1..15}; do
+              body="$(curl -fsS --retry 2 --retry-delay 1 --retry-all-errors "http://localhost:8080/api/${endpoint}" || true)"
+              if [ -n "$body" ] && node -e "const d=JSON.parse(process.argv[1]); process.exit(Array.isArray(d)&&d.length>0?0:1)" "$body"; then
+                echo "✅ /api/${endpoint} returned non-empty array"
+                return 0
+              fi
+              echo "⏳ waiting /api/${endpoint} to become non-empty... (${i}/15)"
+              sleep 2
+            done
+            echo "❌ /api/${endpoint} did not return a non-empty array"
+            return 1
+          }
+
+          check_non_empty_array peaks
+          check_non_empty_array posts
+          check_non_empty_array teams
 
       # ── 运行 API 集成测试（旧版 + 新版 jest/supertest）─────────────────────
       - name: Run API tests

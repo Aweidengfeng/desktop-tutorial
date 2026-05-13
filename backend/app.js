@@ -354,6 +354,11 @@ const databaseStatus = process.env.DATABASE_PROVIDER === 'postgresql'
 const sentryStatus = process.env.SENTRY_DSN
   ? `✅ Enabled (env=${process.env.NODE_ENV || 'development'})`
   : '⚪ Disabled';
+if (process.env.SENTRY_DSN) {
+  const sentryRelease = process.env.SENTRY_RELEASE || 'v1.0.0-launch';
+  const sentryEnv = process.env.SENTRY_ENV || process.env.NODE_ENV || 'production';
+  console.log(`[sentry] enabled, release=${sentryRelease}, environment=${sentryEnv}`);
+}
 const stripeStatus = getStripeStartupStatus();
 console.log('========== SummitLink Backend 启动摘要 ==========');
 console.log(`环境: ${process.env.NODE_ENV || 'development'}`);

@@ -1319,6 +1319,7 @@
         // Stats
         statsCards: [],
         statsLoading: false,
+        paymentsEnabled: false,
 
         // Users
         users: [], usersTotal: 0, usersPage: 1, usersLoading: false, userSearch: '',
@@ -1387,6 +1388,13 @@
         withdrawals: [], withdrawalsTotal: 0, withdrawalsPage: 1, withdrawalsLoading: false, withdrawalsFilter: '',
 
         async init() {
+          try {
+            const cfg = await fetch('/api/config');
+            if (cfg.ok) {
+              const d = await cfg.json();
+              this.paymentsEnabled = !!d.paymentsEnabled;
+            }
+          } catch (e) {}
           try {
             await this.api('GET', '/check');
             this.isLoggedIn = true;
@@ -1486,6 +1494,8 @@
               { icon: '🔔', label: '待确认预约', value: d.pendingBookings },
               { icon: '🆘', label: '待处理SOS', value: d.pendingSos ?? 0 },
               { icon: '💸', label: '待处理提现', value: d.pendingWithdrawals ?? 0 },
+              { icon: '💳', label: 'Stripe Revenue', value: this.paymentsEnabled ? `¥${Number(d.stripeRevenue || 0).toLocaleString()}` : '—' },
+              { icon: '🧾', label: 'Stripe Transactions', value: this.paymentsEnabled ? (d.stripeTransactions ?? 0) : '—' },
             ];
           } catch (e) {
             this.showToast(e.message, 'error');

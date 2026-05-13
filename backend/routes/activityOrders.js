@@ -15,6 +15,7 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
+const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 
 const activityOrdersReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
 const activityOrdersWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
@@ -40,6 +41,7 @@ router.get('/my', activityOrdersReadLimiter, auth, async (req, res) => {
 
 // POST /api/activity-orders/:id/pay — 模拟支付
 router.post('/:id/pay', activityOrdersWriteLimiter, auth, async (req, res) => {
+  if (!paymentsEnabled()) return paymentsDisabledResponse(res);
   try {
     const order = (await prisma.$queryRaw`SELECT * FROM activity_orders WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!order) return res.status(404).json({ error: '订单不存在' });
