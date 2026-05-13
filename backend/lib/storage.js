@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
 
-function normalizeOptions(optionsOrRegion, fallbackRegion = 'us') {
-  if (typeof optionsOrRegion === 'string') return { region: optionsOrRegion };
-  return { region: fallbackRegion, ...(optionsOrRegion || {}) };
+function normalizeOptions(regionOrOptions, fallbackRegion = 'us') {
+  if (typeof regionOrOptions === 'string') return { region: regionOrOptions };
+  return { region: fallbackRegion, ...(regionOrOptions || {}) };
 }
 
 function normalizeKey(key) {
@@ -39,6 +39,7 @@ function resolveCosBucket() {
   const bucket = String(process.env.COS_BUCKET || '').trim();
   const appId = String(process.env.TENCENT_CLOUD_APPID || '').trim();
   if (!bucket) return '';
+  // 腾讯云 COS bucket 常见命名为 <name>-<appid>；若已带后缀则保持原值。
   if (/-\d+$/.test(bucket) || !appId) return bucket;
   return `${bucket}-${appId}`;
 }

@@ -28,7 +28,7 @@ const CLOUD_STORAGE_ENABLED = !!(
  * @param {string} [contentType] MIME 类型
  * @returns {Promise<string>} 公开 URL
  */
-async function uploadToStorage(buffer, originalname, folder = 'uploads', contentType = 'application/octet-stream') {
+async function uploadBufferToStorage(buffer, originalname, folder = 'uploads', contentType = 'application/octet-stream') {
   const ext = path.extname(originalname) || '.jpg';
   const key = `${folder}/${crypto.randomUUID()}${ext}`;
   const result = await uploadFile(buffer, key, { region: 'cn', contentType });
@@ -43,15 +43,21 @@ async function uploadToStorage(buffer, originalname, folder = 'uploads', content
  */
 function safeReadFile(filePath, allowedDir) {
   const fs = require('fs');
-  const resolved = path.resolve(filePath);
-  const dir = path.resolve(allowedDir);
-  if (!resolved.startsWith(dir + path.sep) && resolved !== dir) {
-    console.error('[storage] 路径越界，拒绝读取:', resolved);
+  const normalizedDir = path.normalize(path.resolve(allowedDir));
+  const safeName = path.basename(String(filePath || ''));
+  if (!safeName || safeName === '.' || safeName === '..') {
+    console.error('[storage] 文件名非法，拒绝读取:', filePath);
+    return null;
+  }
+
+  const targetPath = path.normalize(path.join(normalizedDir, safeName));
+  if (!targetPath.startsWith(normalizedDir + path.sep) && targetPath !== normalizedDir) {
+    console.error('[storage] 路径越界，拒绝读取:', targetPath);
     return null;
   }
   try {
-    const buf = fs.readFileSync(resolved);
-    try { fs.unlinkSync(resolved); } catch (e) { console.warn('[storage] 临时文件删除失败:', e.message); }
+    const buf = fs.readFileSync(targetPath);
+    try { fs.unlinkSync(targetPath); } catch (e) { console.warn('[storage] 临时文件删除失败:', e.message); }
     return buf;
   } catch (e) {
     return null;
@@ -73,7 +79,7 @@ async function uploadFilesToStorage(files, allowedDir) {
       buf = safeReadFile(f.path, allowedDir);
     }
     if (buf) {
-      f.storageUrl = await uploadToStorage(buf, f.originalname, 'uploads', f.mimetype || 'application/octet-stream');
+      f.storageUrl = await uploadBufferToStorage(buf, f.originalname, 'uploads', f.mimetype || 'application/octet-stream');
     }
   }
 }
@@ -99,4 +105,4 @@ function storageUploadMiddleware(allowedDir) {
   };
 }
 
-module.exports = { CLOUD_STORAGE_ENABLED, uploadToStorage, uploadFilesToStorage, storageUploadMiddleware };
+module.exports = { CLOUD_STORAGE_ENABLED, uploadBufferToStorage, uploadFilesToStorage, storageUploadMiddleware };
