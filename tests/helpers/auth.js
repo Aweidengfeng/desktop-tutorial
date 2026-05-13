@@ -3,8 +3,12 @@
  * 提供快速创建测试用户、获取 JWT token 的函数
  */
 
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const path = require('path');
+const { createRequire } = require('module');
+
+const requireFromBackend = createRequire(path.resolve(__dirname, '../../backend/package.json'));
+const jwt = requireFromBackend('jsonwebtoken');
+const bcrypt = requireFromBackend('bcrypt');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-summitlink';
 let userSeq = 0;

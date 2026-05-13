@@ -16,8 +16,12 @@ process.env.ADMIN_USERNAME  = process.env.ADMIN_USERNAME  || 'admin';
 process.env.PAYMENTS_ENABLED = process.env.PAYMENTS_ENABLED || 'true';
 process.env.NODE_ENV        = 'test';
 
-const express = require('express');
-const cors    = require('cors');
+const path = require('path');
+const { createRequire } = require('module');
+
+const requireFromBackend = createRequire(path.resolve(__dirname, '../../backend/package.json'));
+const express = requireFromBackend('express');
+const cors = requireFromBackend('cors');
 
 const { clearDbCache } = require('./db');
 

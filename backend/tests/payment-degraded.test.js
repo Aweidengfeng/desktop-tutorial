@@ -32,6 +32,12 @@ function createAppWithPaymentRoute() {
 }
 
 describe('payment degraded mode', () => {
+  let warnSpy;
+
+  beforeAll(() => {
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
   beforeEach(() => {
     resetProcessEnv();
     resetPaymentModule();
@@ -41,6 +47,7 @@ describe('payment degraded mode', () => {
   });
 
   afterAll(() => {
+    warnSpy?.mockRestore();
     resetProcessEnv();
     resetPaymentModule();
   });
