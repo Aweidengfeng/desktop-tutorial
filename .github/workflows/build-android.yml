@@ -100,11 +100,6 @@ jobs:
 
       - name: Build Release AAB (signed)
         if: startsWith(github.ref, 'refs/tags/v') && env.ANDROID_KEYSTORE_BASE64 != ''
-        env:
-          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
-          KEY_ALIAS: ${{ env.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ env.ANDROID_KEY_PASSWORD }}
-          STORE_PASSWORD: ${{ env.ANDROID_STORE_PASSWORD }}
         run: |
           cd android
           ./gradlew bundleRelease --stacktrace
