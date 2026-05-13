@@ -76,16 +76,49 @@ async function apiFetch(url, options = {}) {
   }
   let res;
   try {
-    res = await fetch(url, { ...options, headers });
+    res = await fetch(url, { ...options, headers, credentials: 'include' });
   } catch (e) {
     // 网络错误（断网/超时）
     throw new Error('网络连接失败，请检查网络后重试');
+  }
+  // 处理 503 支付/服务降级
+  if (res.status === 503) {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const data = await res.json();
+        console.warn('[SummitLink] 服务暂时不可用:', data.reason);
+        throw new Error(data.message || '该功能暂时不可用，请稍后重试');
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          throw new Error('服务暂时不可用，请稍后重试');
+        }
+        throw e;
+      }
+    }
+    throw new Error('服务暂时不可用，请稍后重试');
   }
   if (res.status === 401) {
     localStorage.removeItem('summitlink_token');
     // 触发全局登出事件
     window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
     throw new Error('登录已过期，请重新登录');
+  }
+  // 处理其他错误状态
+  if (!res.ok) {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const data = await res.json();
+        throw new Error(data.error || data.message || `请求失败 (${res.status})`);
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          throw new Error(`请求失败 (${res.status})`);
+        }
+        throw e;
+      }
+    }
+    throw new Error(`请求失败 (${res.status})`);
   }
   return res;
 }

@@ -42,11 +42,13 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
     const adminPassword = process.env.ADMIN_PASSWORD;
     if (!adminPassword) {
+      console.error('[admin/login] ADMIN_PASSWORD not configured');
       return res.status(500).json({ error: '管理员账号未配置' });
     }
     const userOk = timingSafeEqual(username, adminUsername);
     const passOk = timingSafeEqual(password, adminPassword);
     if (!userOk || !passOk) {
+      console.warn('[admin/login] Failed login attempt for user:', username);
       return res.status(401).json({ error: '用户名或密码错误' });
     }
     const token = jwt.sign({ isAdmin: true, username }, JWT_SECRET, { expiresIn: '7d' });
@@ -55,9 +57,17 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
     });
-    res.json({ success: true });
+    res.json({
+      success: true,
+      message: '登录成功',
+      token,
+      expiresIn: 7 * 24 * 60 * 60
+    });
+    console.log('[admin/login] Successful login for user:', username);
   } catch (e) {
+    console.error('[admin/login] Error:', e.message);
     res.status(500).json({ error: '服务器错误' });
   }
 });
