@@ -299,6 +299,7 @@ function alpineLink() {
     paymentsEnabled: false,
     stripePublishableKey: '',
     stripeClient: null,
+    stripeLoadPromise: null,
     showLogin: false,
     showRegister: false,
     loginLoading: false,
@@ -3702,21 +3703,44 @@ function alpineLink() {
         this.stripeClient = window.Stripe(key);
         return this.stripeClient;
       }
-      await new Promise((resolve, reject) => {
-        const existing = document.querySelector('script[data-sdk="stripe-v3"]');
-        if (existing) {
-          existing.addEventListener('load', resolve, { once: true });
-          existing.addEventListener('error', reject, { once: true });
-          return;
-        }
-        const script = document.createElement('script');
-        script.src = 'https://js.stripe.com/v3/';
-        script.async = true;
-        script.setAttribute('data-sdk', 'stripe-v3');
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
+      if (!this.stripeLoadPromise) {
+        this.stripeLoadPromise = new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-sdk="stripe-v3"]');
+          if (existing) {
+            if (window.Stripe) { resolve(); return; }
+            if (existing.getAttribute('data-loaded') === 'true') {
+              reject(new Error('Stripe SDK script loaded but window.Stripe is unavailable.'));
+              return;
+            }
+            if (existing.getAttribute('data-failed') === 'true' || existing.readyState === 'complete') {
+              reject(new Error('Stripe SDK script is not available.'));
+              return;
+            }
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error('Stripe SDK failed to load.')), { once: true });
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.async = true;
+          script.setAttribute('data-sdk', 'stripe-v3');
+          script.setAttribute('data-loading', 'true');
+          script.onload = () => {
+            script.setAttribute('data-loading', 'false');
+            script.setAttribute('data-loaded', 'true');
+            resolve();
+          };
+          script.onerror = () => {
+            script.setAttribute('data-loading', 'false');
+            script.setAttribute('data-failed', 'true');
+            reject(new Error('Stripe SDK failed to load.'));
+          };
+          document.head.appendChild(script);
+        }).finally(() => {
+          this.stripeLoadPromise = null;
+        });
+      }
+      await this.stripeLoadPromise;
       if (!window.Stripe) return null;
       this.stripeClient = window.Stripe(key);
       return this.stripeClient;
