@@ -114,6 +114,11 @@ jobs:
           check_non_empty_array posts
           check_non_empty_array teams
 
+      - name: Run clickable audit check
+        run: npm run audit:clickables
+        env:
+          BASE_URL: http://localhost:8080
+
       # ── 运行 API 集成测试（旧版 + 新版 jest/supertest）─────────────────────
       - name: Run API tests
         run: npm run test:api

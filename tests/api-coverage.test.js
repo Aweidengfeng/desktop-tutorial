@@ -844,13 +844,43 @@ describe('十七、俱乐部控制台 /api/club-console', () => {
 
 // ── 18. /api/expeditions ─────────────────────────────────────────────────────
 describe('十八、远征队活动 /api/expeditions', () => {
-  let app, db, user, expeditionId;
+  let app, db, user, guideUser, expeditionId, pendingExpeditionId;
 
   beforeAll(() => {
     clearDbCache();
     app = createApp();
     db  = createTestDb();
     user = createTestUser(db, { phone: '13800002800' });
+    guideUser = createTestUser(db, { phone: '13800002801' });
+    const guideRes = db.prepare(`
+      INSERT INTO guides (user_id, name, rating, reviews, status, created_at)
+      VALUES (?, '测试向导', 4.8, 12, 'approved', datetime('now'))
+    `).run(guideUser.id);
+    const guideId = Number(guideRes.lastInsertRowid);
+    const publishedRes = db.prepare(`
+      INSERT INTO expeditions (
+        publisher_type, publisher_id, title, base_price, commission_rate,
+        min_participants, max_participants, current_participants, status,
+        created_at, updated_at
+      ) VALUES (
+        'guide', ?, '2026珠峰商业攀登', 380000, 0.15,
+        1, 8, 2, 'published',
+        datetime('now'), datetime('now')
+      )
+    `).run(guideId);
+    expeditionId = Number(publishedRes.lastInsertRowid);
+    const pendingRes = db.prepare(`
+      INSERT INTO expeditions (
+        publisher_type, publisher_id, title, base_price, commission_rate,
+        min_participants, max_participants, current_participants, status,
+        created_at, updated_at
+      ) VALUES (
+        'guide', ?, '待发布测试路线', 320000, 0.15,
+        1, 6, 0, 'pending',
+        datetime('now'), datetime('now')
+      )
+    `).run(guideId);
+    pendingExpeditionId = Number(pendingRes.lastInsertRowid);
   });
 
   test('GET /api/expeditions — 公开，返回分页对象', async () => {
@@ -876,10 +906,35 @@ describe('十八、远征队活动 /api/expeditions', () => {
   });
 
   test('GET /api/expeditions/:id — 获取详情', async () => {
-    if (!expeditionId) return;
     const res = await request(app).get(`/api/expeditions/${expeditionId}`);
     expect(res.status).toBe(200);
     expect(res.body.title).toBe('2026珠峰商业攀登');
+    expect(res.body).toHaveProperty('merchant');
+    expect(res.body).toHaveProperty('skus');
+    expect(Array.isArray(res.body.skus)).toBe(true);
+    expect(res.body).toHaveProperty('review_summary');
+  });
+
+  test('GET /api/expeditions/:id — 未发布且非本人/管理员 → 404', async () => {
+    const res = await request(app).get(`/api/expeditions/${pendingExpeditionId}`);
+    expect(res.status).toBe(404);
+  });
+
+  test('GET /api/expeditions/:id — 管理员可查看未发布路线', async () => {
+    const adminToken = createAdminToken();
+    const res = await request(app)
+      .get(`/api/expeditions/${pendingExpeditionId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe('待发布测试路线');
+  });
+
+  test('GET /api/expeditions/:id — 发布者本人可查看未发布路线', async () => {
+    const res = await request(app)
+      .get(`/api/expeditions/${pendingExpeditionId}`)
+      .set('Authorization', `Bearer ${guideUser.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe('待发布测试路线');
   });
 
   test('GET /api/expeditions/orders/my — 未登录 → 401', async () => {

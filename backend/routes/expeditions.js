@@ -16,6 +16,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
@@ -41,6 +42,31 @@ async function getPublisher(userId) {
   const [club] = await prisma.$queryRaw`SELECT id FROM clubs WHERE creator_id = ${userId} AND verified = 1 AND status = 'active'`;
   if (club) return { type: 'club', id: club.id };
   return null;
+}
+
+function parseOptionalViewer(req) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  try {
+    const token = authHeader.slice(7);
+    const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+    const decoded = jwt.verify(token, secret);
+    return {
+      id: decoded.id ? Number(decoded.id) : null,
+      isAdmin: !!decoded.isAdmin,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function safeParseJson(value) {
+  if (!value || typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch (_) {
+    return value;
+  }
 }
 
 // ── 订单相关路由（放在 /:id 之前，防止 'orders' 被当作 id 解析）────
@@ -189,19 +215,147 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const expId = parseInt(req.params.id);
+    if (Number.isNaN(expId)) return res.status(404).json({ error: '远征不存在' });
+    const viewer = parseOptionalViewer(req);
     const [expedition] = await prisma.$queryRaw`
-      SELECT e.*, p.name as peak_name, p.latitude, p.longitude
+      SELECT e.*, p.name as peak_name, p.altitude as peak_altitude, p.country as peak_country, p.latitude, p.longitude,
+             g.name as guide_name, g.avatar as guide_avatar, g.rating as guide_rating, g.reviews as guide_reviews, g.user_id as guide_user_id,
+             c.name as club_name, c.cover as club_cover, c.creator_id as club_owner_id
       FROM expeditions e
       LEFT JOIN peaks p ON p.id = e.peak_id
+      LEFT JOIN guides g ON e.publisher_type = 'guide' AND e.publisher_id = g.id
+      LEFT JOIN clubs c ON e.publisher_type = 'club' AND e.publisher_id = c.id
       WHERE e.id = ${expId}
     `;
     if (!expedition) return res.status(404).json({ error: '远征不存在' });
-    ['gallery', 'itinerary', 'included_services', 'excluded_services', 'addons', 'group_discount', 'payment_stages'].forEach(field => {
-      if (expedition[field]) {
-        try { expedition[field] = JSON.parse(expedition[field]); } catch (e) {}
-      }
+
+    const ownerUserId = expedition.publisher_type === 'guide'
+      ? expedition.guide_user_id
+      : expedition.club_owner_id;
+    const canPreview = expedition.status === 'published'
+      || (viewer && (viewer.isAdmin || (viewer.id && Number(ownerUserId) === viewer.id)));
+    if (!canPreview) {
+      return res.status(404).json({ error: '远征不存在' });
+    }
+
+    ['gallery', 'itinerary', 'included_services', 'excluded_services', 'addons', 'group_discount', 'payment_stages'].forEach((field) => {
+      expedition[field] = safeParseJson(expedition[field]);
     });
-    res.json(expedition);
+
+    const merchant = expedition.publisher_type === 'guide'
+      ? {
+        id: expedition.publisher_id,
+        type: 'guide',
+        name: expedition.guide_name || '向导',
+        avatar: expedition.guide_avatar || null,
+        rating: Number(expedition.guide_rating || 0),
+        review_count: Number(expedition.guide_reviews || 0),
+      }
+      : {
+        id: expedition.publisher_id,
+        type: 'club',
+        name: expedition.club_name || '俱乐部',
+        avatar: expedition.club_cover || null,
+        rating: 0,
+        review_count: 0,
+      };
+
+    const reviews = await prisma.$queryRaw`
+      SELECT r.id, r.rating, r.content, r.created_at, u.name as user_name, u.avatar as user_avatar
+      FROM reviews r
+      LEFT JOIN users u ON u.id = r.user_id
+      WHERE r.target_type = ${expedition.publisher_type} AND r.target_id = ${expedition.publisher_id}
+      ORDER BY r.created_at DESC
+      LIMIT 20
+    `;
+    const ratingBuckets = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let ratingSum = 0;
+    reviews.forEach((r) => {
+      const rounded = Math.max(1, Math.min(5, Math.round(Number(r.rating || 0))));
+      ratingBuckets[rounded] = (ratingBuckets[rounded] || 0) + 1;
+      ratingSum += Number(r.rating || 0);
+    });
+
+    const [samePeak, samePublisher, sameDifficulty] = await Promise.all([
+      expedition.peak_id
+        ? prisma.$queryRaw`
+            SELECT id, title, cover_image, base_price, currency, difficulty, peak_id
+            FROM expeditions
+            WHERE status = 'published' AND peak_id = ${expedition.peak_id} AND id <> ${expedition.id}
+            ORDER BY created_at DESC
+            LIMIT 6
+          `
+        : Promise.resolve([]),
+      prisma.$queryRaw`
+        SELECT id, title, cover_image, base_price, currency, difficulty, peak_id
+        FROM expeditions
+        WHERE status = 'published' AND publisher_type = ${expedition.publisher_type} AND publisher_id = ${expedition.publisher_id} AND id <> ${expedition.id}
+        ORDER BY created_at DESC
+        LIMIT 6
+      `,
+      expedition.difficulty
+        ? prisma.$queryRaw`
+            SELECT id, title, cover_image, base_price, currency, difficulty, peak_id
+            FROM expeditions
+            WHERE status = 'published' AND difficulty = ${expedition.difficulty} AND id <> ${expedition.id}
+            ORDER BY created_at DESC
+            LIMIT 6
+          `
+        : Promise.resolve([]),
+    ]);
+    const recommendationMap = new Map();
+    [...samePeak, ...samePublisher, ...sameDifficulty].forEach((item) => {
+      if (!recommendationMap.has(item.id)) recommendationMap.set(item.id, item);
+    });
+    const recommendations = Array.from(recommendationMap.values()).slice(0, 9);
+
+    const slotsLeft = Math.max(
+      0,
+      Number(expedition.max_participants || 0) - Number(expedition.current_participants || 0),
+    );
+    const skus = [
+      {
+        id: `${expedition.id}-standard`,
+        tier: 'standard',
+        departure_date: expedition.start_date || null,
+        deadline_date: expedition.end_date || null,
+        price: Number(expedition.base_price || 0),
+        currency: expedition.currency || 'CNY',
+        slots_left: slotsLeft,
+        availability: slotsLeft > 0 ? 'available' : 'sold_out',
+        early_bird_price: expedition.early_bird_price || null,
+        early_bird_deadline: expedition.early_bird_deadline || null,
+      },
+    ];
+
+    setImmediate(() => {
+      prisma.$executeRawUnsafe(
+        'UPDATE expeditions SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?',
+        expId,
+      ).catch(() => {});
+    });
+
+    res.json({
+      ...expedition,
+      merchant,
+      skus,
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        rating: Number(r.rating || 0),
+        content: r.content || '',
+        created_at: r.created_at,
+        user: {
+          name: r.user_name || '匿名用户',
+          avatar: r.user_avatar || null,
+        },
+      })),
+      review_summary: {
+        average: reviews.length ? Number((ratingSum / reviews.length).toFixed(2)) : 0,
+        total: reviews.length,
+        distribution: ratingBuckets,
+      },
+      recommendations,
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

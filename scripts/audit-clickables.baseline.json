@@ -1,0 +1,74 @@
+{
+  "/": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/"
+    }
+  },
+  "/admin": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/admin"
+    }
+  },
+  "/guide-portal": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/guide-portal"
+    }
+  },
+  "/club-portal": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/club-portal"
+    }
+  },
+  "/investor": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/investor"
+    }
+  },
+  "/expedition/1": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/expedition/1"
+    }
+  },
+  "/legal/privacy": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/legal/privacy"
+    }
+  },
+  "/legal/terms": {
+    "anchors": [],
+    "buttons": [],
+    "pointers": [],
+    "meta": {
+      "status": 200,
+      "url": "http://localhost:8080/legal/terms"
+    }
+  }
+}
