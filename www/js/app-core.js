@@ -3701,6 +3701,7 @@ function alpineLink() {
       if (this.stripeClient) return this.stripeClient;
       if (window.Stripe) {
         this.stripeClient = window.Stripe(key);
+        this.stripeLoadPromise = Promise.resolve(this.stripeClient);
         return this.stripeClient;
       }
       if (!this.stripeLoadPromise) {
@@ -3712,7 +3713,7 @@ function alpineLink() {
               reject(new Error('Stripe SDK script loaded but window.Stripe is unavailable.'));
               return;
             }
-            if (existing.getAttribute('data-failed') === 'true' || existing.readyState === 'complete') {
+            if (existing.getAttribute('data-failed') === 'true') {
               reject(new Error('Stripe SDK script is not available.'));
               return;
             }
@@ -3736,13 +3737,20 @@ function alpineLink() {
             reject(new Error('Stripe SDK failed to load.'));
           };
           document.head.appendChild(script);
-        }).finally(() => {
-          this.stripeLoadPromise = null;
         });
       }
-      await this.stripeLoadPromise;
-      if (!window.Stripe) return null;
+      try {
+        await this.stripeLoadPromise;
+      } catch (e) {
+        this.stripeLoadPromise = null;
+        throw e;
+      }
+      if (!window.Stripe) {
+        this.stripeLoadPromise = null;
+        return null;
+      }
       this.stripeClient = window.Stripe(key);
+      this.stripeLoadPromise = Promise.resolve(this.stripeClient);
       return this.stripeClient;
     },
   };
