@@ -109,7 +109,6 @@ function createApp() {
   app.use('/api/investor',            loadRoute('../../backend/routes/investor'));
   app.use('/api/profile',             loadRoute('../../backend/routes/profile'));
   app.use('/api/follows',             loadRoute('../../backend/routes/follows'));
-  app.use('/api/comments',            loadRoute('../../backend/routes/comments'));
   app.use('/api/banners',             loadRoute('../../backend/routes/banners'));
   app.use('/api/users',               loadRoute('../../backend/routes/users'));
   app.use('/api/user',                loadRoute('../../backend/routes/passport'));
