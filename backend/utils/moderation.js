@@ -13,7 +13,10 @@ function loadBlocklist() {
 
 loadBlocklist();
 // Hot reload every 5 minutes
-setInterval(loadBlocklist, 5 * 60 * 1000);
+const blocklistReloadTimer = setInterval(loadBlocklist, 5 * 60 * 1000);
+if (typeof blocklistReloadTimer.unref === 'function') {
+  blocklistReloadTimer.unref();
+}
 
 function checkText(text) {
   if (!text) return { ok: true };

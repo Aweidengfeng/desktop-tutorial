@@ -112,10 +112,26 @@ jobs:
         working-directory: backend
         continue-on-error: true
 
+      - name: CI diagnostics on test failure
+        if: failure()
+        run: |
+          node --version
+          npm --version
+          echo "backend/package.json scripts:"
+          node -e "const pkg=require('./backend/package.json'); console.log(JSON.stringify(pkg.scripts, null, 2));"
+          if [ -d backend/tests/helpers ]; then
+            ls -la backend/tests/helpers/
+          else
+            echo "backend/tests/helpers/ not found; listing tests/helpers/ instead:"
+            ls -la tests/helpers/
+          fi
+
   deploy:
     name: Deploy to Railway
     needs: test
     runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     environment:
       name: production
       url: ${{ steps.deploy.outputs.url }}
@@ -127,18 +143,19 @@ jobs:
 
       - name: Deploy to Railway
         id: deploy
-        run: |
-          railway up --service backend --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        continue-on-error: true
+        if: ${{ env.RAILWAY_TOKEN != '' }}
+        run: railway up --service backend --detach
+
+      - name: Note auto-deploy fallback
+        if: ${{ env.RAILWAY_TOKEN == '' }}
+        run: echo "ℹ️ RAILWAY_TOKEN not set — relying on Railway GitHub integration for auto-deploy on push to main."
 
       - name: Deploy status
         run: |
           if [ "${{ steps.deploy.outcome }}" == "success" ]; then
             echo "✅ Railway deployment triggered successfully"
           else
-            echo "⚠️ Railway CLI deploy skipped (token may not be set). Railway auto-deploys on push to main via GitHub integration."
+            echo "ℹ️ Railway CLI deploy step skipped. Railway auto-deploys on push to main via GitHub integration."
           fi
 
   smoke-test:
@@ -163,13 +180,19 @@ jobs:
 
       - name: Wait for deployment health check
         run: |
-          for i in {1..18}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.PRODUCTION_API_URL }}/api/health")
+          for i in $(seq 1 30); do
+            response=$(curl -sS -w "\n%{http_code}" "${{ secrets.PRODUCTION_API_URL }}/api/health" || true)
+            code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
             if [ "$code" = "200" ]; then
               echo "✅ Health endpoint is ready."
               exit 0
             fi
-            echo "⏳ Waiting for deployment... attempt $i/18 (status: $code)"
+            echo "⏳ Waiting for deployment... attempt $i/30 (status: $code)"
+            if [ "$i" -eq 30 ]; then
+              echo "❌ Final health check response body:"
+              echo "$body"
+            fi
             sleep 10
           done
           echo "❌ Deployment did not become healthy in time."
