@@ -297,6 +297,9 @@ function alpineLink() {
     currentUser: null,
     authToken: localStorage.getItem('summitlink_token') || null,
     paymentsEnabled: false,
+    stripePublishableKey: '',
+    stripeClient: null,
+    stripeLoadPromise: null,
     showLogin: false,
     showRegister: false,
     loginLoading: false,
@@ -3579,7 +3582,7 @@ function alpineLink() {
       );
     },
 
-    init() {
+    async init() {
       // Auto-rotate hero carousel every 5 seconds
       setInterval(() => {
         this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
@@ -3593,7 +3596,14 @@ function alpineLink() {
       };
       window.addEventListener('summitlink:session-expired', onSessionExpired);
       this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
-      this.loadPublicConfig();
+      await this.loadPublicConfig();
+      if (this.paymentsEnabled) {
+        try {
+          await this.ensureStripeLoaded();
+        } catch (e) {
+          console.warn('[payments] Stripe SDK load skipped:', e && e.message ? e.message : e);
+        }
+      }
       // Initialize public tracks
       this.filteredPublicTracks = this.publicTracks;
       // Verify token and load initial data
@@ -3681,7 +3691,67 @@ function alpineLink() {
         if (!res.ok) return;
         const data = await res.json();
         this.paymentsEnabled = !!data.paymentsEnabled;
+        this.stripePublishableKey = (data.stripePublishableKey || '').trim();
       } catch (e) {}
+    },
+    async ensureStripeLoaded() {
+      if (!this.paymentsEnabled) return null;
+      const key = (this.stripePublishableKey || '').trim();
+      if (!key) return null;
+      if (this.stripeClient) return this.stripeClient;
+      if (window.Stripe) {
+        this.stripeClient = window.Stripe(key);
+        this.stripeLoadPromise = Promise.resolve(this.stripeClient);
+        return this.stripeClient;
+      }
+      if (!this.stripeLoadPromise) {
+        this.stripeLoadPromise = new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-sdk="stripe-v3"]');
+          if (existing) {
+            if (window.Stripe) { resolve(); return; }
+            if (existing.getAttribute('data-loaded') === 'true') {
+              reject(new Error('Stripe SDK script loaded but window.Stripe is unavailable.'));
+              return;
+            }
+            if (existing.getAttribute('data-failed') === 'true') {
+              reject(new Error('Stripe SDK script is not available.'));
+              return;
+            }
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error('Stripe SDK failed to load.')), { once: true });
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.async = true;
+          script.setAttribute('data-sdk', 'stripe-v3');
+          script.setAttribute('data-loading', 'true');
+          script.onload = () => {
+            script.setAttribute('data-loading', 'false');
+            script.setAttribute('data-loaded', 'true');
+            resolve();
+          };
+          script.onerror = () => {
+            script.setAttribute('data-loading', 'false');
+            script.setAttribute('data-failed', 'true');
+            reject(new Error('Stripe SDK failed to load.'));
+          };
+          document.head.appendChild(script);
+        });
+      }
+      try {
+        await this.stripeLoadPromise;
+      } catch (e) {
+        this.stripeLoadPromise = null;
+        throw e;
+      }
+      if (!window.Stripe) {
+        this.stripeLoadPromise = null;
+        return null;
+      }
+      this.stripeClient = window.Stripe(key);
+      this.stripeLoadPromise = Promise.resolve(this.stripeClient);
+      return this.stripeClient;
     },
   };
 }
