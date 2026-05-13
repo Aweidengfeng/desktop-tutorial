@@ -8,7 +8,10 @@
 // Prisma 不支持 :memory:，因此使用临时文件同时让 better-sqlite3 和 Prisma 共用同一个数据库文件
 const testDbPath = process.env.TEST_DB_PATH || '/tmp/test-summitlink.db';
 process.env.DATABASE_PATH     = process.env.DATABASE_PATH     || testDbPath;
-process.env.DATABASE_URL      = process.env.DATABASE_URL      || `file:${testDbPath}`;
+// Note: DATABASE_URL is intentionally NOT set here at module level.
+// It is synced with DATABASE_PATH inside createApp() on every call so that
+// CI environments injecting a stale DATABASE_URL (e.g. `file:./test.db`) do not
+// cause a mismatch between the file used by better-sqlite3 and the file used by Prisma.
 process.env.DATABASE_PROVIDER = process.env.DATABASE_PROVIDER || 'sqlite';
 process.env.JWT_SECRET      = process.env.JWT_SECRET      || 'test-jwt-secret-summitlink';
 process.env.ADMIN_PASSWORD  = process.env.ADMIN_PASSWORD  || 'test-admin-password';
@@ -31,77 +34,106 @@ const { clearDbCache } = require('./db');
  * @returns {import('express').Application}
  */
 function createApp() {
+  // Sync DATABASE_URL with DATABASE_PATH so both better-sqlite3 (database.js) and
+  // Prisma connect to the same SQLite file. CI workflows may inject DATABASE_URL as a
+  // relative path (e.g. `file:./test.db`) that doesn't match the test-specific
+  // absolute DATABASE_PATH, causing all Prisma queries to return 500 errors.
+  const dbPath = process.env.DATABASE_PATH;
+  if (dbPath && dbPath !== ':memory:') {
+    process.env.DATABASE_URL = `file:${dbPath}`;
+  }
+
   clearDbCache();
 
   // Ensure tables are created by database.js before routes use Prisma
-  require('../../backend/db/database');
+  try {
+    require('../../backend/db/database');
+  } catch (e) {
+    console.error('[testApp] Failed to initialise database.js:', e.message);
+    throw e;
+  }
 
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
 
   // 挂载路由（顺序与 backend/app.js 一致）
-  app.use('/api/auth',          require('../../backend/routes/auth'));
-  app.use('/api/peaks',         require('../../backend/routes/peaks'));
-  app.use('/api/guides',        require('../../backend/routes/guides'));
-  app.use('/api/teams',         require('../../backend/routes/teams'));
-  app.use('/api/tracks',        require('../../backend/routes/tracks'));
-  app.use('/api/gear',          require('../../backend/routes/gear'));
-  app.use('/api/posts',         require('../../backend/routes/posts'));
-  app.use('/api/weather',       require('../../backend/routes/weather'));
-  app.use('/api/leaderboard',   require('../../backend/routes/leaderboard'));
-  app.use('/api/comments',      require('../../backend/routes/comments'));
-  app.use('/api/clubs',         require('../../backend/routes/clubs'));
-  app.use('/api/notifications', require('../../backend/routes/notifications'));
-  app.use('/api/admin',         require('../../backend/routes/admin'));
-  app.use('/api/expeditions',   require('../../backend/routes/expeditions'));
-  app.use('/api/launch',        require('../../backend/routes/launch'));
-  app.use('/api/search',        require('../../backend/routes/search'));
-  app.use('/api/certificates',  require('../../backend/routes/certificates'));
-  app.use('/api/certification', require('../../backend/routes/certification'));
-  app.use('/api/messages',      require('../../backend/routes/messages'));
-  app.use('/api/mountains',     require('../../backend/routes/mountains'));
-  app.use('/api/badges',        require('../../backend/routes/badges'));
-  app.use('/api/bookings',      require('../../backend/routes/bookings'));
-  app.use('/api/customs',       require('../../backend/routes/customs'));
-  app.use('/api/group-chats',   require('../../backend/routes/groupChats'));
-  app.use('/api/activity-orders',       require('../../backend/routes/activityOrders'));
-  app.use('/api/guide-service-orders',  require('../../backend/routes/guideServiceOrders'));
+  // Wrap each require so module-load failures print the exact path and full stack
+  // instead of a truncated "at require (testApp.js:N:M)" line.
+  function loadRoute(routePath) {
+    try {
+      return require(routePath);
+    } catch (e) {
+      console.error(
+        `[testApp] Failed to load route module "${routePath}":\n` +
+        `  ${e.message}\n` +
+        (e.stack || '')
+      );
+      throw e;
+    }
+  }
 
-  app.use('/api/offline-expeditions', require('../../backend/routes/offlineExpeditions'));
-  app.use('/api/climbing-log',        require('../../backend/routes/climbingLog'));
-  app.use('/api/routes',              require('../../backend/routes/routes'));
-  app.use('/api/guide-console',       require('../../backend/routes/guideConsole'));
-  app.use('/api/club-console',        require('../../backend/routes/clubConsole'));
-  app.use('/api/ai-coach',            require('../../backend/routes/aiCoach'));
-  app.use('/api/investor',            require('../../backend/routes/investor'));
-  app.use('/api/profile',             require('../../backend/routes/profile'));
-  app.use('/api/follows',             require('../../backend/routes/follows'));
-  app.use('/api/comments',            require('../../backend/routes/comments'));
-  app.use('/api/banners',             require('../../backend/routes/banners'));
-  app.use('/api/users',               require('../../backend/routes/users'));
-  app.use('/api/user',                require('../../backend/routes/passport'));
-  app.use('/api/passport',            require('../../backend/routes/passport'));
-  app.use('/api/rescue',              require('../../backend/routes/rescue'));
-  app.use('/api/insurance',           require('../../backend/routes/insurance'));
-  app.use('/api/location-share',      require('../../backend/routes/locationShare'));
-  app.use('/api/altitude',            require('../../backend/routes/altitude'));
-  app.use('/api/articles',            require('../../backend/routes/articles'));
-  app.use('/api/orders',              require('../../backend/routes/orders'));
-  app.use('/api/pay',                 require('../../backend/routes/pay'));
-  app.use('/api/upload',              require('../../backend/routes/upload'));
-  app.use('/api/config',              require('../../backend/routes/config'));
+  app.use('/api/auth',          loadRoute('../../backend/routes/auth'));
+  app.use('/api/peaks',         loadRoute('../../backend/routes/peaks'));
+  app.use('/api/guides',        loadRoute('../../backend/routes/guides'));
+  app.use('/api/teams',         loadRoute('../../backend/routes/teams'));
+  app.use('/api/tracks',        loadRoute('../../backend/routes/tracks'));
+  app.use('/api/gear',          loadRoute('../../backend/routes/gear'));
+  app.use('/api/posts',         loadRoute('../../backend/routes/posts'));
+  app.use('/api/weather',       loadRoute('../../backend/routes/weather'));
+  app.use('/api/leaderboard',   loadRoute('../../backend/routes/leaderboard'));
+  app.use('/api/comments',      loadRoute('../../backend/routes/comments'));
+  app.use('/api/clubs',         loadRoute('../../backend/routes/clubs'));
+  app.use('/api/notifications', loadRoute('../../backend/routes/notifications'));
+  app.use('/api/admin',         loadRoute('../../backend/routes/admin'));
+  app.use('/api/expeditions',   loadRoute('../../backend/routes/expeditions'));
+  app.use('/api/launch',        loadRoute('../../backend/routes/launch'));
+  app.use('/api/search',        loadRoute('../../backend/routes/search'));
+  app.use('/api/certificates',  loadRoute('../../backend/routes/certificates'));
+  app.use('/api/certification', loadRoute('../../backend/routes/certification'));
+  app.use('/api/messages',      loadRoute('../../backend/routes/messages'));
+  app.use('/api/mountains',     loadRoute('../../backend/routes/mountains'));
+  app.use('/api/badges',        loadRoute('../../backend/routes/badges'));
+  app.use('/api/bookings',      loadRoute('../../backend/routes/bookings'));
+  app.use('/api/customs',       loadRoute('../../backend/routes/customs'));
+  app.use('/api/group-chats',   loadRoute('../../backend/routes/groupChats'));
+  app.use('/api/activity-orders',       loadRoute('../../backend/routes/activityOrders'));
+  app.use('/api/guide-service-orders',  loadRoute('../../backend/routes/guideServiceOrders'));
+
+  app.use('/api/offline-expeditions', loadRoute('../../backend/routes/offlineExpeditions'));
+  app.use('/api/climbing-log',        loadRoute('../../backend/routes/climbingLog'));
+  app.use('/api/routes',              loadRoute('../../backend/routes/routes'));
+  app.use('/api/guide-console',       loadRoute('../../backend/routes/guideConsole'));
+  app.use('/api/club-console',        loadRoute('../../backend/routes/clubConsole'));
+  app.use('/api/ai-coach',            loadRoute('../../backend/routes/aiCoach'));
+  app.use('/api/investor',            loadRoute('../../backend/routes/investor'));
+  app.use('/api/profile',             loadRoute('../../backend/routes/profile'));
+  app.use('/api/follows',             loadRoute('../../backend/routes/follows'));
+  app.use('/api/comments',            loadRoute('../../backend/routes/comments'));
+  app.use('/api/banners',             loadRoute('../../backend/routes/banners'));
+  app.use('/api/users',               loadRoute('../../backend/routes/users'));
+  app.use('/api/user',                loadRoute('../../backend/routes/passport'));
+  app.use('/api/passport',            loadRoute('../../backend/routes/passport'));
+  app.use('/api/rescue',              loadRoute('../../backend/routes/rescue'));
+  app.use('/api/insurance',           loadRoute('../../backend/routes/insurance'));
+  app.use('/api/location-share',      loadRoute('../../backend/routes/locationShare'));
+  app.use('/api/altitude',            loadRoute('../../backend/routes/altitude'));
+  app.use('/api/articles',            loadRoute('../../backend/routes/articles'));
+  app.use('/api/orders',              loadRoute('../../backend/routes/orders'));
+  app.use('/api/pay',                 loadRoute('../../backend/routes/pay'));
+  app.use('/api/upload',              loadRoute('../../backend/routes/upload'));
+  app.use('/api/config',              loadRoute('../../backend/routes/config'));
 
   // AI 助手（仅当 ENABLE_ASSISTANT=true 时挂载）
   if (process.env.ENABLE_ASSISTANT === 'true') {
-    app.use('/api/assistant', require('../../backend/routes/assistant'));
+    app.use('/api/assistant', loadRoute('../../backend/routes/assistant'));
   }
 
   // Phase 8 新路由（与 backend/app.js 保持一致）
-  app.use('/api/coach',        require('../../backend/routes/coach'));
-  app.use('/api/payment',      require('../../backend/routes/payment'));
-  app.use('/api/admin/stats',  require('../../backend/routes/admin-stats'));
-  app.use('/api/currency',     require('../../backend/routes/currency'));
+  app.use('/api/coach',        loadRoute('../../backend/routes/coach'));
+  app.use('/api/payment',      loadRoute('../../backend/routes/payment'));
+  app.use('/api/admin/stats',  loadRoute('../../backend/routes/admin-stats'));
+  app.use('/api/currency',     loadRoute('../../backend/routes/currency'));
 
   // 健康检查
   app.get(['/api/health', '/health'], (req, res) => {

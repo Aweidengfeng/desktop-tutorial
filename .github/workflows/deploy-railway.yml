@@ -108,7 +108,6 @@ jobs:
         working-directory: backend
         env:
           NODE_ENV: test
-          DATABASE_URL: file:./test.db
           JWT_SECRET: test-secret-for-ci
 
       - name: Check for security vulnerabilities
