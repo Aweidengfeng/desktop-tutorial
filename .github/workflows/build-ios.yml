@@ -1,9 +1,28 @@
 name: Build iOS IPA
 
 on:
+  pull_request:
+    paths:
+      - 'capacitor.config.json'
+      - 'ios/**'
+      - 'android/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/build-ios.yml'
+      - '.github/workflows/build-android.yml'
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+    paths:
+      - 'capacitor.config.json'
+      - 'ios/**'
+      - 'android/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/build-ios.yml'
+      - '.github/workflows/build-android.yml'
   workflow_dispatch:
 
 jobs:
@@ -11,8 +30,15 @@ jobs:
     runs-on: macos-14
     permissions:
       contents: read
+    env:
+      IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Mark workflow start
+        run: touch /tmp/start-marker
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -20,33 +46,72 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: backend
+      - name: Debug environment
+        run: |
+          echo "Node: $(node -v)"
+          echo "npm: $(npm -v)"
+          echo "Has iOS cert: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 != '' }}"
+          echo "Has Android keystore: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}"
+          ls -la
+          cat capacitor.config.json | head -20
 
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Ensure Capacitor iOS dependencies
+        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/ios
+
+      - name: Ensure iOS platform exists
+        run: |
+          if [ ! -d ios/App ]; then
+            npx cap add ios
+          fi
 
       - name: Sync Capacitor
+        working-directory: .
         run: npx cap sync ios
 
-      - name: Install CocoaPods
+      - name: Install CocoaPods (with retry)
         run: |
           cd ios/App
-          pod install
+          for attempt in 1 2 3; do
+            pod install && exit 0
+            echo "pod install failed on attempt ${attempt}, retrying..."
+            sleep $((attempt * 10))
+          done
+          echo "pod install failed after 3 attempts"
+          exit 1
 
       - name: Import signing certificate
-        if: secrets.IOS_CERTIFICATE_P12_BASE64 != ''
+        env:
+          HAS_CERT: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 != '' }}
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_CERT == 'true'
         run: |
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-          echo "${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}" | base64 -d > certificate.p12
+          echo "${IOS_CERTIFICATE_P12_BASE64}" | base64 -d > certificate.p12
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security import certificate.p12 -k build.keychain -P "${IOS_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign
           security list-keychains -s build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
 
-      - name: Build & Archive
+      - name: Install provisioning profile
+        if: startsWith(github.ref, 'refs/tags/v') && env.IOS_PROVISIONING_PROFILE_BASE64 != ''
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${IOS_PROVISIONING_PROFILE_BASE64}" | base64 -d > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      - name: Build & Archive (signed release)
+        if: startsWith(github.ref, 'refs/tags/v') && env.IOS_CERTIFICATE_P12_BASE64 != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != ''
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath $PWD/build/App.xcarchive \
+            archive
+
+      - name: Build & Archive (unsigned validation)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') || env.IOS_CERTIFICATE_P12_BASE64 == '' || env.IOS_PROVISIONING_PROFILE_BASE64 == '' }}
         run: |
           xcodebuild -workspace ios/App/App.xcworkspace \
             -scheme App \
@@ -57,17 +122,36 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Export IPA (no signing)
+      - name: Export IPA
+        id: export_ipa
+        continue-on-error: true
         run: |
+          mkdir -p build/ipa
           xcodebuild -exportArchive \
             -archivePath $PWD/build/App.xcarchive \
             -exportOptionsPlist ios/ExportOptions.plist \
-            -exportPath $PWD/build/ipa \
-            || echo "IPA export requires valid provisioning profile and signing certificate. Set IOS_CERTIFICATE_P12_BASE64 and IOS_PROVISIONING_PROFILE_BASE64 secrets."
+            -exportPath $PWD/build/ipa
 
       - name: Upload IPA artifact
+        if: always() && hashFiles('build/ipa/**/*.ipa') != ''
         uses: actions/upload-artifact@v4
         with:
           name: summitlink-ios-${{ github.ref_name }}
           path: build/ipa/
           retention-days: 30
+
+      - name: Upload xcarchive fallback artifact
+        if: always() && hashFiles('build/App.xcarchive/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: summitlink-ios-archive-${{ github.ref_name }}
+          path: build/App.xcarchive
+          retention-days: 30
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Workflow failed. Collecting diagnostics ==="
+          find . -name "*.log" -newer /tmp/start-marker 2>/dev/null | head -20
+          ls -la ios/App/ 2>/dev/null || echo "no ios dir"
+          ls -la android/ 2>/dev/null || echo "no android dir"

@@ -1,9 +1,28 @@
 name: Build Android AAB
 
 on:
+  pull_request:
+    paths:
+      - 'capacitor.config.json'
+      - 'ios/**'
+      - 'android/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/build-ios.yml'
+      - '.github/workflows/build-android.yml'
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+    paths:
+      - 'capacitor.config.json'
+      - 'ios/**'
+      - 'android/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/build-ios.yml'
+      - '.github/workflows/build-android.yml'
   workflow_dispatch:
 
 jobs:
@@ -11,8 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Mark workflow start
+        run: touch /tmp/start-marker
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -20,52 +47,88 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Debug environment
+        run: |
+          echo "Node: $(node -v)"
+          echo "npm: $(npm -v)"
+          echo "Has iOS cert: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 != '' }}"
+          echo "Has Android keystore: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}"
+          ls -la
+          cat capacitor.config.json | head -20
+
+      - name: Install root dependencies
         run: npm ci
-        working-directory: backend
+
+      - name: Ensure Capacitor Android dependencies
+        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: 'gradle'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
+      - name: Ensure Android platform exists
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
 
       - name: Sync Capacitor
+        working-directory: .
         run: npx cap sync android
 
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build Release AAB
+      - name: Decode keystore
+        if: startsWith(github.ref, 'refs/tags/v') && env.ANDROID_KEYSTORE_BASE64 != ''
+        run: |
+          KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          echo "KEYSTORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
+      - name: Build Debug AAB (unsigned validation)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') || env.ANDROID_KEYSTORE_BASE64 == '' }}
         run: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleDebug
+
+      - name: Build Release AAB (signed)
+        if: startsWith(github.ref, 'refs/tags/v') && env.ANDROID_KEYSTORE_BASE64 != ''
         env:
-          KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-
-      - name: Sign AAB
-        if: secrets.ANDROID_KEYSTORE_BASE64 != ''
+          KEYSTORE_FILE: ${{ env.KEYSTORE_FILE }}
+          KEY_ALIAS: ${{ env.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ env.ANDROID_STORE_PASSWORD }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore release.keystore \
-            -storepass "${{ secrets.ANDROID_STORE_PASSWORD }}" \
-            -keypass "${{ secrets.ANDROID_KEY_PASSWORD }}" \
-            android/app/build/outputs/bundle/release/app-release.aab \
-            "${{ secrets.ANDROID_KEY_ALIAS }}"
+          cd android
+          ./gradlew bundleRelease --stacktrace
 
-      - name: Upload AAB artifact
+      - name: Upload release AAB artifact
+        if: always() && hashFiles('android/app/build/outputs/bundle/release/*.aab') != ''
         uses: actions/upload-artifact@v4
         with:
           name: summitlink-release-${{ github.ref_name }}.aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
+
+      - name: Upload debug AAB artifact
+        if: always() && hashFiles('android/app/build/outputs/bundle/debug/*.aab') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: summitlink-debug-${{ github.ref_name }}.aab
+          path: android/app/build/outputs/bundle/debug/*.aab
+          retention-days: 30
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Workflow failed. Collecting diagnostics ==="
+          find . -name "*.log" -newer /tmp/start-marker 2>/dev/null | head -20
+          ls -la ios/App/ 2>/dev/null || echo "no ios dir"
+          ls -la android/ 2>/dev/null || echo "no android dir"
