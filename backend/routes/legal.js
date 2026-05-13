@@ -81,7 +81,7 @@ const PAGE_STYLE = `
 
 router.get('/privacy', legalLimiter, (req, res) => {
   const region = req.region || 'us';
-  const regionHint = region === 'cn' ? '中国大陆节点（阿里云）' : '国际节点（Railway）';
+  const regionHint = region === 'cn' ? '中国大陆节点（腾讯云）' : '国际节点（Railway）';
   const cnConfig = getRegionConfig('cn');
   const usConfig = getRegionConfig('us');
   const entityRows = `

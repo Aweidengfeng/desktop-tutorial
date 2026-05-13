@@ -20,7 +20,7 @@ const RECOMMENDED = [
 const OPTIONAL = [
   { key: 'AMAP_KEY', desc: '高德地图Key（中国用户）' },
   { key: 'AMAP_SECURITY_KEY', desc: '高德安全码' },
-  { key: 'ALIYUN_OSS_BUCKET', desc: '阿里云OSS存储桶' },
+  { key: 'COS_BUCKET', desc: '腾讯云 COS 存储桶' },
   { key: 'APPLE_CLIENT_ID', desc: 'Apple Sign In（iOS上架需要）' },
   { key: 'GOOGLE_CLIENT_ID', desc: 'Google OAuth' },
   { key: 'NODE_ENV', desc: '运行环境（production/development）' },

@@ -46,7 +46,7 @@
   "optionalDependencies": {
     "@anthropic-ai/sdk": "^0.24.0",
     "@sentry/node": "^8.0.0",
-    "ali-oss": "^6.20.0",
+    "cos-nodejs-sdk-v5": "^2.15.4",
     "openai": "^4.52.0",
     "web-push": "^3.6.0"
   }

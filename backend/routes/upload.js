@@ -8,7 +8,7 @@ const auth = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimits');
 const { checkImageSafety, reviewImageFile } = require('../middleware/contentSafety');
 const prisma = require('../db/prisma');
-const { ossUploadMiddleware, OSS_ENABLED, uploadFilesToOss } = require('../middleware/ossUpload');
+const { CLOUD_STORAGE_ENABLED, uploadFilesToStorage } = require('../middleware/storageUpload');
 
 // 确保上传目录存在（支持 UPLOADS_DIR 环境变量覆盖路径）
 const uploadDir = process.env.UPLOADS_DIR
@@ -52,7 +52,7 @@ const gpxFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage: OSS_ENABLED ? multer.memoryStorage() : storage,
+  storage: CLOUD_STORAGE_ENABLED ? multer.memoryStorage() : storage,
   fileFilter: imageFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 单文件上限（图片）
 });
@@ -87,12 +87,12 @@ router.post('/', uploadLimiter, auth, (req, res, next) => {
     } catch (e) {
       console.error('[contentSafety] 审核异常，放行：', e.message);
     }
-    // OSS 上传
-    if (OSS_ENABLED) {
-      await uploadFilesToOss([req.file], uploadDir);
+    // 对象存储上传
+    if (CLOUD_STORAGE_ENABLED) {
+      await uploadFilesToStorage([req.file], uploadDir);
     }
-    const url = req.file.ossUrl || ('/uploads/' + req.file.filename);
-    // memoryStorage（OSS模式）下没有 filename，使用 originalname 作为记录
+    const url = req.file.storageUrl || ('/uploads/' + req.file.filename);
+    // memoryStorage（对象存储模式）下没有 filename，使用 originalname 作为记录
     const storedFilename = req.file.filename || req.file.originalname || '';
     prisma.$executeRaw`
       INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
@@ -123,14 +123,14 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
         console.error('[contentSafety] 审核异常，放行：', e.message);
       }
     }
-    // OSS 上传
-    if (OSS_ENABLED) {
-      await uploadFilesToOss(req.files, uploadDir);
+    // 对象存储上传
+    if (CLOUD_STORAGE_ENABLED) {
+      await uploadFilesToStorage(req.files, uploadDir);
     }
-    const urls = req.files.map(f => f.ossUrl || ('/uploads/' + f.filename));
+    const urls = req.files.map(f => f.storageUrl || ('/uploads/' + f.filename));
     for (const f of req.files) {
-      const fileUrl = f.ossUrl || ('/uploads/' + f.filename);
-      // memoryStorage（OSS模式）下没有 filename，使用 originalname 作为记录
+      const fileUrl = f.storageUrl || ('/uploads/' + f.filename);
+      // memoryStorage（对象存储模式）下没有 filename，使用 originalname 作为记录
       const storedFilename = f.filename || f.originalname || '';
       prisma.$executeRaw`
         INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)

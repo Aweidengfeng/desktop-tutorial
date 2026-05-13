@@ -82,7 +82,7 @@
 - [ ] Railway 生产环境 env 变量全部配置（参考 [`scripts/validate-env.js`](../scripts/validate-env.js), [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)）
 - [ ] PostgreSQL 备份策略已启用（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)）
 - [ ] Redis（如有）可达（🔍 当前仓库未发现 Redis 配置，若启用请补充连通性检查）
-- [ ] 阿里云 OSS Bucket 配置 + CDN 域名可访问（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md), [`docs/ALIYUN-DEPLOYMENT.md`](./ALIYUN-DEPLOYMENT.md)）
+- [ ] 腾讯云 COS Bucket 配置 + CDN 域名可访问（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md), [`docs/CN_DEPLOYMENT.md`](./CN_DEPLOYMENT.md)）
 - [ ] 健康检查端点 `/api/health` 在生产返回 200（[`scripts/smoke-test.js`](../scripts/smoke-test.js), [`docs/DEPLOYMENT.md`](./DEPLOYMENT.md)）
 - [ ] 至少配置一个故障转移节点或回滚预案（[`docs/DEPLOYMENT.md`](./DEPLOYMENT.md), [`docs/RUNBOOK.md`](./RUNBOOK.md)）
 - [ ] Railway 部署冒烟链路可执行（[`.github/workflows/deploy-railway.yml`](../.github/workflows/deploy-railway.yml), [`scripts/smoke-test.js`](../scripts/smoke-test.js)）

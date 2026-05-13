@@ -31,7 +31,7 @@ Default admin credentials are set via environment variables:
 
 ```bash
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=<set in Railway / Aliyun ECS secrets>
+ADMIN_PASSWORD=<set in Railway / Tencent Cloud secrets>
 ```
 
 ⚠️ Change default password immediately on first login.

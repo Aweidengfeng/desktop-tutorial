@@ -5,25 +5,27 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: registry.cn-hangzhou.aliyuncs.com/unsummit/backend:latest
+    image: ccr.ccs.tencentyun.com/unsummit/backend:latest
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 8080
-      DEPLOY_TARGET: aliyun
+      DEPLOY_TARGET: tencent-cloud
       DATABASE_PROVIDER: postgresql
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL_CN}
       DATABASE_URL_CN: ${DATABASE_URL_CN}
       DATABASE_URL_US: ${DATABASE_URL_US:-}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       UPLOADS_DIR: /app/uploads
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
-      OSS_BUCKET: ${OSS_BUCKET:-}
-      OSS_REGION: ${OSS_REGION:-oss-cn-beijing}
-      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
-      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
-      OSS_CDN_HOST: ${OSS_CDN_HOST:-}
+      COS_BUCKET: ${COS_BUCKET:-}
+      COS_REGION: ${COS_REGION:-ap-beijing}
+      COS_SECRET_ID: ${COS_SECRET_ID:-}
+      COS_SECRET_KEY: ${COS_SECRET_KEY:-}
+      COS_CDN_DOMAIN: ${COS_CDN_DOMAIN:-}
+      TENCENT_CLOUD_APPID: ${TENCENT_CLOUD_APPID:-}
+      TENCENT_CLOUD_REGION: ${TENCENT_CLOUD_REGION:-ap-beijing}
       STRIPE_DISABLED: "true"
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-wechat}
       WECHAT_APP_ID: ${WECHAT_APP_ID:-}
@@ -52,7 +54,7 @@ services:
       start_period: 40s
 
   nginx:
-    image: registry.cn-hangzhou.aliyuncs.com/unsummit/nginx:stable-alpine
+    image: ccr.ccs.tencentyun.com/library/nginx:stable-alpine
     restart: unless-stopped
     ports:
       - "80:80"

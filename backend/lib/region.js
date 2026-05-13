@@ -40,7 +40,7 @@ function getRegionConfig(region) {
   return {
     cn: {
       apiBaseUrl: process.env.API_BASE_URL_CN || 'https://api-cn.unsummit.cn',
-      cdnHost: process.env.OSS_CDN_HOST || process.env.CDN_HOST_US || '',
+      cdnHost: process.env.COS_CDN_DOMAIN || process.env.CDN_HOST_US || '',
       paymentProviders: ['wechat', 'alipay'],
       stripeEnabled: false,
       legalEntity: '末登峰（北京）科技有限公司',
@@ -48,11 +48,11 @@ function getRegionConfig(region) {
       socialCreditCode: '91110112MAKCMPQ75F',
       icpNumber: process.env.ICP_NUMBER || '京ICP备XXXXXXXX号（备案中）',
       icpPoliceNumber: process.env.ICP_POLICE_NUMBER || '京公网安备XXXXXXXXXXXXX号（备案中）',
-      deployTarget: 'aliyun',
+      deployTarget: 'tencent-cloud',
     },
     us: {
       apiBaseUrl: process.env.API_BASE_URL_US || 'https://api.unsummit.com',
-      cdnHost: process.env.CDN_HOST_US || process.env.OSS_CDN_HOST || '',
+      cdnHost: process.env.CDN_HOST_US || process.env.COS_CDN_DOMAIN || '',
       paymentProviders: ['stripe'],
       stripeEnabled: process.env.STRIPE_DISABLED !== 'true',
       legalEntity: 'Unsummit Technology Limited',
