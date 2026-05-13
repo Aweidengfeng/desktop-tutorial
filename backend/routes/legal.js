@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const { getRegionConfig } = require('../lib/region');
 
 const legalLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
@@ -81,9 +82,11 @@ const PAGE_STYLE = `
 router.get('/privacy', legalLimiter, (req, res) => {
   const region = req.region || 'us';
   const regionHint = region === 'cn' ? '中国大陆节点（阿里云）' : '国际节点（Railway）';
+  const cnConfig = getRegionConfig('cn');
+  const usConfig = getRegionConfig('us');
   const entityRows = `
-  <tr><td><strong>中国大陆主体</strong></td><td>未登峰（北京）科技有限公司</td><td>91110112MAKCMPQ75F</td><td>北京市通州区玉桥北里47号1层A2247号</td></tr>
-  <tr><td><strong>海外主体</strong></td><td>Unsummit Technology Limited</td><td>US Registration Pending</td><td>United States</td></tr>`;
+  <tr><td><strong>中国大陆主体</strong></td><td>${cnConfig.legalEntity}</td><td>${cnConfig.socialCreditCode}</td><td>北京市通州区玉桥北里47号1层A2247号</td></tr>
+  <tr><td><strong>海外主体</strong></td><td>${usConfig.legalEntity}</td><td>US Registration Pending</td><td>United States</td></tr>`;
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -186,9 +189,7 @@ ${FOOTER}
 
 router.get('/terms', legalLimiter, (req, res) => {
   const region = req.region || 'us';
-  const currentEntity = region === 'cn'
-    ? '未登峰（北京）科技有限公司'
-    : 'Unsummit Technology Limited';
+  const currentEntity = getRegionConfig(region).legalEntity;
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>

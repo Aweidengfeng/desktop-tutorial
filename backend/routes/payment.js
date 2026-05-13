@@ -358,9 +358,11 @@ router.post('/create', auth, async (req, res) => {
       return res.json({
         orderNo,
         provider: 'stripe',
-        action: 'create_intent',
-        endpoint: '/api/payment/create-intent',
-        message: '请使用 /api/payment/create-intent 创建 Stripe PaymentIntent',
+        payParams: {
+          action: 'create_intent',
+          endpoint: '/api/payment/create-intent',
+        },
+        message: 'Use /api/payment/create-intent to create a Stripe PaymentIntent（请使用 /api/payment/create-intent 创建 Stripe 支付意图）',
       });
     }
 

@@ -53,4 +53,23 @@ describe('multi-region prisma client factory', () => {
     expect(PrismaClientMock.mock.calls[0][0].datasources.db.url).toBe('file:/tmp/default.db');
     expect(PrismaClientMock.mock.calls[1][0].datasources.db.url).toBe('file:/tmp/default.db');
   });
+
+  test('both regions use DATABASE_URL fallback when region-specific urls are unset', () => {
+    const PrismaClientMock = jest.fn().mockImplementation((options = {}) => ({
+      __options: options,
+      $disconnect: jest.fn().mockResolvedValue(),
+    }));
+    jest.doMock('@prisma/client', () => ({ PrismaClient: PrismaClientMock }));
+
+    process.env.DATABASE_URL = 'file:/tmp/shared.db';
+    delete process.env.DATABASE_URL_CN;
+    delete process.env.DATABASE_URL_US;
+
+    const { getPrismaClient } = require('../lib/db');
+    getPrismaClient('cn');
+    getPrismaClient('us');
+
+    expect(PrismaClientMock.mock.calls[0][0].datasources.db.url).toBe('file:/tmp/shared.db');
+    expect(PrismaClientMock.mock.calls[1][0].datasources.db.url).toBe('file:/tmp/shared.db');
+  });
 });

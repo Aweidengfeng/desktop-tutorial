@@ -28,7 +28,7 @@ jobs:
         run: npm install
 
       - name: Run region unit tests
-        run: npx jest --forceExit --no-coverage --runInBand --testMatch '**/backend/tests/region.test.js' --testMatch '**/backend/tests/multi-region-db.test.js'
+        run: npx jest --forceExit --no-coverage --runInBand --testMatch '**/backend/tests/{region,multi-region-db}.test.js'
 
   test:
     name: API & E2E Tests

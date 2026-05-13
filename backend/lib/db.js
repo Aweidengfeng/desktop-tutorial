@@ -21,7 +21,14 @@ function createPrismaClient(url) {
 
 function getPrismaClient(region) {
   const normalizedRegion = getNormalizedRegion(region || getDefaultRegion());
-  const databaseUrl = getDatabaseUrl(normalizedRegion) || process.env.DATABASE_URL || 'file:/tmp/summitlink.db';
+  let databaseUrl = getDatabaseUrl(normalizedRegion) || process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+      databaseUrl = 'file:/tmp/summitlink.db';
+    } else {
+      throw new Error('DATABASE_URL is not configured');
+    }
+  }
 
   const cacheKey = `${normalizedRegion}:${databaseUrl}`;
   if (!prismaClients.has(cacheKey)) {

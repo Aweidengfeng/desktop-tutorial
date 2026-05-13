@@ -36,7 +36,7 @@ async function uploadToOss(buffer, key, region) {
     return uploadToLocal(buffer, key);
   }
 
-  const resolvedRegion = region === 'cn' ? (process.env.OSS_REGION || 'oss-cn-beijing') : (process.env.OSS_REGION_US || process.env.OSS_REGION || 'oss-us-east-1');
+  const resolvedRegion = resolveOssRegion(region);
   const safeKey = String(key || randomUUID()).replace(/^\/+/, '');
   const client = new OSS({
     region: resolvedRegion,
@@ -51,6 +51,11 @@ async function uploadToOss(buffer, key, region) {
     ? `${cdnHost.replace(/\/$/, '')}/${safeKey}`
     : `https://${process.env.OSS_BUCKET}.${resolvedRegion}.aliyuncs.com/${safeKey}`;
   return { provider: 'oss', key: safeKey, url };
+}
+
+function resolveOssRegion(region) {
+  if (region === 'cn') return process.env.OSS_REGION || 'oss-cn-beijing';
+  return process.env.OSS_REGION_US || process.env.OSS_REGION || 'oss-us-east-1';
 }
 
 async function uploadToS3(buffer, key) {
