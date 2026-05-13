@@ -28,7 +28,7 @@ function isInternalHref(href) {
 function isEmptyHref(href) {
   if (!href) return true;
   const v = href.trim().toLowerCase();
-  return v === '' || v === '#' || v === 'javascript:void(0)' || v === 'javascript:void(0);';
+  return v === '' || v === '#' || v.startsWith('javascript:void(0)');
 }
 
 (async () => {
@@ -41,7 +41,7 @@ function isEmptyHref(href) {
     const pageResult = { anchors: [], buttons: [], pointers: [], meta: {} };
     try {
       const resp = await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
       pageResult.meta.status = resp ? resp.status() : null;
       pageResult.meta.url = page.url();
 
@@ -102,6 +102,8 @@ function isEmptyHref(href) {
       for (const b of collected.buttons) {
         if (!b.visible) continue;
         const attrs = b.attrs || {};
+        const hasReadableLabel = !!((b.text || '').trim() || attrs['aria-label'] || attrs.title);
+        if (!hasReadableLabel) continue;
         const hasAction = !!(
           attrs.onclick || attrs['@click'] || attrs['x-on:click'] || attrs['v-on:click'] || attrs['data-action'] || attrs['data-href'] || attrs['aria-controls']
         );

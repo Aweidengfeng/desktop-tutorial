@@ -271,9 +271,11 @@ router.get('/:id', async (req, res) => {
     const ratingBuckets = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let ratingSum = 0;
     reviews.forEach((r) => {
-      const rounded = Math.max(1, Math.min(5, Math.round(Number(r.rating || 0))));
+      const numericRating = Number(r.rating);
+      if (!Number.isFinite(numericRating) || numericRating <= 0) return;
+      const rounded = Math.max(1, Math.min(5, Math.round(numericRating)));
       ratingBuckets[rounded] = (ratingBuckets[rounded] || 0) + 1;
-      ratingSum += Number(r.rating || 0);
+      ratingSum += numericRating;
     });
 
     const [samePeak, samePublisher, sameDifficulty] = await Promise.all([
@@ -332,7 +334,11 @@ router.get('/:id', async (req, res) => {
       prisma.$executeRawUnsafe(
         'UPDATE expeditions SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?',
         expId,
-      ).catch(() => {});
+      ).catch((err) => {
+        const msg = String(err && err.message ? err.message : err || '');
+        if (msg.includes('no such column: view_count')) return;
+        console.warn('[expeditions] view_count increment skipped:', msg);
+      });
     });
 
     res.json({

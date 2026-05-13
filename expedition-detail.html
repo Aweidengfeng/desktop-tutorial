@@ -177,6 +177,13 @@
 
     const language = (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     const t = (k) => (I18N[language] && I18N[language][k]) || I18N.en[k] || k;
+    const USD_TO_CNY_RATE = 7.2;
+    const esc = (v) => String(v == null ? '' : v)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('\"', '&quot;')
+      .replaceAll(\"'\", '&#39;');
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
 
     const regionSwitch = document.getElementById('regionSwitch');
@@ -191,7 +198,7 @@
       const region = regionSwitch.value || 'us';
       const inCny = region === 'cn';
       const base = Number(amount || 0);
-      const converted = inCny && String(currency || '').toUpperCase() === 'USD' ? base * 7.2 : (!inCny && String(currency || '').toUpperCase() === 'CNY' ? base / 7.2 : base);
+      const converted = inCny && String(currency || '').toUpperCase() === 'USD' ? base * USD_TO_CNY_RATE : (!inCny && String(currency || '').toUpperCase() === 'CNY' ? base / USD_TO_CNY_RATE : base);
       const targetCurrency = inCny ? 'CNY' : 'USD';
       return new Intl.NumberFormat(navigator.language, { style: 'currency', currency: targetCurrency, maximumFractionDigits: 0 }).format(converted);
     }
@@ -203,7 +210,7 @@
     }
 
     function setSeo(data) {
-      const title = `${data.title || 'Expedition'} | ${data.peak_name || ''} | Expedition`;
+      const title = `${data.title || 'Expedition'} | ${data.peak_name || 'Peak'} | SummitLink`;
       const description = (data.description || data.cancel_policy || data.title || '').slice(0, 155);
       const canonical = `${location.origin}/expedition/${encodeURIComponent(data.id || getId() || '')}`;
       document.title = title;
@@ -272,7 +279,7 @@
       document.getElementById('reviews').innerHTML = reviews.length ? reviews.map(r=>`<div class="recommend"><div class="row"><img src="${(r.user&&r.user.avatar)||'https://i.pravatar.cc/40?u=u'+r.id}" width="32" height="32" style="border-radius:999px"> <strong>${(r.user&&r.user.name)||'匿名'}</strong> <span class="muted">${'★'.repeat(Math.round(r.rating||0))}</span> <span class="muted">${formatDate(r.created_at)}</span></div><div>${r.content || ''}</div></div>`).join('') : '<div class="muted">暂无评价</div>';
 
       const faqs = Array.isArray(data.faqs) && data.faqs.length ? data.faqs : [{q:'体能要求？',a:'建议具备高海拔连续行进能力。'},{q:'是否可定制行程？',a:'可与商家沟通后定制。'}];
-      document.getElementById('faq').innerHTML = faqs.map((f,i)=>`<div class="faq-item" style="margin-bottom:8px"><button type="button" data-i="${i}">${f.q}</button><div id="faq-${i}" class="muted" style="display:none;padding:6px 10px">${f.a}</div></div>`).join('');
+      document.getElementById('faq').innerHTML = faqs.map((f,i)=>`<div class="faq-item" style="margin-bottom:8px"><button type="button" data-i="${i}">${esc(f.q)}</button><div id="faq-${i}" class="muted" style="display:none;padding:6px 10px">${esc(f.a)}</div></div>`).join('');
       document.querySelectorAll('.faq-item button').forEach(b=>b.onclick=()=>{const i=b.dataset.i;const panel=document.getElementById('faq-'+i);panel.style.display=panel.style.display==='none'?'block':'none';});
 
       const recs = data.recommendations || [];
