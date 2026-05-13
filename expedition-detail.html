@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Expedition Detail</title>
+  <meta name="description" content="" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="" />
+  <meta property="og:description" content="" />
+  <meta property="og:image" content="" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="canonical" href="" />
+  <style>
+    :root { color-scheme: dark; --bg:#0f172a; --card:#111827; --line:#1f2937; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee; --ok:#34d399; --warn:#fbbf24; --danger:#f87171; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+    a { color:var(--accent); text-decoration:none; }
+    .container { max-width: 1200px; margin:0 auto; padding: 20px 16px 100px; }
+    .hero { background:linear-gradient(180deg,#0b1220,#111827); border:1px solid var(--line); border-radius:16px; overflow:hidden; margin-bottom:16px; }
+    .hero-track { display:flex; overflow:auto; scroll-snap-type:x mandatory; }
+    .hero-track img { width:100%; max-height:420px; object-fit:cover; scroll-snap-align:center; }
+    .hero-info { padding:16px; display:grid; gap:8px; }
+    .badges { display:flex; flex-wrap:wrap; gap:8px; }
+    .badge { font-size:12px; padding:4px 8px; border-radius:999px; background:#1f2937; border:1px solid #334155; }
+    .grid { display:grid; grid-template-columns: 1fr 320px; gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; }
+    .section-title { margin:0 0 12px; font-size:18px; }
+    .sticky-info { position:sticky; top:12px; }
+    .key-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .key-grid div { background:#0b1220; border:1px solid #1f2937; border-radius:10px; padding:8px; font-size:13px; }
+    .sku-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .sku-table th,.sku-table td { border-bottom:1px solid #1f2937; padding:8px; text-align:left; }
+    .timeline-item { border-left:2px solid #334155; padding:8px 0 8px 12px; margin-left:6px; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .meter { height:8px; background:#1f2937; border-radius:999px; overflow:hidden; }
+    .meter > span { display:block; height:100%; background:linear-gradient(90deg,#22d3ee,#34d399); }
+    .faq-item button { width:100%; text-align:left; background:#0b1220; color:var(--text); border:1px solid #334155; border-radius:10px; padding:10px; cursor:pointer; }
+    .recommend-list,.review-list { display:grid; gap:8px; }
+    .recommend { border:1px solid #1f2937; border-radius:10px; padding:10px; }
+    .book-btn { background:#06b6d4; color:#001018; border:0; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    .muted { color:var(--muted); }
+    .footer { border-top:1px solid var(--line); margin-top:20px; padding-top:12px; font-size:13px; color:var(--muted); }
+    .mobile-booking { display:none; position:fixed; left:0; right:0; bottom:0; background:#020617f0; border-top:1px solid #1f2937; padding:10px 14px; z-index:50; }
+    .mobile-booking .inner { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns:1fr; }
+      .sticky-info { position:static; }
+      .mobile-booking { display:block; }
+      .container { padding-bottom: 150px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="hero-track" id="heroTrack"></div>
+      <div class="hero-info">
+        <div class="row" style="justify-content:space-between;">
+          <h1 id="title" style="margin:0;font-size:28px;"></h1>
+          <button id="bookNowTop" class="book-btn" data-i18n="bookNow"></button>
+        </div>
+        <div class="muted" id="subTitle"></div>
+        <div class="badges" id="heroBadges"></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <main>
+        <section class="card">
+          <h2 class="section-title" data-i18n="priceTiers"></h2>
+          <div class="row" style="margin-bottom:8px;">
+            <label data-i18n="departureDate"></label>
+            <select id="skuSelect"></select>
+            <span class="badge" id="seatsBadge"></span>
+          </div>
+          <table class="sku-table" id="skuTable"></table>
+          <div class="row" style="margin-top:10px;"><span class="badge" id="earlyBird"></span></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="itinerary"></h2>
+          <div id="itinerary"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="equipment"></h2>
+          <div id="equipment"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="riskAndInsurance"></h2>
+          <div id="risk"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="cancellation"></h2>
+          <div id="cancellation"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="merchantInfo"></h2>
+          <div id="merchant"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="reviews"></h2>
+          <div id="reviewSummary" class="muted"></div>
+          <div id="reviewBars"></div>
+          <div id="reviews" class="review-list"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="faq"></h2>
+          <div id="faq"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" data-i18n="recommendations"></h2>
+          <div id="recommendations" class="recommend-list"></div>
+        </section>
+      </main>
+
+      <aside class="sticky-info">
+        <section class="card">
+          <h2 class="section-title" data-i18n="keyInfo"></h2>
+          <div class="key-grid" id="keyInfo"></div>
+          <div class="row" style="margin-top:10px;">
+            <label for="difficultySystem" data-i18n="difficultySystem"></label>
+            <select id="difficultySystem">
+              <option>YDS</option><option>UIAA</option><option>French</option><option>AAI</option><option>CMA</option>
+            </select>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <span data-i18n="entityCn"></span> / <span data-i18n="entityUs"></span>
+        </div>
+        <div class="row">
+          <label for="regionSwitch" data-i18n="region"></label>
+          <select id="regionSwitch"><option value="us">US</option><option value="cn">CN</option></select>
+          <a href="/legal/privacy" data-i18n="privacy"></a>
+          <a href="/legal/terms" data-i18n="terms"></a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div class="mobile-booking">
+    <div class="inner">
+      <div><div class="muted" data-i18n="fromPrice"></div><strong id="mobilePrice"></strong></div>
+      <button id="bookNowBottom" class="book-btn" data-i18n="bookNow"></button>
+    </div>
+  </div>
+
+  <script>
+    const I18N = {
+      zh: {
+        bookNow: '立即报名', keyInfo: '关键信息', priceTiers: '价格档位选择器', departureDate: '出发日期', itinerary: '详细行程',
+        equipment: '装备清单', riskAndInsurance: '风险声明与必要保险', cancellation: '退订政策', merchantInfo: '向导 / 俱乐部信息',
+        reviews: '用户评价', faq: '常见问题', recommendations: '类似路线推荐', privacy: '隐私政策', terms: '用户协议',
+        region: '国家/地区', entityCn: '末登峰（北京）科技有限公司', entityUs: 'Unsummit Technology Limited',
+        fromPrice: '起步价', difficultySystem: '难度系统'
+      },
+      en: {
+        bookNow: 'Book Now', keyInfo: 'Key Facts', priceTiers: 'Price Tiers', departureDate: 'Departure Date', itinerary: 'Itinerary',
+        equipment: 'Equipment', riskAndInsurance: 'Risk & Insurance', cancellation: 'Cancellation Policy', merchantInfo: 'Guide / Club',
+        reviews: 'Reviews', faq: 'FAQ', recommendations: 'Similar Routes', privacy: 'Privacy', terms: 'Terms',
+        region: 'Region', entityCn: 'Modengfeng (Beijing) Technology Co., Ltd.', entityUs: 'Unsummit Technology Limited',
+        fromPrice: 'From', difficultySystem: 'Difficulty System'
+      }
+    };
+
+    const language = (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    const t = (k) => (I18N[language] && I18N[language][k]) || I18N.en[k] || k;
+    const USD_TO_CNY_RATE = 7.2;
+    const esc = (v) => String(v == null ? '' : v)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('\"', '&quot;')
+      .replaceAll(\"'\", '&#39;');
+    const safeUrl = (v, fallback = '') => {
+      const value = String(v || '').trim();
+      if (!value) return fallback;
+      if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')) return value;
+      return fallback;
+    };
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+
+    const regionSwitch = document.getElementById('regionSwitch');
+    const difficultySelect = document.getElementById('difficultySystem');
+    regionSwitch.value = (document.cookie.match(/(?:^|; )region=([^;]+)/)?.[1]) || 'us';
+    difficultySelect.value = (document.cookie.match(/(?:^|; )difficulty_system=([^;]+)/)?.[1]) || 'YDS';
+    regionSwitch.addEventListener('change', () => { document.cookie = `region=${regionSwitch.value}; path=/; max-age=31536000`; render(window.__expeditionData || {}); });
+    difficultySelect.addEventListener('change', () => { document.cookie = `difficulty_system=${difficultySelect.value}; path=/; max-age=31536000`; render(window.__expeditionData || {}); });
+
+    function formatDate(v) { if (!v) return '-'; try { return new Intl.DateTimeFormat(navigator.language).format(new Date(v)); } catch (_) { return v; } }
+    function formatMoney(amount, currency) {
+      const region = regionSwitch.value || 'us';
+      const inCny = region === 'cn';
+      const base = Number(amount || 0);
+      const converted = inCny && String(currency || '').toUpperCase() === 'USD' ? base * USD_TO_CNY_RATE : (!inCny && String(currency || '').toUpperCase() === 'CNY' ? base / USD_TO_CNY_RATE : base);
+      const targetCurrency = inCny ? 'CNY' : 'USD';
+      return new Intl.NumberFormat(navigator.language, { style: 'currency', currency: targetCurrency, maximumFractionDigits: 0 }).format(converted);
+    }
+
+    function getId() {
+      const m = location.pathname.match(/^\/expedition\/([^/?#]+)/);
+      if (m) return m[1];
+      return new URLSearchParams(location.search).get('id');
+    }
+
+    function setSeo(data) {
+      const title = `${data.title || 'Expedition'} | ${data.peak_name || 'Peak'} | SummitLink`;
+      const description = (data.description || data.cancel_policy || data.title || '').slice(0, 155);
+      const canonical = `${location.origin}/expedition/${encodeURIComponent(data.id || getId() || '')}`;
+      document.title = title;
+      document.querySelector('meta[name="description"]').setAttribute('content', description);
+      document.querySelector('meta[property="og:title"]').setAttribute('content', title);
+      document.querySelector('meta[property="og:description"]').setAttribute('content', description);
+      document.querySelector('meta[property="og:image"]').setAttribute('content', (data.gallery && data.gallery[0]) || data.cover_image || '');
+      document.querySelector('link[rel="canonical"]').setAttribute('href', canonical);
+      const jsonLd = {
+        '@context': 'https://schema.org', '@type': 'TouristTrip', name: data.title || '', description,
+        image: (data.gallery || []).length ? data.gallery : [data.cover_image].filter(Boolean), touristType: ['Mountaineer'],
+        itinerary: data.itinerary || [], offers: [{ '@type': 'Offer', price: String(data.base_price || 0), priceCurrency: (regionSwitch.value==='cn'?'CNY':'USD'), availability: (data.skus||[]).some(s=>s.availability!=='sold_out') ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut' }],
+        provider: { '@type': 'Organization', name: (data.merchant && data.merchant.name) || 'merchant' }
+      };
+      document.getElementById('expedition-schema')?.remove();
+      const s = document.createElement('script'); s.id = 'expedition-schema'; s.type = 'application/ld+json'; s.textContent = JSON.stringify(jsonLd); document.head.appendChild(s);
+    }
+
+    function notFound() {
+      document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#e5e7eb"><h1>404</h1><p>路线不存在或未发布</p><p>Expedition not found or unpublished.</p><a href="/summitlink">Back</a></div>';
+    }
+
+    function render(data) {
+      window.__expeditionData = data;
+      document.getElementById('title').textContent = data.title || '-';
+      document.getElementById('subTitle').textContent = `${data.peak_name || ''} ${data.peak_altitude ? `· ${data.peak_altitude}m` : ''} ${data.peak_country || ''}`;
+      const risk = Math.max(1, Math.min(5, Number(data.risk_level || 3)));
+      document.getElementById('heroBadges').innerHTML = `
+        <span class="badge">${difficultySelect.value}: ${data.difficulty || '-'}</span>
+        <span class="badge">Risk: ${'★'.repeat(risk)}${'☆'.repeat(5-risk)}</span>
+        <span class="badge">${t('fromPrice')}: ${formatMoney(data.base_price, data.currency)}</span>`;
+      const gallery = (Array.isArray(data.gallery) && data.gallery.length ? data.gallery : [data.cover_image || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600']).filter(Boolean);
+      document.getElementById('heroTrack').innerHTML = gallery.map(u => `<img src="${safeUrl(u, 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600')}" alt="hero" loading="lazy">`).join('');
+
+      const key = [
+        ['周期', `${data.total_days || '-'} 天`], ['最佳季节', data.best_season || '4-5 月'], ['起始营地', data.meeting_point || '加德满都'],
+        ['营地数', data.camp_count || 5], ['协作配比', data.support_ratio || '1:1 (标准档)'], ['氧气策略', data.oxygen_strategy || '7 瓶'],
+        ['认证要求', data.cert_requirement || '曾完成 7000m × 1 座'], ['状态', data.status || '-']
+      ];
+      document.getElementById('keyInfo').innerHTML = key.map(([k,v])=>`<div><div class="muted">${k}</div><strong>${v}</strong></div>`).join('');
+
+      const skus = Array.isArray(data.skus) && data.skus.length ? data.skus : [{ id:'default', tier:'standard', price:data.base_price||0, currency:data.currency||'USD', departure_date:data.start_date, availability:'available', slots_left: Math.max(0,(data.max_participants||0)-(data.current_participants||0)) }];
+      const skuSelect = document.getElementById('skuSelect');
+      skuSelect.innerHTML = skus.map((s, i) => `<option value="${i}">${esc(formatDate(s.departure_date))} · ${esc(s.tier || 'standard')}</option>`).join('');
+      const updateSku = () => {
+        const s = skus[Number(skuSelect.value)||0];
+        document.getElementById('skuTable').innerHTML = `<tr><th>Tier</th><th>Price</th><th>Availability</th></tr><tr><td>${esc(s.tier||'standard')}</td><td>${esc(formatMoney(s.price,s.currency))}</td><td>${s.availability==='sold_out'?'已满':'可报名'}</td></tr>`;
+        document.getElementById('seatsBadge').textContent = s.slots_left > 0 ? `剩 ${s.slots_left} 席` : '已满';
+        document.getElementById('earlyBird').textContent = s.early_bird_price ? `早鸟价 ${formatMoney(s.early_bird_price,s.currency)} 截止 ${formatDate(s.early_bird_deadline)}` : '';
+        document.getElementById('mobilePrice').textContent = `${formatMoney(s.price,s.currency)} 起`;
+      };
+      skuSelect.onchange = updateSku; updateSku();
+
+      const itinerary = Array.isArray(data.itinerary) ? data.itinerary : [];
+      document.getElementById('itinerary').innerHTML = (itinerary.length ? itinerary : [{ day:1,title:'集合',desc:'报到，安全培训',camp_alt:'1400m' }]).map((d,idx)=>`<div class="timeline-item"><strong>Day ${esc(d.day||idx+1)}: ${esc(d.title||'')}</strong><div class="meter"><span style="width:${Math.min(100, 20*(idx+1))}%"></span></div><div class="muted">${esc(d.desc||d.description||'')}</div><div>${esc(d.camp_alt||d.altitude||'')}</div></div>`).join('');
+
+      document.getElementById('equipment').innerHTML = `<p>✅ 平台提供：${(data.included_services||[]).slice(0,3).map(esc).join('、') || '后勤支持、基础通讯、公共氧气计划'}</p><p>✅ 向导/俱乐部提供：向导服务、营地组织</p><p>📋 自备：高海拔羽绒服、冰爪、头盔、手套</p><p class="muted">推荐品牌：Mammut / Black Diamond / Arc'teryx（仅参考）</p>`;
+      document.getElementById('risk').innerHTML = `<p>风险等级说明：1★低风险，5★极高风险。当前：${'★'.repeat(risk)}${'☆'.repeat(5-risk)}</p><p>必备保险：医疗 + 救援 + 行程取消</p><p>紧急救援预案：卫星通讯 + 当地救援队联动</p><p class="muted">保险合作方仅展示，不绑定购买。</p>`;
+      document.getElementById('cancellation').innerHTML = `<p>${esc(data.cancel_policy || '出发前60天全额退，30天50%退，15天后不退（不可抗力按平台仲裁）')}</p>`;
+      document.getElementById('merchant').innerHTML = `<div class="row"><img src="${safeUrl((data.merchant&&data.merchant.avatar),'https://i.pravatar.cc/80?u=merchant')}" alt="merchant" width="56" height="56" style="border-radius:999px;object-fit:cover"><div><strong>${esc((data.merchant&&data.merchant.name)||'商家')}</strong><div class="muted">${esc((data.merchant&&data.merchant.type)||'-')} · ${esc((data.merchant&&data.merchant.review_count)||0)} reviews</div><div class="row"><a href="/merchant/${encodeURIComponent((data.merchant&&data.merchant.id)||'')}">查看主页</a><button class="book-btn" onclick="alert('IM 功能即将上线')">私信咨询</button></div></div></div>`;
+
+      const summary = data.review_summary || { average:0,total:0,distribution:{1:0,2:0,3:0,4:0,5:0} };
+      document.getElementById('reviewSummary').textContent = `⭐ ${summary.average || 0} / 5 · ${summary.total || 0} reviews`;
+      document.getElementById('reviewBars').innerHTML = [5,4,3,2,1].map(s=>`<div class="row"><span style="width:20px">${s}</span><div class="meter" style="flex:1"><span style="width:${summary.total?((summary.distribution[s]||0)*100/summary.total):0}%"></span></div><span>${summary.distribution[s]||0}</span></div>`).join('');
+      const reviews = (data.reviews || []).slice(0,5);
+      document.getElementById('reviews').innerHTML = reviews.length ? reviews.map(r=>`<div class="recommend"><div class="row"><img src="${safeUrl((r.user&&r.user.avatar), 'https://i.pravatar.cc/40?u=u'+encodeURIComponent(r.id))}" width="32" height="32" style="border-radius:999px"> <strong>${esc((r.user&&r.user.name)||'匿名')}</strong> <span class="muted">${'★'.repeat(Math.round(r.rating||0))}</span> <span class="muted">${esc(formatDate(r.created_at))}</span></div><div>${esc(r.content || '')}</div></div>`).join('') : '<div class="muted">暂无评价</div>';
+
+      const faqs = Array.isArray(data.faqs) && data.faqs.length ? data.faqs : [{q:'体能要求？',a:'建议具备高海拔连续行进能力。'},{q:'是否可定制行程？',a:'可与商家沟通后定制。'}];
+      document.getElementById('faq').innerHTML = faqs.map((f,i)=>`<div class="faq-item" style="margin-bottom:8px"><button type="button" data-i="${i}">${esc(f.q)}</button><div id="faq-${i}" class="muted" style="display:none;padding:6px 10px">${esc(f.a)}</div></div>`).join('');
+      document.querySelectorAll('.faq-item button').forEach(b=>b.onclick=()=>{const i=b.dataset.i;const panel=document.getElementById('faq-'+i);panel.style.display=panel.style.display==='none'?'block':'none';});
+
+      const recs = data.recommendations || [];
+      document.getElementById('recommendations').innerHTML = recs.length ? recs.map(r=>`<a class="recommend" href="/expedition/${encodeURIComponent(r.id)}"><strong>${esc(r.title)}</strong><div class="muted">${esc(r.difficulty||'-')} · ${esc(formatMoney(r.base_price,r.currency))}</div></a>`).join('') : '<div class="muted">暂无类似路线</div>';
+
+      setSeo(data);
+    }
+
+    function bindBookingButtons(id) {
+      const onClick = () => alert(`路线 ${id} 报名流程即将上线`);
+      document.getElementById('bookNowTop').onclick = onClick;
+      document.getElementById('bookNowBottom').onclick = onClick;
+    }
+
+    (async function init() {
+      const id = getId();
+      if (!id) return notFound();
+      bindBookingButtons(id);
+      try {
+        const regionResp = await fetch('/api/region');
+        if (regionResp.ok) {
+          const regionData = await regionResp.json();
+          if (regionData.region) regionSwitch.value = regionData.region;
+        }
+      } catch (_) {}
+
+      const resp = await fetch(`/api/expeditions/${encodeURIComponent(id)}`);
+      if (!resp.ok) return notFound();
+      const data = await resp.json();
+      render(data);
+    })();
+  </script>
+</body>
+</html>

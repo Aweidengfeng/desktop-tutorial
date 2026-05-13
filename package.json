@@ -9,6 +9,7 @@
     "test:api:unit": "npx jest --forceExit --no-coverage --runInBand",
     "test:api:legacy": "node tests/api.test.js",
     "test:e2e": "playwright test",
+    "audit:clickables": "node scripts/clickable-audit.js",
     "test": "npm run test:api && npm run test:e2e",
     "smoke": "node scripts/smoke.js",
     "db:seed": "node backend/db/seed.js",

@@ -452,6 +452,17 @@ app.get('/club-portal', htmlPageLimiter, (req, res) => {
   });
 });
 
+// 远征详情页（SEO path-based route）
+const expeditionDetailFile = path.join(rootPath, 'expedition-detail.html');
+app.get(['/expedition/:id', '/expedition'], htmlPageLimiter, (req, res) => {
+  fs.readFile(expeditionDetailFile, 'utf8', (err, html) => {
+    if (err) return res.status(404).send('Expedition detail not found');
+    const injected = `<head>\n  <script>window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};</script>`;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html.replace('<head>', injected));
+  });
+});
+
 app.use('/api/offline-expeditions', require('./routes/offlineExpeditions'));
 app.use('/api/climbing-log', require('./routes/climbingLog'));
 app.use('/api/guide-console', require('./routes/guideConsole'));
