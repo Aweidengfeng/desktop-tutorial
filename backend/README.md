@@ -269,7 +269,7 @@ curl "https://your-app.railway.app/api/admin/sms-codes" \
 | 变量名 | 说明 |
 |--------|------|
 | `AMAP_SECURITY_CODE` | 高德 Web JS API 2.0 安全密钥（**必须配置，否则地图无法初始化**）|
-| `SMS_PROVIDER` | 短信服务商（不设置默认 mock，设为 `aliyun` 切换阿里云 SDK，B2 阶段实现）|
+| `SMS_PROVIDER` | 短信服务商（不设置默认 mock，后续可接腾讯云等云短信服务）|
 
 ### 预约
 - `POST /api/bookings` — 创建预约（探索/商业）`{ type, peak_name, route_id, club_id, guide_id, date, people, price, notes }`（需 JWT）
@@ -300,7 +300,7 @@ curl "https://your-app.railway.app/api/admin/sms-codes" \
 | `UPLOADS_DIR` | 上传文件目录，默认 `backend/uploads`。Railway 建议设为 `/data/uploads` |
 | `CORS_ORIGINS` | 生产环境 CORS 白名单（逗号分隔），如 `https://xxx.com,https://www.xxx.com`|
 | `SEED_ON_START` | 设为 `true` 时执行数据填充，默认 `false`（跳过）。**仅首次部署前临时设为 true** |
-| `SMS_PROVIDER` | 短信服务商（留空=mock 模式；`aliyun`=阿里云短信，B2 阶段实现）|
+| `SMS_PROVIDER` | 短信服务商（留空=mock 模式；后续可接腾讯云等云短信服务）|
 | `WECHAT_APPID` | 微信小程序 AppID（留占位）|
 | `WECHAT_SECRET` | 微信小程序 Secret（留占位）|
 | `APPLE_CLIENT_ID` | Apple Sign In Client ID（留占位）|

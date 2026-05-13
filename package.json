@@ -69,7 +69,8 @@
       "**/backend/tests/performance.test.js",
       "**/backend/tests/weak-network.test.js",
       "**/backend/tests/commission.test.js",
-      "**/backend/tests/region.test.js"
+      "**/backend/tests/region.test.js",
+      "**/backend/tests/storage.test.js"
     ],
     "testTimeout": 15000
   }

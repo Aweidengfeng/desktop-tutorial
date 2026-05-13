@@ -103,7 +103,7 @@ docker-compose -f docker-compose.prod.yml up -d
 | ORM | Prisma 5（SQLite 开发 / PostgreSQL 生产）|
 | 实时通信 | Socket.IO 4 |
 | 认证 | JWT（jsonwebtoken） |
-| 文件存储 | 本地磁盘 / 阿里云 OSS（可选）|
+| 文件存储 | 本地磁盘 / 腾讯云 COS（中国大陆，可选）/ S3（海外，可选）|
 | 地图 | 高德地图 JS API / Mapbox GL JS（海外）|
 | 前端 | 原生 HTML5 + Tailwind CSS（CDN）|
 | PWA | Service Worker + IndexedDB 断点续传 |
@@ -122,14 +122,17 @@ docker-compose -f docker-compose.prod.yml up -d
 | `ADMIN_PASSWORD` | ✅ | 管理员初始密码 |
 | `PORT` | - | 监听端口，默认 8080 |
 | `MAPBOX_TOKEN` | - | Mapbox GL JS Token（海外地图）|
-| `OSS_BUCKET` | - | 阿里云 OSS Bucket（图片存储）|
-| `OSS_REGION` | - | OSS Region，如 `oss-cn-hangzhou` |
-| `OSS_ACCESS_KEY_ID` | - | 阿里云 AccessKeyId |
-| `OSS_ACCESS_KEY_SECRET` | - | 阿里云 AccessKeySecret |
-| `OSS_CDN_HOST` | - | CDN 域名，如 `https://cdn.summitlink.app` |
+| `COS_BUCKET` | - | 腾讯云 COS Bucket（建议含 APPID 后缀）|
+| `COS_REGION` | - | COS Region，如 `ap-beijing` |
+| `COS_SECRET_ID` | - | 腾讯云 SecretId |
+| `COS_SECRET_KEY` | - | 腾讯云 SecretKey |
+| `COS_CDN_DOMAIN` | - | 中国大陆 CDN 域名，如 `https://cdn.unsummit.cn` |
+| `TENCENT_CLOUD_APPID` | - | 腾讯云 APPID（Bucket 命名补全用） |
+| `S3_BUCKET_US` | - | 海外 S3 / R2 Bucket |
+| `S3_REGION_US` | - | 海外对象存储 Region，如 `us-east-1` |
+| `AWS_ACCESS_KEY_ID` | - | 海外对象存储访问密钥 ID |
+| `AWS_SECRET_ACCESS_KEY` | - | 海外对象存储访问密钥 Secret |
 | `SENTRY_DSN` | - | Sentry DSN（错误监控）|
-| `ALIYUN_ACCESS_KEY_ID` | - | 阿里云内容安全 AK |
-| `ALIYUN_ACCESS_KEY_SECRET` | - | 阿里云内容安全 SK |
 
 ## 📡 API 文档
 

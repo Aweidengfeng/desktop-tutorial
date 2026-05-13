@@ -108,7 +108,7 @@
 | **Sentry**（可选）| 错误监控与性能追踪（通过 `SENTRY_DSN` 环境变量控制是否启用）| 错误堆栈、请求 URL、设备信息（不含个人身份信息）| [Sentry 隐私政策](https://sentry.io/privacy/) |
 | **微信支付**（预留，B2 阶段）| 支付处理 | 支付流水、微信 OpenID | [微信隐私政策](https://privacy.qq.com/policy/tencent-privacypolicy) |
 | **支付宝支付**（预留，B2 阶段）| 支付处理 | 支付流水、支付宝账号信息 | [支付宝隐私政策](https://render.alipay.com/p/yuyan/180020010001196791/preview.html) |
-| **短信服务商**（预留，如阿里云 SMS）| 发送短信验证码 | 手机号码（由我们传入）| 待确认 |
+| **短信服务商**（预留，如腾讯云 SMS）| 发送短信验证码 | 手机号码（由我们传入）| 待确认 |
 
 ---
 

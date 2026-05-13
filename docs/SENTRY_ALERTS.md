@@ -31,7 +31,7 @@
 - P2 仅邮件
 
 ### 2.3 短信（可选）
-- P0 走 Twilio / 阿里云短信（待运维补充）
+- P0 走 Twilio / 腾讯云短信（待运维补充）
 
 ## 3. 采样率与配额
 | 环境 | tracesSampleRate | profilesSampleRate | 备注 |

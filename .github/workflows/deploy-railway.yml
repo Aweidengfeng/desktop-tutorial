@@ -43,13 +43,17 @@ jobs:
           JWT_SECRET: ci_jwt_secret_placeholder_32chars_ok
           ADMIN_PASSWORD: ci_admin_password
           MAPBOX_TOKEN: pk.ci_dummy
-          OSS_BUCKET: ci-bucket
-          OSS_REGION: oss-cn-hangzhou
-          OSS_ACCESS_KEY_ID: ci-key-id
-          OSS_ACCESS_KEY_SECRET: ci-key-secret
-          OSS_CDN_HOST: https://ci.example.com
-          ALIYUN_ACCESS_KEY_ID: ci-aliyun-id
-          ALIYUN_ACCESS_KEY_SECRET: ci-aliyun-secret
+          COS_BUCKET: ci-bucket-1234567890
+          COS_REGION: ap-beijing
+          COS_SECRET_ID: ci-secret-id
+          COS_SECRET_KEY: ci-secret-key
+          COS_CDN_DOMAIN: https://ci.example.com
+          TENCENT_CLOUD_APPID: "1234567890"
+          TENCENT_CLOUD_REGION: ap-beijing
+          S3_BUCKET_US: ci-us-bucket
+          S3_REGION_US: us-east-1
+          AWS_ACCESS_KEY_ID: ci-aws-key-id
+          AWS_SECRET_ACCESS_KEY: ci-aws-secret
           SENTRY_DSN: https://ci@sentry.io/0
           SENTRY_ENV: test
           SENTRY_TRACES_RATE: "0.1"

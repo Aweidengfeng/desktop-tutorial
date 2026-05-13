@@ -79,14 +79,18 @@ npm start
 | `SEED_ON_START` | 否 | `false` | 设为 `true` 时启动时执行数据填充 |
 | `CORS_ORIGINS` | **生产必需** | — | CORS 白名单，逗号分隔，例：`https://example.com` |
 | `MAPBOX_TOKEN` | 否 | — | Mapbox GL JS Token（海外地图切换功能） |
-| `ALIYUN_ACCESS_KEY_ID` | 否 | — | 阿里云 AccessKey ID（内容安全审核） |
-| `ALIYUN_ACCESS_KEY_SECRET` | 否 | — | 阿里云 AccessKey Secret（内容安全审核） |
+| `COS_BUCKET` | 否 | — | 腾讯云 COS Bucket（中国大陆对象存储） |
+| `COS_REGION` | 否 | `ap-beijing` | 腾讯云 COS Region |
+| `COS_SECRET_ID` | 否 | — | 腾讯云 COS SecretId |
+| `COS_SECRET_KEY` | 否 | — | 腾讯云 COS SecretKey |
+| `COS_CDN_DOMAIN` | 否 | — | 腾讯云 CDN 自定义域名（可选） |
+| `TENCENT_CLOUD_APPID` | 否 | — | 腾讯云 APPID（Bucket 命名补全） |
 | `OPENWEATHER_API_KEY` | 天气功能必需 | — | OpenWeatherMap API Key |
 | `AMAP_KEY` | 地图功能必需 | — | 高德地图 Web JS API Key |
 | `AMAP_SECURITY_CODE` | 地图功能必需 | — | 高德 Web JS API 2.0 安全密钥 |
 | `SENTRY_DSN` | 否 | — | Sentry DSN，未设置则不启用监控 |
 | `COOKIE_SECRET` | 否 | — | Cookie 签名密钥（留作扩展） |
-| `SMS_PROVIDER` | 否 | mock | 短信服务商（`aliyun` 切换阿里云）|
+| `SMS_PROVIDER` | 否 | mock | 短信服务商（默认 mock，后续可接入腾讯云等）|
 
 ---
 
@@ -166,7 +170,7 @@ curl -I https://your-app.railway.app/
 ### 前置条件
 
 - Docker ≥ 24 及 Docker Compose V2（`docker compose` 命令）
-- 已有 PostgreSQL 实例（Railway PostgreSQL / 阿里云 RDS / 自托管 PostgreSQL）
+- 已有 PostgreSQL 实例（Railway PostgreSQL / TencentDB for PostgreSQL / 自托管 PostgreSQL）
 - SSL 证书（放在 `./ssl/` 目录，可用 Let's Encrypt）
 
 ### 步骤
@@ -504,10 +508,10 @@ Sentry 通过 `SENTRY_DSN` 环境变量控制启用，**未设置时完全无副
 3. **数据库连接池**：Prisma 自动重连，最大重试5次
 4. **多副本**：`replicas: 2`，单副本故障不影响服务
 
-### 阿里云多地域部署（HK + SG）
+### 腾讯云多地域部署（HK + SG）
 
 1. 在 HK/SG 各部署一套 Docker Compose 实例
-2. 通过阿里云 DNS 智能解析（GeoDNS）分流：
+2. 通过腾讯云 DNSPod 智能解析（GeoDNS）分流：
    - 中国大陆 → 国内节点
    - 海外 → HK/SG 节点
 3. 数据库使用 PostgreSQL 主从复制（主节点写，从节点读）
@@ -554,14 +558,14 @@ Sentry 通过 `SENTRY_DSN` 环境变量控制启用，**未设置时完全无副
 
 ---
 
-## 阿里云 OSS Bucket CORS 配置
+## 腾讯云 COS Bucket CORS 配置
 
-当使用阿里云 OSS 存储图片时，需配置 CORS 规则，否则浏览器会因跨域拒绝请求。
+当使用腾讯云 COS 存储图片时，需配置 CORS 规则，否则浏览器会因跨域拒绝请求。
 
 ### 步骤
 
-1. 登录 [aliyun.com](https://www.aliyun.com) → **对象存储 OSS** → 进入目标 Bucket
-2. 左侧菜单 **数据安全 → 跨域设置** → **创建规则**
+1. 登录 [腾讯云 COS 控制台](https://console.cloud.tencent.com/cos) → 进入目标 Bucket
+2. 左侧菜单 **安全管理 → 跨域访问 CORS 设置** → **新增规则**
 3. 填写如下规则：
 
 | 字段 | 值 |
@@ -569,19 +573,20 @@ Sentry 通过 `SENTRY_DSN` 环境变量控制启用，**未设置时完全无副
 | 来源（Origins） | `https://summitlink.app` `https://www.summitlink.app` `https://*.railway.app` |
 | 允许 Methods | `GET` `PUT` `POST` `DELETE` `HEAD` |
 | 允许 Headers | `*` |
-| 暴露 Headers | `ETag` `x-oss-request-id` |
+| 暴露 Headers | `ETag` `x-cos-request-id` |
 | 缓存时间（Max Age） | `3600` |
 
-4. 确认 Bucket 读写权限（ACL）已配置为**私有**，上传通过后端签名 URL 进行。
+4. 确认 Bucket 权限与 CDN 回源策略已按生产要求配置完成。
 
 ### Railway 侧环境变量
 
 ```
-OSS_BUCKET=your-bucket-name
-OSS_REGION=oss-cn-hangzhou
-OSS_ACCESS_KEY_ID=LTAIxxxxxxxxxxxx
-OSS_ACCESS_KEY_SECRET=<AccessKeySecret>
-OSS_CDN_HOST=https://cdn.summitlink.app   # 可选，CDN 加速域名
+COS_BUCKET=unsummit-cn-1234567890
+COS_REGION=ap-beijing
+COS_SECRET_ID=AKIDxxxxxxxxxxxx
+COS_SECRET_KEY=<SecretKey>
+COS_CDN_DOMAIN=https://cdn.unsummit.cn   # 可选，CDN 加速域名
+TENCENT_CLOUD_APPID=1234567890
 ```
 
 ---

@@ -77,7 +77,7 @@ Authorization: Bearer <token>
 
 **获取 Token 流程：**
 
-1. 调用 `POST /api/auth/send-code` 发送短信验证码（阿里云短信）
+1. 调用 `POST /api/auth/send-code` 发送短信验证码（云短信服务 / mock）
 2. 调用 `POST /api/auth/login` 用手机号和验证码登录
 3. 响应中的 `data.token` 即为 JWT Token
 4. 在后续请求的 `Authorization` 头中携带此 Token
@@ -200,11 +200,11 @@ DATABASE_URL=postgresql://user:password@host:5432/dbname
 JWT_SECRET=your_jwt_secret_here_min_32_chars
 JWT_EXPIRES_IN=7d
 
-# ─── 阿里云短信 ─────────────────────────────────────
-ALIYUN_ACCESS_KEY_ID=your_access_key_id
-ALIYUN_ACCESS_KEY_SECRET=your_access_key_secret
-ALIYUN_SMS_SIGN_NAME=SummitLink
-ALIYUN_SMS_TEMPLATE_CODE=SMS_000000000
+# ─── 腾讯云短信（预留） ─────────────────────────────
+SMS_PROVIDER=mock
+TENCENT_SMS_SDK_APP_ID=your_sdk_app_id
+TENCENT_SMS_SECRET_ID=your_secret_id
+TENCENT_SMS_SECRET_KEY=your_secret_key
 
 # ─── 跨域 ────────────────────────────────────────────
 CORS_ORIGINS=https://your-frontend-domain.com
