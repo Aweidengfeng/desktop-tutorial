@@ -1,0 +1,100 @@
+name: Deploy to Tencent Cloud (CN Production)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'index.html'
+      - 'deploy/tencent/**'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy'
+        required: false
+        default: 'manual trigger'
+
+concurrency:
+  group: cn-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-cn:
+    name: Deploy CN Node (Tencent Cloud Shanghai)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync code to server via rsync over SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.TENCENT_HOST }}
+          port: ${{ secrets.TENCENT_SSH_PORT }}
+          username: ${{ secrets.TENCENT_SSH_USER }}
+          key: ${{ secrets.TENCENT_SSH_KEY }}
+          source: "backend/,deploy/tencent/,index.html,package.json,package-lock.json"
+          target: ${{ secrets.TENCENT_DEPLOY_PATH }}
+          strip_components: 0
+          overwrite: true
+
+      - name: Run remote deploy script
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.TENCENT_HOST }}
+          port: ${{ secrets.TENCENT_SSH_PORT }}
+          username: ${{ secrets.TENCENT_SSH_USER }}
+          key: ${{ secrets.TENCENT_SSH_KEY }}
+          script: |
+            set -e
+            DEPLOY_PATH="${{ secrets.TENCENT_DEPLOY_PATH }}"
+            cd "$DEPLOY_PATH"
+
+            # Copy tencent-specific compose file if not already in place
+            if [ -f deploy/tencent/docker-compose.yml ]; then
+              cp deploy/tencent/docker-compose.yml ./docker-compose.yml
+            fi
+            if [ -f deploy/tencent/nginx.conf ]; then
+              cp deploy/tencent/nginx.conf ./nginx.conf
+            fi
+            if [ -f deploy/tencent/.env.example ] && [ ! -f .env ]; then
+              cp deploy/tencent/.env.example .env
+              echo "⚠️  .env created from .env.example — please fill in real secrets!"
+            fi
+
+            # Pull latest images and rebuild
+            docker compose pull --quiet || true
+            docker compose up -d --build --remove-orphans
+
+            # Wait for backend to be healthy (up to 60s)
+            echo "⏳ Waiting for backend health check..."
+            for i in $(seq 1 12); do
+              if curl -sf http://localhost:8080/api/health > /dev/null 2>&1; then
+                echo "✅ Health check passed."
+                exit 0
+              fi
+              echo "  attempt $i/12 — sleeping 5s..."
+              sleep 5
+            done
+            echo "❌ Health check failed after 60s"
+            docker compose logs backend --tail=50
+            exit 1
+
+      - name: Verify deployment health
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.TENCENT_HOST }}
+          port: ${{ secrets.TENCENT_SSH_PORT }}
+          username: ${{ secrets.TENCENT_SSH_USER }}
+          key: ${{ secrets.TENCENT_SSH_KEY }}
+          script: |
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health)
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "❌ /api/health returned HTTP $HTTP_CODE — deployment failed"
+              exit 1
+            fi
+            echo "✅ CN node healthy: /api/health → 200"

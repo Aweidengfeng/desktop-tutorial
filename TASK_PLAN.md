@@ -14,7 +14,10 @@
 | A-01 | 注册 Apple 开发者账号 | [developer.apple.com/enroll](https://developer.apple.com/programs/enroll/) | $99/年 | ⬜ |
 | A-02 | 注册 Google Play 开发者账号 | [play.google.com/console](https://play.google.com/console/signup) | $25一次性 | ⬜ |
 | A-03 | 注册 Stripe 账号（填营业执照） | [dashboard.stripe.com/register](https://dashboard.stripe.com/register) | 免费+手续费 | ✅ |
-| A-04 | 购买域名 summitlink.app | [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) | ~$15/年 | ⬜ |
+| A-06 | 注册 Mercury / Brex 美国商业银行账户 | [mercury.com](https://mercury.com) / [brex.com](https://brex.com) | 免费 | ⬜ |
+| A-07 | 腾讯云服务器购买 | 腾讯云上海 ap-shanghai | ¥1,200/年 | ✅（**已完成 2026-05-14**，IP: 49.234.163.103）|
+| A-08 | ICP 备案（境内公司+境内服务器） | [腾讯云 ICP 备案](https://console.cloud.tencent.com/beian) | 免费 | ⬜ |
+| A-09 | 域名购买 summitlink.app | Cloudflare Registrar | ~$15/年 | ✅ |
 | A-05 | 注册 Sentry 账号 + 创建 Node.js 项目 | [sentry.io/signup](https://sentry.io/signup/) | 免费 | ⬜ |
 
 ---
@@ -28,6 +31,9 @@
 | B-03 | 配置 Stripe 密钥 | A-03审核后 → `STRIPE_SECRET_KEY=sk_live_xxx` + `STRIPE_PUBLISHABLE_KEY=pk_live_xxx` | ⬜ |
 | B-04 | 绑定自定义域名 | A-04完成后 → Railway → Settings → Domains → summitlink.app | ⬜ |
 | B-05 | 配置 Apple Sign In 环境变量 | A-01审核后 → `APPLE_CLIENT_ID` + `APPLE_TEAM_ID` + `APPLE_KEY_ID` | ⬜ |
+| B-06 | 配置腾讯云 5 个 GitHub Secrets | `TENCENT_HOST=49.234.163.103` + `TENCENT_SSH_PORT` + `TENCENT_SSH_USER` + `TENCENT_SSH_KEY` + `TENCENT_DEPLOY_PATH=/opt/summitlink` | ⬜ |
+| B-07 | DNS 智能分流配置 | Cloudflare Worker geo-router 上线，见 docs/DNS_GEO_ROUTING.md | ⬜ |
+| B-08 | 配置 `TENCENT_COS_*` 三个变量 | `TENCENT_COS_SECRET_ID` + `TENCENT_COS_SECRET_KEY` + `TENCENT_COS_BUCKET` | ⬜ |
 
 ---
 
@@ -111,12 +117,28 @@
 
 ---
 
+### 🔶 第七批 — CN 节点接入 + 美国主体调整（2026-05-14）
+
+| # | PR 内容 | 涉及任务 | 前置条件 | 状态 |
+|---|---------|---------|---------|------|
+| PR-25 | E2E 修复 + 付费开关 + Mapbox/Sentry 降级 + App Store文案 | 运维 | 无 | ✅ |
+| PR-26 | Railway deploy workflow 优化（缺 secret 跳过 build-ios/android/sentry）| CI | 无 | ✅ |
+| PR-27 | 区域配置抽离 `backend/lib/region.js`（双区基础）| 架构 | 无 | ✅ |
+| PR-28 | COS 存储迁移（腾讯云对象存储，图片 CDN 兜底）| 存储 | 无 | ✅ |
+| PR-29 | 腾讯云 CN 部署 workflow（.github/workflows/deploy-tencent.yml）| CI/CD | B-06 | ✅ |
+| PR-30 | DNS 智能分流配置文档 + Cloudflare 脚本 | DNS | B-07 | ✅ |
+| PR-31 | 腾讯云专属 Docker Compose 部署文件（deploy/tencent/）| 部署 | A-07 | ✅ |
+| PR-32 | 主体由 HK 改为 US LLC + region.js 默认 USD/global | 架构/文档 | 无 | ✅ |
+| PR-33 | 更新 TASK_PLAN.md + 新建 PROGRESS_2026-05-14.md | 文档 | 无 | ✅ |
+
+---
+
 ## 📊 进度统计
 
 | 类别 | 总数 | 已完成 | 进度 |
 |------|------|--------|------|
-| 你来做 A类（账号）| 5 | 1 | 20% |
-| 你来做 B类（配置）| 5 | 0 | 0% |
+| 你来做 A类（账号）| 9 | 3 | 33% |
+| 你来做 B类（配置）| 8 | 0 | 0% |
 | 你来做 C类（上架）| 5 | 4 | 80% |
 | 我来做 PR第一批 | 3 | 3 | 100% |
 | 我来做 PR第二批 | 5 | 5 | 100% |
@@ -124,7 +146,8 @@
 | 我来做 PR第四批 | 5 | 5 | 100% 🎉 |
 | 我来做 PR第五批 | 3 | 3 | 100% 🎉 |
 | 我来做 PR第六批 | 3 | 3 | 100% 🎉 |
-| **总计** | **39** | **29** | **74%** |
+| 我来做 PR第七批 | 9 | 9 | 100% 🎉 |
+| **总计** | **55** | **40** | **~82%** |
 
 ---
 
@@ -156,6 +179,14 @@
 | 2026-05-11 | PR-22合并：Universal Links(iOS) + App Links(Android) + deeplinks路由(/verify-email, /reset-password) + universalLinks中间件 + docs/universal-links-setup.md + nginx.conf更新 |
 | 2026-05-11 | PR-23合并：Fastlane自动化发布（fastlane/Appfile, Fastfile, Gemfile, Deliverfile）+ GitHub Actions workflow（fastlane-beta.yml，push tag v* 触发）+ docs/fastlane-setup.md |
 | 2026-05-11 | PR-24合并：App Store完整metadata（EN+ZH）：name/subtitle/description/keywords/promotional_text/release_notes/support_url/marketing_url + zh-Hans全套 + default/privacy_url，C-02✅ |
+| 2026-05-13 | PR-25合并：E2E测试修复（seed-prisma.js + posts/teams种子数据），CI 解绿 |
+| 2026-05-13 | PR-26合并：付费按钮开关 PAYMENTS_ENABLED=false + Mapbox→OSM降级 + Sentry静默 + App Store免费文案 |
+| 2026-05-13 | PR-27合并：区域配置抽离 backend/lib/region.js（cn/global双区），PR-145（Launch P0）总 PR 合并 |
+| 2026-05-13 | PR-28合并：腾讯云 COS 存储迁移（图片 CDN 兜底），COS_BUCKET/COS_REGION 等变量已就绪 |
+| 2026-05-14 | 用户已取得美国公司 US LLC 执照 ✅，战略由"香港主体"改为"美国主体 + 境内主体"双主体 |
+| 2026-05-14 | 用户购买腾讯云上海服务器 ✅（IP: 49.234.163.103，2核4GB，TencentOS 3.3）|
+| 2026-05-14 | 用户已购买域名 summitlink.app ✅ |
+| 2026-05-14 | PR-29~33合并（本批次五合一）：CN 节点 workflow + DNS 分流 + deploy/tencent/ 目录 + US主体更新 + 进度文档 |
 
 ---
 

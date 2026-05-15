@@ -1,0 +1,52 @@
+# SummitLink CN 节点 Backend Dockerfile
+# 基于 node:20-alpine，多阶段构建减少镜像体积
+# 目标机器：腾讯云上海 2核4GB TencentOS 3.3
+
+# ---- 构建阶段 ----
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# 安装依赖（仅 production）
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev --ignore-scripts
+
+# 生成 Prisma Client（如有 Prisma schema）
+COPY prisma ./prisma
+RUN npx prisma generate 2>/dev/null || true
+
+# 复制源码
+COPY . .
+
+# ---- 运行阶段 ----
+FROM node:20-alpine AS runner
+
+# 安装 wget（健康检查用）
+RUN apk add --no-cache wget
+
+WORKDIR /app
+
+# 创建非 root 用户
+RUN addgroup -g 1001 -S summitlink && \
+    adduser -u 1001 -S summitlink -G summitlink
+
+# 从构建阶段复制产物
+COPY --from=builder --chown=summitlink:summitlink /app/node_modules ./node_modules
+COPY --from=builder --chown=summitlink:summitlink /app/prisma ./prisma
+COPY --chown=summitlink:summitlink . .
+
+# 创建上传目录
+RUN mkdir -p /app/uploads && chown summitlink:summitlink /app/uploads
+
+USER summitlink
+
+EXPOSE 8080
+
+ENV NODE_ENV=production \
+    PORT=8080 \
+    NODE_OPTIONS=--max-old-space-size=1024
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+  CMD wget -qO- http://localhost:8080/api/health || exit 1
+
+CMD ["node", "app.js"]

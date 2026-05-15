@@ -64,4 +64,4 @@ Premium features coming soon.
 - Password: `123456`
 
 ## Review Notes
-This is v1.0 (free tier). Payment features intentionally disabled and will be enabled in v1.1 after our HK entity payment processor approval (~June 2026). All payment-related code is feature-flagged behind PAYMENTS_ENABLED env var.
+This is v1.0 (free tier). Payment features intentionally disabled and will be enabled in v1.1 after our US entity Stripe approval (~June 2026). All payment-related code is feature-flagged behind PAYMENTS_ENABLED env var.
