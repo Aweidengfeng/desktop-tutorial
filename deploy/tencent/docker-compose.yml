@@ -1,0 +1,143 @@
+# SummitLink CN 节点 — Docker Compose 部署配置
+# 腾讯云上海 (ap-shanghai) | 2核 4GB | TencentOS Server 3.3
+# 内存限制: postgres 共享缓冲 512MB, Node.js heap 1024MB
+
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: ../deploy/tencent/Dockerfile.backend
+    image: summitlink-backend:cn
+    restart: unless-stopped
+    mem_limit: 1.5g
+    mem_reservation: 512m
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DEPLOY_REGION: cn
+      NODE_OPTIONS: --max-old-space-size=1024
+      DATABASE_URL: ${DATABASE_URL:-postgresql://summitlink:CHANGEME@postgres:5432/summitlink}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY:?PII_ENCRYPTION_KEY is required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      PAYMENTS_ENABLED: "false"
+      STRIPE_DISABLED: "true"
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-wechat,alipay}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_MCH_ID: ${WECHAT_MCH_ID:-}
+      WECHAT_API_KEY_V3: ${WECHAT_API_KEY_V3:-}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
+      ALIPAY_PRIVATE_KEY: ${ALIPAY_PRIVATE_KEY:-}
+      ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
+      MAP_PROVIDER: ${MAP_PROVIDER:-amap}
+      AMAP_KEY: ${AMAP_KEY:-}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-cos}
+      COS_SECRET_ID: ${TENCENT_COS_SECRET_ID:-}
+      COS_SECRET_KEY: ${TENCENT_COS_SECRET_KEY:-}
+      COS_BUCKET: ${TENCENT_COS_BUCKET:-summitlink-cn-1300000000}
+      COS_REGION: ${TENCENT_COS_REGION:-ap-shanghai}
+      COS_CDN_DOMAIN: ${COS_CDN_DOMAIN:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      ICP_NUMBER: ${ICP_NUMBER:-（备案中）}
+      ICP_POLICE_NUMBER: ${ICP_POLICE_NUMBER:-（备案中）}
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - uploads_cn:/app/uploads
+      - logs_cn:/var/log/summitlink
+    networks:
+      - summitlink-cn
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 768m
+    mem_reservation: 256m
+    environment:
+      POSTGRES_DB: summitlink
+      POSTGRES_USER: summitlink
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGEME}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - summitlink-cn
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U summitlink -d summitlink"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      postgres
+      -c shared_buffers=512MB
+      -c effective_cache_size=1GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=128MB
+      -c max_connections=50
+      -c wal_buffers=16MB
+      -c checkpoint_completion_target=0.9
+      -c log_min_duration_statement=500
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - uploads_cn:/app/uploads:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    networks:
+      - summitlink-cn
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+networks:
+  summitlink-cn:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_cn:
+    driver: local
+  logs_cn:
+    driver: local
+  letsencrypt:
+    driver: local
+  certbot_www:
+    driver: local
