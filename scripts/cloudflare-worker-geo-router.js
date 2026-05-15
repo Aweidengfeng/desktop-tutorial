@@ -22,7 +22,8 @@
  */
 
 const DEFAULT_CN_BACKEND = 'http://49.234.163.103';
-const DEFAULT_RAILWAY_BACKEND = 'https://your-app.railway.app'; // 部署后替换
+// Set RAILWAY_BACKEND env var in Worker settings (Workers & Pages → Settings → Variables)
+const DEFAULT_RAILWAY_BACKEND = 'https://your-app.railway.app';
 
 export default {
   async fetch(request, env) {

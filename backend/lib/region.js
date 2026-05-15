@@ -2,7 +2,9 @@ const CN_REGIONS = ['CN', 'HK', 'MO', 'TW'];
 
 function normalizeRegion(input) {
   const value = String(input || '').trim().toLowerCase();
-  return value === 'cn' ? 'cn' : (value === 'us' || value === 'global' ? 'global' : null);
+  if (value === 'cn') return 'cn';
+  if (value === 'us' || value === 'global') return 'global';
+  return null;
 }
 
 function detectRegion(req) {
