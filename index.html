@@ -1292,7 +1292,7 @@
                 <template x-for="layer in mapLayerOptions" :key="layer.key">
                   <button
                     @click="switchTrackMapLayer(layer.key)"
-                    class="px-3 min-h-[44px] rounded-xl text-xs font-semibold transition-colors"
+                    class="px-3 min-h-[44px] min-w-[44px] rounded-xl text-xs font-semibold transition-colors"
                     :class="activeMapLayer === layer.key ? 'bg-primary text-white' : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700'">
                     <span x-text="layer.label"></span>
                   </button>

@@ -214,7 +214,7 @@ const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
 const MAP_LAYER_OPTIONS = [
   { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
   { key: 'satellite', label: '卫星', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
-  { key: 'terrain3d', label: '3D', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
+  { key: 'terrain', label: '3D', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
   { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
 ];
 
@@ -446,6 +446,7 @@ function alpineLink() {
     trackMap: null,
     trackMapEngine: 'amap',
     trackTileLayer: null,
+    trackLocationMarker: null,
     mapLayerOptions: MAP_LAYER_OPTIONS,
     activeMapLayer,
     amapAvailable: typeof AMap !== 'undefined',
@@ -1477,7 +1478,7 @@ function alpineLink() {
     // 初始化轨迹记录地图
     initTrackMap() {
       if (this.trackMap) {
-        if (this.trackMapEngine === 'leaflet' && typeof this.trackMap.invalidateSize === 'function') {
+        if (this.trackMapEngine === 'leaflet') {
           try { this.trackMap.invalidateSize(); } catch(e) {}
         } else {
           try { this.trackMap.resize(); } catch(e) {}
@@ -1514,7 +1515,6 @@ function alpineLink() {
     },
 
     switchTrackMapLayer(layerKey) {
-      this.initTrackMap();
       this.applyTrackMapLayer(layerKey);
     },
 
@@ -1528,16 +1528,21 @@ function alpineLink() {
           return;
         }
         navigator.geolocation.getCurrentPosition((position) => {
-          const lat = position && position.coords ? position.coords.latitude : null;
-          const lng = position && position.coords ? position.coords.longitude : null;
-          if (typeof lat !== 'number' || typeof lng !== 'number') {
-            this.showToast('定位失败，请检查GPS权限', 'error');
-            return;
-          }
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
           this.trackMap.setView([lat, lng], 15);
-          window.L.marker([lat, lng]).addTo(this.trackMap);
-        }, () => {
-          this.showToast('定位失败，请检查GPS权限', 'error');
+          if (this.trackLocationMarker) {
+            try { this.trackMap.removeLayer(this.trackLocationMarker); } catch (e) {}
+          }
+          this.trackLocationMarker = window.L.marker([lat, lng]).addTo(this.trackMap);
+        }, (error) => {
+          const code = error && typeof error.code === 'number' ? error.code : 0;
+          const msg = code === 1
+            ? '定位权限被拒绝，请在系统设置中开启定位权限'
+            : code === 3
+              ? '定位超时，请检查网络后重试'
+              : '定位失败，请检查定位权限或网络连接';
+          this.showToast(msg, 'error');
         }, { enableHighAccuracy: true, timeout: 10000 });
         return;
       }
