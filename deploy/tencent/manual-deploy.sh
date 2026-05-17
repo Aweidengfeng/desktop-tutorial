@@ -34,7 +34,7 @@ read_env_value() {
 is_placeholder_value() {
   local value="$1"
   case "$value" in
-    ''|CHANGEME*|your_*|example*|TODO*|"（备案中）")
+    ''|CHANGEME*|your_*|example*|TODO*)
       return 0
       ;;
     *)
@@ -46,16 +46,18 @@ is_placeholder_value() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.cn.yml"
+HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://localhost:8080/health}"
+HEALTHCHECK_FALLBACK_URL="${HEALTHCHECK_FALLBACK_URL:-http://localhost:8080/api/health}"
 cd "$ROOT_DIR"
 
 log_info "开始腾讯云手动部署（目录: $ROOT_DIR）"
 
 # 1) 检查依赖
-a=0
+has_missing_deps=0
 for cmd in docker git curl; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     log_error "缺少依赖: $cmd"
-    a=1
+    has_missing_deps=1
   fi
 done
 
@@ -67,10 +69,10 @@ elif docker compose version >/dev/null 2>&1; then
   log_warn "未检测到 docker-compose，改用 docker compose"
 else
   log_error "缺少依赖: docker-compose（或 docker compose 插件）"
-  a=1
+  has_missing_deps=1
 fi
 
-if [ "$a" -ne 0 ]; then
+if [ "$has_missing_deps" -ne 0 ]; then
   exit 1
 fi
 
@@ -85,6 +87,12 @@ if [ ! -f "$COMPOSE_FILE" ]; then
 fi
 
 # 2) 拉取最新代码
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$current_branch" != "main" ]; then
+  log_error "当前分支是 $current_branch，请切换到 main 后再执行部署"
+  exit 1
+fi
+
 log_info "拉取最新代码: git pull origin main"
 git pull origin main
 
@@ -100,10 +108,7 @@ if [ ! -f .env ]; then
 fi
 
 # 4) 提示填写必要环境变量
-required_vars=(DATABASE_URL JWT_SECRET ADMIN_PASSWORD)
-if grep -q '^DATABASE_URL_CN=' .env; then
-  required_vars+=(DATABASE_URL_CN)
-fi
+required_vars=(DATABASE_URL DATABASE_URL_CN JWT_SECRET ADMIN_PASSWORD)
 
 missing_vars=()
 for var_name in "${required_vars[@]}"; do
@@ -144,7 +149,7 @@ $COMPOSE_CMD -f docker-compose.cn.yml up -d --build
 log_info "等待健康检查（最多 60 秒）..."
 health_ok=0
 for i in $(seq 1 60); do
-  if curl -fsS http://localhost:8080/health >/dev/null 2>&1 || curl -fsS http://localhost:8080/api/health >/dev/null 2>&1; then
+  if curl -fsS "$HEALTHCHECK_URL" >/dev/null 2>&1 || curl -fsS "$HEALTHCHECK_FALLBACK_URL" >/dev/null 2>&1; then
     health_ok=1
     break
   fi
@@ -159,8 +164,6 @@ if [ "$health_ok" -ne 1 ]; then
 fi
 
 # 7) 成功提示
-SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-SERVER_IP=${SERVER_IP:-localhost}
 log_success "部署成功！"
-log_success "健康检查: http://$SERVER_IP:8080/health"
-log_success "应用访问:  http://$SERVER_IP"
+log_success "健康检查: $HEALTHCHECK_URL"
+log_success "应用访问:  http://<你的服务器公网IP或域名>"
