@@ -210,6 +210,13 @@ async function idbUpdateTrackStatus(id, status, retries) {
 
 // ─── Phase 2.5: 地图引擎检测与 Mapbox 懒加载 ────────────────────────────────
 window.__activeMapProvider = 'amap';
+const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
+const MAP_LAYER_OPTIONS = [
+  { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
+  { key: 'satellite', label: '卫星', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
+  { key: 'terrain3d', label: '3D', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
+  { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
+];
 
 async function detectMapProvider() {
   try {
@@ -292,6 +299,8 @@ function loadLeaflet() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function alpineLink() {
+  const savedMapLayer = localStorage.getItem(MAP_LAYER_STORAGE_KEY);
+  const activeMapLayer = MAP_LAYER_OPTIONS.some(layer => layer.key === savedMapLayer) ? savedMapLayer : 'standard';
   return {
     currentPage: 'home',
     currentUser: null,
@@ -435,6 +444,10 @@ function alpineLink() {
     lightboxUrl: '',
     showLightbox: false,
     trackMap: null,
+    trackMapEngine: 'amap',
+    trackTileLayer: null,
+    mapLayerOptions: MAP_LAYER_OPTIONS,
+    activeMapLayer,
     amapAvailable: typeof AMap !== 'undefined',
     pendingUploadCount: 0,
     recordingMap: null,
@@ -1464,16 +1477,71 @@ function alpineLink() {
     // 初始化轨迹记录地图
     initTrackMap() {
       if (this.trackMap) {
-        try { this.trackMap.resize(); } catch(e) {}
+        if (this.trackMapEngine === 'leaflet' && typeof this.trackMap.invalidateSize === 'function') {
+          try { this.trackMap.invalidateSize(); } catch(e) {}
+        } else {
+          try { this.trackMap.resize(); } catch(e) {}
+        }
         return;
       }
+      if (window.L && document.getElementById('track-map')) {
+        try {
+          this.trackMap = window.L.map('track-map', { zoomControl: true }).setView([39.90923, 116.397428], 13);
+          this.trackMapEngine = 'leaflet';
+          this.trackTileLayer = null;
+          this.applyTrackMapLayer(this.activeMapLayer);
+          return;
+        } catch (e) {}
+      }
       this.trackMap = this.initAMap('track-map', { zoom: 13 });
+      this.trackMapEngine = this.trackMap ? 'amap' : '';
+    },
+
+    applyTrackMapLayer(layerKey) {
+      const normalized = this.mapLayerOptions.some(layer => layer.key === layerKey) ? layerKey : 'standard';
+      const layer = this.mapLayerOptions.find(item => item.key === normalized) || this.mapLayerOptions[0];
+      this.activeMapLayer = layer.key;
+      try { localStorage.setItem(MAP_LAYER_STORAGE_KEY, layer.key); } catch (e) {}
+      if (this.trackMapEngine !== 'leaflet' || !this.trackMap || !window.L) return;
+      if (this.trackTileLayer) {
+        try { this.trackMap.removeLayer(this.trackTileLayer); } catch (e) {}
+      }
+      this.trackTileLayer = window.L.tileLayer(layer.tileUrl, {
+        attribution: layer.attribution,
+        maxZoom: 19,
+      });
+      this.trackTileLayer.addTo(this.trackMap);
+    },
+
+    switchTrackMapLayer(layerKey) {
+      this.initTrackMap();
+      this.applyTrackMapLayer(layerKey);
     },
 
     // GPS 定位
     locateMe() {
       this.initTrackMap();
-      if (!this.trackMap || typeof AMap === 'undefined') return;
+      if (!this.trackMap) return;
+      if (this.trackMapEngine === 'leaflet') {
+        if (!navigator.geolocation) {
+          this.showToast('当前设备不支持定位', 'error');
+          return;
+        }
+        navigator.geolocation.getCurrentPosition((position) => {
+          const lat = position && position.coords ? position.coords.latitude : null;
+          const lng = position && position.coords ? position.coords.longitude : null;
+          if (typeof lat !== 'number' || typeof lng !== 'number') {
+            this.showToast('定位失败，请检查GPS权限', 'error');
+            return;
+          }
+          this.trackMap.setView([lat, lng], 15);
+          window.L.marker([lat, lng]).addTo(this.trackMap);
+        }, () => {
+          this.showToast('定位失败，请检查GPS权限', 'error');
+        }, { enableHighAccuracy: true, timeout: 10000 });
+        return;
+      }
+      if (typeof AMap === 'undefined') return;
       AMap.plugin('AMap.Geolocation', () => {
         const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
         this.trackMap.addControl(geo);
