@@ -1158,49 +1158,28 @@
       <!-- SOS救援记录管理 -->
       <div x-show="page === 'sos-records'">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold">🆘 SOS救援记录</h2>
-          <div class="flex gap-2 items-center">
-            <select x-model="sosRecordsFilter" @change="loadSosRecords(1)" class="bg-slate-700 text-white text-sm rounded-lg px-3 py-1.5 outline-none">
-              <option value="">全部状态</option>
-              <option value="pending">待处理</option>
-              <option value="processing">处理中</option>
-              <option value="resolved">已解决</option>
-            </select>
-            <button @click="loadSosRecords(1)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm">刷新</button>
-          </div>
+          <h2 class="text-xl font-bold">🆘 SOS 告警列表</h2>
+          <button @click="loadSosRecords(1)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm">刷新</button>
         </div>
         <div x-show="sosRecordsLoading" class="text-center py-8 text-slate-400">加载中…</div>
         <div x-show="!sosRecordsLoading && sosRecords.length===0" class="text-center py-8 text-slate-400">暂无SOS救援记录</div>
         <div class="overflow-x-auto" x-show="!sosRecordsLoading && sosRecords.length>0">
           <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
             <th class="text-left py-2 pr-3">ID</th>
-            <th class="text-left py-2 pr-3">用户</th>
+            <th class="text-left py-2 pr-3">用户ID</th>
             <th class="text-left py-2 pr-3">电话</th>
-            <th class="text-left py-2 pr-3">位置</th>
-            <th class="text-left py-2 pr-3">峰名</th>
-            <th class="text-left py-2 pr-3">消息</th>
-            <th class="text-left py-2 pr-3">时间</th>
-            <th class="text-left py-2 pr-3">状态</th>
-            <th class="text-left py-2">操作</th>
+            <th class="text-left py-2 pr-3">纬度</th>
+            <th class="text-left py-2 pr-3">经度</th>
+            <th class="text-left py-2 pr-3">触发时间</th>
           </tr></thead><tbody>
             <template x-for="r in sosRecords" :key="r.id">
               <tr class="border-b border-white/5 hover:bg-white/5">
                 <td class="py-2 pr-3 text-slate-300" x-text="r.id"></td>
-                <td class="py-2 pr-3 text-white font-medium" x-text="r.user_name||'未知'"></td>
-                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.user_phone||'-'"></td>
-                <td class="py-2 pr-3 text-slate-400 text-xs max-w-24 truncate" x-text="r.location||'-'"></td>
-                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.peak_name||'-'"></td>
-                <td class="py-2 pr-3 text-slate-400 text-xs max-w-32 truncate" x-text="r.message||'-'"></td>
-                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(r.timestamp||'').slice(0,16).replace('T',' ')"></td>
-                <td class="py-2 pr-3">
-                  <span :class="{'bg-red-500/20 text-red-300':r.status==='pending'||!r.status,'bg-yellow-500/20 text-yellow-300':r.status==='processing','bg-emerald-500/20 text-emerald-300':r.status==='resolved'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待处理','processing':'处理中','resolved':'已解决'}[r.status||'pending']"></span>
-                </td>
-                <td class="py-2">
-                  <div class="flex gap-1">
-                    <button x-show="r.status!=='processing'" @click="updateSosStatus(r,'processing')" class="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-xs text-white">处理中</button>
-                    <button x-show="r.status!=='resolved'" @click="updateSosStatus(r,'resolved')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-xs text-white">已解决</button>
-                  </div>
-                </td>
+                <td class="py-2 pr-3 text-white font-medium" x-text="r.userId ?? '-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.phone||'-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.lat ?? '-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.lng ?? '-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(r.timestamp||r.createdAt||'').slice(0,19).replace('T',' ')"></td>
               </tr>
             </template>
           </tbody></table>
@@ -2367,17 +2346,19 @@
         async loadSosRecords(p) {
           this.sosRecordsLoading = true; this.sosRecordsPage = p;
           try {
-            const qs = this.sosRecordsFilter ? `&status=${this.sosRecordsFilter}` : '';
-            const d = await this.api('GET', `/sos-records?page=${p}&limit=20${qs}`);
-            this.sosRecords = d.records || []; this.sosRecordsTotal = d.total || 0;
+            const r = await fetch(`/api/sos/alerts?page=${p}&limit=20`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+            });
+            if (r.status === 401 || r.status === 403) {
+              this.isLoggedIn = false;
+              throw new Error('登录已过期，请重新登录');
+            }
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || '请求失败');
+            this.sosRecords = d.alerts || []; this.sosRecordsTotal = d.total || 0;
           } catch(e) { this.showToast(e.message,'error'); } finally { this.sosRecordsLoading = false; }
-        },
-        async updateSosStatus(record, status) {
-          try {
-            await this.api('PUT', `/sos-records/${record.id}/status`, { status });
-            record.status = status;
-            this.showToast('SOS状态已更新');
-          } catch(e) { this.showToast(e.message,'error'); }
         },
 
         async loadWithdrawals(p) {
