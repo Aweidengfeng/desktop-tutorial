@@ -1726,7 +1726,7 @@
         </div>
 
         <!-- Emergency SOS text button -->
-        <button @click="showSOSConfirm=true" class="w-full glass rounded-2xl py-3 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-3 flex items-center justify-center gap-2">
+        <button @click="startSOSCountdown()" class="w-full glass rounded-2xl py-3 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-3 flex items-center justify-center gap-2">
           <span class="material-symbols-outlined text-base">emergency</span>紧急求救
         </button>
 
@@ -5038,7 +5038,7 @@
   <!-- SOS button - fixed right center -->
   <button
     x-show="currentPage === 'home' || currentPage === 'track'"
-    @click="showSOSConfirm = true"
+    @click="startSOSCountdown()"
     class="fixed right-3 z-40 w-10 h-10 bg-red-600 rounded-full flex items-center justify-center shadow-lg pulse-red"
     style="top: 50%; transform: translateY(-50%); max-width: none;">
     <span class="text-white text-xs font-bold">SOS</span>
@@ -5515,22 +5515,26 @@
     </div>
   </div>
 
-  <!-- SOS 二次确认弹窗 -->
-  <div x-show="showSOSConfirm"
+  <!-- SOS 5秒倒计时防误触 overlay (PR-160) -->
+  <!-- 倒计时结束后自动调用 _executeSOS()：GPS 入库 → tel:112 拨号 -->
+  <!-- 可将 tel:112 改为 tel:110（匪警）或 tel:120（急救），或本地配置 -->
+  <div x-show="sosCountdownActive"
        x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0 scale-95"
-       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
        x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100 scale-100"
-       x-transition:leave-end="opacity-0 scale-95"
-       class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="max-width:430px;margin:0 auto;">
-    <div class="bg-slate-800 rounded-2xl p-5 mx-6 text-center">
-      <p class="text-red-400 font-bold text-lg mb-2">🆘 确认发送紧急求救？</p>
-      <p class="text-slate-400 text-sm mb-4">此操作将向救援中心发送您的GPS位置</p>
-      <div class="flex gap-3">
-        <button @click="showSOSConfirm=false" class="flex-1 bg-slate-700 text-white rounded-xl py-2.5 font-semibold">取消</button>
-        <button @click="showSOSConfirm=false;showSOS=true" class="flex-1 bg-red-600 text-white rounded-xl py-2.5 font-semibold">确认求救</button>
-      </div>
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-red-600" style="max-width:430px;margin:0 auto;">
+    <div class="text-center px-8">
+      <div class="text-white text-8xl font-bold mb-4 leading-none" x-text="sosCountdownValue"></div>
+      <p class="text-white text-xl font-bold mb-2">秒后拨出紧急电话</p>
+      <p class="text-red-200 text-sm mb-8">正在获取 GPS 位置并通知平台救援</p>
+      <p class="text-red-100 text-xs mb-10">将拨打 112（国际通用紧急号码）</p>
+      <button @click="cancelSOSCountdown()"
+              class="w-full bg-white text-red-600 font-bold text-lg py-4 rounded-2xl shadow-lg">
+        ✕ 点击取消
+      </button>
     </div>
   </div>
 

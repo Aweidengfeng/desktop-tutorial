@@ -2137,6 +2137,19 @@ if (!existingSosCols.includes('status')) {
   db.exec("ALTER TABLE sos_records ADD COLUMN status TEXT DEFAULT 'pending'");
 }
 
+// sos_alerts 表（PR-160：SOS 真实化，不依赖 sos_records，独立入库）
+db.exec(`
+CREATE TABLE IF NOT EXISTS sos_alerts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId     TEXT,
+  lat        REAL,
+  lng        REAL,
+  timestamp  TEXT,
+  userAgent  TEXT,
+  createdAt  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
 // 迁移：guides 表补充认证年费字段
 const existingGuideCols3 = db.pragma('table_info(guides)').map(c => c.name);
 if (!existingGuideCols3.includes('cert_level')) {

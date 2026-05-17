@@ -114,6 +114,7 @@ function createApp() {
   app.use('/api/user',                loadRoute('../../backend/routes/passport'));
   app.use('/api/passport',            loadRoute('../../backend/routes/passport'));
   app.use('/api/rescue',              loadRoute('../../backend/routes/rescue'));
+  app.use('/api/sos',                 loadRoute('../../backend/routes/sos'));
   app.use('/api/insurance',           loadRoute('../../backend/routes/insurance'));
   app.use('/api/location-share',      loadRoute('../../backend/routes/locationShare'));
   app.use('/api/altitude',            loadRoute('../../backend/routes/altitude'));

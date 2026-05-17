@@ -5,6 +5,11 @@ All notable changes to SummitLink are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
+## [1.4.0] - 2026-05-17
+
+### Added
+- SOS 按钮真实化：5 秒倒计时防误触 overlay、真实 GPS 定位、后端 sos_alerts 入库、管理员 console.warn 告警、tel:112 拨号（[#160](https://github.com/Aweidengfeng/desktop-tutorial/pull/160))
+
 ## [1.3.0] - 2026-05-11
 
 ### Added

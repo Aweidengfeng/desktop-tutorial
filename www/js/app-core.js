@@ -418,6 +418,12 @@ function alpineLink() {
     ],
     sosStep: 0,
     sosImages: [],
+    // PR-160: SOS 真实化 — 5 秒倒计时防误触
+    sosCountdownActive: false,
+    sosCountdownValue: 5,
+    sosCountdownTimer: null,
+    sosGpsLat: null,
+    sosGpsLng: null,
     showSettings: false,
     settingsType: 'profile',
     showComments: false,
@@ -1217,6 +1223,65 @@ function alpineLink() {
     sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
     cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
     refreshLocation() { this.showToast('位置已刷新'); },
+
+    // PR-160: SOS 真实化 — 5 秒倒计时
+    startSOSCountdown() {
+      // 重置并显示倒计时 overlay
+      this.sosCountdownValue = 5;
+      this.sosGpsLat = null;
+      this.sosGpsLng = null;
+      this.sosCountdownActive = true;
+
+      // 同时开始 GPS 定位（倒计时期间在后台获取）
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => { this.sosGpsLat = pos.coords.latitude; this.sosGpsLng = pos.coords.longitude; },
+          () => {} // 定位失败不阻塞 SOS 流程
+        );
+      }
+
+      this.sosCountdownTimer = setInterval(() => {
+        this.sosCountdownValue -= 1;
+        if (this.sosCountdownValue <= 0) {
+          clearInterval(this.sosCountdownTimer);
+          this.sosCountdownTimer = null;
+          this._executeSOS();
+        }
+      }, 1000);
+    },
+
+    cancelSOSCountdown() {
+      if (this.sosCountdownTimer) {
+        clearInterval(this.sosCountdownTimer);
+        this.sosCountdownTimer = null;
+      }
+      this.sosCountdownActive = false;
+      this.sosCountdownValue = 5;
+    },
+
+    async _executeSOS() {
+      this.sosCountdownActive = false;
+      try {
+        const userId = (this.user && (this.user.id || this.user.phone)) || null;
+        const payload = {
+          userId: userId ? String(userId) : null,
+          lat: this.sosGpsLat,
+          lng: this.sosGpsLng,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+        };
+        try {
+          await fetch('/api/sos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) { /* 入库失败不阻塞拨号 */ }
+      } finally {
+        // 拨打国际通用紧急号码 112（可配置为 110/120）
+        window.location.href = 'tel:112';
+      }
+    },
     shareLocation() { this.showToast('位置已分享'); },
     callEmergency(number) { this.showToast('正在拨打 ' + number); },
     callContact(contact) { this.showToast('正在联系 ' + contact.name); },
