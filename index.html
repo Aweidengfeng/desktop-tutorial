@@ -70,6 +70,62 @@
     .skeleton { animation: shimmer 1.5s ease-in-out infinite; background: #334155; border-radius: 8px; }
     /* Text shadow for readability on images */
     .text-shadow { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+    /* Track page: desktop (normal single-column layout) */
+    .track-map-wrapper { border-radius: 1rem; margin: 0 1rem 1rem; height: 220px; }
+    .track-drawer-handle { display: none; }
+    /* Track page: mobile full-screen map + bottom drawer */
+    @media (max-width: 768px) {
+      .track-map-wrapper {
+        position: fixed;
+        inset: 0;
+        height: 100vh !important;
+        width: 100%;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        z-index: 10;
+      }
+      .track-content-panel {
+        position: fixed;
+        bottom: 64px;
+        left: 0;
+        right: 0;
+        z-index: 11;
+        background: rgba(15, 23, 42, 0.97);
+        border-radius: 20px 20px 0 0;
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        max-height: calc(75vh - 64px);
+        box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.6);
+      }
+      .track-content-panel.drawer-closed {
+        transform: translateY(calc(100% - 48px));
+      }
+      .track-content-panel.drawer-open {
+        overflow-y: auto;
+      }
+      .track-drawer-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 0 6px;
+        cursor: pointer;
+        user-select: none;
+        position: sticky;
+        top: 0;
+        background: rgba(15, 23, 42, 0.97);
+        border-radius: 20px 20px 0 0;
+        z-index: 1;
+      }
+      .track-drawer-pill {
+        width: 36px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+      }
+      .track-content-body {
+        overflow-y: auto;
+        max-height: calc(75vh - 64px - 52px);
+      }
+    }
   </style>
   <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN 由后端注入，未配置时不加载）-->
   <script>
@@ -221,12 +277,6 @@
         <span class="font-display font-bold text-lg text-white" x-text="t('app_name')"></span>
       </div>
       <div class="flex items-center gap-1">
-        <button @click="showLangPicker=true" class="px-2 py-1 rounded-full text-xs font-bold glass text-slate-300 hover:text-white transition-colors uppercase" x-text="currentLang.toUpperCase()"></button>
-        <button id="lang-switch-btn" onclick="switchLang()" class="px-2 py-1 rounded-full text-xs font-bold glass text-slate-300 hover:text-white transition-colors" data-i18n="lang_switch">EN</button>
-        <button id="theme-toggle-btn" onclick="toggleTheme()" aria-label="切换深色/浅色模式" class="p-1.5 rounded-full hover:bg-white/10 transition-colors text-slate-300 text-base leading-none">🌙</button>
-        <button @click="showSearch = !showSearch" class="p-2 rounded-full hover:bg-white/10 transition-colors">
-          <span class="material-symbols-outlined text-slate-300 text-xl">search</span>
-        </button>
         <template x-if="currentUser">
           <button @click="openNotificationCenter()" class="relative p-2 rounded-full hover:bg-white/10 transition-colors">
             <span class="material-symbols-outlined text-slate-300 text-xl">notifications</span>
@@ -240,28 +290,6 @@
           <button @click="currentPage='me'" class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary-light">
             <img :src="userProfile.avatar" class="w-full h-full object-cover">
           </button>
-        </template>
-      </div>
-    </div>
-    <!-- Collapsible Search Bar -->
-    <div x-show="showSearch"
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0 -translate-y-2"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-150"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 -translate-y-2"
-         class="px-4 pb-3">
-      <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
-        <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
-        <input x-model="searchQuery" type="text" :placeholder="t('search')" class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
-        <button @click="showSearch=false;searchQuery=''" class="text-slate-400 hover:text-white">
-          <span class="material-symbols-outlined text-lg">close</span>
-        </button>
-      </div>
-      <div class="flex gap-2 mt-2 overflow-x-auto scroll-hide pb-1">
-        <template x-for="h in searchHistory" :key="h">
-          <button @click="searchQuery = h" class="flex-shrink-0 px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition-colors" x-text="h"></button>
         </template>
       </div>
     </div>
@@ -1271,134 +1299,143 @@
 
 
     <section x-show="currentPage === 'track'"
+             x-data="{ drawerOpen: false }"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
-      <div class="px-4 pt-2">
-        <h2 class="font-display font-bold text-xl text-white mb-4">轨迹记录</h2>
-        <!-- AMap GPS 地图 -->
-        <div id="track-map-container" class="glass rounded-2xl mb-4 relative overflow-hidden" style="height:220px;">
-          <div id="track-map" style="width:100%;height:100%;"></div>
-          <!-- AMap 未加载时显示占位 -->
-          <div x-show="!trackMap" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
-            <span class="material-symbols-outlined text-4xl mb-2">map</span>
-            <p class="text-xs" x-text="amapAvailable ? '地图加载中…' : '地图未配置（需设置 AMAP_KEY）'"></p>
+      <!-- AMap GPS 地图 (full-screen on mobile, 220px on desktop) -->
+      <div id="track-map-container" class="track-map-wrapper glass relative overflow-hidden">
+        <div id="track-map" style="width:100%;height:100%;"></div>
+        <!-- AMap 未加载时显示占位 -->
+        <div x-show="!trackMap" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
+          <span class="material-symbols-outlined text-4xl mb-2">map</span>
+          <p class="text-xs" x-text="amapAvailable ? '地图加载中…' : '地图未配置（需设置 AMAP_KEY）'"></p>
+        </div>
+        <div class="absolute top-2 right-2 flex gap-1.5">
+          <button @click="locateMe()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
+            <span class="material-symbols-outlined text-base text-primary-light">my_location</span>
+          </button>
+        </div>
+      </div>
+      <!-- Content panel: bottom drawer on mobile, normal flow on desktop -->
+      <div class="track-content-panel" :class="drawerOpen ? 'drawer-open' : 'drawer-closed'">
+        <!-- Drag handle (mobile only) -->
+        <div class="track-drawer-handle" @click="drawerOpen = !drawerOpen">
+          <div class="track-drawer-pill"></div>
+        </div>
+        <!-- Scrollable content body -->
+        <div class="track-content-body px-4 pt-2">
+          <h2 class="font-display font-bold text-xl text-white mb-4">轨迹记录</h2>
+          <!-- Live Stats -->
+          <div class="grid grid-cols-3 gap-3 mb-4">
+            <div class="glass rounded-2xl p-3 text-center">
+              <p class="text-2xl font-bold text-white" x-text="formatDistance(trackLiveStats.distance)"></p>
+              <p class="text-xs text-slate-400 mt-1" x-text="useMetric ? '距离 (km)' : '距离 (mi)'"></p>
+            </div>
+            <div class="glass rounded-2xl p-3 text-center">
+              <p class="text-2xl font-bold text-white" x-text="formatElevation(trackLiveStats.elevation)"></p>
+              <p class="text-xs text-slate-400 mt-1" x-text="useMetric ? '海拔 (m)' : '海拔 (ft)'"></p>
+            </div>
+            <div class="glass rounded-2xl p-3 text-center">
+              <p class="text-2xl font-bold text-white" x-text="formatTrackDuration(trackLiveStats.seconds)"></p>
+              <p class="text-xs text-slate-400 mt-1">时长</p>
+            </div>
           </div>
-          <div class="absolute top-2 right-2 flex gap-1.5">
-            <button @click="locateMe()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
-              <span class="material-symbols-outlined text-base text-primary-light">my_location</span>
+          <!-- Track Control Buttons -->
+          <div class="flex gap-3 mb-3">
+            <button x-show="trackRecordingState==='idle'" @click="openNewTrack()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-xl">play_arrow</span>开始记录
+            </button>
+            <button x-show="trackRecordingState==='recording'" @click="pauseTrackRecording()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-xl">pause</span>暂停
+            </button>
+            <button x-show="trackRecordingState!=='idle'" @click="saveTrackRecording()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined text-xl">save</span>保存
             </button>
           </div>
-        </div>
-        <!-- Live Stats -->
-        <div class="grid grid-cols-3 gap-3 mb-4">
-          <div class="glass rounded-2xl p-3 text-center">
-            <p class="text-2xl font-bold text-white" x-text="formatDistance(trackLiveStats.distance)"></p>
-            <p class="text-xs text-slate-400 mt-1" x-text="useMetric ? '距离 (km)' : '距离 (mi)'"></p>
-          </div>
-          <div class="glass rounded-2xl p-3 text-center">
-            <p class="text-2xl font-bold text-white" x-text="formatElevation(trackLiveStats.elevation)"></p>
-            <p class="text-xs text-slate-400 mt-1" x-text="useMetric ? '海拔 (m)' : '海拔 (ft)'"></p>
-          </div>
-          <div class="glass rounded-2xl p-3 text-center">
-            <p class="text-2xl font-bold text-white" x-text="formatTrackDuration(trackLiveStats.seconds)"></p>
-            <p class="text-xs text-slate-400 mt-1">时长</p>
-          </div>
-        </div>
-        <!-- Track Control Buttons -->
-        <div class="flex gap-3 mb-3">
-          <button x-show="trackRecordingState==='idle'" @click="openNewTrack()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-xl">play_arrow</span>开始记录
+          <label x-show="trackRecordingState==='idle'" class="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-2xl transition-colors mb-2 cursor-pointer">
+            <span class="material-symbols-outlined text-base">upload_file</span>导入GPX轨迹
+            <input type="file" accept=".gpx,.kml" class="hidden" @change="importGpxFile($event)">
+          </label>
+          <button x-show="trackRecordingState==='idle'" @click="showManualSummitModal=true" class="w-full flex items-center justify-center gap-2 bg-amber-600/80 hover:bg-amber-500 text-white font-semibold py-3 rounded-2xl transition-colors mb-5">
+            <span class="material-symbols-outlined text-base">emoji_events</span>手动记录登顶（无轨迹）
           </button>
-          <button x-show="trackRecordingState==='recording'" @click="pauseTrackRecording()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-xl">pause</span>暂停
-          </button>
-          <button x-show="trackRecordingState!=='idle'" @click="saveTrackRecording()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-colors text-lg flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-xl">save</span>保存
-          </button>
-        </div>
-        <label x-show="trackRecordingState==='idle'" class="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-2xl transition-colors mb-2 cursor-pointer">
-          <span class="material-symbols-outlined text-base">upload_file</span>导入GPX轨迹
-          <input type="file" accept=".gpx,.kml" class="hidden" @change="importGpxFile($event)">
-        </label>
-        <button x-show="trackRecordingState==='idle'" @click="showManualSummitModal=true" class="w-full flex items-center justify-center gap-2 bg-amber-600/80 hover:bg-amber-500 text-white font-semibold py-3 rounded-2xl transition-colors mb-5">
-          <span class="material-symbols-outlined text-base">emoji_events</span>手动记录登顶（无轨迹）
-        </button>
-        <!-- Track History -->
-        <div class="flex items-center gap-2 mb-3">
-          <h3 class="font-display font-bold text-white">我的历史轨迹</h3>
-          <template x-if="pendingUploadCount > 0">
-            <span @click="syncPendingTracks()" @keydown.enter="syncPendingTracks()" role="button" tabindex="0" class="cursor-pointer bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" x-text="pendingUploadCount + ' 待上传'"></span>
-          </template>
-        </div>
-        <div class="space-y-3">
-          <template x-for="track in tracks" :key="track.id">
-            <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
-              <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
-              <div class="py-3 pr-3 flex-1 min-w-0">
-                <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
-                <p class="text-slate-400 text-xs mt-1" x-text="track.peak_name || track.date"></p>
-                <div class="flex gap-3 mt-2">
-                  <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || track.distance || 0) + 'km'"></span></span>
-                  <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || track.elevation || 0) + 'm'"></span></span>
-                  <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
-                </div>
-              </div>
-              <div class="flex items-center pr-3">
-                <span class="material-symbols-outlined text-slate-600 text-lg">chevron_right</span>
-              </div>
-            </div>
-          </template>
-          <div x-show="tracks.length === 0" class="text-center py-8 text-slate-500">
-            <span class="material-symbols-outlined text-4xl">route</span>
-            <p class="mt-2 text-sm">暂无轨迹记录，开始第一次攀登吧！</p>
-          </div>
-        </div>
-
-        <!-- 公开轨迹 - 搜索 & 浏览 -->
-        <div class="mt-6">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-display font-bold text-white">🌐 发现公开轨迹</h3>
-          </div>
-          <!-- 搜索栏 -->
-          <div class="glass rounded-2xl flex items-center gap-2 px-3 py-2 mb-3">
-            <span class="material-symbols-outlined text-slate-400 text-xl">search</span>
-            <input type="text" x-model="publicTrackSearch.query" @input.debounce.400ms="filterPublicTracks()" placeholder="搜索雪山名、地区、作者..." class="bg-transparent text-white text-sm flex-1 outline-none placeholder-slate-500">
-          </div>
-          <!-- 筛选标签 -->
-          <div class="flex gap-2 overflow-x-auto scroll-hide pb-2 mb-3">
-            <template x-for="d in ['全部难度','入门','中级','高难','极难']" :key="d">
-              <button @click="publicTrackSearch.difficulty = d==='全部难度'?'':d; filterPublicTracks()"
-                      :class="(publicTrackSearch.difficulty === d || (d==='全部难度' && !publicTrackSearch.difficulty)) ? 'bg-primary text-white' : 'glass text-slate-300'"
-                      class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors" x-text="d"></button>
+          <!-- Track History -->
+          <div class="flex items-center gap-2 mb-3">
+            <h3 class="font-display font-bold text-white">我的历史轨迹</h3>
+            <template x-if="pendingUploadCount > 0">
+              <span @click="syncPendingTracks()" @keydown.enter="syncPendingTracks()" role="button" tabindex="0" class="cursor-pointer bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" x-text="pendingUploadCount + ' 待上传'"></span>
             </template>
           </div>
-          <!-- 轨迹列表 -->
           <div class="space-y-3">
-            <template x-for="track in filteredPublicTracks" :key="track.id">
+            <template x-for="track in tracks" :key="track.id">
               <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
-                <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" class="w-20 h-20 object-cover flex-shrink-0">
+                <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
                 <div class="py-3 pr-3 flex-1 min-w-0">
                   <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
-                  <div class="flex items-center gap-1.5 mt-0.5">
-                    <img :src="'https://i.pravatar.cc/20?u='+track.author_id" class="w-4 h-4 rounded-full">
-                    <span class="text-slate-400 text-xs" x-text="track.author"></span>
-                  </div>
-                  <div class="flex gap-2 mt-1.5 flex-wrap">
-                    <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || 0) + 'km'"></span></span>
-                    <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || 0) + 'm'"></span></span>
-                    <span :class="getDifficultyClass(track.difficulty)" class="text-xs font-semibold" x-text="track.difficulty"></span>
+                  <p class="text-slate-400 text-xs mt-1" x-text="track.peak_name || track.date"></p>
+                  <div class="flex gap-3 mt-2">
+                    <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || track.distance || 0) + 'km'"></span></span>
+                    <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || track.elevation || 0) + 'm'"></span></span>
+                    <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
                   </div>
                 </div>
-                <div class="flex flex-col items-end pr-3 py-3 gap-1">
+                <div class="flex items-center pr-3">
                   <span class="material-symbols-outlined text-slate-600 text-lg">chevron_right</span>
-                  <span class="text-primary-light text-xs">❤️ <span x-text="track.likes || 0"></span></span>
                 </div>
               </div>
             </template>
-            <div x-show="filteredPublicTracks.length === 0" class="text-center py-6 text-slate-500 text-sm">
-              <span class="material-symbols-outlined text-3xl">search_off</span>
-              <p class="mt-2">未找到匹配轨迹</p>
+            <div x-show="tracks.length === 0" class="text-center py-8 text-slate-500">
+              <span class="material-symbols-outlined text-4xl">route</span>
+              <p class="mt-2 text-sm">暂无轨迹记录，开始第一次攀登吧！</p>
+            </div>
+          </div>
+
+          <!-- 公开轨迹 - 搜索 & 浏览 -->
+          <div class="mt-6 pb-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-display font-bold text-white">🌐 发现公开轨迹</h3>
+            </div>
+            <!-- 搜索栏 -->
+            <div class="glass rounded-2xl flex items-center gap-2 px-3 py-2 mb-3">
+              <span class="material-symbols-outlined text-slate-400 text-xl">search</span>
+              <input type="text" x-model="publicTrackSearch.query" @input.debounce.400ms="filterPublicTracks()" placeholder="搜索雪山名、地区、作者..." class="bg-transparent text-white text-sm flex-1 outline-none placeholder-slate-500">
+            </div>
+            <!-- 筛选标签 -->
+            <div class="flex gap-2 overflow-x-auto scroll-hide pb-2 mb-3">
+              <template x-for="d in ['全部难度','入门','中级','高难','极难']" :key="d">
+                <button @click="publicTrackSearch.difficulty = d==='全部难度'?'':d; filterPublicTracks()"
+                        :class="(publicTrackSearch.difficulty === d || (d==='全部难度' && !publicTrackSearch.difficulty)) ? 'bg-primary text-white' : 'glass text-slate-300'"
+                        class="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors" x-text="d"></button>
+              </template>
+            </div>
+            <!-- 轨迹列表 -->
+            <div class="space-y-3">
+              <template x-for="track in filteredPublicTracks" :key="track.id">
+                <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+                  <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" class="w-20 h-20 object-cover flex-shrink-0">
+                  <div class="py-3 pr-3 flex-1 min-w-0">
+                    <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <img :src="'https://i.pravatar.cc/20?u='+track.author_id" class="w-4 h-4 rounded-full">
+                      <span class="text-slate-400 text-xs" x-text="track.author"></span>
+                    </div>
+                    <div class="flex gap-2 mt-1.5 flex-wrap">
+                      <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || 0) + 'km'"></span></span>
+                      <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || 0) + 'm'"></span></span>
+                      <span :class="getDifficultyClass(track.difficulty)" class="text-xs font-semibold" x-text="track.difficulty"></span>
+                    </div>
+                  </div>
+                  <div class="flex flex-col items-end pr-3 py-3 gap-1">
+                    <span class="material-symbols-outlined text-slate-600 text-lg">chevron_right</span>
+                    <span class="text-primary-light text-xs">❤️ <span x-text="track.likes || 0"></span></span>
+                  </div>
+                </div>
+              </template>
+              <div x-show="filteredPublicTracks.length === 0" class="text-center py-6 text-slate-500 text-sm">
+                <span class="material-symbols-outlined text-3xl">search_off</span>
+                <p class="mt-2">未找到匹配轨迹</p>
+              </div>
             </div>
           </div>
         </div>
