@@ -60,13 +60,14 @@ router.post('/', sosLimiter, async (req, res) => {
       RETURNING *
     `;
 
-    // 向管理员发出告警（console.warn 兜底，不依赖外部服务）
+    const inserted = record && record[0] ? record[0] : { userId, lat, lng, timestamp, userAgent };
+
     console.warn(
       '[SOS ALERT] 新 SOS 求救记录：',
       JSON.stringify({ userId, lat, lng, timestamp, userAgent })
     );
 
-    res.json({ success: true, record: record[0] });
+    res.json({ success: true, record: inserted });
   } catch (e) {
     console.error('[SOS] POST /api/sos 错误：', e.message);
     res.status(500).json({ error: '服务器错误' });

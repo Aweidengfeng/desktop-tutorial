@@ -1276,7 +1276,10 @@ function alpineLink() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
-        } catch (e) { /* 入库失败不阻塞拨号 */ }
+        } catch (e) {
+          /* 入库失败不阻塞拨号 */
+          console.warn('[SOS] 后端入库失败（不影响拨号）：', e && e.message);
+        }
       } finally {
         // 拨打国际通用紧急号码 112（可配置为 110/120）
         window.location.href = 'tel:112';
