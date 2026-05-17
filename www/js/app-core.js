@@ -3343,8 +3343,11 @@ function alpineLink() {
     },
     getSosDialNumber() {
       const lang = (navigator.language || '').toLowerCase();
+      const langs = (navigator.languages || []).map(l => String(l).toLowerCase());
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-      return (lang.includes('zh') || timezone.includes('Shanghai')) ? '120' : '112';
+      const isChinaLocale = lang.startsWith('zh-cn') || langs.some(l => l.startsWith('zh-cn'));
+      const isChinaTz = timezone === 'Asia/Shanghai';
+      return (isChinaLocale || isChinaTz) ? '120' : '112';
     },
     startSOSCountdown() {
       this.cancelSOSCountdown(false);
@@ -3367,15 +3370,21 @@ function alpineLink() {
       if (showToast) this.showToast('已取消SOS');
     },
     async getSOSPosition() {
-      if (!navigator.geolocation) return { lat: null, lng: null };
+      const GPS_PRECISION_DECIMALS = 6;
+      const GPS_TIMEOUT_MS = 10000;
+      const GPS_CACHE_MAX_AGE_MS = 5000;
+      if (!navigator.geolocation) {
+        this.showToast('GPS不可用，已按空坐标上报', 'warning');
+        return { lat: null, lng: null };
+      }
       return new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({
-            lat: Number(pos.coords.latitude.toFixed(6)),
-            lng: Number(pos.coords.longitude.toFixed(6)),
+            lat: Math.round(pos.coords.latitude * (10 ** GPS_PRECISION_DECIMALS)) / (10 ** GPS_PRECISION_DECIMALS),
+            lng: Math.round(pos.coords.longitude * (10 ** GPS_PRECISION_DECIMALS)) / (10 ** GPS_PRECISION_DECIMALS),
           }),
           () => resolve({ lat: null, lng: null }),
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+          { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS, maximumAge: GPS_CACHE_MAX_AGE_MS }
         );
       });
     },
@@ -3400,7 +3409,10 @@ function alpineLink() {
       this.callEmergency(phone);
       this.sosStep = 1;
       this.showSOS = true;
-      this.reportSOSAlert(phone, timestamp).catch(() => {});
+      this.reportSOSAlert(phone, timestamp).catch((e) => {
+        console.error('SOS alert reporting failed:', e);
+        this.showToast('SOS上报失败，已继续拨号，请口头说明位置', 'warning');
+      });
       this.showToast('SOS 已发送！救援正在响应', 'warning');
     },
     async sendSOS() {

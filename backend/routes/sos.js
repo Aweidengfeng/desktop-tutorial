@@ -7,7 +7,7 @@ const router = express.Router();
 
 const sosLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 10,
   message: { error: '请求太频繁' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -28,6 +28,10 @@ router.post('/alert', sosLimiter, async (req, res) => {
     const phone = req.body?.phone ? String(req.body.phone).slice(0, 32) : null;
     const timestampRaw = req.body?.timestamp;
     const timestampDate = timestampRaw ? new Date(timestampRaw) : new Date();
+    if (timestampRaw && Number.isNaN(timestampDate.getTime())) {
+      console.warn('[SOS] Invalid timestamp received:', timestampRaw);
+      return res.status(400).json({ error: '无效 timestamp' });
+    }
     const timestamp = Number.isNaN(timestampDate.getTime()) ? new Date().toISOString() : timestampDate.toISOString();
 
     const inserted = await prisma.$queryRaw`
@@ -44,6 +48,7 @@ router.post('/alert', sosLimiter, async (req, res) => {
     console.log(`[SOS ALERT] userId=${userId ?? 'null'} lat=${lat ?? 'null'} lng=${lng ?? 'null'}`);
     res.json({ success: true, alert });
   } catch (e) {
+    console.error('[SOS] Alert creation failed:', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -65,6 +70,7 @@ router.get('/alerts', sosLimiter, adminAuth, async (req, res) => {
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM sos_alerts`)[0].c || 0);
     res.json({ alerts, total, page, limit });
   } catch (e) {
+    console.error('[SOS] Alerts fetch failed:', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });

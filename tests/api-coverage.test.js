@@ -444,6 +444,24 @@ describe('七、救援模块 /api/rescue', () => {
     expect(res.body.alert.phone).toBe('120');
   });
 
+  test('POST /api/sos/alert — GPS成功时保存经纬度', async () => {
+    const ts = new Date().toISOString();
+    const res = await request(app)
+      .post('/api/sos/alert')
+      .send({ userId: user.id, lat: 27.9881, lng: 86.925, timestamp: ts, phone: '112' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Number(res.body.alert.lat)).toBeCloseTo(27.9881);
+    expect(Number(res.body.alert.lng)).toBeCloseTo(86.925);
+  });
+
+  test('POST /api/sos/alert — 无效 timestamp → 400', async () => {
+    const res = await request(app)
+      .post('/api/sos/alert')
+      .send({ userId: user.id, lat: 27.9, lng: 86.9, timestamp: 'invalid-time', phone: '120' });
+    expect(res.status).toBe(400);
+  });
+
   test('GET /api/sos/alerts — 管理员可查看告警列表', async () => {
     const res = await request(app)
       .get('/api/sos/alerts')
