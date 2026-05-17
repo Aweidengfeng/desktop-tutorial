@@ -39,6 +39,7 @@ cp deploy/tencent/env.template .env
 | `COS_REGION` | 否 | COS 区域，默认 `ap-shanghai` |
 | `COS_SECRET_ID` / `COS_SECRET_KEY` | 否 | COS 访问凭据 |
 | `PAYMENT_PROVIDER` | 否 | 支付提供方，默认 `wechat` |
+| `SERVER_PUBLIC_HOST` | 否 | 用于部署成功时输出可访问 URL（公网 IP 或域名） |
 
 ## 常见问题排查
 

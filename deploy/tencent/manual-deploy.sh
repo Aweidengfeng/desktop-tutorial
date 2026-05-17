@@ -34,7 +34,7 @@ read_env_value() {
 is_placeholder_value() {
   local value="$1"
   case "$value" in
-    ''|CHANGEME*|your_*|example*|TODO*)
+    ''|CHANGEME*|replace_with_*|your_*|example*|TODO*)
       return 0
       ;;
     *)
@@ -147,6 +147,7 @@ $COMPOSE_CMD -f docker-compose.cn.yml up -d --build
 
 # 6) 健康检查（最多 60 秒）
 log_info "等待健康检查（最多 60 秒）..."
+log_info "健康检查在服务器本机执行，可通过 HEALTHCHECK_URL / HEALTHCHECK_FALLBACK_URL 覆盖"
 health_ok=0
 for i in $(seq 1 60); do
   if curl -fsS "$HEALTHCHECK_URL" >/dev/null 2>&1 || curl -fsS "$HEALTHCHECK_FALLBACK_URL" >/dev/null 2>&1; then
@@ -164,6 +165,17 @@ if [ "$health_ok" -ne 1 ]; then
 fi
 
 # 7) 成功提示
+public_host="$(read_env_value SERVER_PUBLIC_HOST)"
+if is_placeholder_value "$public_host"; then
+  public_host=""
+fi
+
+if [ -n "$public_host" ]; then
+  access_url="http://$public_host"
+else
+  access_url="http://<你的服务器公网IP或域名>"
+fi
+
 log_success "部署成功！"
 log_success "健康检查: $HEALTHCHECK_URL"
-log_success "应用访问:  http://<你的服务器公网IP或域名>"
+log_success "应用访问:  $access_url"
