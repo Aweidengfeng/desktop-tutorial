@@ -3,7 +3,8 @@ const CN_REGIONS = ['CN', 'HK', 'MO', 'TW'];
 function normalizeRegion(input) {
   const value = String(input || '').trim().toLowerCase();
   if (value === 'cn') return 'cn';
-  if (value === 'us' || value === 'global') return 'global';
+  if (value === 'us') return 'us';
+  if (value === 'global') return 'us'; // legacy alias
   return null;
 }
 
@@ -27,12 +28,13 @@ function detectRegion(req) {
     )) || ''
   ).trim().toUpperCase();
   if (country && CN_REGIONS.includes(country)) return 'cn';
-  if (country && country.length === 2) return 'global';
+  if (country && country.length === 2) return 'us';
 
   const language = String(req && req.headers && req.headers['accept-language'] || '').toLowerCase();
   if (language.includes('zh')) return 'cn';
+  if (language.length > 0) return 'us';
 
-  return process.env.DEPLOY_REGION || 'global';
+  return normalizeRegion(process.env.DEPLOY_REGION) || 'us';
 }
 
 function getDatabaseUrl(region) {
@@ -43,6 +45,16 @@ function getDatabaseUrl(region) {
 }
 
 function getRegionConfig(region) {
+  const usConfig = {
+    apiBaseUrl: process.env.API_BASE_URL_US || 'https://api.summitlink.app',
+    cdnHost: process.env.CDN_HOST_US || process.env.COS_CDN_DOMAIN || '',
+    paymentProviders: ['stripe'],
+    stripeEnabled: process.env.STRIPE_DISABLED !== 'true',
+    currency: 'USD',
+    legalEntity: 'Unsummit Technology Limited',
+    legalEntityEn: 'Unsummit Technology Limited',
+    deployTarget: 'railway',
+  };
   return {
     cn: {
       apiBaseUrl: process.env.API_BASE_URL_CN || 'https://api-cn.summitlink.app',
@@ -57,26 +69,9 @@ function getRegionConfig(region) {
       icpPoliceNumber: process.env.ICP_POLICE_NUMBER || '京公网安备XXXXXXXXXXXXX号（备案中）',
       deployTarget: 'tencent-cloud',
     },
-    global: {
-      apiBaseUrl: process.env.API_BASE_URL_US || 'https://api.summitlink.app',
-      cdnHost: process.env.CDN_HOST_US || process.env.COS_CDN_DOMAIN || '',
-      paymentProviders: ['stripe'],
-      stripeEnabled: process.env.STRIPE_DISABLED !== 'true',
-      currency: 'USD',
-      legalEntity: 'SummitLink US LLC',
-      legalEntityEn: 'SummitLink US LLC',
-      deployTarget: 'railway',
-    },
-  }[region] || {
-    apiBaseUrl: process.env.API_BASE_URL_US || 'https://api.summitlink.app',
-    cdnHost: process.env.CDN_HOST_US || '',
-    paymentProviders: ['stripe'],
-    stripeEnabled: process.env.STRIPE_DISABLED !== 'true',
-    currency: 'USD',
-    legalEntity: 'SummitLink US LLC',
-    legalEntityEn: 'SummitLink US LLC',
-    deployTarget: 'railway',
-  };
+    us: usConfig,
+    global: usConfig, // legacy alias
+  }[region] || usConfig;
 }
 
 module.exports = { detectRegion, getDatabaseUrl, getRegionConfig, CN_REGIONS };
