@@ -938,7 +938,7 @@
           usedMapCenterFallback = lat !== null && lng !== null;
         }
         if (geoFailed) {
-          if (usedMapCenterFallback) this.toast('定位失败，已改用地图中心点上报 SOS', 'warning');
+          if (usedMapCenterFallback) this.toast('定位失败，已使用地图中心点上报 SOS', 'warning');
           else this.toast('定位失败，位置不可用', 'error');
         }
         if (lat === null || lng === null) {
