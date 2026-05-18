@@ -1170,6 +1170,7 @@
             <th class="text-left py-2 pr-3">电话</th>
             <th class="text-left py-2 pr-3">纬度</th>
             <th class="text-left py-2 pr-3">经度</th>
+            <th class="text-left py-2 pr-3">精度(m)</th>
             <th class="text-left py-2 pr-3">触发时间</th>
           </tr></thead><tbody>
             <template x-for="r in sosRecords" :key="r.id">
@@ -1179,6 +1180,7 @@
                 <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.phone||'-'"></td>
                 <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.lat ?? '-'"></td>
                 <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.lng ?? '-'"></td>
+                <td class="py-2 pr-3 text-slate-400 text-xs" x-text="r.accuracy ?? '-'"></td>
                 <td class="py-2 pr-3 text-slate-400 text-xs" x-text="(r.timestamp||'').slice(0,19).replace('T',' ') || '-'"></td>
               </tr>
             </template>

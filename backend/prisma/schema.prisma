@@ -965,6 +965,7 @@ model SosAlert {
   userId    Int?     @map("user_id")
   lat       Float?
   lng       Float?
+  accuracy  Float?
   timestamp DateTime
   phone     String?
   createdAt DateTime @default(now()) @map("created_at")

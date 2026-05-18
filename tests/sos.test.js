@@ -1,6 +1,6 @@
 /**
  * PR-160: SOS 真实化 API 集成测试
- * 覆盖：POST /api/sos/alert、缺少/无效字段 400、GET /api/sos/alerts 需 admin token
+ * 覆盖：POST /api/sos/alert 入库成功、缺少/无效字段 400、GET /api/sos/alerts 需 admin token
  */
 
 'use strict';
@@ -28,39 +28,35 @@ describe('PR-160 SOS API', () => {
 
   // ── 1. POST /api/sos/alert → 200 并入库 ──────────────────────────────────
   describe('POST /api/sos/alert', () => {
-    test('合法请求 → 200 + { success: true }', async () => {
+    test('合法请求 → 200 + { ok: true, alertId }', async () => {
       const res = await request(app)
         .post('/api/sos/alert')
         .send({
           userId:    123,
           lat:       27.9881,
           lng:       86.9250,
+          accuracy:  8.2,
           timestamp: new Date().toISOString(),
           phone:     '112',
         });
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.alert).toBeDefined();
+      expect(res.body.ok).toBe(true);
+      expect(typeof res.body.alertId).toBe('number');
     });
 
-    test('userId / lat / lng / phone 可选 → 200', async () => {
+    test('缺少必填字段 → 400', async () => {
       const res = await request(app)
         .post('/api/sos/alert')
-        .send({ timestamp: new Date().toISOString() });
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-
-    test('无 body 也 → 200（timestamp 默认 now）', async () => {
-      const res = await request(app).post('/api/sos/alert').send({});
-      expect(res.status).toBe(200);
+        .send({ userId: 123, lat: 27.9881, timestamp: new Date().toISOString() });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('缺少必填字段');
     });
 
     // ── 2. 无效 timestamp → 400 ──────────────────────────────────────────
     test('无效 timestamp → 400', async () => {
       const res = await request(app)
         .post('/api/sos/alert')
-        .send({ userId: 1, lat: 30, lng: 100, timestamp: 'not-a-date' });
+        .send({ userId: 1, lat: 30, lng: 100, accuracy: 10, timestamp: 'not-a-date' });
       expect(res.status).toBe(400);
       expect(res.body.error).toBeTruthy();
     });
@@ -97,7 +93,7 @@ describe('PR-160 SOS API', () => {
       const ts = new Date().toISOString();
       await request(app)
         .post('/api/sos/alert')
-        .send({ userId: 999, lat: 1.1, lng: 2.2, timestamp: ts, phone: '120' });
+        .send({ userId: 999, lat: 1.1, lng: 2.2, accuracy: 6.5, timestamp: ts, phone: '120' });
 
       const token = createAdminToken();
       const res = await request(app)
@@ -107,6 +103,7 @@ describe('PR-160 SOS API', () => {
       const found = res.body.alerts.find(r => r.userId === 999);
       expect(found).toBeDefined();
       expect(found.lat).toBeCloseTo(1.1);
+      expect(found.accuracy).toBeCloseTo(6.5);
     });
   });
 });
