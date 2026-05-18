@@ -3,8 +3,7 @@ const CN_REGIONS = ['CN', 'HK', 'MO', 'TW'];
 function normalizeRegion(input) {
   const value = String(input || '').trim().toLowerCase();
   if (value === 'cn') return 'cn';
-  if (value === 'us') return 'us';
-  if (value === 'global') return 'us'; // legacy alias
+  if (value === 'us' || value === 'global') return 'us';
   return null;
 }
 
@@ -34,7 +33,7 @@ function detectRegion(req) {
   if (language.includes('zh')) return 'cn';
   if (language.length > 0) return 'us';
 
-  return normalizeRegion(process.env.DEPLOY_REGION) || 'us';
+  return process.env.DEPLOY_REGION || 'us';
 }
 
 function getDatabaseUrl(region) {
@@ -75,3 +74,4 @@ function getRegionConfig(region) {
 }
 
 module.exports = { detectRegion, getDatabaseUrl, getRegionConfig, CN_REGIONS };
+
