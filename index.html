@@ -1394,12 +1394,12 @@
            x-transition:leave="transition ease-in duration-200"
            class="fixed inset-0 z-[160] bg-black/55 flex items-center justify-center px-4">
         <div class="glass rounded-3xl p-5 w-full max-w-sm">
-          <h3 class="text-lg font-bold text-white mb-2">离线地图下载中</h3>
-          <p class="text-sm text-slate-300 mb-4">山区弱网场景已自动优化瓦片缓存</p>
+          <h3 class="text-lg font-bold text-white mb-2">离线地图功能预览</h3>
+          <p class="text-sm text-slate-300 mb-4">真实瓦片预缓存能力即将上线，当前为占位入口</p>
           <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden mb-2">
             <div class="h-full bg-primary-light transition-all duration-200" :style="`width:${offlineMapProgress}%`"></div>
           </div>
-          <p class="text-xs text-slate-300 mb-4" x-text="offlineMapProgress + '%'"></p>
+          <p class="text-xs text-slate-300 mb-4">Coming soon</p>
           <button @click="closeOfflineMapModal()" class="w-full py-2.5 rounded-xl bg-white/10 text-white font-semibold">关闭</button>
         </div>
       </div>

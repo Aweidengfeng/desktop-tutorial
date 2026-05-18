@@ -217,8 +217,6 @@ const MAP_LAYER_OPTIONS = [
   { key: 'relief', label: '3D', tileUrl: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© CARTO + OSM' },
   { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
 ];
-const OFFLINE_MAP_TICK_INTERVAL = 220;
-const OFFLINE_MAP_PROGRESS_INCREMENT = 10;
 
 async function detectMapProvider() {
   try {

@@ -924,7 +924,7 @@
               lng = pos.coords.longitude;
               resolve();
             }, () => {
-              this.toast('定位失败，已按空坐标上报 SOS', 'error');
+              this.toast(this.guideMap ? '定位失败，已使用地图中心点上报 SOS' : '定位失败，位置不可用', 'error');
               resolve();
             }, { enableHighAccuracy: true, timeout: 8000 });
           });
@@ -943,28 +943,18 @@
           phone: '112',
         };
         const token = this.getAuthToken();
-        let res;
+        let reportOk = false;
         try {
-          res = await fetch('/api/sos', {
+          const res = await fetch('/api/sos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
             body: JSON.stringify(payload),
           });
-        } catch (e) {
-          this.toast('SOS 上报失败，请检查网络后重试', 'error');
-          return;
-        }
-        if (!res.ok) {
-          let message = 'SOS 上报失败，请稍后重试';
-          try {
-            const errorText = (await res.text()).trim();
-            if (errorText) message = `SOS 上报失败：${errorText}`;
-          } catch (e) {}
-          this.toast(message, 'error');
-          return;
-        }
+          reportOk = !!res.ok;
+        } catch (e) {}
         window.location.href = 'tel:112';
-        this.toast('SOS 已上报并发起拨号', 'error');
+        if (reportOk) this.toast('SOS 已上报并发起拨号', 'error');
+        else this.toast('已发起拨号，但 SOS 上报失败，请稍后重试', 'error');
       },
 
       async init() {

@@ -1875,6 +1875,7 @@
         // SOS Records
         sosRecords: [], sosRecordsTotal: 0, sosRecordsPage: 1, sosRecordsLoading: false, sosRecordsFilter: '',
         sosBannerVisible: false,
+        lastSeenSosId: 0,
         latestSosModal: { open: false, item: null },
         adminMonitorMap: null,
         adminMonitorMarkers: [],
@@ -1952,6 +1953,7 @@
           try {
             await this.api('GET', '/check');
             this.isLoggedIn = true;
+            this.lastSeenSosId = Number(localStorage.getItem('admin_last_seen_sos_id') || 0);
             this.loadPage();
             this.loadSosRecords(1);
           } catch (e) {
@@ -2030,7 +2032,7 @@
           else if (this.page === 'moderation-logs') this.loadModerationLogs();
           else if (this.page === 'club-commercial') this.loadClubCommercial();
           else if (this.page === 'guide-commercial') this.loadGuideCommercial();
-          else if (this.page === 'sos-records') this.loadSosRecords(1);
+          else if (this.page === 'sos-records') { this.markLatestSosAsSeen(); this.loadSosRecords(1); }
           else if (this.page === 'withdrawals') this.loadWithdrawals(1);
           else if (this.page === 'merchant-kyc') this.loadMerchantKyc();
           else if (this.page === 'platform-routes') this.loadPlatformRoutes();
@@ -2094,8 +2096,17 @@
             this.showToast('暂无 SOS 记录', 'error');
             return;
           }
+          this.markLatestSosAsSeen();
           this.latestSosModal.item = this.sosRecords[0];
           this.latestSosModal.open = true;
+        },
+
+        markLatestSosAsSeen() {
+          const latestId = Number(this.sosRecords?.[0]?.id || 0);
+          if (!latestId) return;
+          this.lastSeenSosId = Math.max(this.lastSeenSosId || 0, latestId);
+          localStorage.setItem('admin_last_seen_sos_id', String(this.lastSeenSosId));
+          this.sosBannerVisible = false;
         },
 
         async loadStats() {
@@ -2510,26 +2521,8 @@
             const d = await r.json();
             if (!r.ok) throw new Error(d.error || '请求失败');
             this.sosRecords = d.alerts || []; this.sosRecordsTotal = d.total || 0;
-
-            const latestSos = this.sosRecords[0];
-            const latestSosMarker = latestSos
-              ? String(
-                  latestSos.id
-                  ?? latestSos.createdAt
-                  ?? latestSos.created_at
-                  ?? latestSos.timestamp
-                  ?? ''
-                )
-              : '';
-            const viewedSosMarkerKey = 'adminLastViewedSosMarker';
-            const lastViewedSosMarker = localStorage.getItem(viewedSosMarkerKey) || '';
-            const hasNewSos = !!latestSosMarker && latestSosMarker !== lastViewedSosMarker;
-
-            // 进入/加载 SOS 列表即视为已查看，避免历史记录导致横幅长期显示。
-            if (latestSosMarker) {
-              localStorage.setItem(viewedSosMarkerKey, latestSosMarker);
-            }
-            this.sosBannerVisible = false;
+            const latestId = Number(this.sosRecords?.[0]?.id || 0);
+            this.sosBannerVisible = latestId > (this.lastSeenSosId || 0);
           } catch(e) { this.showToast(e.message,'error'); } finally { this.sosRecordsLoading = false; }
         },
 
