@@ -64,6 +64,11 @@ jobs:
             if [ -f deploy/tencent/nginx.conf ]; then
               cp deploy/tencent/nginx.conf ./nginx.conf
             fi
+            if [ -f deploy/tencent/Dockerfile.backend ]; then
+              cp deploy/tencent/Dockerfile.backend backend/Dockerfile.backend
+              # 清理本地 node_modules，防止 COPY . . 污染 Docker build context
+              rm -rf backend/node_modules
+            fi
             if [ -f deploy/tencent/.env.example ] && [ ! -f .env ]; then
               cp deploy/tencent/.env.example .env
               echo "⚠️  .env created from .env.example — please fill in real secrets!"

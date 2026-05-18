@@ -40,9 +40,9 @@ RUN addgroup -g 1001 -S summitlink && \
     adduser -u 1001 -S summitlink -G summitlink
 
 # 从构建阶段复制产物
+COPY --chown=summitlink:summitlink . .
 COPY --from=builder --chown=summitlink:summitlink /app/node_modules ./node_modules
 COPY --from=builder --chown=summitlink:summitlink /app/prisma ./prisma
-COPY --chown=summitlink:summitlink . .
 
 # 创建上传目录
 RUN mkdir -p /app/uploads && chown summitlink:summitlink /app/uploads
