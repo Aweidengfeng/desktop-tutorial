@@ -20,10 +20,15 @@ async function gotoTab(page, tabName) {
     home: '首页',
     explore: '找队友',
     chat: '聊天',
-    me: '我的',
+    me: '我',
   };
   const label = nameMap[tabName] || tabName;
-  await page.locator('nav button').filter({ hasText: label }).first().click();
+  let btn = page.locator('nav button').filter({ hasText: label }).first();
+  if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
+    btn = page.locator(`nav button:has-text("${label}")`).first();
+  }
+  await btn.waitFor({ state: 'visible', timeout: 8000 });
+  await btn.click();
   // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
   await page.locator(`[x-show*="${tabName}"]`).first().waitFor({ state: 'visible', timeout: 8000 });
 }
