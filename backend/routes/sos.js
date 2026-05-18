@@ -19,8 +19,7 @@ function toNullableNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-// POST /api/sos/alert
-router.post('/alert', sosLimiter, async (req, res) => {
+async function createSosAlert(req, res) {
   try {
     const userId = toNullableNumber(req.body?.userId);
     const lat = toNullableNumber(req.body?.lat);
@@ -50,10 +49,9 @@ router.post('/alert', sosLimiter, async (req, res) => {
     console.error('[SOS] Alert creation failed:', e);
     res.status(500).json({ error: '服务器错误' });
   }
-});
+}
 
-// GET /api/sos/alerts
-router.get('/alerts', sosLimiter, adminAuth, async (req, res) => {
+async function listSosAlerts(req, res) {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
@@ -72,6 +70,14 @@ router.get('/alerts', sosLimiter, adminAuth, async (req, res) => {
     console.error('[SOS] Alerts fetch failed:', e);
     res.status(500).json({ error: '服务器错误' });
   }
-});
+}
+
+// POST /api/sos（新标准端点） + 兼容旧版 /alert
+router.post('/', sosLimiter, createSosAlert);
+router.post('/alert', sosLimiter, createSosAlert);
+
+// GET /api/sos（新标准端点） + 兼容旧版 /alerts
+router.get('/', sosLimiter, adminAuth, listSosAlerts);
+router.get('/alerts', sosLimiter, adminAuth, listSosAlerts);
 
 module.exports = router;

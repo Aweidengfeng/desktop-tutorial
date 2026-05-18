@@ -213,8 +213,8 @@ window.__activeMapProvider = 'amap';
 const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
 const MAP_LAYER_OPTIONS = [
   { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
-  { key: 'satellite', label: '卫星', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
-  { key: 'terrain', label: '3D', tileUrl: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}', attribution: 'Tiles © Esri' },
+  { key: 'satellite', label: '卫星', tileUrl: 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', attribution: '© AutoNavi' },
+  { key: 'relief', label: '3D', tileUrl: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© CARTO + OSM' },
   { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
 ];
 
@@ -375,6 +375,11 @@ function alpineLink() {
     sosCountdown: 5,
     sosCountdownTimer: null,
     sosEmergencyPhone: '112',
+    mapSearchExpanded: false,
+    mapSearchQuery: '',
+    showTrackLayerPanel: false,
+    showOfflineMapModal: false,
+    offlineMapProgress: 0,
     showChatWindow: false,
     activeChatSession: null,
     chatSubTab: 'all',
@@ -766,10 +771,15 @@ function alpineLink() {
     ],
     teamChatMessages: [],
     navTabs: [
-      { id: 'home', icon: 'home', name: '首页' },
-      { id: 'explore', icon: 'group', name: '找队友' },
-      { id: 'chat', icon: 'chat', name: '聊天' },
+      { id: 'expedition', icon: 'explore', name: '探险' },
+      { id: 'map', icon: 'map', name: '地图' },
+      { id: 'discover', icon: 'travel_explore', name: '发现' },
       { id: 'me', icon: 'person', name: '我的' },
+    ],
+    expeditionCards: [
+      { id: 1001, name: '珠峰南坡标准线', region: '尼泊尔 · 春季窗口', difficulty: '高海拔', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=900' },
+      { id: 1002, name: '慕士塔格技术攀登', region: '新疆 · 冰川训练', difficulty: '技术', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900' },
+      { id: 1003, name: '阿尼玛卿连续穿越', region: '青海 · 轻量远征', difficulty: '进阶', cover: 'https://images.unsplash.com/photo-1508261305436-e5b4b38b7f35?w=900' },
     ],
     weather: { location: '珠穆朗玛峰大本营', condition: 'partly_cloudy', temp: -8, wind: 25, humidity: 45, visibility: 12 },
     userProfile: { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 },
@@ -1523,6 +1533,77 @@ function alpineLink() {
 
     switchTrackMapLayer(layerKey) {
       this.applyTrackMapLayer(layerKey);
+      this.showTrackLayerPanel = false;
+    },
+
+    getPageTitle() {
+      const tab = this.resolvePrimaryTab(this.currentPage);
+      const titleMap = {
+        expedition: '精选路线',
+        map: '实时轨迹地图',
+        discover: '社区发现',
+        me: '个人中心',
+      };
+      return titleMap[tab] || '探索与协作';
+    },
+
+    resolvePrimaryTab(page) {
+      if (page === 'track') return 'map';
+      if (page === 'me') return 'me';
+      if (['community', 'chat', 'explore'].includes(page)) return 'discover';
+      return 'expedition';
+    },
+
+    isPrimaryTabActive(tabId) {
+      return this.resolvePrimaryTab(this.currentPage) === tabId;
+    },
+
+    switchPrimaryTab(tabId) {
+      const pageMap = {
+        expedition: 'home',
+        map: 'track',
+        discover: 'community',
+        me: 'me',
+      };
+      this.currentPage = pageMap[tabId] || 'home';
+      if (tabId === 'map') {
+        this.$nextTick(() => this.initTrackMap());
+      }
+    },
+
+    openExpeditionDetail(item) {
+      if (!item || !item.id) {
+        this.showToast('探险详情暂不可用', 'warning');
+        return;
+      }
+      window.location.href = `/expedition-detail.html?id=${encodeURIComponent(item.id)}`;
+    },
+
+    toggleMapSearch() {
+      this.mapSearchExpanded = !this.mapSearchExpanded;
+      if (!this.mapSearchExpanded) this.mapSearchQuery = '';
+    },
+
+    runMapSearch() {
+      const keyword = String(this.mapSearchQuery || '').trim();
+      if (!keyword) {
+        this.showToast('请输入山峰或营地名称', 'warning');
+        return;
+      }
+      this.weatherSearch = keyword;
+      this.showOsmSuggestions = false;
+      this.searchWeather();
+      this.showToast(`已搜索：${keyword}`);
+    },
+
+    startOfflineMapDownload() {
+      this.showOfflineMapModal = true;
+      this.offlineMapProgress = 0;
+    },
+
+    closeOfflineMapModal() {
+      this.showOfflineMapModal = false;
+      this.offlineMapProgress = 0;
     },
 
     // GPS 定位
