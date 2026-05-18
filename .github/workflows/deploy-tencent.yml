@@ -70,7 +70,9 @@ jobs:
             fi
 
             # Pull latest images and rebuild
-            docker compose pull --quiet || true
+            # Copy Dockerfile into backend dir so compose build context can find it
+            cp deploy/tencent/Dockerfile.backend backend/Dockerfile.backend
+            docker compose pull postgres nginx --quiet || true
             docker compose up -d --build --remove-orphans
 
             # Wait for backend to be healthy (up to 60s)
