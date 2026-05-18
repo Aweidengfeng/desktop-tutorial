@@ -1,0 +1,247 @@
+const fs = require('fs');
+const path = require('path');
+
+console.log('🚀 开始自动修复...\n');
+
+function safeRead(p) {
+  if (!fs.existsSync(p)) {
+    console.log('⚠️  文件不存在，跳过：' + p);
+    return null;
+  }
+  return fs.readFileSync(p, 'utf-8');
+}
+
+// 修复 1: backend/routes/admin.js
+console.log('📝 修复 admin.js 登录路由...');
+const adminJsPath = path.join(process.cwd(), 'backend/routes/admin.js');
+let adminJs = safeRead(adminJsPath);
+
+if (adminJs) {
+  const oldLoginStart = adminJs.indexOf('// POST /api/admin/login');
+  const oldLoginEnd = adminJs.indexOf('// POST /api/admin/logout');
+
+  if (oldLoginStart === -1 || oldLoginEnd === -1) {
+    console.error('❌ 找不到登录路由标记，跳过 admin.js');
+  } else {
+    const newLogin = `// POST /api/admin/login
+router.post('/login', adminLoginLimiter, async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      console.error('[admin/login] ADMIN_PASSWORD not configured');
+      return res.status(500).json({ error: '管理员账号未配置' });
+    }
+    const userOk = timingSafeEqual(username, adminUsername);
+    const passOk = timingSafeEqual(password, adminPassword);
+    if (!userOk || !passOk) {
+      console.warn('[admin/login] Failed login attempt for user:', username);
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+    const token = jwt.sign({ isAdmin: true, username }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('adminToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+    res.json({
+      success: true,
+      message: '登录成功',
+      token,
+      expiresIn: 7 * 24 * 60 * 60
+    });
+    console.log('[admin/login] Successful login for user:', username);
+  } catch (e) {
+    console.error('[admin/login] Error:', e.message);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+`;
+
+    const oldLogin = adminJs.substring(oldLoginStart, oldLoginEnd);
+    adminJs = adminJs.replace(oldLogin, newLogin);
+    fs.writeFileSync(adminJsPath, adminJs, 'utf-8');
+    console.log('✅ admin.js 修复完成\n');
+  }
+}
+
+// 修复 2: admin.html - 添加 credentials
+console.log('📝 修复 admin.html...');
+const adminHtmlPath = path.join(process.cwd(), 'admin.html');
+let adminHtml = safeRead(adminHtmlPath);
+
+if (adminHtml) {
+  const oldDoLogin = `async doLogin() {
+        this.loginLoading = true;
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.loginForm)
+          });
+          if (!res.ok) {
+            this.addToast('登录失败', 'error');
+            return;
+          }
+          this.isLoggedIn = true;
+          this.addToast('登录成功', 'success');
+          this.loadPage();
+        } catch (e) {
+          this.addToast('网络错误：' + e.message, 'error');
+        } finally {
+          this.loginLoading = false;
+        }
+      }`;
+
+  const newDoLogin = `async doLogin() {
+        this.loginLoading = true;
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(this.loginForm)
+          });
+          if (!res.ok) {
+            let errMsg = '登录失败';
+            try {
+              const data = await res.json();
+              errMsg = data.error || errMsg;
+            } catch (e) {}
+            this.addToast(errMsg, 'error');
+            return;
+          }
+          this.isLoggedIn = true;
+          this.addToast('登录成功', 'success');
+          this.loadPage();
+        } catch (e) {
+          this.addToast('网络错误：' + e.message, 'error');
+        } finally {
+          this.loginLoading = false;
+        }
+      }`;
+
+  if (adminHtml.includes(oldDoLogin)) {
+    adminHtml = adminHtml.replace(oldDoLogin, newDoLogin);
+    fs.writeFileSync(adminHtmlPath, adminHtml, 'utf-8');
+    console.log('✅ admin.html 修复完成\n');
+  } else {
+    console.log('⚠️  admin.html doLogin 函数格式不同，跳过\n');
+  }
+}
+
+// 修复 3: www/js/app-core.js - 改进 apiFetch
+console.log('📝 修复 www/js/app-core.js...');
+const appCorePath = path.join(process.cwd(), 'www/js/app-core.js');
+let appCore = safeRead(appCorePath);
+
+if (appCore) {
+  const oldApiFetch = `async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem('summitlink_token');
+  const headers = {
+    ...(options.headers || {}),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  // 如果 body 是对象且没有设置 Content-Type，自动加 JSON 头
+  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    options = { ...options, body: JSON.stringify(options.body) };
+  }
+  let res;
+  try {
+    res = await fetch(url, { ...options, headers });
+  } catch (e) {
+    // 网络错误（断网/超时）
+    throw new Error('网络连接失败，请检查网络后重试');
+  }
+  if (res.status === 401) {
+    localStorage.removeItem('summitlink_token');
+    // 触发全局登出事件
+    window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
+    throw new Error('登录已过期，请重新登录');
+  }
+  return res;
+}`;
+
+  const newApiFetch = `async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem('summitlink_token');
+  const headers = {
+    ...(options.headers || {}),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  // 如果 body 是对象且没有设置 Content-Type，自动加 JSON 头
+  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    options = { ...options, body: JSON.stringify(options.body) };
+  }
+  let res;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include'
+    });
+  } catch (e) {
+    // 网络错误（断网/超时）
+    throw new Error('网络连接失败，请检查网络后重试');
+  }
+  // 处理 503 支付降级
+  if (res.status === 503) {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const data = await res.json();
+        console.warn('[SummitLink] 服务暂时不可用:', data.reason);
+        throw new Error(data.message || '该功能暂时不可用，请稍后重试');
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          throw new Error('服务暂时不可用，请稍后重试');
+        }
+        throw e;
+      }
+    }
+    throw new Error('服务暂时不可用，请稍后重试');
+  }
+  if (res.status === 401) {
+    localStorage.removeItem('summitlink_token');
+    // 触发全局登出事件
+    window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
+    throw new Error('登录已过期，请重新登录');
+  }
+  // 处理其他错误状态
+  if (!res.ok) {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const data = await res.json();
+        throw new Error(data.error || data.message || \`请求失败 (\${res.status})\`);
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          throw new Error(\`请求失败 (\${res.status})\`);
+        }
+        throw e;
+      }
+    }
+    throw new Error(\`请求失败 (\${res.status})\`);
+  }
+  return res;
+}`;
+
+  if (appCore.includes(oldApiFetch)) {
+    appCore = appCore.replace(oldApiFetch, newApiFetch);
+    fs.writeFileSync(appCorePath, appCore, 'utf-8');
+    console.log('✅ app-core.js 修复完成\n');
+  } else {
+    console.log('⚠️  app-core.js apiFetch 函数格式不同，跳过\n');
+  }
+}
+
+console.log('✅ 所有修复完成！\n');
