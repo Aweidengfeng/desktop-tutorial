@@ -34,6 +34,7 @@ RUN addgroup -g 1001 -S summitlink && \
 COPY --from=builder --chown=summitlink:summitlink /app/node_modules ./node_modules
 COPY --from=builder --chown=summitlink:summitlink /app/prisma ./prisma
 COPY --chown=summitlink:summitlink . .
+RUN npx prisma generate 2>/dev/null || true
 
 # 创建上传目录
 RUN mkdir -p /app/uploads && chown summitlink:summitlink /app/uploads
