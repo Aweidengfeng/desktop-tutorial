@@ -5556,20 +5556,26 @@
     </div>
   </div>
 
-  <!-- SOS 二次确认弹窗 -->
-  <div x-show="showSOSConfirm"
+  <!-- SOS 5秒倒计时防误触 overlay (PR-160) -->
+  <!-- 倒计时结束后自动调用 _executeSOS()：GPS 入库 → tel:112 拨号 -->
+  <!-- 可将 tel:112 改为 tel:110（匪警）或 tel:120（急救），或本地配置 -->
+  <div x-show="sosCountdownActive"
        x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0 scale-95"
-       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
        x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100 scale-100"
-       x-transition:leave-end="opacity-0 scale-95"
-       class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="max-width:430px;margin:0 auto;">
-    <div class="bg-slate-800 rounded-2xl p-5 mx-6 text-center">
-      <p class="text-red-400 font-bold text-lg mb-2">🆘 紧急求救倒计时</p>
-      <p class="text-slate-400 text-sm mb-1">将在 <span class="text-white font-semibold" x-text="sosCountdown"></span> 秒后自动拨号并上报定位</p>
-      <p class="text-slate-500 text-xs mb-4">目标号码：<span x-text="getSosDialNumber()"></span></p>
-      <button @click="cancelSOSCountdown()" class="w-full bg-slate-700 text-white rounded-xl py-2.5 font-semibold">取消</button>
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-red-600" style="max-width:430px;margin:0 auto;">
+    <div class="text-center px-8">
+      <div class="text-white text-8xl font-bold mb-4 leading-none" x-text="sosCountdown"></div>
+      <p class="text-white text-xl font-bold mb-2">秒后拨出紧急电话</p>
+      <p class="text-red-200 text-sm mb-8">正在获取 GPS 位置并通知平台救援</p>
+      <p class="text-red-100 text-xs mb-10">将拨打 <span x-text="getSosDialNumber()"></span>（可配置 110/120/112）</p>
+      <button @click="cancelSOSCountdown()"
+              class="w-full bg-white text-red-600 font-bold text-lg py-4 rounded-2xl shadow-lg">
+        ✕ 点击取消
+      </button>
     </div>
   </div>
 
