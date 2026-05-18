@@ -3,7 +3,7 @@
 # 目标机器：腾讯云上海 2核4GB TencentOS 3.3
 
 # ---- 构建阶段 ----
-FROM mirrors.tencent.com/library/node:20-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN npx prisma generate 2>/dev/null || true
 COPY . .
 
 # ---- 运行阶段 ----
-FROM mirrors.tencent.com/library/node:20-alpine AS runner
+FROM node:20-alpine AS runner
 
 # 安装 wget（健康检查用）
 RUN apk add --no-cache wget
