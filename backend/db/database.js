@@ -399,6 +399,16 @@ CREATE TABLE IF NOT EXISTS sos_records (
   message TEXT,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS sos_alerts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  lat REAL,
+  lng REAL,
+  timestamp DATETIME,
+  phone TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // 新模块：离线远征、攀登日志、装备清单、AI教练
@@ -2136,19 +2146,6 @@ const existingSosCols = db.pragma('table_info(sos_records)').map(c => c.name);
 if (!existingSosCols.includes('status')) {
   db.exec("ALTER TABLE sos_records ADD COLUMN status TEXT DEFAULT 'pending'");
 }
-
-// sos_alerts 表（PR-160：SOS 真实化，不依赖 sos_records，独立入库）
-db.exec(`
-CREATE TABLE IF NOT EXISTS sos_alerts (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  userId     TEXT,
-  lat        REAL,
-  lng        REAL,
-  timestamp  TEXT,
-  userAgent  TEXT,
-  createdAt  DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-`);
 
 // 迁移：guides 表补充认证年费字段
 const existingGuideCols3 = db.pragma('table_info(guides)').map(c => c.name);
