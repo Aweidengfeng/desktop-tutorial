@@ -214,7 +214,7 @@ const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
 const MAP_LAYER_OPTIONS = [
   { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
   { key: 'satellite', label: '卫星', tileUrl: 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', attribution: '© AutoNavi' },
-  { key: '3d', label: '3D', tileUrl: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© CARTO + OSM' },
+  { key: 'relief', label: '3D', tileUrl: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© CARTO + OSM' },
   { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
 ];
 const OFFLINE_MAP_TICK_INTERVAL = 220;
@@ -1542,12 +1542,12 @@ function alpineLink() {
     getPageTitle() {
       const tab = this.resolvePrimaryTab(this.currentPage);
       const titleMap = {
-        expedition: '探险',
-        map: '地图',
-        discover: '发现',
-        me: '我的',
+        expedition: '精选路线',
+        map: '实时轨迹地图',
+        discover: '社区发现',
+        me: '个人中心',
       };
-      return titleMap[tab] || '探险';
+      return titleMap[tab] || '探索与协作';
     },
 
     resolvePrimaryTab(page) {
@@ -1621,6 +1621,7 @@ function alpineLink() {
       if (this.offlineMapTimer && this.offlineMapProgress < 100) {
         clearInterval(this.offlineMapTimer);
         this.offlineMapTimer = null;
+        this.showToast('离线地图下载已取消', 'warning');
       }
       if (this.offlineMapProgress >= 100) this.offlineMapProgress = 0;
     },

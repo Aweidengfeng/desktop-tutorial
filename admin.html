@@ -2491,11 +2491,18 @@
         async loadSosRecords(p) {
           this.sosRecordsLoading = true; this.sosRecordsPage = p;
           try {
-            const r = await fetch(`/api/sos?page=${p}&limit=20`, {
+            let r = await fetch(`/api/sos?page=${p}&limit=20`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
             });
+            if (r.status === 404) {
+              r = await fetch(`/api/sos/alerts?page=${p}&limit=20`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+              });
+            }
             if (r.status === 401 || r.status === 403) {
               this.isLoggedIn = false;
               throw new Error('登录已过期，请重新登录');

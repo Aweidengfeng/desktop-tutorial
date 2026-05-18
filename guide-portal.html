@@ -783,6 +783,10 @@
       guideMemberDrawerOpen: false,
       guideTourState: 'idle',
       guideTrackName: '珠峰北坳训练线',
+      // 扇形图层菜单布局参数（半径 + 角度步长）
+      guideLayerAngleStep: 0.5,
+      guideLayerRadiusX: 74,
+      guideLayerRadiusY: 52,
       guideSosConfirm: false,
       guideSosCountdown: 5,
       guideSosTimer: null,
@@ -882,11 +886,8 @@
       },
 
       getGuideLayerButtonStyle(idx) {
-        const GUIDE_LAYER_ANGLE_STEP = 0.5;
-        const GUIDE_LAYER_RADIUS_X = 74;
-        const GUIDE_LAYER_RADIUS_Y = 52;
-        const angle = (idx + 1) * GUIDE_LAYER_ANGLE_STEP;
-        return `right:${Math.round(Math.cos(angle) * GUIDE_LAYER_RADIUS_X)}px; top:${Math.round(Math.sin(angle) * GUIDE_LAYER_RADIUS_Y)}px;`;
+        const angle = (idx + 1) * this.guideLayerAngleStep;
+        return `right:${Math.round(Math.cos(angle) * this.guideLayerRadiusX)}px; top:${Math.round(Math.sin(angle) * this.guideLayerRadiusY)}px;`;
       },
 
       guideStartTour() { this.guideTourState = 'running'; this.toast('导览已开始'); },
@@ -927,6 +928,11 @@
               resolve();
             }, { enableHighAccuracy: true, timeout: 8000 });
           });
+        }
+        if ((lat === null || lng === null) && this.guideMap) {
+          const center = this.guideMap.getCenter();
+          lat = center.lat;
+          lng = center.lng;
         }
         const payload = {
           userId: this.currentUser?.id || null,

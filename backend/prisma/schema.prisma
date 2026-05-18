@@ -75,6 +75,7 @@ model User {
   summitRecords        SummitRecord[]
   sosRecords           SosRecord[]
   sosAlerts            SosAlert[]
+  sosEvents            SosEvent[]
   notifications        Notification[]
   followersRel         Follow[]            @relation("Following")
   followingRel         Follow[]            @relation("Follower")
@@ -980,9 +981,13 @@ model SosEvent {
   userId    Int?     @map("user_id")
   lat       Float?
   lng       Float?
+  accuracy  Float?
+  phone     String?
   timestamp DateTime
   createdAt DateTime @default(now()) @map("created_at")
-  // 新版统一 SOS 事件表；历史告警读取仍兼容 SosAlert(sos_alerts)
+  // 新版统一 SOS 事件表（预留给后续迁移）；当前读写仍走 SosAlert(sos_alerts) 以保持兼容
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("sos_events")
 }
