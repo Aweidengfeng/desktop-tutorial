@@ -372,6 +372,8 @@ function alpineLink() {
     bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '' },
     showSOS: false,
     showSOSConfirm: false,
+    sosCountdown: 5,
+    sosCountdownTimer: null,
     showChatWindow: false,
     activeChatSession: null,
     chatSubTab: 'all',
@@ -1229,10 +1231,14 @@ function alpineLink() {
     // SOS
     openSOS() { this.showSOS = true; this.sosStep = 0; },
     sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
-    cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; },
+    cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; this.cancelSOSCountdown(false); },
     refreshLocation() { this.showToast('位置已刷新'); },
     shareLocation() { this.showToast('位置已分享'); },
-    callEmergency(number) { this.showToast('正在拨打 ' + number); },
+    callEmergency(number) {
+      if (!number) return;
+      window.location.href = `tel:${String(number).replace(/[^\d+]/g, '')}`;
+      this.showToast('正在拨打 ' + number);
+    },
     callContact(contact) { this.showToast('正在联系 ' + contact.name); },
     callVIPHotline() { this.showToast('正在拨打 VIP 热线'); },
     saveMedicalInfo() { this.showToast('医疗信息已保存'); },
@@ -3408,18 +3414,82 @@ function alpineLink() {
         if (res.ok) this.rescueContacts = await res.json();
       } catch(e) {}
     },
-    async sendSOS() {
-      this.sosStep = 1;
-      this.showToast('SOS 已发送！救援正在响应', 'warning');
-      if (this.authToken) {
-        try {
-          await fetch('/api/rescue/sos', {
-            method: 'POST',
-            headers: this.getAuthHeaders(),
-            body: JSON.stringify({ location: '27.9881° N, 86.9250° E', peak_name: '珠穆朗玛峰大本营', message: 'SOS求救' })
-          });
-        } catch(e) {}
+    getSosDialNumber() {
+      const lang = (navigator.language || '').toLowerCase();
+      const langs = (navigator.languages || []).map(l => String(l).toLowerCase());
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      const isChinaLocale = lang.startsWith('zh-cn') || langs.some(l => l.startsWith('zh-cn'));
+      const isChinaTz = timezone === 'Asia/Shanghai';
+      return (isChinaLocale || isChinaTz) ? '120' : '112';
+    },
+    startSOSCountdown() {
+      this.cancelSOSCountdown(false);
+      this.sosCountdown = 5;
+      this.showSOSConfirm = true;
+      this.sosCountdownTimer = setInterval(() => {
+        this.sosCountdown -= 1;
+        if (this.sosCountdown <= 0) {
+          this.cancelSOSCountdown(false);
+          this.triggerSOSAlert();
+        }
+      }, 1000);
+    },
+    cancelSOSCountdown(showToast = true) {
+      if (this.sosCountdownTimer) {
+        clearInterval(this.sosCountdownTimer);
+        this.sosCountdownTimer = null;
       }
+      this.showSOSConfirm = false;
+      if (showToast) this.showToast('已取消SOS');
+    },
+    async getSOSPosition() {
+      const GPS_PRECISION_DECIMALS = 6;
+      const GPS_TIMEOUT_MS = 10000;
+      const GPS_CACHE_MAX_AGE_MS = 5000;
+      if (!navigator.geolocation) {
+        this.showToast('GPS不可用，已按空坐标上报', 'warning');
+        return { lat: null, lng: null };
+      }
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({
+            lat: Math.round(pos.coords.latitude * (10 ** GPS_PRECISION_DECIMALS)) / (10 ** GPS_PRECISION_DECIMALS),
+            lng: Math.round(pos.coords.longitude * (10 ** GPS_PRECISION_DECIMALS)) / (10 ** GPS_PRECISION_DECIMALS),
+          }),
+          () => resolve({ lat: null, lng: null }),
+          { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS, maximumAge: GPS_CACHE_MAX_AGE_MS }
+        );
+      });
+    },
+    async reportSOSAlert(phone, timestamp) {
+      const { lat, lng } = await this.getSOSPosition();
+      const userId = this.currentUser?.id ?? null;
+      await fetch('/api/sos/alert', {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          userId,
+          lat,
+          lng,
+          timestamp,
+          phone,
+        }),
+      });
+    },
+    async triggerSOSAlert() {
+      const phone = this.getSosDialNumber();
+      const timestamp = new Date().toISOString();
+      this.callEmergency(phone);
+      this.sosStep = 1;
+      this.showSOS = true;
+      this.reportSOSAlert(phone, timestamp).catch((e) => {
+        console.error('SOS alert reporting failed:', e);
+        this.showToast('SOS上报失败，已继续拨号，请口头说明位置', 'warning');
+      });
+      this.showToast('SOS 已发送！救援正在响应', 'warning');
+    },
+    async sendSOS() {
+      this.startSOSCountdown();
     },
 
     // ─── Customs / 定制攀登 ──────────────────────────────────────────────────

@@ -333,6 +333,7 @@ app.use('/api/articles', require('./routes/articles'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/customs', require('./routes/customs'));
 app.use('/api/rescue', require('./routes/rescue'));
+app.use('/api/sos', require('./routes/sos'));
 app.use('/api/insurance', require('./routes/insurance'));
 app.use('/api/banners', require('./routes/banners'));
 app.use('/api/upload', require('./routes/upload'));

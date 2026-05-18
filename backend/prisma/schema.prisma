@@ -74,6 +74,7 @@ model User {
   customOrders         CustomOrder[]
   summitRecords        SummitRecord[]
   sosRecords           SosRecord[]
+  sosAlerts            SosAlert[]
   notifications        Notification[]
   followersRel         Follow[]            @relation("Following")
   followingRel         Follow[]            @relation("Follower")
@@ -957,6 +958,20 @@ model SosRecord {
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("sos_records")
+}
+
+model SosAlert {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  lat       Float?
+  lng       Float?
+  timestamp DateTime
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("sos_alerts")
 }
 
 model RescueContact {
