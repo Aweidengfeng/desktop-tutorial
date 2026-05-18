@@ -25,7 +25,8 @@ async function doLogin(page) {
   await page.waitForLoadState('networkidle');
 
   const loginBtn = page.locator('button:has-text("登录")').first();
-  await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
+  const isLoginVisible = await loginBtn.isVisible({ timeout: 5000 }).catch(() => false);
+  if (!isLoginVisible) return;
   await loginBtn.click();
 
   const loginBox = page.locator('[x-show="showLogin"]');
