@@ -7,8 +7,11 @@ version: '3.9'
 services:
   backend:
     build:
-      context: ../../backend
-      dockerfile: ../deploy/tencent/Dockerfile.backend
+      # Relative build paths assume this compose file has first been copied to the deploy root
+      # by CI/deploy scripts. Running `docker compose -f deploy/tencent/docker-compose.yml ...`
+      # in-place will resolve `./backend` relative to `deploy/tencent/` and fail.
+      context: ./backend
+      dockerfile: ./deploy/tencent/Dockerfile.backend
     image: summitlink-backend:cn
     restart: unless-stopped
     mem_limit: 1.5g
@@ -64,7 +67,7 @@ services:
         max-file: "10"
 
   postgres:
-    image: postgres:16-alpine
+    image: mirrors.tencent.com/library/postgres:16-alpine
     restart: unless-stopped
     mem_limit: 768m
     mem_reservation: 256m
@@ -100,7 +103,7 @@ services:
         max-file: "5"
 
   nginx:
-    image: nginx:alpine
+    image: mirrors.tencent.com/library/nginx:alpine
     restart: unless-stopped
     mem_limit: 128m
     ports:
