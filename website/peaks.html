@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!-- 全球山峰数据库展示页：8000m 巨峰横向轮播与关键指标 -->
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SummitLink · Peaks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
+  </script>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-page="peaks" data-page-title="titles.peaks" class="bg-space font-sans text-white antialiased">
+  <div data-site-header></div>
+  <main class="pt-28">
+    <section class="mx-auto max-w-7xl px-4 py-16" data-reveal>
+      <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="peaks.heroEyebrow"></span>
+      <h1 class="mt-6 font-display text-5xl font-black leading-none md:text-7xl" data-i18n="peaks.heroTitle"></h1>
+      <p class="mt-6 max-w-3xl text-lg leading-8 text-white/65" data-i18n="peaks.heroBody"></p>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 pb-8">
+      <div class="peaks-strip">
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">珠穆朗玛峰</h2><p class="text-sm text-white/50">Mount Everest</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8848.86m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 68%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">K2</h2><p class="text-sm text-white/50">Chhogori</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8611m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 44%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">干城章嘉</h2><p class="text-sm text-white/50">Kangchenjunga</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8586m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 40%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">洛子峰</h2><p class="text-sm text-white/50">Lhotse</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8516m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 52%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">马卡鲁</h2><p class="text-sm text-white/50">Makalu</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8485m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 38%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">卓奥友峰</h2><p class="text-sm text-white/50">Cho Oyu</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8188m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 71%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">道拉吉里 I</h2><p class="text-sm text-white/50">Dhaulagiri I</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8167m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 49%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">马纳斯鲁</h2><p class="text-sm text-white/50">Manaslu</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8163m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 63%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">南迦帕尔巴特</h2><p class="text-sm text-white/50">Nanga Parbat</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8126m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 36%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">安纳普尔纳 I</h2><p class="text-sm text-white/50">Annapurna I</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8091m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 32%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">迦舒布鲁姆 I</h2><p class="text-sm text-white/50">Gasherbrum I</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8080m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 42%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">布洛阿特峰</h2><p class="text-sm text-white/50">Broad Peak</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8051m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 46%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">加舒尔布鲁姆 II</h2><p class="text-sm text-white/50">Gasherbrum II</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8035m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 58%</p></div></article>
+        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">希夏邦马</h2><p class="text-sm text-white/50">Shishapangma</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8027m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 69%</p></div></article>
+      </div>
+    </section>
+  </main>
+  <div data-site-footer></div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
