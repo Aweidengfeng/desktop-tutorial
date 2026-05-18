@@ -898,7 +898,10 @@
           this.guideMap = window.L.map(node, { zoomControl: false }).setView([27.9881, 86.925], 10);
           this.applyGuideLayer(this.guideActiveLayer);
           this._teamMarkers = {};
-          this.refreshTeamLocations();
+          // 加载当前激活探险ID
+          this.loadActiveExpedition().then(() => {
+            this.refreshTeamLocations();
+          });
           // 启动位置上报（每30秒）
           if (this.locationInterval) clearInterval(this.locationInterval);
           this.locationInterval = setInterval(() => this.reportMyLocation(), 30000);
@@ -909,6 +912,21 @@
         } else {
           this.guideMap.invalidateSize();
         }
+      },
+
+      async loadActiveExpedition() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        try {
+          const r = await fetch('/api/platform/expeditions/mine', { headers: { Authorization: 'Bearer ' + token } });
+          if (!r.ok) return;
+          const data = await r.json();
+          const list = Array.isArray(data) ? data : (data.expeditions || []);
+          const active = list.find(e => e.status === 'active') || list.find(e => e.status === 'pending') || list[0];
+          if (active && active.id) {
+            this.currentExpeditionId = active.id;
+          }
+        } catch(e) {}
       },
 
       applyGuideLayer(layerKey) {
@@ -1109,29 +1127,42 @@
           this.toast('当前浏览器不支持离线缓存', 'error');
           return;
         }
-        this.offlineMapDownloading = true;
-        this.toast('开始缓存当前区域地图瓦片…');
+        const MAX_TILES = 500;
         try {
           const bounds = this.guideMap.getBounds();
           const minZoom = 10, maxZoom = 14;
           const layer = this.guideLayerOptions.find(l => l.key === this.guideActiveLayer) || this.guideLayerOptions[0];
           const tileUrls = [];
           for (let z = minZoom; z <= maxZoom; z++) {
-            const minTile = latLngToTile(bounds.getSouth(), bounds.getWest(), z);
-            const maxTile = latLngToTile(bounds.getNorth(), bounds.getEast(), z);
+            const minTile = latLngToTile(Math.max(-85.05, bounds.getSouth()), bounds.getWest(), z);
+            const maxTile = latLngToTile(Math.min(85.05, bounds.getNorth()), bounds.getEast(), z);
             for (let x = minTile.x; x <= maxTile.x; x++) {
               for (let y = maxTile.y; y <= minTile.y; y++) {
                 tileUrls.push(layer.tileUrl.replace('{z}', z).replace('{x}', x).replace('{y}', y));
+                if (tileUrls.length >= MAX_TILES) break;
               }
+              if (tileUrls.length >= MAX_TILES) break;
             }
+            if (tileUrls.length >= MAX_TILES) break;
           }
+          if (tileUrls.length > 200) {
+            if (!confirm(`即将下载 ${tileUrls.length} 个地图瓦片（约 ${Math.round(tileUrls.length * 15 / 1024)} MB），确认继续？`)) return;
+          }
+          this.offlineMapDownloading = true;
+          this.toast(`开始缓存 ${tileUrls.length} 个地图瓦片…`);
           const cache = await caches.open('summitlink-tiles-v1');
           let count = 0;
           const batchSize = 10;
+          const now = String(Date.now());
           for (let i = 0; i < tileUrls.length; i += batchSize) {
             const batch = tileUrls.slice(i, i + batchSize);
             await Promise.allSettled(batch.map(url =>
-              fetch(url).then(r => r.ok ? cache.put(url, r) : null).catch(() => null)
+              fetch(url).then(r => {
+                if (!r.ok) return null;
+                const headers = new Headers(r.headers);
+                headers.set('sw-cached-at', now);
+                return r.blob().then(body => cache.put(url, new Response(body, { status: r.status, statusText: r.statusText, headers })));
+              }).catch(() => null)
             ));
             count += batch.length;
           }
@@ -1144,7 +1175,9 @@
         function latLngToTile(lat, lng, z) {
           const n = Math.pow(2, z);
           const x = Math.floor((lng + 180) / 360 * n);
-          const latRad = lat * Math.PI / 180;
+          // Clamp lat to valid Web Mercator range to avoid tan() overflow
+          const clampedLat = Math.min(85.0511, Math.max(-85.0511, lat));
+          const latRad = clampedLat * Math.PI / 180;
           const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
           return { x, y };
         }

@@ -19,17 +19,20 @@ if [ ! -f "$DB_PATH" ]; then
   exit 0
 fi
 
-# 使用 SQLite 原生备份，避免在 WAL/写入过程中直接复制数据库文件导致备份不一致
-if ! command -v sqlite3 > /dev/null 2>&1; then
-  echo "❌ 未找到 sqlite3，无法执行一致性备份"
-  exit 1
+# 使用 sqlite3 .backup 命令做一致性热备份（WAL 安全，无损坏风险）
+if command -v sqlite3 > /dev/null 2>&1; then
+  sqlite3 "$DB_PATH" ".backup '$BACKUP_FILE'"
+  echo "✅ 备份完成 (sqlite3 .backup): $BACKUP_FILE"
+else
+  # 降级：cp 备份，同时复制 WAL/SHM（若存在）
+  echo "⚠️  sqlite3 未安装，降级为 cp 备份（可能在 WAL 模式下不完整）"
+  cp "$DB_PATH" "$BACKUP_FILE"
+  [ -f "${DB_PATH}-wal" ] && cp "${DB_PATH}-wal" "${BACKUP_FILE}-wal" || true
+  echo "✅ 备份完成 (cp): $BACKUP_FILE"
 fi
 
-sqlite3 "$DB_PATH" ".backup \"$BACKUP_FILE\""
-echo "✅ 备份完成: $BACKUP_FILE"
-
 # 清理7天前的备份文件
-find "$BACKUP_DIR" -name "summitlink_*.db" -mtime +7 -delete
+find "$BACKUP_DIR" -name "summitlink_*.db" -mtime +7 -exec rm -f {} \; 2>/dev/null || true
 echo "🧹 已清理7天前的旧备份"
 
 # COS 上传（若已配置密钥）

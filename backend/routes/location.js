@@ -28,7 +28,7 @@ async function ensureTable() {
         lng REAL,
         expeditionId INTEGER,
         userName TEXT,
-        updatedAt TEXT DEFAULT (datetime('now'))
+        updatedAt TEXT
       )
     `);
   } catch (e) {
@@ -66,6 +66,8 @@ router.post('/update', locationLimiter, auth, async (req, res) => {
 router.get('/team', locationLimiter, auth, async (req, res) => {
   try {
     const { expeditionId } = req.query;
+    // Use JS-computed timestamp for cross-DB compatibility (no SQLite datetime() calls)
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     let members;
     if (expeditionId) {
       members = await prisma.$queryRawUnsafe(`
@@ -73,15 +75,15 @@ router.get('/team', locationLimiter, auth, async (req, res) => {
         FROM user_locations ul
         LEFT JOIN users u ON u.id = ul.userId
         WHERE ul.expeditionId = ?
-          AND ul.updatedAt >= datetime('now', '-5 minutes')
-      `, Number(expeditionId));
+          AND ul.updatedAt >= ?
+      `, Number(expeditionId), fiveMinAgo);
     } else {
-      members = await prisma.$queryRaw`
+      members = await prisma.$queryRawUnsafe(`
         SELECT ul.userId, ul.lat, ul.lng, ul.updatedAt, u.name, u.avatar
         FROM user_locations ul
         LEFT JOIN users u ON u.id = ul.userId
-        WHERE ul.updatedAt >= datetime('now', '-5 minutes')
-      `;
+        WHERE ul.updatedAt >= ?
+      `, fiveMinAgo);
     }
     res.json(members.map(m => ({
       userId: Number(m.userId),

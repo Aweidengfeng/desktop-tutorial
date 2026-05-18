@@ -90,6 +90,7 @@ router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
     const totalClubs = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM clubs`)[0].c);
     const totalBookings = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM bookings`)[0].c);
     const today = new Date().toISOString().slice(0, 10);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     const newUsersToday = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM users WHERE date(created_at) = ${today}`)[0].c);
     const pendingPosts = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM posts WHERE status = 'pending'`)[0].c);
     const pendingGuides = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM guide_applications WHERE status = 'pending'`)[0].c);
@@ -105,7 +106,28 @@ router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
       stripeRevenue = Number(sr.total) || 0;
       stripeTransactions = Number(sr.cnt) || 0;
     } catch(e) { console.warn('admin/stats stripe_payments query failed (non-fatal):', e.message); }
-    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings, pendingSos, pendingWithdrawals, stripeRevenue, stripeTransactions });
+    // Real-time KPI fields (today active users, week revenue, SOS count, avg rating)
+    let activeUsersToday = newUsersToday;
+    let weekRevenue = 0;
+    let sosCount = pendingSos;
+    let avgRating = null;
+    try {
+      const [row] = await prisma.$queryRaw`SELECT COUNT(DISTINCT user_id) as cnt FROM notifications WHERE date(created_at) = ${today}`.catch(() => [{ cnt: 0 }]);
+      activeUsersToday = Number(row?.cnt || 0);
+    } catch(e) {}
+    try {
+      const [row] = await prisma.$queryRaw`SELECT COALESCE(SUM(amount), 0) as total FROM orders WHERE status = 'paid' AND date(created_at) >= ${weekAgo}`.catch(() => [{ total: 0 }]);
+      weekRevenue = Number(row?.total || 0);
+    } catch(e) {}
+    try {
+      const [row] = await prisma.$queryRaw`SELECT COUNT(*) as cnt FROM sos_alerts WHERE date(created_at) >= ${weekAgo}`.catch(() => [{ cnt: 0 }]);
+      sosCount = Number(row?.cnt || 0);
+    } catch(e) {}
+    try {
+      const [row] = await prisma.$queryRaw`SELECT ROUND(AVG(rating), 1) as avg FROM guide_reviews`.catch(() => [{ avg: null }]);
+      avgRating = row?.avg ? Number(row.avg) : null;
+    } catch(e) {}
+    res.json({ totalUsers, totalPosts, totalOrders, totalClubs, totalBookings, newUsersToday, pendingPosts, pendingGuides, pendingBookings, pendingSos, pendingWithdrawals, stripeRevenue, stripeTransactions, activeUsersToday, weekRevenue, sosCount, avgRating });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -1441,42 +1463,6 @@ router.post('/backup', adminWriteLimiter, adminAuth, (req, res) => {
     console.log('[backup] 备份完成:', stdout);
     res.json({ success: true, output: stdout });
   });
-});
-
-// GET /api/admin/stats — 数据看板核心指标（今日活跃用户/本周收入/SOS次数/平均评分）
-router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-
-    const [activeUsersRow] = await prisma.$queryRaw`
-      SELECT COUNT(DISTINCT user_id) as cnt FROM notifications
-      WHERE date(created_at) = ${today}
-    `.catch(() => [{ cnt: 0 }]);
-
-    const [weekRevenueRow] = await prisma.$queryRaw`
-      SELECT COALESCE(SUM(amount), 0) as total FROM orders
-      WHERE status = 'paid' AND date(created_at) >= ${weekAgo}
-    `.catch(() => [{ total: 0 }]);
-
-    const [sosCountRow] = await prisma.$queryRaw`
-      SELECT COUNT(*) as cnt FROM sos_alerts
-      WHERE date(created_at) >= ${weekAgo}
-    `.catch(() => [{ cnt: 0 }]);
-
-    const [avgRatingRow] = await prisma.$queryRaw`
-      SELECT ROUND(AVG(rating), 1) as avg FROM guide_reviews
-    `.catch(() => [{ avg: null }]);
-
-    res.json({
-      activeUsersToday: Number(activeUsersRow?.cnt || 0),
-      weekRevenue: Number(weekRevenueRow?.total || 0),
-      sosCount: Number(sosCountRow?.cnt || 0),
-      avgRating: avgRatingRow?.avg ? Number(avgRatingRow.avg) : null,
-    });
-  } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
-  }
 });
 
 module.exports = router;

@@ -2603,8 +2603,8 @@ function alpineLink() {
     },
     async confirmPayment() {
       try {
-        // 先尝试调用 /api/payments/create-intent
-        const res = await fetch('/api/payments/create-intent', {
+        // 调用 /api/payment/create-intent（后端挂载路径为 /api/payment，单数）
+        const res = await fetch('/api/payment/create-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(this.getAuthHeaders() || {}) },
           body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }),

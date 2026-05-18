@@ -53,7 +53,8 @@ self.addEventListener('fetch', (event) => {
         if (cached) {
           // 在线时后台刷新（stale-while-revalidate）
           const ts = cached.headers.get('sw-cached-at');
-          const age = ts ? Date.now() - Number(ts) : Infinity;
+          // Treat missing header (e.g. tiles pre-fetched by offline button) as fresh (age 0)
+          const age = ts ? Date.now() - Number(ts) : 0;
           if (age > TILE_CACHE_MAX_AGE_MS) {
             fetch(event.request).then(response => {
               if (response.ok) {

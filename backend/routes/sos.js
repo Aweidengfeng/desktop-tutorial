@@ -82,25 +82,29 @@ router.get('/alerts', sosLimiter, adminAuth, listSosAlerts);
 
 // GET /api/sos/active — 过去24小时内的未处理 SOS（管理端轮询用）
 router.get('/active', sosLimiter, adminAuth, async (req, res) => {
+  // Use JS-computed timestamp for cross-DB compatibility (SQLite and PostgreSQL)
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   try {
-    const alerts = await prisma.$queryRaw`
-      SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, status, created_at as createdAt
-      FROM sos_alerts
-      WHERE created_at >= datetime('now', '-24 hours')
-        AND (status IS NULL OR status != 'resolved')
-      ORDER BY created_at DESC
-    `;
+    const alerts = await prisma.$queryRawUnsafe(
+      `SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, status, created_at as createdAt
+       FROM sos_alerts
+       WHERE created_at >= ?
+         AND (status IS NULL OR status != 'resolved')
+       ORDER BY created_at DESC`,
+      since24h
+    );
     res.json({ alerts: alerts.map(a => ({ ...a, userId: Number(a.userId) })), count: alerts.length });
   } catch (e) {
     console.error('[SOS] Active alerts fetch failed:', e);
     // 兼容没有 status 列的旧表
     try {
-      const alerts = await prisma.$queryRaw`
-        SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, created_at as createdAt
-        FROM sos_alerts
-        WHERE created_at >= datetime('now', '-24 hours')
-        ORDER BY created_at DESC
-      `;
+      const alerts = await prisma.$queryRawUnsafe(
+        `SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, created_at as createdAt
+         FROM sos_alerts
+         WHERE created_at >= ?
+         ORDER BY created_at DESC`,
+        since24h
+      );
       res.json({ alerts: alerts.map(a => ({ ...a, userId: Number(a.userId), status: 'pending' })), count: alerts.length });
     } catch (e2) {
       res.status(500).json({ error: '服务器错误' });

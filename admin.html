@@ -2144,7 +2144,10 @@
 
         async pollActiveSos() {
           try {
-            const d = await this.api('GET', '/sos/active');
+            // Use fetch directly to /api/sos/active (not via this.api which prefixes /api/admin)
+            const r = await fetch('/api/sos/active', { credentials: 'include' });
+            if (!r.ok) return;
+            const d = await r.json();
             const alerts = (d.alerts || []);
             const hadAlerts = this.sosBannerVisible;
             const prevCount = this.sosActiveAlerts.filter(a => a.status !== 'resolved').length;
@@ -2155,8 +2158,8 @@
             } else {
               this.sosBannerVisible = false;
             }
-            // Show toast only when a new SOS comes in
-            if (!hadAlerts && newCount > prevCount && newCount > 0) {
+            // Show toast for each new SOS arrival
+            if (newCount > prevCount && newCount > 0) {
               this.showToast(`🆘 收到 ${newCount} 条新 SOS 告警！`, 'error');
             }
           } catch(e) {
@@ -2166,7 +2169,9 @@
 
         async resolveSosAlert(id) {
           try {
-            await this.api('PATCH', `/sos/${id}/resolve`);
+            // Use fetch directly to /api/sos/:id/resolve (not via this.api which prefixes /api/admin)
+            const r = await fetch(`/api/sos/${id}/resolve`, { method: 'PATCH', credentials: 'include' });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || '操作失败');
             const alert = this.sosActiveAlerts.find(a => a.id === id);
             if (alert) alert.status = 'resolved';
             this.showToast('SOS 已标记为已处理');
@@ -2178,23 +2183,18 @@
         async loadStats() {
           this.statsLoading = true;
           try {
-            // Load base stats
+            // Single /stats endpoint now returns both base stats and KPI fields
             const d = await this.api('GET', '/stats');
-            // Also load real-time stats from new endpoint
-            let realtimeStats = {};
-            try {
-              realtimeStats = await this.api('GET', '/admin/stats').catch(() => ({}));
-            } catch(e) {}
             this.statsCards = [
               { icon: '👥', label: '总用户数', value: d.totalUsers },
               { icon: '📝', label: '总帖子数', value: d.totalPosts },
               { icon: '💰', label: '总订单数', value: d.totalOrders },
               { icon: '🏛️', label: '俱乐部数', value: d.totalClubs },
               { icon: '📅', label: '总预约数', value: d.totalBookings },
-              { icon: '🆕', label: '今日活跃用户', value: realtimeStats.activeUsersToday ?? d.newUsersToday },
-              { icon: '💵', label: '本周收入', value: realtimeStats.weekRevenue != null ? `¥${Number(realtimeStats.weekRevenue).toLocaleString()}` : '—', sparkline: '0,24 14,10 28,18 42,8 56,16 70,4 84,12 100,6' },
-              { icon: '🆘', label: '本周SOS次数', value: realtimeStats.sosCount ?? (d.pendingSos ?? 0), sparkline: '0,20 16,16 32,20 48,10 64,18 80,8 100,14' },
-              { icon: '⭐', label: '平均评分', value: realtimeStats.avgRating != null ? realtimeStats.avgRating.toFixed(1) : '—', sparkline: '0,12 16,8 32,10 48,6 64,8 80,4 100,6' },
+              { icon: '🆕', label: '今日活跃用户', value: d.activeUsersToday ?? d.newUsersToday },
+              { icon: '💵', label: '本周收入', value: d.weekRevenue != null ? `¥${Number(d.weekRevenue).toLocaleString()}` : '—', sparkline: '0,24 14,10 28,18 42,8 56,16 70,4 84,12 100,6' },
+              { icon: '🆘', label: '本周SOS次数', value: d.sosCount ?? (d.pendingSos ?? 0), sparkline: '0,20 16,16 32,20 48,10 64,18 80,8 100,14' },
+              { icon: '⭐', label: '平均评分', value: d.avgRating != null ? d.avgRating.toFixed(1) : '—', sparkline: '0,12 16,8 32,10 48,6 64,8 80,4 100,6' },
               { icon: '⏳', label: '待审核帖子', value: d.pendingPosts },
               { icon: '🧭', label: '待审核向导', value: d.pendingGuides },
               { icon: '💸', label: '待处理提现', value: d.pendingWithdrawals ?? 0 },
