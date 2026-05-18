@@ -2510,7 +2510,26 @@
             const d = await r.json();
             if (!r.ok) throw new Error(d.error || '请求失败');
             this.sosRecords = d.alerts || []; this.sosRecordsTotal = d.total || 0;
-            this.sosBannerVisible = this.sosRecords.length > 0;
+
+            const latestSos = this.sosRecords[0];
+            const latestSosMarker = latestSos
+              ? String(
+                  latestSos.id
+                  ?? latestSos.createdAt
+                  ?? latestSos.created_at
+                  ?? latestSos.timestamp
+                  ?? ''
+                )
+              : '';
+            const viewedSosMarkerKey = 'adminLastViewedSosMarker';
+            const lastViewedSosMarker = localStorage.getItem(viewedSosMarkerKey) || '';
+            const hasNewSos = !!latestSosMarker && latestSosMarker !== lastViewedSosMarker;
+
+            // 进入/加载 SOS 列表即视为已查看，避免历史记录导致横幅长期显示。
+            if (latestSosMarker) {
+              localStorage.setItem(viewedSosMarkerKey, latestSosMarker);
+            }
+            this.sosBannerVisible = false;
           } catch(e) { this.showToast(e.message,'error'); } finally { this.sosRecordsLoading = false; }
         },
 
