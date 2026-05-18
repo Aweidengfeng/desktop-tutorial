@@ -72,11 +72,11 @@ async function listSosAlerts(req, res) {
   }
 }
 
-// POST /api/sos  (兼容旧版 /alert)
+// POST /api/sos（新标准端点） + 兼容旧版 /alert
 router.post('/', sosLimiter, createSosAlert);
 router.post('/alert', sosLimiter, createSosAlert);
 
-// GET /api/sos  (兼容旧版 /alerts)
+// GET /api/sos（新标准端点） + 兼容旧版 /alerts
 router.get('/', sosLimiter, adminAuth, listSosAlerts);
 router.get('/alerts', sosLimiter, adminAuth, listSosAlerts);
 

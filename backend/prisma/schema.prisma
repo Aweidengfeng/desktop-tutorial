@@ -982,6 +982,7 @@ model SosEvent {
   lng       Float?
   timestamp DateTime
   createdAt DateTime @default(now()) @map("created_at")
+  // 新版统一 SOS 事件表；历史告警读取仍兼容 SosAlert(sos_alerts)
 
   @@map("sos_events")
 }

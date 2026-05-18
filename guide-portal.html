@@ -226,7 +226,7 @@
             <button @click="switchGuideLayer(layer.key)"
                     class="absolute w-20 h-10 rounded-2xl text-xs font-semibold shadow-lg"
                     :class="guideActiveLayer === layer.key ? 'bg-blue-600 text-white' : 'glass text-slate-200'"
-                    :style="`right:${Math.round(Math.cos((idx+1)*0.5)*74)}px; top:${Math.round(Math.sin((idx+1)*0.5)*52)}px;`"
+                    :style="getGuideLayerButtonStyle(idx)"
                     x-text="layer.label"></button>
           </template>
         </div>
@@ -881,6 +881,14 @@
         this.guideLayerMenuOpen = false;
       },
 
+      getGuideLayerButtonStyle(idx) {
+        const GUIDE_LAYER_ANGLE_STEP = 0.5;
+        const GUIDE_LAYER_RADIUS_X = 74;
+        const GUIDE_LAYER_RADIUS_Y = 52;
+        const angle = (idx + 1) * GUIDE_LAYER_ANGLE_STEP;
+        return `right:${Math.round(Math.cos(angle) * GUIDE_LAYER_RADIUS_X)}px; top:${Math.round(Math.sin(angle) * GUIDE_LAYER_RADIUS_Y)}px;`;
+      },
+
       guideStartTour() { this.guideTourState = 'running'; this.toast('导览已开始'); },
       guidePauseTour() { this.guideTourState = 'paused'; this.toast('导览已暂停', 'error'); },
       guideEndTour() { this.guideTourState = 'ended'; this.toast('导览已结束'); },
@@ -914,7 +922,10 @@
               lat = pos.coords.latitude;
               lng = pos.coords.longitude;
               resolve();
-            }, () => resolve(), { enableHighAccuracy: true, timeout: 8000 });
+            }, () => {
+              this.toast('定位失败，已按空坐标上报 SOS', 'error');
+              resolve();
+            }, { enableHighAccuracy: true, timeout: 8000 });
           });
         }
         const payload = {

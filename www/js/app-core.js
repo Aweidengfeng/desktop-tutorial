@@ -217,6 +217,8 @@ const MAP_LAYER_OPTIONS = [
   { key: '3d', label: '3D', tileUrl: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© CARTO + OSM' },
   { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
 ];
+const OFFLINE_MAP_TICK_INTERVAL = 220;
+const OFFLINE_MAP_PROGRESS_INCREMENT = 10;
 
 async function detectMapProvider() {
   try {
@@ -1573,7 +1575,10 @@ function alpineLink() {
     },
 
     openExpeditionDetail(item) {
-      if (!item || !item.id) return;
+      if (!item || !item.id) {
+        this.showToast('探险详情暂不可用', 'warning');
+        return;
+      }
       window.location.href = `/expedition-detail.html?id=${encodeURIComponent(item.id)}`;
     },
 
@@ -1602,13 +1607,13 @@ function alpineLink() {
       this.showOfflineMapModal = true;
       this.offlineMapProgress = 0;
       this.offlineMapTimer = setInterval(() => {
-        this.offlineMapProgress = Math.min(100, this.offlineMapProgress + 10);
+        this.offlineMapProgress = Math.min(100, this.offlineMapProgress + OFFLINE_MAP_PROGRESS_INCREMENT);
         if (this.offlineMapProgress >= 100) {
           clearInterval(this.offlineMapTimer);
           this.offlineMapTimer = null;
           this.showToast('离线地图已下载，可在无网环境使用');
         }
-      }, 220);
+      }, OFFLINE_MAP_TICK_INTERVAL);
     },
 
     closeOfflineMapModal() {
