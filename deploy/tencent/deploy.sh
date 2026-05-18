@@ -46,7 +46,7 @@ cp deploy/tencent/nginx.conf nginx.conf
 
 # 拉取最新镜像
 log "▶ 拉取依赖镜像..."
-docker compose pull --quiet 2>&1 | tee -a "$LOG_FILE" || true
+docker compose pull postgres nginx --quiet 2>&1 | tee -a "$LOG_FILE" || true
 
 # 重建并启动
 log "▶ docker compose up -d --build..."

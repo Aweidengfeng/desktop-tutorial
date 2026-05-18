@@ -2,16 +2,14 @@
 # 腾讯云上海 (ap-shanghai) | 2核 4GB | TencentOS Server 3.3
 # 内存限制: postgres 共享缓冲 512MB, Node.js heap 1024MB
 
-version: '3.9'
-
 services:
   backend:
     build:
-      # Relative build paths assume this compose file has first been copied to the deploy root
-      # by CI/deploy scripts. Running `docker compose -f deploy/tencent/docker-compose.yml ...`
-      # in-place will resolve `./backend` relative to `deploy/tencent/` and fail.
+      # 此 compose 预期先复制到 /opt/summitlink/docker-compose.yml 再执行（见 deploy.sh/workflow）
+      # context = backend 目录（compose 文件位于 /opt/summitlink/ 时，backend/ 就在同级）
       context: ./backend
-      dockerfile: ./deploy/tencent/Dockerfile.backend
+      # Dockerfile 路径相对于 context（./backend）解析
+      dockerfile: ../deploy/tencent/Dockerfile.backend
     image: summitlink-backend:cn
     restart: unless-stopped
     mem_limit: 1.5g
