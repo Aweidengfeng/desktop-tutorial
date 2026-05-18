@@ -43,7 +43,6 @@ fi
 log "▶ 复制 tencent 专用配置..."
 cp deploy/tencent/docker-compose.yml docker-compose.yml
 cp deploy/tencent/nginx.conf nginx.conf
-cp deploy/tencent/Dockerfile.backend backend/Dockerfile.backend
 
 # 拉取最新镜像
 log "▶ 拉取依赖镜像..."

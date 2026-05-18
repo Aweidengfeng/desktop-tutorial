@@ -5,9 +5,10 @@
 services:
   backend:
     build:
-      # context = backend 目录（compose 文件被 CI 复制到 /opt/summitlink/ 后，backend/ 就在同级）
+      # context = backend 目录（compose 文件被复制到 /opt/summitlink/ 后，backend/ 就在同级）
       context: ./backend
-      dockerfile: Dockerfile.backend
+      # Dockerfile 路径相对于 context（./backend）解析
+      dockerfile: ../deploy/tencent/Dockerfile.backend
     image: summitlink-backend:cn
     restart: unless-stopped
     mem_limit: 1.5g

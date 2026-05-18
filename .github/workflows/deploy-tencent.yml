@@ -69,9 +69,7 @@ jobs:
               echo "⚠️  .env created from .env.example — please fill in real secrets!"
             fi
 
-            # Pull latest images and rebuild
-            # Copy Dockerfile into backend dir so compose build context can find it
-            cp deploy/tencent/Dockerfile.backend backend/Dockerfile.backend
+            # Pull latest dependency images and rebuild
             docker compose pull postgres nginx --quiet || true
             docker compose up -d --build --remove-orphans
 
