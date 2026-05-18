@@ -19,8 +19,13 @@ if [ ! -f "$DB_PATH" ]; then
   exit 0
 fi
 
-# 复制数据库文件
-cp "$DB_PATH" "$BACKUP_FILE"
+# 使用 SQLite 原生备份，避免在 WAL/写入过程中直接复制数据库文件导致备份不一致
+if ! command -v sqlite3 > /dev/null 2>&1; then
+  echo "❌ 未找到 sqlite3，无法执行一致性备份"
+  exit 1
+fi
+
+sqlite3 "$DB_PATH" ".backup \"$BACKUP_FILE\""
 echo "✅ 备份完成: $BACKUP_FILE"
 
 # 清理7天前的备份文件
