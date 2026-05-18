@@ -399,6 +399,16 @@ CREATE TABLE IF NOT EXISTS sos_records (
   message TEXT,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS sos_alerts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  lat REAL,
+  lng REAL,
+  timestamp DATETIME,
+  phone TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // 新模块：离线远征、攀登日志、装备清单、AI教练

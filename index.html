@@ -1767,7 +1767,7 @@
         </div>
 
         <!-- Emergency SOS text button -->
-        <button @click="showSOSConfirm=true" class="w-full glass rounded-2xl py-3 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-3 flex items-center justify-center gap-2">
+        <button @click="startSOSCountdown()" class="w-full glass rounded-2xl py-3 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-3 flex items-center justify-center gap-2">
           <span class="material-symbols-outlined text-base">emergency</span>紧急求救
         </button>
 
@@ -5079,7 +5079,7 @@
   <!-- SOS button - fixed right center -->
   <button
     x-show="currentPage === 'home' || currentPage === 'track'"
-    @click="showSOSConfirm = true"
+    @click="startSOSCountdown()"
     class="fixed right-3 z-40 w-10 h-10 bg-red-600 rounded-full flex items-center justify-center shadow-lg pulse-red"
     style="top: 50%; transform: translateY(-50%); max-width: none;">
     <span class="text-white text-xs font-bold">SOS</span>
@@ -5566,12 +5566,10 @@
        x-transition:leave-end="opacity-0 scale-95"
        class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="max-width:430px;margin:0 auto;">
     <div class="bg-slate-800 rounded-2xl p-5 mx-6 text-center">
-      <p class="text-red-400 font-bold text-lg mb-2">🆘 确认发送紧急求救？</p>
-      <p class="text-slate-400 text-sm mb-4">此操作将向救援中心发送您的GPS位置</p>
-      <div class="flex gap-3">
-        <button @click="showSOSConfirm=false" class="flex-1 bg-slate-700 text-white rounded-xl py-2.5 font-semibold">取消</button>
-        <button @click="showSOSConfirm=false;showSOS=true" class="flex-1 bg-red-600 text-white rounded-xl py-2.5 font-semibold">确认求救</button>
-      </div>
+      <p class="text-red-400 font-bold text-lg mb-2">🆘 紧急求救倒计时</p>
+      <p class="text-slate-400 text-sm mb-1">将在 <span class="text-white font-semibold" x-text="sosCountdown"></span> 秒后自动拨号并上报定位</p>
+      <p class="text-slate-500 text-xs mb-4">目标号码：<span x-text="getSosDialNumber()"></span></p>
+      <button @click="cancelSOSCountdown()" class="w-full bg-slate-700 text-white rounded-xl py-2.5 font-semibold">取消</button>
     </div>
   </div>
 
