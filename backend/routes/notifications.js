@@ -82,4 +82,18 @@ router.post('/:id/read', notifLimiter, auth, async (req, res) => {
   }
 });
 
+// GET /api/notifications/unread — 返回当前用户未读通知列表（需JWT）
+router.get('/unread', notifLimiter, auth, async (req, res) => {
+  try {
+    const notifications = await prisma.$queryRaw`
+      SELECT id, type, content, title, body, link, related_id, is_read, read_at, created_at
+      FROM notifications WHERE user_id = ${req.user.id} AND is_read = 0
+      ORDER BY created_at DESC LIMIT 20
+    `;
+    res.json(notifications);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;

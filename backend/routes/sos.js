@@ -80,4 +80,52 @@ router.post('/alert', sosLimiter, createSosAlert);
 router.get('/', sosLimiter, adminAuth, listSosAlerts);
 router.get('/alerts', sosLimiter, adminAuth, listSosAlerts);
 
+// GET /api/sos/active — 过去24小时内的未处理 SOS（管理端轮询用）
+router.get('/active', sosLimiter, adminAuth, async (req, res) => {
+  try {
+    const alerts = await prisma.$queryRaw`
+      SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, status, created_at as createdAt
+      FROM sos_alerts
+      WHERE created_at >= datetime('now', '-24 hours')
+        AND (status IS NULL OR status != 'resolved')
+      ORDER BY created_at DESC
+    `;
+    res.json({ alerts: alerts.map(a => ({ ...a, userId: Number(a.userId) })), count: alerts.length });
+  } catch (e) {
+    console.error('[SOS] Active alerts fetch failed:', e);
+    // 兼容没有 status 列的旧表
+    try {
+      const alerts = await prisma.$queryRaw`
+        SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, created_at as createdAt
+        FROM sos_alerts
+        WHERE created_at >= datetime('now', '-24 hours')
+        ORDER BY created_at DESC
+      `;
+      res.json({ alerts: alerts.map(a => ({ ...a, userId: Number(a.userId), status: 'pending' })), count: alerts.length });
+    } catch (e2) {
+      res.status(500).json({ error: '服务器错误' });
+    }
+  }
+});
+
+// PATCH /api/sos/:id/resolve — 管理员标记 SOS 已处理
+router.patch('/:id/resolve', sosLimiter, adminAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    // 尝试更新 status 字段（若列不存在则降级）
+    try {
+      await prisma.$executeRaw`UPDATE sos_alerts SET status = 'resolved' WHERE id = ${id}`;
+    } catch (e) {
+      // 若列不存在，尝试建列后重试
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TABLE sos_alerts ADD COLUMN status TEXT DEFAULT 'pending'`);
+        await prisma.$executeRaw`UPDATE sos_alerts SET status = 'resolved' WHERE id = ${id}`;
+      } catch (e2) { /* 忽略 */ }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;

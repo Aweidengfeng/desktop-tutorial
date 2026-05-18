@@ -328,6 +328,7 @@ app.use('/api/group-chats', require('./routes/groupChats'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/location-share', require('./routes/locationShare'));
+app.use('/api/location', require('./routes/location'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/articles', require('./routes/articles'));
 app.use('/api/profile', require('./routes/profile'));
@@ -398,6 +399,26 @@ if (stripeStatus.degraded) {
 }
 console.log(`Sentry: ${sentryStatus}`);
 console.log('====================================================');
+
+// 环境变量缺失时的优雅降级警告（不 throw，继续启动）
+const startupWarnings = [];
+if (!process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_DISABLED) {
+  startupWarnings.push('⚠️  STRIPE_SECRET_KEY 未配置，支付为演示模式');
+}
+if (!process.env.SENTRY_DSN) {
+  startupWarnings.push('⚠️  SENTRY_DSN 未配置，错误监控已禁用');
+}
+if (!process.env.MAPBOX_TOKEN) {
+  startupWarnings.push('⚠️  MAPBOX_TOKEN 未配置，地图使用 OpenStreetMap');
+}
+if (!process.env.TENCENT_COS_SECRET_ID && !process.env.COS_SECRET_ID) {
+  startupWarnings.push('⚠️  COS 未配置，图片存储使用本地 Volume');
+}
+if (startupWarnings.length > 0) {
+  console.log('--- 降级模式提示 ---');
+  startupWarnings.forEach(w => console.warn(w));
+  console.log('--------------------');
+}
 
 // Deep link handlers (email verification, password reset)
 // These routes are also intercepted by iOS Universal Links / Android App Links

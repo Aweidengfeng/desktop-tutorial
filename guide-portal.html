@@ -203,18 +203,19 @@
       </template>
     </div>
 
-    <!-- 地图指挥页 -->
+      <!-- 地图指挥页 -->
     <div x-show="page === 'map' && certStatus.certified" class="fixed inset-0 z-[45] bg-slate-950" style="padding-top:var(--safe-top);padding-bottom:var(--safe-bottom);padding-left:var(--safe-left);padding-right:var(--safe-right);">
       <div id="guide-map" class="absolute inset-0"></div>
       <div class="absolute left-4 top-4 glass rounded-2xl px-4 py-3">
         <p class="text-xs text-slate-300">当前轨迹</p>
         <p class="text-sm font-semibold text-white" x-text="guideTrackName"></p>
+        <p class="text-xs mt-1" :class="guideTourState === 'running' ? 'text-emerald-400' : guideTourState === 'paused' ? 'text-amber-400' : 'text-slate-400'" x-text="guideTourState === 'running' ? '● 导览进行中' : guideTourState === 'paused' ? '⏸ 已暂停' : guideTourState === 'ended' ? '✓ 已结束' : '待开始'"></p>
       </div>
 
       <div class="absolute left-1/2 -translate-x-1/2 top-4 flex gap-3">
-        <button @click="guideStartTour()" class="w-14 h-14 rounded-full bg-emerald-500 text-white text-xl shadow-xl">▶</button>
-        <button @click="guidePauseTour()" class="w-14 h-14 rounded-full bg-amber-500 text-white text-xl shadow-xl">⏸</button>
-        <button @click="guideEndTour()" class="w-14 h-14 rounded-full bg-rose-600 text-white text-xl shadow-xl">⏹</button>
+        <button @click="guideStartTour()" :disabled="guideTourLoading" :class="guideTourState === 'running' ? 'opacity-50' : ''" class="w-14 h-14 rounded-full bg-emerald-500 text-white text-xl shadow-xl disabled:opacity-40">▶</button>
+        <button @click="guidePauseTour()" :disabled="guideTourLoading" :class="guideTourState !== 'running' ? 'opacity-50' : ''" class="w-14 h-14 rounded-full bg-amber-500 text-white text-xl shadow-xl disabled:opacity-40">⏸</button>
+        <button @click="guideEndTour()" :disabled="guideTourLoading" :class="guideTourState === 'ended' ? 'opacity-50' : ''" class="w-14 h-14 rounded-full bg-rose-600 text-white text-xl shadow-xl disabled:opacity-40">⏹</button>
       </div>
 
       <button @click="startGuideSOSCountdown()" class="absolute right-4 top-4 w-14 h-14 rounded-full bg-red-600 text-white font-bold shadow-2xl">SOS</button>
@@ -230,6 +231,13 @@
                     x-text="layer.label"></button>
           </template>
         </div>
+        <!-- 下载离线地图按钮 -->
+        <button data-testid="offline-map-btn" @click="downloadOfflineTiles()"
+                :disabled="offlineMapDownloading"
+                class="w-12 h-12 rounded-2xl glass text-white text-xl disabled:opacity-50"
+                :title="offlineMapDownloading ? '正在缓存…' : '下载当前区域地图'">
+          <span x-text="offlineMapDownloading ? '⏳' : '📥'"></span>
+        </button>
       </div>
 
       <div class="absolute left-0 right-0 bottom-0">
@@ -238,16 +246,16 @@
              :style="guideMemberDrawerOpen ? '' : 'height:48px;overflow:hidden;'">
           <div>
             <p class="text-xs text-slate-300">团队成员位置</p>
-            <p class="text-sm text-white font-semibold" x-text="guideTeamMembers.length + ' 人在线协作'"></p>
+            <p class="text-sm text-white font-semibold" x-text="guideTeamMembers.filter(m=>m.online).length + ' 人在线协作'"></p>
           </div>
           <span class="text-slate-300" x-text="guideMemberDrawerOpen ? '收起' : '上滑'"></span>
         </div>
         <div x-show="guideMemberDrawerOpen" class="glass px-4 pb-4 max-h-60 overflow-y-auto">
-          <template x-for="member in guideTeamMembers" :key="member.id">
+          <template x-for="member in guideTeamMembers" :key="member.userId || member.id">
             <div class="py-3 border-b border-white/10 flex items-center justify-between">
               <div>
                 <p class="text-sm text-white" x-text="member.name"></p>
-                <p class="text-xs text-slate-300" x-text="member.position"></p>
+                <p class="text-xs text-slate-300" x-text="member.position || (member.lat ? member.lat.toFixed(4) + ', ' + member.lng.toFixed(4) : '位置未知')"></p>
               </div>
               <span class="text-xs px-2 py-1 rounded-full" :class="member.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-500/20 text-slate-300'" x-text="member.online ? '在线' : '离线'"></span>
             </div>
@@ -540,6 +548,29 @@
 
     <!-- 商业资质申请页 -->
     <div x-show="page === 'commercial' && certStatus.certified">
+      <!-- 资质状态卡片 -->
+      <div class="glass rounded-2xl p-5 mb-4" x-show="commercialStatus">
+        <h3 class="text-sm font-semibold text-slate-300 mb-3">📋 当前资质状态</h3>
+        <div x-show="commercialStatus?.status === 'pending'" class="flex items-center gap-3 py-2 px-3 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
+          <span class="text-xl">⏳</span>
+          <div><p class="text-sm font-semibold text-yellow-300">待审核</p><p class="text-xs text-slate-400">材料已提交，预计3-7个工作日审核</p></div>
+        </div>
+        <div x-show="commercialStatus?.status === 'approved'" class="flex items-center gap-3 py-2 px-3 bg-green-500/10 rounded-xl border border-green-500/20">
+          <span class="text-xl">✅</span>
+          <div><p class="text-sm font-semibold text-green-300">已通过</p><p class="text-xs text-slate-400">商业资质审核已通过，可发布付费服务</p></div>
+        </div>
+        <div x-show="commercialStatus?.status === 'rejected'" class="flex items-center gap-3 py-2 px-3 bg-red-500/10 rounded-xl border border-red-500/20">
+          <span class="text-xl">❌</span>
+          <div><p class="text-sm font-semibold text-red-300">已驳回</p><p class="text-xs text-slate-400 mt-0.5" x-show="commercialStatus?.reject_reason" x-text="'驳回原因：' + commercialStatus?.reject_reason"></p></div>
+        </div>
+        <div x-show="commercialStatus?.status === 'need_info'" class="flex items-center gap-3 py-2 px-3 bg-orange-500/10 rounded-xl border border-orange-500/20">
+          <span class="text-xl">📎</span>
+          <div>
+            <p class="text-sm font-semibold text-orange-300">需补充材料</p>
+            <p class="text-xs text-slate-400 mt-0.5" x-show="commercialStatus?.need_info_reason" x-text="commercialStatus?.need_info_reason"></p>
+          </div>
+        </div>
+      </div>
       <div class="glass rounded-2xl p-6">
         <h2 class="text-lg font-bold mb-5">🏆 商业资质申请</h2>
         <p class="text-slate-400 text-sm mb-5">上传商业运营所需的资质证件，审核通过后可发布收费服务。</p>
@@ -843,12 +874,20 @@
       // Dashboard
       dashboardData: null, dashboardLoading: false,
 
+      offlineMapDownloading: false,
+      guideTourLoading: false,
+      currentExpeditionId: null,
+      locationInterval: null,
+      teamInterval: null,
+      commercialStatus: null,
+
       selectGuideTab(nextPage) {
         this.page = nextPage;
         if (nextPage === 'map') this.$nextTick(() => this.initGuideMap());
         if (nextPage === 'routes') this.loadPlatformRoutes();
         if (nextPage === 'finance') this.loadFinanceData();
         if (nextPage === 'dashboard') this.loadDashboardData();
+        if (nextPage === 'commercial') this.loadCommercialStatus();
       },
 
       initGuideMap() {
@@ -858,13 +897,15 @@
           if (!node) return;
           this.guideMap = window.L.map(node, { zoomControl: false }).setView([27.9881, 86.925], 10);
           this.applyGuideLayer(this.guideActiveLayer);
-          this.guideTeamMembers.forEach((member, idx) => {
-            const lat = 27.94 + idx * 0.03;
-            const lng = 86.82 + idx * 0.04;
-            const color = member.online ? '#22c55e' : '#94a3b8';
-            const marker = window.L.circleMarker([lat, lng], { radius: 8, color, fillColor: color, fillOpacity: 0.9 }).addTo(this.guideMap);
-            marker.bindPopup(`${member.name}<br>${member.position}`);
-          });
+          this._teamMarkers = {};
+          this.refreshTeamLocations();
+          // 启动位置上报（每30秒）
+          if (this.locationInterval) clearInterval(this.locationInterval);
+          this.locationInterval = setInterval(() => this.reportMyLocation(), 30000);
+          this.reportMyLocation();
+          // 启动团队位置刷新（每15秒）
+          if (this.teamInterval) clearInterval(this.teamInterval);
+          this.teamInterval = setInterval(() => this.refreshTeamLocations(), 15000);
         } else {
           this.guideMap.invalidateSize();
         }
@@ -890,9 +931,51 @@
         return `right:${Math.round(Math.cos(angle) * this.guideLayerRadiusX)}px; top:${Math.round(Math.sin(angle) * this.guideLayerRadiusY)}px;`;
       },
 
-      guideStartTour() { this.guideTourState = 'running'; this.toast('导览已开始'); },
-      guidePauseTour() { this.guideTourState = 'paused'; this.toast('导览已暂停', 'error'); },
-      guideEndTour() { this.guideTourState = 'ended'; this.toast('导览已结束'); },
+      guideStartTour() {
+        if (this.guideTourLoading) return;
+        this.guideTourLoading = true;
+        const token = this.getAuthToken();
+        const expId = this.currentExpeditionId;
+        if (expId && token) {
+          fetch(`/api/expeditions/${expId}/start`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+            .then(r => r.json()).catch(() => ({}))
+            .finally(() => { this.guideTourLoading = false; });
+        } else {
+          this.guideTourLoading = false;
+        }
+        this.guideTourState = 'running';
+        this.toast('导览已开始');
+      },
+      guidePauseTour() {
+        if (this.guideTourLoading) return;
+        this.guideTourLoading = true;
+        const token = this.getAuthToken();
+        const expId = this.currentExpeditionId;
+        if (expId && token) {
+          fetch(`/api/expeditions/${expId}/pause`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+            .then(r => r.json()).catch(() => ({}))
+            .finally(() => { this.guideTourLoading = false; });
+        } else {
+          this.guideTourLoading = false;
+        }
+        this.guideTourState = 'paused';
+        this.toast('导览已暂停', 'error');
+      },
+      guideEndTour() {
+        if (this.guideTourLoading) return;
+        this.guideTourLoading = true;
+        const token = this.getAuthToken();
+        const expId = this.currentExpeditionId;
+        if (expId && token) {
+          fetch(`/api/expeditions/${expId}/complete`, { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+            .then(r => r.json()).catch(() => ({}))
+            .finally(() => { this.guideTourLoading = false; });
+        } else {
+          this.guideTourLoading = false;
+        }
+        this.guideTourState = 'ended';
+        this.toast('导览已结束');
+      },
 
       startGuideSOSCountdown() {
         this.cancelGuideSOSCountdown(false);
@@ -972,6 +1055,118 @@
         await this.loadLevels();
         await this.checkAuth();
         this.loading = false;
+      },
+
+      async reportMyLocation() {
+        const token = this.getAuthToken();
+        if (!token || !navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(pos => {
+          fetch('/api/location/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              expeditionId: this.currentExpeditionId || null,
+            }),
+          }).catch(() => {});
+        }, () => {}, { enableHighAccuracy: false, timeout: 10000 });
+      },
+
+      async refreshTeamLocations() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        try {
+          const url = this.currentExpeditionId
+            ? `/api/location/team?expeditionId=${this.currentExpeditionId}`
+            : '/api/location/team';
+          const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+          if (!r.ok) return;
+          const members = await r.json();
+          if (Array.isArray(members) && members.length > 0) {
+            this.guideTeamMembers = members;
+          }
+          // Update map markers
+          if (this.guideMap && window.L) {
+            if (!this._teamMarkers) this._teamMarkers = {};
+            members.forEach(m => {
+              const color = m.online ? '#22c55e' : '#94a3b8';
+              if (this._teamMarkers[m.userId]) {
+                this._teamMarkers[m.userId].setLatLng([m.lat, m.lng]);
+                this._teamMarkers[m.userId].setStyle({ color, fillColor: color });
+              } else {
+                const marker = window.L.circleMarker([m.lat, m.lng], { radius: 8, color, fillColor: color, fillOpacity: 0.9 }).addTo(this.guideMap);
+                marker.bindPopup(`${m.name}`);
+                this._teamMarkers[m.userId] = marker;
+              }
+            });
+          }
+        } catch(e) {}
+      },
+
+      async downloadOfflineTiles() {
+        if (!this.guideMap || !('caches' in window)) {
+          this.toast('当前浏览器不支持离线缓存', 'error');
+          return;
+        }
+        this.offlineMapDownloading = true;
+        this.toast('开始缓存当前区域地图瓦片…');
+        try {
+          const bounds = this.guideMap.getBounds();
+          const minZoom = 10, maxZoom = 14;
+          const layer = this.guideLayerOptions.find(l => l.key === this.guideActiveLayer) || this.guideLayerOptions[0];
+          const tileUrls = [];
+          for (let z = minZoom; z <= maxZoom; z++) {
+            const minTile = latLngToTile(bounds.getSouth(), bounds.getWest(), z);
+            const maxTile = latLngToTile(bounds.getNorth(), bounds.getEast(), z);
+            for (let x = minTile.x; x <= maxTile.x; x++) {
+              for (let y = maxTile.y; y <= minTile.y; y++) {
+                tileUrls.push(layer.tileUrl.replace('{z}', z).replace('{x}', x).replace('{y}', y));
+              }
+            }
+          }
+          const cache = await caches.open('summitlink-tiles-v1');
+          let count = 0;
+          const batchSize = 10;
+          for (let i = 0; i < tileUrls.length; i += batchSize) {
+            const batch = tileUrls.slice(i, i + batchSize);
+            await Promise.allSettled(batch.map(url =>
+              fetch(url).then(r => r.ok ? cache.put(url, r) : null).catch(() => null)
+            ));
+            count += batch.length;
+          }
+          this.toast(`✅ 已缓存 ${tileUrls.length} 个地图瓦片`);
+        } catch(e) {
+          this.toast('地图缓存失败：' + e.message, 'error');
+        }
+        this.offlineMapDownloading = false;
+
+        function latLngToTile(lat, lng, z) {
+          const n = Math.pow(2, z);
+          const x = Math.floor((lng + 180) / 360 * n);
+          const latRad = lat * Math.PI / 180;
+          const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+          return { x, y };
+        }
+      },
+
+      async loadCommercialStatus() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        try {
+          const r = await fetch('/api/guides/my-qualification', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            this.commercialStatus = await r.json();
+          } else {
+            // 降级到 certStatus.guide 字段
+            if (this.certStatus.guide) {
+              this.commercialStatus = {
+                status: this.certStatus.guide.commercial_status || null,
+                reject_reason: this.certStatus.guide.commercial_reject_reason || null,
+              };
+            }
+          }
+        } catch(e) {}
       },
 
       getAuthToken() {

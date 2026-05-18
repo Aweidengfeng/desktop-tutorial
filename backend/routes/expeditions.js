@@ -515,4 +515,55 @@ router.get('/:id/moments', async (req, res) => {
   }
 });
 
+// POST /api/expeditions/:id/start — 向导开始导览
+router.post('/:id/start', auth, async (req, res) => {
+  try {
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId}`;
+    if (!expedition) return res.status(404).json({ error: '探险不存在' });
+    const publisher = await getPublisher(req.user.id);
+    if (!publisher || !(expedition.publisher_type === publisher.type && expedition.publisher_id === publisher.id)) {
+      return res.status(403).json({ error: '无权操作此探险' });
+    }
+    await prisma.$executeRaw`UPDATE expeditions SET status = 'active', updated_at = ${new Date().toISOString()} WHERE id = ${expId}`;
+    res.json({ success: true, status: 'active' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/expeditions/:id/pause — 向导暂停导览
+router.post('/:id/pause', auth, async (req, res) => {
+  try {
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId}`;
+    if (!expedition) return res.status(404).json({ error: '探险不存在' });
+    const publisher = await getPublisher(req.user.id);
+    if (!publisher || !(expedition.publisher_type === publisher.type && expedition.publisher_id === publisher.id)) {
+      return res.status(403).json({ error: '无权操作此探险' });
+    }
+    await prisma.$executeRaw`UPDATE expeditions SET status = 'paused', updated_at = ${new Date().toISOString()} WHERE id = ${expId}`;
+    res.json({ success: true, status: 'paused' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/expeditions/:id/complete — 向导结束导览
+router.post('/:id/complete', auth, async (req, res) => {
+  try {
+    const expId = parseInt(req.params.id);
+    const [expedition] = await prisma.$queryRaw`SELECT * FROM expeditions WHERE id = ${expId}`;
+    if (!expedition) return res.status(404).json({ error: '探险不存在' });
+    const publisher = await getPublisher(req.user.id);
+    if (!publisher || !(expedition.publisher_type === publisher.type && expedition.publisher_id === publisher.id)) {
+      return res.status(403).json({ error: '无权操作此探险' });
+    }
+    await prisma.$executeRaw`UPDATE expeditions SET status = 'completed', updated_at = ${new Date().toISOString()} WHERE id = ${expId}`;
+    res.json({ success: true, status: 'completed' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;

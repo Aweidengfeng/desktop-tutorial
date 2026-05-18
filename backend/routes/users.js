@@ -411,5 +411,35 @@ router.get('/:id/posts', usersReadLimiter, async (req, res) => {
   }
 });
 
+// GET /api/users/me/stats — 当前用户统计数据（需JWT）
+router.get('/me/stats', usersReadLimiter, auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // 探险次数：expedition_participants + expedition_orders 聚合
+    const [epRow] = await prisma.$queryRaw`
+      SELECT COUNT(*) as cnt FROM expedition_orders WHERE user_id = ${userId} AND status IN ('paid', 'completed')
+    `.catch(() => [{ cnt: 0 }]);
+    const expeditionCount = Number(epRow?.cnt || 0);
+
+    // 轨迹总里程
+    const [trackRow] = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(distance_km), 0) as total_km, COUNT(*) as track_count
+      FROM tracks WHERE user_id = ${userId}
+    `.catch(() => [{ total_km: 0, track_count: 0 }]);
+    const totalKm = Math.round(Number(trackRow?.total_km || 0) * 10) / 10;
+    const trackCount = Number(trackRow?.track_count || 0);
+
+    // 攀登天数：从轨迹表统计唯一日期数
+    const [dayRow] = await prisma.$queryRaw`
+      SELECT COUNT(DISTINCT date(date)) as days FROM tracks WHERE user_id = ${userId}
+    `.catch(() => [{ days: 0 }]);
+    const climbingDays = Number(dayRow?.days || 0);
+
+    res.json({ expeditionCount, totalKm, climbingDays, trackCount });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;
 
