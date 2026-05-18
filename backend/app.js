@@ -197,22 +197,9 @@ if (!process.env.API_BASE) {
 const { mountUniversalLinks } = require('./middleware/universalLinks');
 mountUniversalLinks(app);
 
-// 静态文件服务 - 根目录
-app.use(express.static(rootPath));
-// 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
-// 因此显式映射 `/js` → `<rootPath>/www/js`，避免 404 导致整个 SPA 加载失败。
-app.use('/js', express.static(path.join(rootPath, 'www', 'js')));
-
-// 上传文件静态服务（支持 UPLOADS_DIR 环境变量覆盖路径）
-const uploadsPath = process.env.UPLOADS_DIR
-  ? path.resolve(process.env.UPLOADS_DIR)
-  : path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
-app.use('/uploads', express.static(uploadsPath));
-
 // 专门处理HTML文件路由（避免中文文件名问题）
 const htmlFile = path.join(rootPath, 'index.html');
-app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
+const renderMainPage = (req, res) => {
   console.log('📄 请求HTML文件:', htmlFile);
   console.log('📄 文件存在:', fs.existsSync(htmlFile));
   const amapKey = process.env.AMAP_KEY || '';
@@ -232,7 +219,9 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
   <script>
     window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)};
     window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};
-    window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}
+    window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};
+    window.__AMAP_KEY__ = ${JSON.stringify(amapKey)};
+    window.__AMAP_SECURITY_CODE__ = ${JSON.stringify(amapSecurityCode)};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}
   </script>`;
     result = result.replace('<head>', injected);
     // 在 AMap script 标签之前注入安全密钥配置（高德官方要求：必须先于 AMap JS 加载）
@@ -260,9 +249,25 @@ app.get(['/summitlink', '/summitlink.html'], htmlPageLimiter, (req, res) => {
       result = result.replace('</head>', warningScript + '\n</head>');
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
     res.send(result);
   });
-});
+};
+// 根路径和 SummitLink 入口都走动态注入逻辑，避免 express.static 直接返回未替换占位符
+app.get(['/', '/index.html', '/summitlink', '/summitlink.html'], htmlPageLimiter, renderMainPage);
+
+// 静态文件服务 - 根目录（必须放在根路径 HTML 注入路由之后）
+app.use(express.static(rootPath));
+// 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
+// 因此显式映射 `/js` → `<rootPath>/www/js`，避免 404 导致整个 SPA 加载失败。
+app.use('/js', express.static(path.join(rootPath, 'www', 'js')));
+
+// 上传文件静态服务（支持 UPLOADS_DIR 环境变量覆盖路径）
+const uploadsPath = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
+app.use('/uploads', express.static(uploadsPath));
 
 // PostgreSQL 模式：在路由挂载前检查 Prisma 连接
 if (process.env.DATABASE_PROVIDER === 'postgresql') {

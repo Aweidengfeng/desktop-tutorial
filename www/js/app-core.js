@@ -208,7 +208,7 @@ async function idbUpdateTrackStatus(id, status, retries) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Phase 2.5: 地图引擎检测与 Mapbox 懒加载 ────────────────────────────────
+// ─── Phase 2.5: 地图引擎检测与 SDK 懒加载 ────────────────────────────────────
 window.__activeMapProvider = 'amap';
 const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
 const MAP_LAYER_OPTIONS = [
@@ -237,10 +237,51 @@ async function detectMapProvider() {
           attribution: data.attribution || '© OpenStreetMap contributors',
         };
       }
+      const amapKey = data.amapKey || '';
+      const amapSecurityCode = data.amapSecurityCode || '';
+      window.__activeMapProvider = 'amap';
+      if (amapKey) {
+        try {
+          await loadAMap(amapKey, amapSecurityCode);
+        } catch (e) {
+          console.warn('[SummitLink] AMap 动态加载失败:', e && e.message ? e.message : e);
+        }
+      } else {
+        console.warn('[SummitLink] /api/config/map 返回 amap 但未提供 amapKey');
+      }
+      return { provider: 'amap', amapKey };
     }
   } catch (e) {}
   window.__activeMapProvider = 'amap';
+  console.warn('[SummitLink] 无法获取地图配置，地图功能不可用');
   return { provider: 'amap' };
+}
+
+/**
+ * 动态加载高德地图 SDK
+ * 必须先注入 window._AMapSecurityConfig，再加载 AMap JS SDK
+ */
+function loadAMap(amapKey, securityCode) {
+  return new Promise((resolve, reject) => {
+    if (typeof AMap !== 'undefined') { resolve(); return; }
+    if (!amapKey) {
+      reject(new Error('AMap key is required'));
+      return;
+    }
+    // 1. 注入安全密钥（必须先于 SDK 脚本）
+    if (securityCode) {
+      window._AMapSecurityConfig = { securityJsCode: securityCode };
+    }
+    // 2. 动态加载 AMap SDK
+    const script = document.createElement('script');
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(amapKey)}`;
+    script.onload = resolve;
+    script.onerror = () => {
+      console.error('[SummitLink] AMap SDK 加载失败，请检查 AMAP_KEY 是否正确');
+      reject(new Error('AMap SDK load failed'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 function loadMapboxGL(token) {
