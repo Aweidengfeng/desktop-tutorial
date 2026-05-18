@@ -943,11 +943,26 @@
           phone: '112',
         };
         const token = this.getAuthToken();
-        await fetch('/api/sos', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
-          body: JSON.stringify(payload),
-        }).catch(() => {});
+        let res;
+        try {
+          res = await fetch('/api/sos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) {
+          this.toast('SOS 上报失败，请检查网络后重试', 'error');
+          return;
+        }
+        if (!res.ok) {
+          let message = 'SOS 上报失败，请稍后重试';
+          try {
+            const errorText = (await res.text()).trim();
+            if (errorText) message = `SOS 上报失败：${errorText}`;
+          } catch (e) {}
+          this.toast(message, 'error');
+          return;
+        }
         window.location.href = 'tel:112';
         this.toast('SOS 已上报并发起拨号', 'error');
       },
