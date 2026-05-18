@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- 定价与支付页：三类套餐、月付年付切换、支付方式提示 -->
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SummitLink · Pricing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
+  </script>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-page="pricing" data-page-title="titles.pricing" class="bg-space font-sans text-white antialiased">
+  <div data-site-header></div>
+  <main class="pt-28">
+    <section class="mx-auto max-w-7xl px-4 py-16" data-reveal>
+      <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="pricing.heroEyebrow"></span>
+      <div class="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="font-display text-5xl font-black leading-none md:text-7xl" data-i18n="pricing.heroTitle"></h1>
+          <p class="mt-6 max-w-3xl text-lg leading-8 text-white/65" data-i18n="pricing.heroBody"></p>
+        </div>
+        <label class="toggle-pill text-sm text-white/70">
+          <span data-i18n="pricing.monthly"></span>
+          <input type="checkbox" data-billing-toggle />
+          <span data-i18n="pricing.yearly"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 py-8">
+      <h2 class="mb-8 font-display text-3xl font-black" data-i18n="pricing.climberTitle" data-reveal></h2>
+      <div class="grid gap-6 lg:grid-cols-3">
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Free</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="0" data-yearly="0">$0</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.freeDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureA"></li><li data-i18n="pricing.featureB"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Explorer</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="29" data-yearly="290">$29</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.explorerDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureA"></li><li data-i18n="pricing.featureB"></li><li data-i18n="pricing.featureC"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Legend</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="79" data-yearly="790">$79</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.legendDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureB"></li><li data-i18n="pricing.featureC"></li><li data-i18n="home.feature6Title"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 py-8">
+      <h2 class="mb-8 font-display text-3xl font-black" data-i18n="pricing.guideTitle" data-reveal></h2>
+      <div class="grid gap-6 lg:grid-cols-3">
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Starter</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="39" data-yearly="390">$39</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.starterDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureD"></li><li data-i18n="pricing.featureE"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Professional</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="99" data-yearly="990">$99</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.proDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureD"></li><li data-i18n="pricing.featureE"></li><li data-i18n="pricing.featureF"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Elite</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="179" data-yearly="1790">$179</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.eliteDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureE"></li><li data-i18n="pricing.featureF"></li><li data-i18n="home.feature6Title"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 py-8">
+      <h2 class="mb-8 font-display text-3xl font-black" data-i18n="pricing.corporateTitle" data-reveal></h2>
+      <div class="grid gap-6 lg:grid-cols-3">
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Standard</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="299" data-yearly="2990">$299</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.standardDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureG"></li><li data-i18n="pricing.featureH"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Business</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-prefix="$" data-monthly="699" data-yearly="6990">$699</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.businessDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureG"></li><li data-i18n="pricing.featureH"></li><li data-i18n="pricing.featureI"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+        <article class="glass-panel rounded-[1.75rem] p-6" data-reveal><div class="text-sm uppercase tracking-[0.28em] text-white/45">Custom</div><div class="mt-4 flex items-end gap-2 text-4xl font-black"><span data-price data-monthly="Custom" data-yearly="Custom">Custom</span><span class="text-base text-white/55" data-billing-suffix></span></div><p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.customDesc"></p><ul class="mt-4 space-y-2 text-sm text-white/65"><li data-i18n="pricing.featureH"></li><li data-i18n="pricing.featureI"></li><li data-i18n="corporate.inquiryTitle"></li></ul><p class="mt-4 text-xs text-white/45" data-billing-note></p></article>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 py-16">
+      <div class="glass-panel rounded-[2rem] p-6" data-reveal>
+        <h2 class="text-3xl font-black" data-i18n="pricing.paymentTitle"></h2>
+        <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="pricing.paymentBody"></p>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <button type="button" class="badge-button text-green-300" data-payment-method>🟢 WeChat Pay</button>
+          <button type="button" class="badge-button text-sky-300" data-payment-method>🔵 Alipay</button>
+          <button type="button" class="badge-button" data-payment-method>Visa</button>
+          <button type="button" class="badge-button" data-payment-method>Mastercard</button>
+          <button type="button" class="badge-button" data-payment-method>Stripe</button>
+          <button type="button" class="badge-button" data-payment-method>Apple Pay</button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div data-site-footer></div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!-- 申请入口：向导申请与俱乐部申请双 Tab 表单 -->
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SummitLink · Apply</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
+  </script>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-page="apply" data-page-title="titles.apply" class="bg-space font-sans text-white antialiased">
+  <div data-site-header></div>
+  <main class="pt-28">
+    <section class="mx-auto max-w-7xl px-4 py-16" data-reveal>
+      <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="apply.heroEyebrow"></span>
+      <h1 class="mt-6 font-display text-5xl font-black leading-none md:text-7xl" data-i18n="apply.heroTitle"></h1>
+      <p class="mt-6 max-w-3xl text-lg leading-8 text-white/65" data-i18n="apply.heroBody"></p>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 pb-10">
+      <div class="mb-6 flex flex-wrap gap-3" data-reveal>
+        <button type="button" class="apply-tab rounded-full px-5 py-3 text-sm font-semibold text-white/80 gradient-chip" data-apply-tab="guide" data-i18n="apply.guideTab"></button>
+        <button type="button" class="apply-tab rounded-full px-5 py-3 text-sm font-semibold text-white/80 gradient-chip" data-apply-tab="corporate" data-i18n="apply.corporateTab"></button>
+      </div>
+
+      <section class="glass-panel rounded-[2rem] p-6" data-apply-panel="guide" data-reveal>
+        <form class="grid gap-4 md:grid-cols-2" data-application-form="guide">
+          <label class="text-sm text-white/60"><span data-i18n="apply.name"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.nationality"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.contact"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.specialtyPeaks"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.certificate"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.dayRate"></span><input required class="form-input mt-2" type="number" min="0" /></label>
+          <label class="text-sm text-white/60 md:col-span-2"><span data-i18n="apply.languages"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60 md:col-span-2"><span data-i18n="apply.bio"></span><textarea required class="form-textarea mt-2"></textarea></label>
+          <div class="md:col-span-2">
+            <button type="submit" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="common.submit"></button>
+          </div>
+        </form>
+      </section>
+
+      <section class="glass-panel hidden rounded-[2rem] p-6" data-apply-panel="corporate" data-reveal>
+        <form class="grid gap-4 md:grid-cols-2" data-application-form="corporate">
+          <label class="text-sm text-white/60"><span data-i18n="apply.companyName"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.businessLicense"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.registeredCountry"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.expeditionsPerYear"></span><input required class="form-input mt-2" type="number" min="0" /></label>
+          <div class="rounded-[1.25rem] border border-white/10 bg-black/20 p-4 text-sm text-white/70 md:col-span-2" data-business-group>
+            <div class="mb-3 text-white/60" data-i18n="apply.businessType"></div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="flex items-center gap-3"><input type="checkbox" name="businessType" class="h-4 w-4 rounded border-white/20 bg-transparent" /><span data-i18n="apply.typeBrand"></span></label>
+              <label class="flex items-center gap-3"><input type="checkbox" name="businessType" class="h-4 w-4 rounded border-white/20 bg-transparent" /><span data-i18n="apply.typeClub"></span></label>
+              <label class="flex items-center gap-3"><input type="checkbox" name="businessType" class="h-4 w-4 rounded border-white/20 bg-transparent" /><span data-i18n="apply.typeTraining"></span></label>
+              <label class="flex items-center gap-3"><input type="checkbox" name="businessType" class="h-4 w-4 rounded border-white/20 bg-transparent" /><span data-i18n="apply.typeCorporate"></span></label>
+            </div>
+          </div>
+          <label class="text-sm text-white/60"><span data-i18n="apply.contactPerson"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60"><span data-i18n="apply.contact"></span><input required class="form-input mt-2" type="text" /></label>
+          <label class="text-sm text-white/60 md:col-span-2"><span data-i18n="apply.inquiry"></span><textarea required class="form-textarea mt-2"></textarea></label>
+          <div class="md:col-span-2">
+            <button type="submit" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="common.submit"></button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+  <div data-site-footer></div>
+  <script type="module" src="./js/main.js"></script>
+  <script type="module" src="./js/apply.js"></script>
+</body>
+</html>

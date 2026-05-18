@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!-- 企业/俱乐部落地页：套餐对比、定制远征询价与合作展示 -->
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SummitLink · Corporate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
+  </script>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-page="corporate" data-page-title="titles.corporate" class="bg-space font-sans text-white antialiased">
+  <div data-site-header></div>
+  <main class="pt-28">
+    <section class="px-4 py-16">
+      <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div class="space-y-6" data-reveal>
+          <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="corporate.heroEyebrow"></span>
+          <h1 class="font-display text-5xl font-black leading-none md:text-7xl" data-i18n="corporate.heroTitle"></h1>
+          <p class="max-w-2xl text-lg leading-8 text-white/65" data-i18n="corporate.heroBody"></p>
+          <div class="flex flex-wrap gap-4">
+            <a href="./apply.html#corporate" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="corporate.primary"></a>
+            <a href="./pricing.html" class="rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-white/80" data-i18n="corporate.secondary"></a>
+          </div>
+        </div>
+        <div class="glass-panel rounded-[2rem] p-6" data-reveal>
+          <h2 class="text-3xl font-black" data-i18n="corporate.tableTitle"></h2>
+          <div class="mt-6 overflow-hidden rounded-[1.4rem] border border-white/10">
+            <table class="comparison-table w-full text-sm text-white/70">
+              <thead class="bg-white/5 text-white/90">
+                <tr>
+                  <th data-i18n="corporate.featureCol"></th>
+                  <th data-i18n="corporate.basicCol"></th>
+                  <th data-i18n="corporate.proCol"></th>
+                  <th data-i18n="corporate.customCol"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td data-i18n="corporate.row1"></td><td data-i18n="corporate.basic1"></td><td data-i18n="corporate.pro1"></td><td data-i18n="corporate.custom1"></td></tr>
+                <tr><td data-i18n="corporate.row2"></td><td data-i18n="corporate.basic2"></td><td data-i18n="corporate.pro2"></td><td data-i18n="corporate.custom2"></td></tr>
+                <tr><td data-i18n="corporate.row3"></td><td data-i18n="corporate.basic3"></td><td data-i18n="corporate.pro3"></td><td data-i18n="corporate.custom3"></td></tr>
+                <tr><td data-i18n="corporate.row4"></td><td data-i18n="corporate.basic4"></td><td data-i18n="corporate.pro4"></td><td data-i18n="corporate.custom4"></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 py-16">
+      <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <form class="glass-panel rounded-[2rem] p-6" data-mock-form data-success-title-key="corporate.successTitle" data-success-body-key="corporate.successBody" data-reveal>
+          <h2 class="text-3xl font-black" data-i18n="corporate.inquiryTitle"></h2>
+          <div class="mt-6 grid gap-4 md:grid-cols-2">
+            <label class="text-sm text-white/60"><span data-i18n="corporate.targetPeak"></span><input required class="form-input mt-2" type="text" /></label>
+            <label class="text-sm text-white/60"><span data-i18n="corporate.teamSize"></span><input required class="form-input mt-2" type="number" min="1" /></label>
+            <label class="text-sm text-white/60"><span data-i18n="corporate.departureDate"></span><input required class="form-input mt-2" type="date" /></label>
+            <label class="text-sm text-white/60"><span data-i18n="corporate.budget"></span><select required class="form-select mt-2"><option value="" data-i18n="common.requestQuote"></option><option data-i18n="corporate.budget1"></option><option data-i18n="corporate.budget2"></option><option data-i18n="corporate.budget3"></option><option data-i18n="corporate.budget4"></option></select></label>
+          </div>
+          <label class="mt-4 block text-sm text-white/60"><span data-i18n="corporate.contact"></span><textarea required class="form-textarea mt-2"></textarea></label>
+          <button type="submit" class="mt-6 rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="common.requestQuote"></button>
+        </form>
+        <div class="space-y-6" data-reveal>
+          <div class="glass-panel rounded-[2rem] p-6">
+            <h2 class="text-3xl font-black" data-i18n="corporate.logosTitle"></h2>
+            <div class="brand-strip mt-6">
+              <div class="rounded-[1.5rem] bg-sky-400/10 p-5 text-center text-white/85">Altitude Lab</div>
+              <div class="rounded-[1.5rem] bg-amber-400/10 p-5 text-center text-white/85">Andes Circle</div>
+              <div class="rounded-[1.5rem] bg-emerald-400/10 p-5 text-center text-white/85">Summit Works</div>
+              <div class="rounded-[1.5rem] bg-fuchsia-400/10 p-5 text-center text-white/85">North Ice Club</div>
+              <div class="rounded-[1.5rem] bg-indigo-400/10 p-5 text-center text-white/85">Seven Peaks Co.</div>
+              <div class="rounded-[1.5rem] bg-rose-400/10 p-5 text-center text-white/85">Polar Ridge</div>
+            </div>
+          </div>
+          <div class="glass-panel rounded-[2rem] p-6">
+            <h2 class="text-3xl font-black" data-i18n="corporate.ctaTitle"></h2>
+            <p class="mt-4 text-sm leading-7 text-white/65" data-i18n="corporate.ctaBody"></p>
+            <a href="./apply.html#corporate" class="mt-6 inline-flex rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white/80" data-i18n="corporate.ctaButton"></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div data-site-footer></div>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
