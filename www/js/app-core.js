@@ -1606,24 +1606,16 @@ function alpineLink() {
       }
       this.showOfflineMapModal = true;
       this.offlineMapProgress = 0;
-      this.offlineMapTimer = setInterval(() => {
-        this.offlineMapProgress = Math.min(100, this.offlineMapProgress + OFFLINE_MAP_PROGRESS_INCREMENT);
-        if (this.offlineMapProgress >= 100) {
-          clearInterval(this.offlineMapTimer);
-          this.offlineMapTimer = null;
-          this.showToast('离线地图已下载，可在无网环境使用');
-        }
-      }, OFFLINE_MAP_TICK_INTERVAL);
+      this.showToast('离线地图下载功能即将上线，当前版本暂不支持无网地图缓存', 'warning');
     },
 
     closeOfflineMapModal() {
       this.showOfflineMapModal = false;
-      if (this.offlineMapTimer && this.offlineMapProgress < 100) {
+      if (this.offlineMapTimer) {
         clearInterval(this.offlineMapTimer);
         this.offlineMapTimer = null;
-        this.showToast('离线地图下载已取消', 'warning');
       }
-      if (this.offlineMapProgress >= 100) this.offlineMapProgress = 0;
+      this.offlineMapProgress = 0;
     },
 
     // GPS 定位
