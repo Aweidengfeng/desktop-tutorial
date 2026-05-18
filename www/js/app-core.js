@@ -2629,8 +2629,8 @@ function alpineLink() {
           }
         }
       } catch(e) {
-        // 降级：演示模式 toast
-        this.showToast('演示模式：支付已模拟成功 🎉');
+      // 降级：演示模式 toast（STRIPE_SECRET_KEY 未配置或网络不可达时触发）
+      this.showToast('演示模式：支付已模拟成功 🎉');
         setTimeout(() => {
           if (this._pendingOrder) { this._pendingOrder.status = '已托管'; this._pendingOrder = null; }
           this.showPayment = false;

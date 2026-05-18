@@ -62,7 +62,7 @@ self.addEventListener('fetch', (event) => {
                 headers.set('sw-cached-at', String(Date.now()));
                 cloned.blob().then(body => {
                   cache.put(event.request, new Response(body, { status: cloned.status, statusText: cloned.statusText, headers }));
-                }).catch(() => {});
+                }).catch(err => console.warn('[SW] Background tile cache write failed:', err));
               }
             }).catch(() => {});
           }
