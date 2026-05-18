@@ -309,6 +309,10 @@ function alpineLink() {
     stripePublishableKey: '',
     stripeClient: null,
     stripeLoadPromise: null,
+    notifUnreadCount: 0,
+    notifUnreadList: [],
+    notifPanelOpen: false,
+    userStats: { expeditionCount: null, totalKm: null, climbingDays: null },
     showLogin: false,
     showRegister: false,
     loginLoading: false,
@@ -2599,12 +2603,39 @@ function alpineLink() {
     },
     async confirmPayment() {
       try {
-        const res = await fetch('/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
-        if (!res.ok) {
-          // Fallback to mock success for demo (remove in production)
+        // 先尝试调用 /api/payments/create-intent
+        const res = await fetch('/api/payments/create-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(this.getAuthHeaders() || {}) },
+          body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.demo) {
+            // 演示模式：显示 toast，3秒后跳转确认
+            this.showToast('演示模式：支付已模拟成功 🎉');
+            setTimeout(() => {
+              if (this._pendingOrder) { this._pendingOrder.status = '已托管'; this._pendingOrder = null; }
+              this.showPayment = false;
+              this.showToast('款项已托管平台，服务完成后结算 🎉');
+            }, 3000);
+            return;
+          }
+          // 真实 Stripe
+          if (data.clientSecret && window.Stripe && this.stripePublishableKey) {
+            const stripe = window.Stripe(this.stripePublishableKey);
+            const { error } = await stripe.confirmCardPayment(data.clientSecret);
+            if (error) { this.showToast(error.message, 'error'); return; }
+          }
         }
       } catch(e) {
-        // Allow mock success for frontend demo
+        // 降级：演示模式 toast
+        this.showToast('演示模式：支付已模拟成功 🎉');
+        setTimeout(() => {
+          if (this._pendingOrder) { this._pendingOrder.status = '已托管'; this._pendingOrder = null; }
+          this.showPayment = false;
+        }, 3000);
+        return;
       }
       // Update pending order status to "已托管"
       if (this._pendingOrder) {
@@ -2817,6 +2848,8 @@ function alpineLink() {
         const user = await res.json();
         this.currentUser = user;
         this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
+        // Load real user stats
+        this.loadUserStats();
       } catch(e) {}
     },
 
@@ -3370,8 +3403,45 @@ function alpineLink() {
     async loadUnreadCount() {
       if (!this.authToken) return;
       try {
-        const res = await fetch('/api/notifications/unread-count', { headers: this.getAuthHeaders() });
-        if (res.ok) { const d = await res.json(); this.notificationCount = d.count || 0; }
+        // 先尝试新的 /api/notifications/unread 端点，获取通知列表
+        const res = await fetch('/api/notifications/unread', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list)) {
+            this.notifUnreadList = list;
+            this.notifUnreadCount = list.length;
+            this.notificationCount = list.length;
+            return;
+          }
+        }
+        // 降级到旧的 unread-count 端点
+        const res2 = await fetch('/api/notifications/unread-count', { headers: this.getAuthHeaders() });
+        if (res2.ok) { const d = await res2.json(); this.notificationCount = d.count || 0; this.notifUnreadCount = d.count || 0; }
+      } catch(e) {}
+    },
+    openNotificationPanel() {
+      this.notifPanelOpen = true;
+      if (this.notifUnreadList.length === 0) this.loadUnreadCount();
+    },
+    getExpeditionGradient(seed) {
+      // 根据名称/id hash 生成渐变颜色（纯 JS，不依赖外部服务）
+      let hash = 0;
+      const str = String(seed || '');
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      const h1 = Math.abs(hash) % 360;
+      const h2 = (h1 + 60) % 360;
+      return `linear-gradient(135deg, hsl(${h1},60%,35%), hsl(${h2},70%,25%))`;
+    },
+    async loadUserStats() {
+      if (!this.authToken) return;
+      try {
+        const res = await fetch('/api/users/me/stats', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.userStats = await res.json();
+        }
       } catch(e) {}
     },
     async markNotificationRead(n) {
