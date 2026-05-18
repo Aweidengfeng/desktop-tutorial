@@ -44,7 +44,7 @@ router.post('/alert', sosLimiter, async (req, res) => {
       RETURNING id
     `;
     const alertId = inserted[0].id;
-    console.log(`[SOS ALERT] userId=${userId} lat=${lat} lng=${lng} accuracy=${accuracy}`);
+    console.log(`[SOS ALERT] id=${alertId} userId=${userId} lat=${lat} lng=${lng} accuracy=${accuracy}`);
     res.json({ ok: true, alertId });
   } catch (e) {
     console.error('[SOS] Alert creation failed:', e);

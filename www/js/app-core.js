@@ -3419,7 +3419,7 @@ function alpineLink() {
       const raw = String(this.sosEmergencyPhone || '').trim();
       if (!raw) return '112';
       const normalized = raw.toLowerCase().startsWith('tel:') ? raw.slice(4) : raw;
-      const sanitized = normalized.replace(/[^\d+]/g, '').trim();
+      const sanitized = normalized.replace(/[^\d+]/g, '');
       return sanitized || '112';
     },
     startSOSCountdown() {
