@@ -1,10 +1,25 @@
 // sw.js
 const CACHE_NAME = 'summitlink-v2';
+const TILE_CACHE = 'summitlink-tiles-v1';
+const TILE_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30天
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   // 关键静态资源（CSS/JS 由 Tailwind/Alpine CDN 提供，只缓存核心页面）
 ];
+
+// 地图瓦片 URL 匹配规则
+const TILE_PATTERNS = [
+  /tile\.openstreetmap\.org/,
+  /opentopomap\.org/,
+  /webst\d+\.is\.autonavi\.com/,
+  /basemaps\.cartocdn\.com/,
+  /tile\.opentopomap\.org/,
+];
+
+function isTileRequest(url) {
+  return TILE_PATTERNS.some(p => p.test(url));
+}
 
 // Install：预缓存关键资源
 self.addEventListener('install', (event) => {
@@ -14,21 +29,65 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate：清理旧缓存
+// Activate：清理旧缓存（保留 TILE_CACHE）
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE_NAME && k !== TILE_CACHE).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// Fetch：网络优先，失败时返回缓存
+// Fetch：地图瓦片 Cache-First，其他资源 Network-First
 self.addEventListener('fetch', (event) => {
   // 只处理 GET 请求，API 请求直接穿透
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
+
+  // 地图瓦片：Cache-First（离线可用，在线时后台更新）
+  if (isTileRequest(event.request.url)) {
+    event.respondWith(
+      caches.open(TILE_CACHE).then(async cache => {
+        const cached = await cache.match(event.request);
+        if (cached) {
+          // 在线时后台刷新（stale-while-revalidate）
+          const ts = cached.headers.get('sw-cached-at');
+          // Treat missing header (e.g. tiles pre-fetched by offline button) as fresh (age 0)
+          const age = ts ? Date.now() - Number(ts) : 0;
+          if (age > TILE_CACHE_MAX_AGE_MS) {
+            fetch(event.request).then(response => {
+              if (response.ok) {
+                const cloned = response.clone();
+                const headers = new Headers(cloned.headers);
+                headers.set('sw-cached-at', String(Date.now()));
+                cloned.blob().then(body => {
+                  cache.put(event.request, new Response(body, { status: cloned.status, statusText: cloned.statusText, headers }));
+                }).catch(err => console.warn('[SW] Background tile cache write failed:', err));
+              }
+            }).catch(() => {});
+          }
+          return cached;
+        }
+        // 缓存未命中：从网络获取并缓存
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) {
+            const toCache = response.clone();
+            const headers = new Headers(toCache.headers);
+            headers.set('sw-cached-at', String(Date.now()));
+            toCache.blob().then(body => {
+              cache.put(event.request, new Response(body, { status: toCache.status, statusText: toCache.statusText, headers }));
+            }).catch(() => {});
+          }
+          return response;
+        } catch (e) {
+          return new Response('', { status: 503 });
+        }
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

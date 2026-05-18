@@ -302,6 +302,14 @@
         </div>
       </div>
       <div class="flex items-center gap-1">
+        <!-- 通知铃铛 -->
+        <button data-testid="notification-bell" @click="openNotificationPanel()"
+                class="relative w-10 h-10 rounded-2xl bg-white/10 text-slate-200 flex items-center justify-center">
+          <span class="material-symbols-outlined text-xl">notifications</span>
+          <span x-show="notifUnreadCount > 0"
+                class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
+                x-text="notifUnreadCount > 99 ? '99+' : notifUnreadCount"></span>
+        </button>
         <button @click="showSettings=true; settingsType='profile'" class="w-10 h-10 rounded-2xl bg-white/10 text-slate-200 flex items-center justify-center">
           <span class="material-symbols-outlined text-xl">menu</span>
         </button>
@@ -311,6 +319,37 @@
 
   <!-- MAIN CONTENT -->
   <main class="pt-20 pb-24 min-h-screen fluid-300" style="padding-top:calc(var(--safe-top) + 60px);">
+
+  <!-- 通知面板 (下拉式) -->
+  <div x-show="notifPanelOpen" x-cloak @click.self="notifPanelOpen=false"
+       class="fixed inset-0 z-50 bg-black/40 flex flex-col">
+    <div class="glass rounded-b-3xl max-w-[430px] mx-auto w-full pt-safe pb-4 px-4"
+         style="padding-top:calc(var(--safe-top) + 16px); max-height:70vh; overflow-y:auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-base text-white">通知消息</h3>
+        <button @click="notifPanelOpen=false" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <template x-if="notifUnreadList.length === 0">
+        <div class="text-center py-6 text-slate-400 text-sm">
+          <span class="material-symbols-outlined text-3xl block mb-2">notifications_none</span>
+          暂无未读通知
+        </div>
+      </template>
+      <template x-for="n in notifUnreadList" :key="n.id">
+        <div class="glass-dark rounded-xl p-3 mb-2 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-blue-400 text-sm"
+                  x-text="n.type === 'payment_success' ? 'payments' : n.type === 'sos_alert' ? 'emergency' : 'notifications'"></span>
+          </div>
+          <div class="flex-1">
+            <p class="text-white text-sm" x-text="n.title || n.content || '通知'"></p>
+            <p class="text-slate-400 text-xs mt-0.5" x-text="n.body || n.content || ''"></p>
+            <p class="text-slate-500 text-xs mt-1" x-text="n.created_at ? new Date(n.created_at).toLocaleString('zh-CN') : ''"></p>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
 
     <!-- HOME PAGE -->
     <section x-show="currentPage === 'home'"
@@ -325,7 +364,15 @@
         <div class="space-y-3">
           <template x-for="item in expeditionCards" :key="item.id">
             <button @click="openExpeditionDetail(item)" class="w-full text-left glass rounded-2xl overflow-hidden">
-              <img :src="item.cover" :alt="item.name" class="w-full h-28 object-cover">
+              <template x-if="item.cover">
+                <img :src="item.cover" :alt="item.name" class="w-full h-28 object-cover">
+              </template>
+              <template x-if="!item.cover">
+                <div class="w-full h-28 flex items-center justify-center text-white/60 font-bold text-lg"
+                     :style="'background: ' + getExpeditionGradient(item.name || item.id || '')">
+                  <span x-text="(item.name || '探险').slice(0, 2)"></span>
+                </div>
+              </template>
               <div class="p-3">
                 <p class="font-semibold text-white" x-text="item.name"></p>
                 <div class="mt-1 flex items-center justify-between text-xs text-slate-300">
@@ -1712,16 +1759,16 @@
           </div>
           <div class="grid grid-cols-4 gap-2 text-center">
             <div>
-              <p class="text-xl font-bold text-white" x-text="userProfile.summits"></p>
-              <p class="text-xs text-slate-400">登顶</p>
-            </div>
-            <div>
-              <p class="text-xl font-bold text-white" x-text="userProfile.expeditions"></p>
+              <p class="text-xl font-bold text-white" x-text="userStats.expeditionCount ?? userProfile.summits"></p>
               <p class="text-xs text-slate-400">远征</p>
             </div>
             <div>
-              <p class="text-xl font-bold text-white" x-text="userProfile.followers"></p>
-              <p class="text-xs text-slate-400">粉丝</p>
+              <p class="text-xl font-bold text-white" x-text="(userStats.totalKm != null ? userStats.totalKm + 'km' : userProfile.expeditions)"></p>
+              <p class="text-xs text-slate-400">里程</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold text-white" x-text="userStats.climbingDays ?? userProfile.followers"></p>
+              <p class="text-xs text-slate-400">攀登天</p>
             </div>
             <div>
               <p class="text-xl font-bold text-white" x-text="userProfile.following"></p>

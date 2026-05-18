@@ -16,6 +16,9 @@ on:
           - android
           - both
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── iOS: TestFlight ────────────────────────────────────────────────────────
   beta-ios:

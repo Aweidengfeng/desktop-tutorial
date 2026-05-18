@@ -1,0 +1,36 @@
+name: Daily DB Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨2点 UTC
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Trigger database backup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backup via Railway API
+        run: |
+          if [ -z "${{ secrets.RAILWAY_URL }}" ]; then
+            echo "⚠️  RAILWAY_URL secret not configured, skipping backup trigger"
+            exit 0
+          fi
+          RESPONSE=$(curl -sf -X POST \
+            "${{ secrets.RAILWAY_URL }}/api/admin/backup" \
+            -H "Authorization: Bearer ${{ secrets.ADMIN_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --max-time 90 || echo '{"error":"curl_failed"}')
+          echo "Backup response: $RESPONSE"
+          if echo "$RESPONSE" | grep -q '"success":true'; then
+            echo "✅ Backup triggered successfully"
+          else
+            echo "⚠️  Backup may have failed: $RESPONSE"
+            exit 1
+          fi

@@ -10,6 +10,12 @@
  * @param {'home'|'explore'|'chat'|'me'} tabName
  */
 async function gotoTab(page, tabName) {
+  // Ensure we are on the app page before trying to click nav
+  if (!page.url().includes('/summitlink')) {
+    await page.goto('/summitlink');
+    await page.waitForLoadState('networkidle');
+  }
+
   const nameMap = {
     home: '首页',
     explore: '找队友',
