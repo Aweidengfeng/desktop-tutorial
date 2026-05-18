@@ -917,6 +917,8 @@
         this.cancelGuideSOSCountdown(false);
         let lat = null;
         let lng = null;
+        let geoFailed = false;
+        let usedMapCenterFallback = false;
         if (navigator.geolocation) {
           await new Promise((resolve) => {
             navigator.geolocation.getCurrentPosition((pos) => {
@@ -924,7 +926,7 @@
               lng = pos.coords.longitude;
               resolve();
             }, () => {
-              this.toast(this.guideMap ? '定位失败，已使用地图中心点上报 SOS' : '定位失败，位置不可用', 'error');
+              geoFailed = true;
               resolve();
             }, { enableHighAccuracy: true, timeout: 8000 });
           });
@@ -933,6 +935,15 @@
           const center = this.guideMap.getCenter();
           lat = center.lat;
           lng = center.lng;
+          usedMapCenterFallback = lat !== null && lng !== null;
+        }
+        if (geoFailed) {
+          if (usedMapCenterFallback) this.toast('定位失败，已改用地图中心点上报 SOS', 'warning');
+          else this.toast('定位失败，位置不可用', 'error');
+        }
+        if (lat === null || lng === null) {
+          this.toast('定位失败，位置不可用', 'error');
+          return;
         }
         const payload = {
           userId: this.currentUser?.id || null,
@@ -953,7 +964,7 @@
           reportOk = !!res.ok;
         } catch (e) {}
         window.location.href = 'tel:112';
-        if (reportOk) this.toast('SOS 已上报并发起拨号', 'error');
+        if (reportOk) this.toast('SOS 已上报并发起拨号', 'success');
         else this.toast('已发起拨号，但 SOS 上报失败，请稍后重试', 'error');
       },
 

@@ -380,7 +380,6 @@ function alpineLink() {
     showTrackLayerPanel: false,
     showOfflineMapModal: false,
     offlineMapProgress: 0,
-    offlineMapTimer: null,
     showChatWindow: false,
     activeChatSession: null,
     chatSubTab: 'all',
@@ -1598,21 +1597,12 @@ function alpineLink() {
     },
 
     startOfflineMapDownload() {
-      if (this.offlineMapTimer) {
-        clearInterval(this.offlineMapTimer);
-        this.offlineMapTimer = null;
-      }
       this.showOfflineMapModal = true;
       this.offlineMapProgress = 0;
-      this.showToast('离线地图下载功能即将上线，当前版本暂不支持无网地图缓存', 'warning');
     },
 
     closeOfflineMapModal() {
       this.showOfflineMapModal = false;
-      if (this.offlineMapTimer) {
-        clearInterval(this.offlineMapTimer);
-        this.offlineMapTimer = null;
-      }
       this.offlineMapProgress = 0;
     },
 
