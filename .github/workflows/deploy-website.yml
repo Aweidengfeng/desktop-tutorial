@@ -5,7 +5,8 @@ env:
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'website/**'
   workflow_dispatch:
@@ -23,8 +24,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/upload-pages-artifact@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./website
 
@@ -38,3 +42,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+# 部署完成后需在仓库 Settings → Pages → Source 选择 GitHub Actions
