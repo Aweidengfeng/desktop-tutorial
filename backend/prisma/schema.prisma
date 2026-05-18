@@ -975,6 +975,17 @@ model SosAlert {
   @@map("sos_alerts")
 }
 
+model SosEvent {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  lat       Float?
+  lng       Float?
+  timestamp DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("sos_events")
+}
+
 model RescueContact {
   id     Int     @id @default(autoincrement())
   name   String

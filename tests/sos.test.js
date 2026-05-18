@@ -44,6 +44,22 @@ describe('PR-160 SOS API', () => {
       expect(typeof res.body.alertId).toBe('number');
     });
 
+    test('新端点 /api/sos 同样可写入', async () => {
+      const res = await request(app)
+        .post('/api/sos')
+        .send({
+          userId: 124,
+          lat: 27.9,
+          lng: 86.9,
+          accuracy: 9.1,
+          timestamp: new Date().toISOString(),
+          phone: '112',
+        });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(typeof res.body.alertId).toBe('number');
+    });
+
     test('缺少必填字段 → 400', async () => {
       const res = await request(app)
         .post('/api/sos/alert')
@@ -87,6 +103,15 @@ describe('PR-160 SOS API', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.alerts)).toBe(true);
       expect(typeof res.body.total).toBe('number');
+    });
+
+    test('新端点 /api/sos 在 admin token 下可读', async () => {
+      const token = createAdminToken();
+      const res = await request(app)
+        .get('/api/sos')
+        .set(authHeader(token));
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.alerts)).toBe(true);
     });
 
     test('admin token → 返回最近插入的记录', async () => {

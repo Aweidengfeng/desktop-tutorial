@@ -6,14 +6,34 @@
   <title>向导工作台 · SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
     body { background: #0f172a; }
-    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+    .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.14); }
     .glass-dark { background: rgba(0,0,0,0.3); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
     [x-cloak] { display: none !important; }
+    .guide-pulse-online::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 999px;
+      border: 2px solid rgba(34,197,94,.55);
+      animation: guidePulse 1.8s infinite;
+    }
+    @keyframes guidePulse {
+      0% { transform: scale(0.6); opacity: .8; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
   </style>
   <script>
   (function(){
@@ -175,12 +195,79 @@
     <!-- 导航标签 -->
     <div x-show="certStatus.certified" class="flex gap-2 overflow-x-auto pb-1">
       <template x-for="tab in tabs" :key="tab.id">
-        <button @click="page=tab.id"
+        <button @click="selectGuideTab(tab.id)"
                 :class="page===tab.id ? 'bg-blue-600 text-white' : 'glass text-slate-300 hover:bg-white/10'"
                 class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">
           <span x-text="tab.icon + ' ' + tab.label"></span>
         </button>
       </template>
+    </div>
+
+    <!-- 地图指挥页 -->
+    <div x-show="page === 'map' && certStatus.certified" class="fixed inset-0 z-[45] bg-slate-950" style="padding-top:var(--safe-top);padding-bottom:var(--safe-bottom);padding-left:var(--safe-left);padding-right:var(--safe-right);">
+      <div id="guide-map" class="absolute inset-0"></div>
+      <div class="absolute left-4 top-4 glass rounded-2xl px-4 py-3">
+        <p class="text-xs text-slate-300">当前轨迹</p>
+        <p class="text-sm font-semibold text-white" x-text="guideTrackName"></p>
+      </div>
+
+      <div class="absolute left-1/2 -translate-x-1/2 top-4 flex gap-3">
+        <button @click="guideStartTour()" class="w-14 h-14 rounded-full bg-emerald-500 text-white text-xl shadow-xl">▶</button>
+        <button @click="guidePauseTour()" class="w-14 h-14 rounded-full bg-amber-500 text-white text-xl shadow-xl">⏸</button>
+        <button @click="guideEndTour()" class="w-14 h-14 rounded-full bg-rose-600 text-white text-xl shadow-xl">⏹</button>
+      </div>
+
+      <button @click="startGuideSOSCountdown()" class="absolute right-4 top-4 w-14 h-14 rounded-full bg-red-600 text-white font-bold shadow-2xl">SOS</button>
+
+      <div class="absolute right-4 top-24 flex flex-col items-end gap-2">
+        <button @click="guideLayerMenuOpen = !guideLayerMenuOpen" class="w-12 h-12 rounded-2xl glass text-white text-xl">🗺️</button>
+        <div x-show="guideLayerMenuOpen" class="relative w-44 h-44">
+          <template x-for="(layer, idx) in guideLayerOptions" :key="layer.key">
+            <button @click="switchGuideLayer(layer.key)"
+                    class="absolute w-20 h-10 rounded-2xl text-xs font-semibold shadow-lg"
+                    :class="guideActiveLayer === layer.key ? 'bg-blue-600 text-white' : 'glass text-slate-200'"
+                    :style="`right:${Math.round(Math.cos((idx+1)*0.5)*74)}px; top:${Math.round(Math.sin((idx+1)*0.5)*52)}px;`"
+                    x-text="layer.label"></button>
+          </template>
+        </div>
+      </div>
+
+      <div class="absolute left-0 right-0 bottom-0">
+        <div @click="guideMemberDrawerOpen = !guideMemberDrawerOpen"
+             class="glass rounded-t-3xl px-4 py-3 flex items-center justify-between cursor-pointer"
+             :style="guideMemberDrawerOpen ? '' : 'height:48px;overflow:hidden;'">
+          <div>
+            <p class="text-xs text-slate-300">团队成员位置</p>
+            <p class="text-sm text-white font-semibold" x-text="guideTeamMembers.length + ' 人在线协作'"></p>
+          </div>
+          <span class="text-slate-300" x-text="guideMemberDrawerOpen ? '收起' : '上滑'"></span>
+        </div>
+        <div x-show="guideMemberDrawerOpen" class="glass px-4 pb-4 max-h-60 overflow-y-auto">
+          <template x-for="member in guideTeamMembers" :key="member.id">
+            <div class="py-3 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <p class="text-sm text-white" x-text="member.name"></p>
+                <p class="text-xs text-slate-300" x-text="member.position"></p>
+              </div>
+              <span class="text-xs px-2 py-1 rounded-full" :class="member.online ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-500/20 text-slate-300'" x-text="member.online ? '在线' : '离线'"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <button @click="selectGuideTab('activities')" class="absolute left-4 bottom-24 px-4 py-2 rounded-xl glass text-sm text-white">返回工作台</button>
+    </div>
+
+    <div x-show="guideSosConfirm" class="fixed inset-0 z-[70] bg-black/70 flex items-center justify-center px-4">
+      <div class="glass rounded-3xl p-6 w-full max-w-sm text-center">
+        <h3 class="text-lg font-bold text-red-300 mb-2">SOS 紧急确认</h3>
+        <p class="text-sm text-slate-300 mb-3">5 秒后将拨打紧急电话并上报平台</p>
+        <p class="text-6xl font-black text-white mb-4" x-text="guideSosCountdown"></p>
+        <div class="flex gap-2">
+          <button @click="cancelGuideSOSCountdown()" class="flex-1 py-2 rounded-xl glass">取消</button>
+          <button @click="triggerGuideSOS()" class="flex-1 py-2 rounded-xl bg-red-600 text-white font-semibold">立即发送</button>
+        </div>
+      </div>
     </div>
 
     <!-- 活动发布页 -->
@@ -681,6 +768,7 @@
       certLevels: { guide: {}, club: {} },
       page: 'activities',
       tabs: [
+        { id: 'map',       icon: '🧭', label: '导览地图' },
         { id: 'activities', icon: '📋', label: '已发布服务' },
         { id: 'publish',    icon: '➕', label: '发布服务' },
         { id: 'routes',     icon: '🗺️', label: '路线管理' },
@@ -688,6 +776,27 @@
         { id: 'finance',    icon: '💰', label: '资金中心' },
         { id: 'dashboard',  icon: '📊', label: '数据看板' },
         { id: 'commercial', icon: '🏆', label: '商业资质' },
+      ],
+      guideMap: null,
+      guideTileLayer: null,
+      guideLayerMenuOpen: false,
+      guideMemberDrawerOpen: false,
+      guideTourState: 'idle',
+      guideTrackName: '珠峰北坳训练线',
+      guideSosConfirm: false,
+      guideSosCountdown: 5,
+      guideSosTimer: null,
+      guideActiveLayer: 'standard',
+      guideLayerOptions: [
+        { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
+        { key: 'satellite', label: '卫星', tileUrl: 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', attribution: '© AutoNavi' },
+        { key: 'contour', label: '等高线', tileUrl: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '© OpenTopoMap contributors' },
+        { key: '3d', label: '3D', tileUrl: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© CARTO + OSM' },
+      ],
+      guideTeamMembers: [
+        { id: 1, name: '扎西次仁', position: '北坳营地 · 海拔 6500m', online: true },
+        { id: 2, name: 'A. Sherpa', position: 'C1 补给点 · 海拔 6100m', online: true },
+        { id: 3, name: '后勤车组', position: '大本营', online: false },
       ],
       activities: [],
       activitiesLoading: false,
@@ -729,6 +838,102 @@
 
       // Dashboard
       dashboardData: null, dashboardLoading: false,
+
+      selectGuideTab(nextPage) {
+        this.page = nextPage;
+        if (nextPage === 'map') this.$nextTick(() => this.initGuideMap());
+        if (nextPage === 'routes') this.loadPlatformRoutes();
+        if (nextPage === 'finance') this.loadFinanceData();
+        if (nextPage === 'dashboard') this.loadDashboardData();
+      },
+
+      initGuideMap() {
+        if (!window.L) return;
+        if (!this.guideMap) {
+          const node = document.getElementById('guide-map');
+          if (!node) return;
+          this.guideMap = window.L.map(node, { zoomControl: false }).setView([27.9881, 86.925], 10);
+          this.applyGuideLayer(this.guideActiveLayer);
+          this.guideTeamMembers.forEach((member, idx) => {
+            const lat = 27.94 + idx * 0.03;
+            const lng = 86.82 + idx * 0.04;
+            const color = member.online ? '#22c55e' : '#94a3b8';
+            const marker = window.L.circleMarker([lat, lng], { radius: 8, color, fillColor: color, fillOpacity: 0.9 }).addTo(this.guideMap);
+            marker.bindPopup(`${member.name}<br>${member.position}`);
+          });
+        } else {
+          this.guideMap.invalidateSize();
+        }
+      },
+
+      applyGuideLayer(layerKey) {
+        const layer = this.guideLayerOptions.find(x => x.key === layerKey) || this.guideLayerOptions[0];
+        this.guideActiveLayer = layer.key;
+        if (!this.guideMap || !window.L) return;
+        if (this.guideTileLayer) {
+          try { this.guideMap.removeLayer(this.guideTileLayer); } catch(e) {}
+        }
+        this.guideTileLayer = window.L.tileLayer(layer.tileUrl, { attribution: layer.attribution, maxZoom: 19 }).addTo(this.guideMap);
+      },
+
+      switchGuideLayer(layerKey) {
+        this.applyGuideLayer(layerKey);
+        this.guideLayerMenuOpen = false;
+      },
+
+      guideStartTour() { this.guideTourState = 'running'; this.toast('导览已开始'); },
+      guidePauseTour() { this.guideTourState = 'paused'; this.toast('导览已暂停', 'error'); },
+      guideEndTour() { this.guideTourState = 'ended'; this.toast('导览已结束'); },
+
+      startGuideSOSCountdown() {
+        this.cancelGuideSOSCountdown(false);
+        this.guideSosCountdown = 5;
+        this.guideSosConfirm = true;
+        this.guideSosTimer = setInterval(() => {
+          this.guideSosCountdown -= 1;
+          if (this.guideSosCountdown <= 0) this.triggerGuideSOS();
+        }, 1000);
+      },
+
+      cancelGuideSOSCountdown(showToast = true) {
+        if (this.guideSosTimer) {
+          clearInterval(this.guideSosTimer);
+          this.guideSosTimer = null;
+        }
+        this.guideSosConfirm = false;
+        if (showToast) this.toast('已取消 SOS', 'error');
+      },
+
+      async triggerGuideSOS() {
+        this.cancelGuideSOSCountdown(false);
+        let lat = null;
+        let lng = null;
+        if (navigator.geolocation) {
+          await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition((pos) => {
+              lat = pos.coords.latitude;
+              lng = pos.coords.longitude;
+              resolve();
+            }, () => resolve(), { enableHighAccuracy: true, timeout: 8000 });
+          });
+        }
+        const payload = {
+          userId: this.currentUser?.id || null,
+          lat,
+          lng,
+          accuracy: 15,
+          timestamp: new Date().toISOString(),
+          phone: '112',
+        };
+        const token = this.getAuthToken();
+        await fetch('/api/sos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+        window.location.href = 'tel:112';
+        this.toast('SOS 已上报并发起拨号', 'error');
+      },
 
       async init() {
         await this.loadLevels();

@@ -36,28 +36,47 @@
   </script>
   <style>
     :root {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f3f4f6;
-      --text-primary: #111827;
-      --text-secondary: #6b7280;
-      --border-color: #e5e7eb;
-      --card-bg: #ffffff;
-      --nav-bg: #1e40af;
+      --bg-primary: #f2f5fa;
+      --bg-secondary: #e8edf5;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --border-color: rgba(15, 23, 42, 0.12);
+      --card-bg: rgba(255, 255, 255, 0.6);
+      --nav-bg: rgba(255, 255, 255, 0.7);
+      --primary: #2b6579;
+      --primary-strong: #245668;
+      --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.18);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
       --bottom-nav-height: 64px;
       --drawer-handle-height: 52px;
       --drawer-peek-height: 48px;
-      --drawer-bg: rgba(15, 23, 42, 0.97);
+      --drawer-bg: rgba(15, 23, 42, 0.84);
     }
     [data-theme="dark"] {
       --bg-primary: #0f172a;
-      --bg-secondary: #1e293b;
+      --bg-secondary: #111827;
       --text-primary: #f1f5f9;
       --text-secondary: #94a3b8;
-      --border-color: #334155;
-      --card-bg: #1e293b;
-      --nav-bg: #0f172a;
+      --border-color: rgba(148, 163, 184, 0.2);
+      --card-bg: rgba(15, 23, 42, 0.55);
+      --nav-bg: rgba(15, 23, 42, 0.72);
+      --shadow-soft: 0 16px 40px rgba(2, 6, 23, 0.45);
     }
-    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg-primary: #0f172a;
+        --bg-secondary: #111827;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border-color: rgba(148, 163, 184, 0.2);
+        --card-bg: rgba(15, 23, 42, 0.55);
+        --nav-bg: rgba(15, 23, 42, 0.72);
+      }
+    }
+    .glass { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border-color); }
     [x-cloak] { display: none !important; }
     .app-container { max-width: 430px; margin: 0 auto; }
     body { background: var(--bg-primary, #0f172a); }
@@ -69,7 +88,8 @@
     .pulse-red { animation: pulse-red 2s infinite; }
     .bottom-sheet { border-radius: 20px 20px 0 0; }
     /* Button click feedback */
-    button { transition: transform 0.1s, opacity 0.1s; }
+    button { transition: transform 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.18s, box-shadow 0.18s; }
+    button:hover { transform: scale(1.02); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2); }
     button:active { transform: scale(0.95); opacity: 0.8; }
     /* Skeleton pulse */
     @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
@@ -127,6 +147,7 @@
       overflow-y: auto;
       max-height: calc(75vh - var(--bottom-nav-height) - var(--drawer-handle-height));
     }
+    .fluid-300 { transition-duration: 300ms; transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94); }
   </style>
   <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN 由后端注入，未配置时不加载）-->
   <script>
@@ -271,39 +292,51 @@
   </div>
 
   <!-- FIXED HEADER -->
-  <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/10" style="max-width:430px;margin:0 auto;">
+  <header class="fixed top-0 left-0 right-0 z-50 glass" style="max-width:430px;margin:0 auto;padding-top:var(--safe-top);padding-left:var(--safe-left);padding-right:var(--safe-right);">
     <div class="flex items-center justify-between px-4 py-3">
       <div class="flex items-center gap-2">
         <span class="text-primary-light text-xl">&#9968;&#65039;</span>
-        <span class="font-display font-bold text-lg text-white" x-text="t('app_name')"></span>
+        <div>
+          <span class="font-display font-bold text-lg text-white block" x-text="t('app_name')"></span>
+          <span class="text-[11px] text-slate-400 block" x-text="getPageTitle()"></span>
+        </div>
       </div>
       <div class="flex items-center gap-1">
-        <template x-if="currentUser">
-          <button @click="openNotificationCenter()" class="relative p-2 rounded-full hover:bg-white/10 transition-colors">
-            <span class="material-symbols-outlined text-slate-300 text-xl">notifications</span>
-            <span x-show="notificationCount > 0" class="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold px-0.5" x-text="notificationCount > 99 ? '99+' : notificationCount"></span>
-          </button>
-        </template>
-        <template x-if="!currentUser">
-          <button @click="showLogin=true" class="px-3 py-1.5 rounded-full text-xs font-bold bg-primary text-white hover:bg-primary-light transition-colors">登录</button>
-        </template>
-        <template x-if="currentUser">
-          <button @click="currentPage='me'" class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary-light">
-            <img :src="userProfile.avatar" class="w-full h-full object-cover">
-          </button>
-        </template>
+        <button @click="showSettings=true; settingsType='profile'" class="w-10 h-10 rounded-2xl bg-white/10 text-slate-200 flex items-center justify-center">
+          <span class="material-symbols-outlined text-xl">menu</span>
+        </button>
       </div>
     </div>
   </header>
 
   <!-- MAIN CONTENT -->
-  <main class="pt-16 pb-20 min-h-screen">
+  <main class="pt-20 pb-24 min-h-screen fluid-300" style="padding-top:calc(var(--safe-top) + 60px);">
 
     <!-- HOME PAGE -->
     <section x-show="currentPage === 'home'"
-             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
+      <div class="px-4 pt-2 pb-2">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-bold text-xl text-white">精选探险</h2>
+          <a href="/expedition-detail.html?id=featured" class="text-xs text-primary-light">查看全部</a>
+        </div>
+        <div class="space-y-3">
+          <template x-for="item in expeditionCards" :key="item.id">
+            <button @click="openExpeditionDetail(item)" class="w-full text-left glass rounded-2xl overflow-hidden">
+              <img :src="item.cover" :alt="item.name" class="w-full h-28 object-cover">
+              <div class="p-3">
+                <p class="font-semibold text-white" x-text="item.name"></p>
+                <div class="mt-1 flex items-center justify-between text-xs text-slate-300">
+                  <span x-text="item.region"></span>
+                  <span class="px-2 py-0.5 rounded-full bg-white/10" x-text="item.difficulty"></span>
+                </div>
+              </div>
+            </button>
+          </template>
+        </div>
+      </div>
       <!-- Hero Carousel -->
       <div class="relative overflow-hidden" style="height:240px;" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
         <template x-for="(slide,i) in heroSlides" :key="i">
@@ -1300,34 +1333,74 @@
 
 
     <section x-show="currentPage === 'track'"
-             x-data="{ drawerOpen: false }"
-             x-transition:enter="transition ease-out duration-200"
+              x-data="{ drawerOpen: false }"
+             x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100">
-      <!-- AMap GPS 地图 (full-screen on mobile, 220px on desktop) -->
+              x-transition:enter-end="opacity-100">
+      <!-- 全屏地图 -->
       <div id="track-map-container" class="track-map-wrapper glass relative overflow-hidden">
         <div id="track-map" style="width:100%;height:100%;"></div>
-        <!-- AMap 未加载时显示占位 -->
         <div x-show="!trackMap" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
           <span class="material-symbols-outlined text-4xl mb-2">map</span>
           <p class="text-xs" x-text="amapAvailable ? '地图加载中…' : '地图未配置（需设置 AMAP_KEY）'"></p>
         </div>
-        <div class="absolute top-2 right-2 flex flex-col items-end gap-2">
-          <div class="bg-slate-900/80 backdrop-blur rounded-2xl p-1.5 border border-white/15 shadow-lg">
-            <div class="grid grid-cols-2 gap-1.5">
-              <template x-for="layer in mapLayerOptions" :key="layer.key">
-                <button
-                  @click="switchTrackMapLayer(layer.key)"
-                  class="px-3 min-h-[44px] min-w-[44px] rounded-xl text-xs font-semibold transition-colors"
-                  :class="activeMapLayer === layer.key ? 'bg-primary text-white' : 'bg-slate-800/80 text-slate-200 hover:bg-slate-700'">
-                  <span x-text="layer.label"></span>
-                </button>
-              </template>
-            </div>
+        <div class="absolute left-3 top-3 z-20" style="padding-top:var(--safe-top);">
+          <div class="glass rounded-2xl flex items-center gap-2 px-3 py-2 shadow-lg">
+            <button @click="toggleMapSearch()" class="w-9 h-9 rounded-xl bg-white/10 text-slate-100 flex items-center justify-center">
+              <span class="material-symbols-outlined">search</span>
+            </button>
+            <input x-show="mapSearchExpanded"
+                   x-transition:enter="transition ease-out duration-200"
+                   x-transition:leave="transition ease-in duration-150"
+                   @keydown.enter="runMapSearch()"
+                   x-model="mapSearchQuery"
+                   class="bg-transparent text-white text-sm w-40 outline-none placeholder-slate-400"
+                   placeholder="搜索山峰或营地">
           </div>
-          <button @click="locateMe()" class="bg-slate-900/80 backdrop-blur text-white p-2 rounded-xl hover:bg-slate-800 transition-colors" title="我的位置">
-            <span class="material-symbols-outlined text-base text-primary-light">my_location</span>
+        </div>
+
+        <div class="absolute right-3 bottom-24 z-20 flex flex-col items-end gap-2" style="padding-right:var(--safe-right);padding-bottom:var(--safe-bottom);">
+          <button @click="showTrackLayerPanel = !showTrackLayerPanel" class="w-12 h-12 rounded-2xl bg-slate-900/85 text-white flex items-center justify-center shadow-xl">
+            <span class="material-symbols-outlined">layers</span>
           </button>
+          <button @click="locateMe()" class="w-12 h-12 rounded-2xl bg-slate-900/85 text-white flex items-center justify-center shadow-xl" title="我的位置">
+            <span class="material-symbols-outlined text-primary-light">my_location</span>
+          </button>
+          <button @click="openNewTrack()" class="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center shadow-xl" title="新建轨迹">
+            <span class="material-symbols-outlined text-3xl">add</span>
+          </button>
+        </div>
+
+        <div x-show="showTrackLayerPanel"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:leave="transition ease-in duration-200"
+             class="absolute right-3 bottom-[220px] z-30 w-48 glass rounded-2xl p-2 space-y-1">
+          <template x-for="layer in mapLayerOptions" :key="layer.key">
+            <button @click="switchTrackMapLayer(layer.key)"
+                    class="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold"
+                    :class="activeMapLayer === layer.key ? 'bg-primary text-white' : 'bg-white/5 text-slate-200'">
+              <span x-text="layer.label"></span>
+            </button>
+          </template>
+          <button @click="startOfflineMapDownload(); showTrackLayerPanel=false"
+                  class="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold bg-white/10 text-primary-light">
+            离线地图下载
+          </button>
+        </div>
+      </div>
+
+      <div x-show="showOfflineMapModal"
+           x-transition:enter="transition ease-out duration-300"
+           x-transition:leave="transition ease-in duration-200"
+           class="fixed inset-0 z-[160] bg-black/55 flex items-center justify-center px-4">
+        <div class="glass rounded-3xl p-5 w-full max-w-sm">
+          <h3 class="text-lg font-bold text-white mb-2">离线地图下载中</h3>
+          <p class="text-sm text-slate-300 mb-4">山区弱网场景已自动优化瓦片缓存</p>
+          <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden mb-2">
+            <div class="h-full bg-primary-light transition-all duration-200" :style="`width:${offlineMapProgress}%`"></div>
+          </div>
+          <p class="text-xs text-slate-300 mb-4" x-text="offlineMapProgress + '%'"></p>
+          <button @click="closeOfflineMapModal()" class="w-full py-2.5 rounded-xl bg-white/10 text-white font-semibold">关闭</button>
         </div>
       </div>
       <!-- Content panel: bottom drawer on mobile, normal flow on desktop -->
@@ -5589,14 +5662,14 @@
   </div>
 
   <!-- FIXED BOTTOM NAV -->
-  <nav class="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10" style="max-width:430px;margin:0 auto;">
+  <nav class="fixed bottom-0 left-0 right-0 z-50 glass" style="max-width:430px;margin:0 auto;padding-left:var(--safe-left);padding-right:var(--safe-right);padding-bottom:var(--safe-bottom);">
     <div class="flex items-center justify-around px-2 py-2">
       <template x-for="tab in navTabs" :key="tab.id">
-        <button @click="currentPage=tab.id"
+        <button @click="switchPrimaryTab(tab.id)"
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
-                :class="currentPage===tab.id ? 'text-primary-light' : 'text-slate-500 hover:text-slate-300'">
+                :class="isPrimaryTabActive(tab.id) ? 'bg-primary/20 text-primary-light' : 'text-slate-500 hover:text-slate-300'">
           <span class="material-symbols-outlined text-2xl"
-                :class="currentPage===tab.id ? 'filled' : ''"
+                :class="isPrimaryTabActive(tab.id) ? 'filled' : ''"
                 x-text="tab.icon"></span>
           <span class="text-xs font-medium" x-text="tab.name"></span>
         </button>

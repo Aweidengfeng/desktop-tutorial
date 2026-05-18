@@ -6,14 +6,30 @@
   <title>SummitLink 后台管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
     body { background: #0f172a; }
-    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+    .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); }
     .glass-dark { background: rgba(0,0,0,0.3); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
     [x-cloak] { display: none !important; }
+    .admin-online-pulse {
+      box-shadow: 0 0 0 rgba(34, 197, 94, 0.6);
+      animation: adminPulse 1.8s infinite;
+    }
+    @keyframes adminPulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.65); }
+      100% { box-shadow: 0 0 0 14px rgba(34, 197, 94, 0); }
+    }
   </style>
   <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
   <script>
@@ -94,7 +110,7 @@
   <div x-show="isLoggedIn" class="flex min-h-screen">
 
     <!-- 侧边栏 -->
-    <aside class="glass-dark w-56 flex-shrink-0 flex flex-col py-6 px-3 fixed top-0 left-0 h-full z-30">
+    <aside class="glass-dark w-[240px] flex-shrink-0 flex flex-col py-6 px-3 fixed top-0 left-0 h-full z-30">
       <div class="text-center mb-8 px-2">
         <div class="text-2xl">🏔️</div>
         <div class="text-sm font-bold mt-1">SummitLink Admin</div>
@@ -102,8 +118,9 @@
       <nav class="flex-1 space-y-1">
         <template x-for="nav in navItems" :key="nav.id">
           <button @click="page = nav.id; loadPage()"
-                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition"
-                  :class="page === nav.id ? 'bg-blue-600 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white'">
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition relative"
+                  :class="page === nav.id ? 'bg-blue-600/20 text-white' : 'text-white/60 hover:bg-white/10 hover:text-white'">
+            <span x-show="page === nav.id" class="absolute left-0 top-2 bottom-2 w-[3px] bg-blue-400 rounded-r-full"></span>
             <span x-text="nav.icon"></span>
             <span x-text="nav.label"></span>
           </button>
@@ -115,7 +132,15 @@
     </aside>
 
     <!-- 主内容区 -->
-    <main class="ml-56 flex-1 p-6 min-h-screen">
+    <main class="ml-[240px] flex-1 p-6 min-h-screen" style="padding-top:calc(var(--safe-top) + 24px);padding-right:calc(var(--safe-right) + 24px);padding-bottom:calc(var(--safe-bottom) + 24px);">
+
+      <div x-show="sosBannerVisible" class="mb-4 px-4 py-3 rounded-2xl bg-red-600/85 text-white flex items-center justify-between">
+        <div>
+          <p class="font-semibold">🆘 SOS 实时告警</p>
+          <p class="text-xs text-red-100">检测到新的 SOS 事件，点击查看详情</p>
+        </div>
+        <button @click="openLatestSosDetail()" class="px-3 py-1.5 rounded-xl bg-white/20 text-sm">查看</button>
+      </div>
 
       <!-- 数据总览 -->
       <div x-show="page === 'stats'">
@@ -130,6 +155,34 @@
           </template>
         </div>
         <div x-show="statsLoading" class="text-center text-white/40 py-8">加载中…</div>
+      </div>
+
+      <div x-show="page === 'map-monitor'" class="space-y-4">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <template x-for="card in monitorCards" :key="card.label">
+            <div class="glass rounded-2xl p-4">
+              <p class="text-xs text-slate-300" x-text="card.label"></p>
+              <p class="text-2xl font-bold mt-1" x-text="card.value"></p>
+              <svg viewBox="0 0 100 24" class="w-full h-6 mt-2 text-blue-300">
+                <polyline fill="none" stroke="currentColor" stroke-width="2" :points="card.sparkline"></polyline>
+              </svg>
+            </div>
+          </template>
+        </div>
+        <div class="glass rounded-2xl p-4">
+          <div class="flex flex-wrap gap-2 mb-3">
+            <input x-model="monitorFilters.date" type="date" class="bg-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none">
+            <select x-model="monitorFilters.guide" class="bg-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none">
+              <option value="">全部向导</option>
+              <template x-for="item in monitorGuides" :key="item.id"><option :value="item.name" x-text="item.name"></option></template>
+            </select>
+            <select x-model="monitorFilters.status" class="bg-white/10 text-white rounded-lg px-3 py-2 text-sm outline-none">
+              <option value="">全部状态</option><option value="online">在线</option><option value="offline">离线</option>
+            </select>
+            <button @click="applyMonitorFilter()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm">筛选</button>
+          </div>
+          <div id="admin-monitor-map" class="rounded-2xl overflow-hidden" style="height:62vh;"></div>
+        </div>
       </div>
 
       <!-- 用户管理 -->
@@ -1686,6 +1739,15 @@
       </template>
     </div>
   </div>
+  <div x-show="latestSosModal.open" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" @click.self="latestSosModal.open=false">
+    <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
+      <h3 class="text-lg font-bold mb-3 text-red-300">🆘 SOS 告警详情</h3>
+      <p class="text-sm text-slate-300 mb-1">用户ID：<span x-text="latestSosModal.item?.userId ?? '-'"></span></p>
+      <p class="text-sm text-slate-300 mb-1">位置：<span x-text="`${latestSosModal.item?.lat ?? '-'}, ${latestSosModal.item?.lng ?? '-'}`"></span></p>
+      <p class="text-sm text-slate-300 mb-4">时间：<span x-text="latestSosModal.item?.timestamp ? new Date(latestSosModal.item.timestamp).toLocaleString('zh-CN') : '-'"></span></p>
+      <button @click="latestSosModal.open=false; page='sos-records'; loadPage()" class="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500">前往 SOS 列表</button>
+    </div>
+  </div>
   <div x-show="commercialReviewDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="commercialReviewDrawer.open=false">
     <div class="glass rounded-2xl p-6 w-full max-w-md mx-4">
       <h3 class="font-bold text-lg mb-2">审核商业资质</h3>
@@ -1716,6 +1778,7 @@
 
         navItems: [
           { id: 'stats',           icon: '📊', label: '数据总览' },
+          { id: 'map-monitor',     icon: '🛰️', label: '地图监控' },
           { id: 'merchant-kyc',    icon: '🔍', label: '商家 KYC 审核' },
           { id: 'platform-routes', icon: '🗺️', label: '路线审核' },
           { id: 'invite-codes',    icon: '🎟️', label: '邀请码管理' },
@@ -1811,6 +1874,27 @@
 
         // SOS Records
         sosRecords: [], sosRecordsTotal: 0, sosRecordsPage: 1, sosRecordsLoading: false, sosRecordsFilter: '',
+        sosBannerVisible: false,
+        latestSosModal: { open: false, item: null },
+        adminMonitorMap: null,
+        adminMonitorMarkers: [],
+        monitorFilters: { date: '', guide: '', status: '' },
+        monitorGuides: [
+          { id: 1, name: '扎西次仁' },
+          { id: 2, name: 'A. Sherpa' },
+          { id: 3, name: '刘燕' },
+        ],
+        monitorPositions: [
+          { id: 1, name: '扎西次仁', lat: 27.99, lng: 86.93, status: 'online' },
+          { id: 2, name: 'A. Sherpa', lat: 27.95, lng: 86.87, status: 'online' },
+          { id: 3, name: '刘燕', lat: 28.01, lng: 86.8, status: 'offline' },
+        ],
+        monitorCards: [
+          { label: '今日活跃', value: 28, sparkline: '0,20 20,12 40,13 60,8 80,10 100,5' },
+          { label: '本周收入', value: '¥ 128,400', sparkline: '0,18 20,16 40,14 60,10 80,6 100,4' },
+          { label: 'SOS次数', value: 3, sparkline: '0,21 20,20 40,19 60,13 80,15 100,11' },
+          { label: '评分均值', value: '4.92', sparkline: '0,17 20,14 40,12 60,11 80,9 100,8' },
+        ],
 
         // Withdrawal Requests
         withdrawals: [], withdrawalsTotal: 0, withdrawalsPage: 1, withdrawalsLoading: false, withdrawalsFilter: '',
@@ -1869,6 +1953,7 @@
             await this.api('GET', '/check');
             this.isLoggedIn = true;
             this.loadPage();
+            this.loadSosRecords(1);
           } catch (e) {
             this.isLoggedIn = false;
           }
@@ -1927,6 +2012,7 @@
 
         loadPage() {
           if (this.page === 'stats') this.loadStats();
+          else if (this.page === 'map-monitor') this.initAdminMonitorMap();
           else if (this.page === 'users') this.loadUsers(1);
           else if (this.page === 'posts') this.loadPosts(1);
           else if (this.page === 'guides') this.loadGuides(1);
@@ -1953,6 +2039,63 @@
           else if (this.page === 'commission-config') this.loadCommissionRates();
           else if (this.page === 'disputes') this.loadDisputes();
           else if (this.page === 'traffic') { this.loadFeaturedSlots(); this.loadBanners(); }
+        },
+
+        initAdminMonitorMap() {
+          this.$nextTick(() => {
+            if (!window.L) return;
+            const node = document.getElementById('admin-monitor-map');
+            if (!node) return;
+            if (!this.adminMonitorMap) {
+              this.adminMonitorMap = window.L.map(node, { zoomControl: false }).setView([27.98, 86.9], 8);
+              window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+              }).addTo(this.adminMonitorMap);
+            } else {
+              this.adminMonitorMap.invalidateSize();
+            }
+            this.renderMonitorMarkers();
+          });
+        },
+
+        applyMonitorFilter() {
+          this.renderMonitorMarkers();
+        },
+
+        renderMonitorMarkers() {
+          if (!this.adminMonitorMap || !window.L) return;
+          this.adminMonitorMarkers.forEach(m => {
+            try { this.adminMonitorMap.removeLayer(m); } catch(e) {}
+          });
+          this.adminMonitorMarkers = [];
+          const list = this.monitorPositions.filter(item => {
+            if (this.monitorFilters.guide && item.name !== this.monitorFilters.guide) return false;
+            if (this.monitorFilters.status && item.status !== this.monitorFilters.status) return false;
+            return true;
+          });
+          list.forEach((item) => {
+            const online = item.status === 'online';
+            const color = online ? '#22c55e' : '#94a3b8';
+            const marker = window.L.circleMarker([item.lat, item.lng], {
+              radius: online ? 10 : 8,
+              color,
+              fillColor: color,
+              fillOpacity: online ? 0.95 : 0.6,
+              className: online ? 'admin-online-pulse' : '',
+            }).addTo(this.adminMonitorMap);
+            marker.bindPopup(`${item.name}<br>${online ? '在线' : '离线'}`);
+            this.adminMonitorMarkers.push(marker);
+          });
+        },
+
+        openLatestSosDetail() {
+          if (!this.sosRecords.length) {
+            this.showToast('暂无 SOS 记录', 'error');
+            return;
+          }
+          this.latestSosModal.item = this.sosRecords[0];
+          this.latestSosModal.open = true;
         },
 
         async loadStats() {
@@ -2348,7 +2491,7 @@
         async loadSosRecords(p) {
           this.sosRecordsLoading = true; this.sosRecordsPage = p;
           try {
-            const r = await fetch(`/api/sos/alerts?page=${p}&limit=20`, {
+            const r = await fetch(`/api/sos?page=${p}&limit=20`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
@@ -2360,6 +2503,7 @@
             const d = await r.json();
             if (!r.ok) throw new Error(d.error || '请求失败');
             this.sosRecords = d.alerts || []; this.sosRecordsTotal = d.total || 0;
+            this.sosBannerVisible = this.sosRecords.length > 0;
           } catch(e) { this.showToast(e.message,'error'); } finally { this.sosRecordsLoading = false; }
         },
 
