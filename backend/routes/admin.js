@@ -1423,16 +1423,17 @@ router.put('/withdrawals/:id/reject', adminWriteLimiter, adminAuth, async (req, 
 });
 
 // POST /api/admin/backup — 触发数据库备份（需 admin 鉴权）
-router.post('/backup', adminWriteLimiter, adminAuth, async (req, res) => {
-  const { exec } = require('child_process');
+router.post('/backup', adminWriteLimiter, adminAuth, (req, res) => {
+  const { execFile } = require('child_process');
   const path = require('path');
-  const scriptPath = path.join(__dirname, '../../backend/scripts/backup-db.sh');
-  const altPath = path.join(__dirname, '../scripts/backup-db.sh');
-  const script = require('fs').existsSync(scriptPath) ? scriptPath : altPath;
-  if (!require('fs').existsSync(script)) {
+  const fs = require('fs');
+  // Resolve the script path relative to this file's directory (backend/routes/ → backend/scripts/)
+  const script = path.resolve(__dirname, '../scripts/backup-db.sh');
+  if (!fs.existsSync(script)) {
     return res.status(404).json({ error: '备份脚本不存在' });
   }
-  exec(`bash ${script}`, { timeout: 60000 }, (err, stdout, stderr) => {
+  // Use execFile with an array of args to avoid shell injection
+  execFile('bash', [script], { timeout: 60000 }, (err, stdout, stderr) => {
     if (err) {
       console.error('[backup] 备份失败:', err.message, stderr);
       return res.status(500).json({ error: '备份执行失败', detail: stderr });

@@ -57,10 +57,12 @@ self.addEventListener('fetch', (event) => {
           if (age > TILE_CACHE_MAX_AGE_MS) {
             fetch(event.request).then(response => {
               if (response.ok) {
-                const headers = new Headers(response.headers);
+                const cloned = response.clone();
+                const headers = new Headers(cloned.headers);
                 headers.set('sw-cached-at', String(Date.now()));
-                const cloned = new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-                cache.put(event.request, cloned);
+                cloned.blob().then(body => {
+                  cache.put(event.request, new Response(body, { status: cloned.status, statusText: cloned.statusText, headers }));
+                }).catch(() => {});
               }
             }).catch(() => {});
           }
@@ -70,10 +72,12 @@ self.addEventListener('fetch', (event) => {
         try {
           const response = await fetch(event.request);
           if (response.ok) {
-            const headers = new Headers(response.headers);
+            const toCache = response.clone();
+            const headers = new Headers(toCache.headers);
             headers.set('sw-cached-at', String(Date.now()));
-            const cloned = new Response(response.clone().body, { status: response.status, statusText: response.statusText, headers });
-            cache.put(event.request, cloned);
+            toCache.blob().then(body => {
+              cache.put(event.request, new Response(body, { status: toCache.status, statusText: toCache.statusText, headers }));
+            }).catch(() => {});
           }
           return response;
         } catch (e) {
