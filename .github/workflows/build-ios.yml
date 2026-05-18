@@ -65,7 +65,8 @@ jobs:
 
       - name: Ensure iOS platform exists
         run: |
-          if [ ! -d ios/App ]; then
+          if [ ! -d ios ] || [ ! -d ios/App ]; then
+            rm -rf ios
             npx cap add ios
           fi
 
