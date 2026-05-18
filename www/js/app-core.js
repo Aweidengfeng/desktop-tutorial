@@ -239,7 +239,6 @@ async function detectMapProvider() {
       }
       const amapKey = data.amapKey || '';
       const amapSecurityCode = data.amapSecurityCode || '';
-      window.__activeMapProvider = 'amap';
       if (amapKey) {
         try {
           await loadAMap(amapKey, amapSecurityCode);
@@ -263,7 +262,7 @@ async function detectMapProvider() {
  */
 function loadAMap(amapKey, securityCode) {
   return new Promise((resolve, reject) => {
-    if (typeof AMap !== 'undefined') { resolve(); return; }
+    if (window.AMap && typeof window.AMap.Map === 'function') { resolve(); return; }
     if (!amapKey) {
       reject(new Error('AMap key is required'));
       return;
