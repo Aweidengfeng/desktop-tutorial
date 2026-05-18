@@ -374,6 +374,7 @@ function alpineLink() {
     showSOSConfirm: false,
     sosCountdown: 5,
     sosCountdownTimer: null,
+    sosEmergencyPhone: '112',
     showChatWindow: false,
     activeChatSession: null,
     chatSubTab: 'all',
@@ -3415,12 +3416,11 @@ function alpineLink() {
       } catch(e) {}
     },
     getSosDialNumber() {
-      const lang = (navigator.language || '').toLowerCase();
-      const langs = (navigator.languages || []).map(l => String(l).toLowerCase());
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-      const isChinaLocale = lang.startsWith('zh-cn') || langs.some(l => l.startsWith('zh-cn'));
-      const isChinaTz = timezone === 'Asia/Shanghai';
-      return (isChinaLocale || isChinaTz) ? '120' : '112';
+      const raw = String(this.sosEmergencyPhone || '').trim();
+      if (!raw) return '112';
+      const normalized = raw.toLowerCase().startsWith('tel:') ? raw.slice(4) : raw;
+      const sanitized = normalized.replace(/[^\d+]/g, '');
+      return sanitized || '112';
     },
     startSOSCountdown() {
       this.cancelSOSCountdown(false);
@@ -3448,21 +3448,24 @@ function alpineLink() {
       const GPS_CACHE_MAX_AGE_MS = 5000;
       if (!navigator.geolocation) {
         this.showToast('GPS不可用，已按空坐标上报', 'warning');
-        return { lat: null, lng: null };
+        return { lat: null, lng: null, accuracy: null };
       }
       return new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
           (pos) => resolve({
             lat: Math.round(pos.coords.latitude * (10 ** GPS_PRECISION_DECIMALS)) / (10 ** GPS_PRECISION_DECIMALS),
             lng: Math.round(pos.coords.longitude * (10 ** GPS_PRECISION_DECIMALS)) / (10 ** GPS_PRECISION_DECIMALS),
+            accuracy: Number.isFinite(pos.coords.accuracy)
+              ? Math.round(pos.coords.accuracy * 100) / 100
+              : null,
           }),
-          () => resolve({ lat: null, lng: null }),
+          () => resolve({ lat: null, lng: null, accuracy: null }),
           { enableHighAccuracy: true, timeout: GPS_TIMEOUT_MS, maximumAge: GPS_CACHE_MAX_AGE_MS }
         );
       });
     },
     async reportSOSAlert(phone, timestamp) {
-      const { lat, lng } = await this.getSOSPosition();
+      const { lat, lng, accuracy } = await this.getSOSPosition();
       const userId = this.currentUser?.id ?? null;
       await fetch('/api/sos/alert', {
         method: 'POST',
@@ -3471,6 +3474,7 @@ function alpineLink() {
           userId,
           lat,
           lng,
+          accuracy,
           timestamp,
           phone,
         }),
@@ -3835,6 +3839,7 @@ function alpineLink() {
         const data = await res.json();
         this.paymentsEnabled = !!data.paymentsEnabled;
         this.stripePublishableKey = (data.stripePublishableKey || '').trim();
+        this.sosEmergencyPhone = String(data.emergencyPhone || '112').trim();
       } catch (e) {}
     },
     async ensureStripeLoaded() {

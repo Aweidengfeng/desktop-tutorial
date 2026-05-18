@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS "sos_alerts" (
   "user_id" INTEGER,
   "lat" REAL,
   "lng" REAL,
+  "accuracy" REAL,
   "timestamp" DATETIME NOT NULL,
   "phone" TEXT,
   "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

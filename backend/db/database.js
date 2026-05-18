@@ -405,6 +405,7 @@ CREATE TABLE IF NOT EXISTS sos_alerts (
   user_id INTEGER,
   lat REAL,
   lng REAL,
+  accuracy REAL,
   timestamp DATETIME,
   phone TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -1174,6 +1175,11 @@ if (!existingBookingCols2.includes('price')) {
 }
 if (!existingBookingCols2.includes('booking_type')) {
   db.exec("ALTER TABLE bookings ADD COLUMN booking_type TEXT DEFAULT 'commercial'");
+}
+
+const existingSosAlertCols = db.pragma('table_info(sos_alerts)').map(c => c.name);
+if (!existingSosAlertCols.includes('accuracy')) {
+  db.exec('ALTER TABLE sos_alerts ADD COLUMN accuracy REAL');
 }
 
 // 种子数据：登山线路（仅当表使用 legacy 列模式时运行）

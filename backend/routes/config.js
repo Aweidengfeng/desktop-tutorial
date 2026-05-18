@@ -18,10 +18,13 @@ function hasValidMapboxToken(token) {
 
 router.get('/', configLimiter, (_req, res) => {
   const paymentsEnabled = isPaymentsEnabled();
+  const emergencyPhoneRaw = String(process.env.SOS_EMERGENCY_PHONE || '').trim();
+  const emergencyPhone = emergencyPhoneRaw || '112';
   res.setHeader('Cache-Control', 'public, max-age=60');
   res.json({
     paymentsEnabled,
     stripePublishableKey: paymentsEnabled ? String(process.env.STRIPE_PUBLISHABLE_KEY || '').trim() : '',
+    emergencyPhone,
   });
 });
 
