@@ -67,7 +67,7 @@ services:
         max-file: "10"
 
   postgres:
-    image: mirrors.tencent.com/library/postgres:16-alpine
+    image: postgres:16-alpine
     restart: unless-stopped
     mem_limit: 768m
     mem_reservation: 256m
@@ -103,7 +103,7 @@ services:
         max-file: "5"
 
   nginx:
-    image: mirrors.tencent.com/library/nginx:alpine
+    image: nginx:alpine
     restart: unless-stopped
     mem_limit: 128m
     ports:
