@@ -5,7 +5,8 @@
 services:
   backend:
     build:
-      # context = backend 目录（compose 文件被复制到 /opt/summitlink/ 后，backend/ 就在同级）
+      # 此 compose 预期先复制到 /opt/summitlink/docker-compose.yml 再执行（见 deploy.sh/workflow）
+      # context = backend 目录（compose 文件位于 /opt/summitlink/ 时，backend/ 就在同级）
       context: ./backend
       # Dockerfile 路径相对于 context（./backend）解析
       dockerfile: ../deploy/tencent/Dockerfile.backend
