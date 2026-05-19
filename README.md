@@ -65,6 +65,7 @@ summitlink/
 - [部署指南](docs/DEPLOY_GUIDE.md)
 - [推送通知配置](docs/PUSH_NOTIFICATION.md)
 - [API 参考](docs/API_REFERENCE.md)
+- [项目汇报 PPT 草稿](docs/PPT_REPORT_2026-05.md)
 - [隐私政策](docs/PRIVACY.md)
 - [上线检查清单](docs/LAUNCH_CHECKLIST_FINAL.md)
 - [审计基线](docs/AUDIT_2026-05-18.md)
