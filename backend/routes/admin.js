@@ -9,6 +9,7 @@ const devOnly = require('../middleware/devOnly');
 const { GUIDE_CERT_LEVELS, CLUB_CERT_LEVELS } = require('../utils/certLevels');
 const { sendMail, certificationResultEmail } = require('../middleware/mailer');
 const PDFDocument = require('pdfkit');
+const stripeConnect = require('../lib/payment/stripe-connect');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -1475,11 +1476,41 @@ async function processWithdrawalAction(withdrawalId, action, note = '') {
   const paymentsEnabled = String(process.env.PAYMENTS_ENABLED || '').toLowerCase() === 'true';
   const now = new Date().toISOString();
   const finalNote = String(note || '').trim();
+
+  let stripeTransferId = null;
+  let stripeError = null;
+  let payoutMock = true;
+
+  if (isApprove && request.owner_type === 'guide') {
+    // 尝试 Stripe Connect 打款
+    const [guide] = await prisma.$queryRaw`SELECT stripe_account_id FROM guides WHERE id = ${request.owner_id}`;
+    const stripeAccountId = guide && guide.stripe_account_id;
+    if (stripeAccountId && !stripeConnect.isMock()) {
+      try {
+        const amountUsd = Math.round(Number(request.amount || 0) * 100); // 分（USD cents）
+        const { transferId, mock } = await stripeConnect.createPayout({
+          accountId: stripeAccountId,
+          amount: amountUsd,
+          currency: 'usd',
+          description: `SummitLink 向导提现 #${withdrawalId}`,
+        });
+        stripeTransferId = transferId;
+        payoutMock = mock;
+      } catch (e) {
+        stripeError = e.message;
+        console.error('[admin/withdrawal] Stripe payout failed:', e.message);
+      }
+    }
+  }
+
   const defaultNote = (() => {
     if (!isApprove) return '管理员驳回';
+    if (stripeTransferId && !payoutMock) return `Stripe 转账成功，transfer_id: ${stripeTransferId}`;
+    if (stripeError) return `Stripe 打款失败（${stripeError}），待人工处理`;
     if (paymentsEnabled) return '已批准：等待真实银行转账处理';
     return 'PAYMENTS_ENABLED=false：记录 mock 审批结果';
   })();
+
   await prisma.$executeRaw`
     UPDATE withdrawal_requests
     SET status = ${isApprove ? 'approved' : 'rejected'},
@@ -1501,7 +1532,8 @@ async function processWithdrawalAction(withdrawalId, action, note = '') {
     body: {
       success: true,
       status: isApprove ? 'approved' : 'rejected',
-      mock_transfer: isApprove ? true : undefined,
+      mock_transfer: isApprove ? payoutMock : undefined,
+      stripe_transfer_id: stripeTransferId || undefined,
       payments_enabled: paymentsEnabled,
       note: finalNote || undefined,
       message: isApprove ? '已批准提现申请' : '已拒绝提现申请',

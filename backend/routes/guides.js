@@ -7,6 +7,10 @@ const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine'
 const crypto = require('crypto');
 const { GUIDE_CERT_LEVELS } = require('../utils/certLevels');
 const rateLimit = require('express-rate-limit');
+const { detectRegion } = require('../lib/region');
+const wechatPay = require('../lib/payment/wechat-pay');
+const stripeConnect = require('../lib/payment/stripe-connect');
+const { paymentLimiter } = require('../middleware/rateLimits');
 
 const applyRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: '申请频率过高，请稍后再试' } });
 const payRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作频率过高，请稍后再试' } });
@@ -740,6 +744,119 @@ router.get('/:guideId/services/:id/bookings', guideReadLimiter, auth, async (req
     res.json(bookings);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/connect-stripe — 向导绑定 Stripe Express 收款账户
+router.post('/connect-stripe', guideWriteLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id} AND status = 'approved'`;
+    if (!guide) return res.status(403).json({ error: '仅已审核通过的向导可绑定收款账户' });
+    const [user] = await prisma.$queryRaw`SELECT email FROM users WHERE id = ${req.user.id}`;
+    const apiBase = (process.env.API_BASE || 'https://summitlink.app').replace(/\/$/, '');
+    const returnUrl = `${apiBase}/guide-portal?stripe=connected`;
+    const refreshUrl = `${apiBase}/guide-portal?stripe=refresh`;
+
+    // 若已有 stripeAccountId，直接生成 onboarding 链接（续签或重新入驻）
+    let accountId = guide.stripe_account_id || null;
+    if (!accountId) {
+      const { accountId: newId } = await stripeConnect.createConnectedAccount({
+        email: user ? user.email || '' : '',
+        country: 'US',
+      });
+      accountId = newId;
+      await prisma.$executeRaw`
+        UPDATE guides SET stripe_account_id = ${accountId} WHERE id = ${guide.id}
+      `;
+    }
+    const { url, mock } = await stripeConnect.createAccountLink({ accountId, returnUrl, refreshUrl });
+    res.json({ success: true, onboardingUrl: url, mock });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/service-orders/:orderNo/pay — 区域感知支付唤起（向导服务预约）
+router.post('/service-orders/:orderNo/pay', paymentLimiter, auth, async (req, res) => {
+  try {
+    const { orderNo } = req.params;
+    const { openid } = req.body || {};
+    const [order] = await prisma.$queryRaw`
+      SELECT gso.*, gs.title as service_title
+      FROM guide_service_orders gso
+      LEFT JOIN guide_services gs ON gs.id = gso.service_id
+      WHERE gso.order_no = ${orderNo} AND gso.user_id = ${req.user.id}
+    `;
+    if (!order) return res.status(404).json({ error: '订单不存在' });
+    if (order.status === 'paid') return res.json({ provider: 'paid', message: '订单已支付' });
+    if (order.status !== 'pending_payment') {
+      return res.status(400).json({ error: `订单状态为 ${order.status}，无法发起支付` });
+    }
+    const description = order.service_title || 'SummitLink 向导服务';
+    const amountFen = Math.round(Number(order.amount || 0) * 100);
+    const region = detectRegion(req);
+    const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+    const stripeDisabled = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+
+    if (region === 'cn') {
+      const notifyUrl = `${process.env.API_BASE || 'https://summitlink.app'}/api/guides/payment/notify/wechat`;
+      const payParams = await wechatPay.createOrder({
+        body: description,
+        outTradeNo: orderNo,
+        totalFee: amountFen,
+        notifyUrl,
+        openid: openid || null,
+      });
+      return res.json({ provider: 'wechat', payParams });
+    }
+    if (stripeKey && !stripeDisabled) {
+      try {
+        const stripe = require('stripe')(stripeKey);
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountFen,
+          currency: 'cny',
+          metadata: { orderNo, userId: String(req.user.id) },
+          description,
+        });
+        return res.json({ provider: 'stripe', clientSecret: paymentIntent.client_secret });
+      } catch (stripeErr) {
+        console.error('[guides/service-orders/pay] Stripe error:', stripeErr.message);
+      }
+    }
+    return res.json({ provider: 'mock', orderId: 'mock_' + orderNo });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/payment/notify/wechat — 向导服务微信支付回调
+router.post('/payment/notify/wechat', async (req, res) => {
+  try {
+    const rawBody = req.body;
+    const signature = req.headers['wechatpay-signature'] || '';
+    const timestamp = req.headers['wechatpay-timestamp'] || '';
+    const nonce = req.headers['wechatpay-nonce'] || '';
+    let verified = false;
+    let notifyPayload = {};
+    try {
+      const result = await wechatPay.verifyNotify(rawBody, signature, timestamp, nonce);
+      verified = !!(result && result.valid);
+      notifyPayload = (result && result.payload) || {};
+    } catch (_) { verified = false; }
+    if (!verified) {
+      return res.status(200).send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[SIGN_ERROR]]></return_msg></xml>');
+    }
+    const outTradeNo = notifyPayload.out_trade_no || null;
+    if (outTradeNo) {
+      const now = new Date().toISOString();
+      await prisma.$executeRaw`
+        UPDATE guide_service_orders SET status = 'paid', paid_at = ${now}
+        WHERE order_no = ${outTradeNo} AND status = 'pending_payment'
+      `;
+    }
+    res.status(200).send('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
+  } catch (e) {
+    res.status(200).send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[SERVER_ERROR]]></return_msg></xml>');
   }
 });
 

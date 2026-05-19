@@ -216,7 +216,11 @@ const authReadLimiter = rateLimit({
 });
 
 function makeToken(id) {
-  return jwt.sign({ id }, JWT_SECRET, { expiresIn: '30d' });
+  return jwt.sign({ id }, JWT_SECRET, { expiresIn: '15m' });
+}
+
+function makeRefreshToken(id) {
+  return jwt.sign({ id, type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' });
 }
 
 async function safeUser(user) {
@@ -353,7 +357,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (phone) userData.phone = encryptPII(phone);
     if (email) userData.email = encryptPII(email);
     const user = await prisma.user.create({ data: userData });
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     if (e.code === 'P2002') {
       const target = e.meta?.target || '';
@@ -426,7 +430,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ error: email ? '邮箱或密码错误' : '手机号或密码错误' });
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     console.error('[login]', e);
     res.status(500).json({ error: '服务器错误' });
@@ -678,7 +682,7 @@ router.post('/sms/verify', async (req, res) => {
       const avatar = 'https://i.pravatar.cc/150?u=' + phone;
       user = await prisma.user.create({ data: { name, username, phone: encryptPII(phone), avatar } });
     }
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     if (e.code === 'P2002') {
       return res.status(400).json({ error: '账号已存在，请直接登录' });
@@ -767,7 +771,7 @@ router.post('/email/verify', async (req, res) => {
       const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(email);
       user = await prisma.user.create({ data: { name, username, email: encryptPII(email), avatar } });
     }
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     if (e.code === 'P2002') {
       return res.status(400).json({ error: '账号已存在，请直接登录' });
@@ -850,7 +854,7 @@ router.post('/wechat', loginLimiter, async (req, res) => {
         } else throw e;
       }
     }
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     console.error('[wechat]', e);
     res.status(500).json({ error: '服务器错误' });
@@ -916,7 +920,7 @@ router.post('/apple', loginLimiter, async (req, res) => {
         } else throw e;
       }
     }
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     console.error('[apple]', e);
     res.status(500).json({ error: '服务器错误' });
@@ -975,9 +979,37 @@ router.post('/google', loginLimiter, async (req, res) => {
         } else throw e;
       }
     }
-    res.json({ token: makeToken(user.id), user: await safeUser(user) });
+    res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
     console.error('[google]', e);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/auth/refresh — 刷新 Access Token
+// 接受 refreshToken，返回新 accessToken（15分钟）+ 新 refreshToken（30天）
+router.post('/refresh', authWriteLimiter, async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken) return res.status(400).json({ error: '缺少 refreshToken 参数' });
+    let payload;
+    try {
+      payload = jwt.verify(refreshToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: 'refreshToken 无效或已过期' });
+    }
+    if (payload.type !== 'refresh') {
+      return res.status(401).json({ error: 'token 类型错误' });
+    }
+    const userId = Number(payload.id);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(401).json({ error: '用户不存在' });
+    res.json({
+      token: makeToken(userId),
+      refreshToken: makeRefreshToken(userId),
+      user: await safeUser(user),
+    });
+  } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });
