@@ -105,12 +105,12 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     profiles:
-      # 由 COMPOSE_PROFILES 控制（默认通过 .env: COMPOSE_PROFILES=${SSL_ENABLED:-false} 联动）
+      # 使用 "false"/"true" 与 SSL_ENABLED 一致，保证只改 SSL_ENABLED 一行即可切换
       - "false"
     ports:
       - "80:80"
     volumes:
-      - ./deploy/tencent/nginx-http.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx-http.conf:/etc/nginx/nginx.conf:ro
       - uploads_cn:/app/uploads:ro
       - letsencrypt:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
@@ -134,13 +134,13 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     profiles:
-      # 由 COMPOSE_PROFILES 控制（默认通过 .env: COMPOSE_PROFILES=${SSL_ENABLED:-false} 联动）
+      # 使用 "false"/"true" 与 SSL_ENABLED 一致，保证只改 SSL_ENABLED 一行即可切换
       - "true"
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./deploy/tencent/nginx-https.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx-https.conf:/etc/nginx/nginx.conf:ro
       - uploads_cn:/app/uploads:ro
       - letsencrypt:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro

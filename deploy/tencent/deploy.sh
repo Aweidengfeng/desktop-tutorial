@@ -42,6 +42,8 @@ fi
 # 复制腾讯云专用配置文件
 log "▶ 复制 tencent 专用配置..."
 cp deploy/tencent/docker-compose.yml docker-compose.yml
+cp deploy/tencent/nginx-http.conf nginx-http.conf
+cp deploy/tencent/nginx-https.conf nginx-https.conf
 
 # 拉取最新镜像
 log "▶ 拉取依赖镜像..."
