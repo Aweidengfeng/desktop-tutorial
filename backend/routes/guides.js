@@ -84,6 +84,12 @@ router.post('/withdraw', guideWriteLimiter, auth, async (req, res) => {
 
     const balance = Number(guide.balance || 0);
     if (amountNum > balance) return res.status(400).json({ error: '提现金额超过可用余额' });
+    const balanceChanged = await prisma.$executeRaw`
+      UPDATE guides
+      SET balance = balance - ${amountNum}
+      WHERE id = ${guide.id} AND balance >= ${amountNum}
+    `;
+    if (balanceChanged === 0) return res.status(400).json({ error: '可用余额不足，请刷新后重试' });
 
     const accountInfo = JSON.stringify({ bank_account: bankAccount, bank_name: bankName });
     const [inserted] = await prisma.$queryRaw`

@@ -33,7 +33,7 @@ async function sendSms(phone, templateId, params = []) {
       message: status?.Message || '',
     };
   } catch (e) {
-    console.warn('[SMS mock fallback]', e.message, e);
+    console.warn('[SMS] Tencent SDK error, falling back to mock', e.message, e);
     return { success: true, mock: true, fallback: true };
   }
 }

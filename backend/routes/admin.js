@@ -1455,6 +1455,12 @@ async function processWithdrawalAction(withdrawalId, action, note = '') {
         reject_reason = ${isApprove ? null : (finalNote || '管理员驳回')}
     WHERE id = ${withdrawalId}
   `;
+  if (!isApprove && request.owner_type === 'guide') {
+    await prisma.$executeRaw`
+      UPDATE guides SET balance = balance + ${Number(request.amount || 0)}
+      WHERE id = ${request.owner_id}
+    `;
+  }
 
   return {
     statusCode: 200,

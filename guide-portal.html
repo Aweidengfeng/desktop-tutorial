@@ -1595,13 +1595,17 @@
           if (!r.ok) throw new Error('load failed');
           const d = await r.json();
           this.withdrawalHistory = d.requests || [];
-          const approved = this.withdrawalHistory.filter(x => x.status === 'approved').reduce((s, x) => s + Number(x.amount || 0), 0);
-          const pending = this.withdrawalHistory.filter(x => x.status === 'pending').reduce((s, x) => s + Number(x.amount || 0), 0);
+          const sums = this.withdrawalHistory.reduce((acc, x) => {
+            const amount = Number(x.amount || 0);
+            if (x.status === 'approved') acc.approved += amount;
+            if (x.status === 'pending') acc.pending += amount;
+            return acc;
+          }, { approved: 0, pending: 0 });
           this.financeData = {
             currency: 'CNY',
             availableBalance: Number(d.balance || 0),
-            pendingBalance: pending,
-            totalPaid: approved,
+            pendingBalance: sums.pending,
+            totalPaid: sums.approved,
           };
         } catch(e) {
           this.financeData = null;

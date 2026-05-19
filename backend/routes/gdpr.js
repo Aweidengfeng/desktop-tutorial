@@ -43,7 +43,7 @@ router.get('/export', auth, async (req, res) => {
     const safeDecrypt = (v) => {
       try { return v ? decryptPII(v) : v; } catch (err) {
         console.warn('[gdpr/export] decrypt failed:', err.message);
-        return null;
+        return '[decryption_failed]';
       }
     };
     user.phone = safeDecrypt(user.phone);
