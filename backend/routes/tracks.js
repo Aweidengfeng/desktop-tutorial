@@ -415,6 +415,7 @@ router.get('/:id/export-pdf', exportLimiter, auth, async (req, res) => {
     renderTrackPdf(doc, track, points, { includeAllPoints: true });
     doc.end();
   } catch (e) {
+    console.error('[tracks/export-pdf] failed:', e && e.message ? e.message : e);
     res.status(500).json({ error: '导出 PDF 失败' });
   }
 });

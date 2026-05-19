@@ -40,13 +40,16 @@ router.post('/create', async (req, res) => {
       description: description || 'SummitLink 订单',
       openid,
       returnUrl: return_url,
-    }).catch(() => ({
-      provider: selectedMethod,
-      payParams: {
-        mock: true,
-        orderNo,
-      },
-    }));
+    }).catch((err) => {
+      console.warn('[pay/create] fallback to mock payParams:', err && err.message ? err.message : err);
+      return {
+        provider: selectedMethod,
+        payParams: {
+          mock: true,
+          orderNo,
+        },
+      };
+    });
     res.json({
       success: true,
       orderNo,

@@ -856,6 +856,7 @@ router.get('/tracks/export-pdf', adminWriteLimiter, adminAuth, async (req, res) 
     });
     doc.end();
   } catch (e) {
+    console.error('[admin/tracks/export-pdf] failed:', e && e.message ? e.message : e);
     res.status(500).json({ error: '导出失败' });
   }
 });

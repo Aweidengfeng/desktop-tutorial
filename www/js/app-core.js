@@ -211,6 +211,7 @@ async function idbUpdateTrackStatus(id, status, retries) {
 // ─── Phase 2.5: 地图引擎检测与 SDK 懒加载 ────────────────────────────────────
 window.__activeMapProvider = 'amap';
 const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
+const EXPEDITION_SOCKET_NAMESPACE = '/expedition-tracking';
 const MAP_LAYER_OPTIONS = [
   { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
   { key: 'satellite', label: '卫星', tileUrl: 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', attribution: '© AutoNavi' },
@@ -1465,6 +1466,7 @@ function alpineLink() {
       }
       this.stopExpeditionLocationPolling();
       this.locationConnectionMode = 'poll';
+      this.loadExpeditionLocations(expeditionId);
       this._locationPollTimer = setInterval(() => {
         this.loadExpeditionLocations(expeditionId);
       }, this.expeditionLocationPollMs);
@@ -1478,7 +1480,9 @@ function alpineLink() {
         if (!res.ok) return;
         const members = await res.json();
         if (Array.isArray(members)) this.teamMembers = members;
-      } catch (_) {}
+      } catch (e) {
+        console.warn('[location] loadExpeditionLocations failed:', e && e.message ? e.message : e);
+      }
     },
     openCreateTeam() { this.showCreateTeam = true; },
     closeCreateTeam() { this.showCreateTeam = false; },
@@ -2614,7 +2618,8 @@ function alpineLink() {
         a.remove();
         URL.revokeObjectURL(url);
         this.showToast('PDF 导出成功');
-      } catch (_) {
+      } catch (e) {
+        console.warn('[track] exportTrackPdf failed:', e && e.message ? e.message : e);
         this.showToast('导出失败，请稍后重试', 'error');
       }
     },
@@ -4060,7 +4065,7 @@ function alpineLink() {
         return;
       }
       if (!this._locationSocket) {
-        this._locationSocket = window.io('/expedition-tracking', {
+        this._locationSocket = window.io(EXPEDITION_SOCKET_NAMESPACE, {
           auth: { token: this.authToken, userId: this.currentUser?.id },
           query: { userId: this.currentUser?.id },
           transports: ['websocket', 'polling'],
