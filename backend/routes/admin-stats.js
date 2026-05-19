@@ -130,6 +130,107 @@ router.get('/revenue/trend', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/admin/stats/revenue?period=7d|30d|90d — 按日营收时间序列（含 provider）
+router.get('/revenue', adminAuth, async (req, res) => {
+  try {
+    const periodMap = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = periodMap[req.query.period] || 30;
+    const daysParam = `-${days} days`;
+    const trend = await prisma.$queryRaw`
+      SELECT date(created_at) as date,
+             COALESCE(SUM(amount), 0) as amount,
+             COALESCE(provider, 'unknown') as provider
+      FROM orders
+      WHERE status = 'paid'
+        AND created_at >= date('now', ${daysParam})
+      GROUP BY date(created_at), provider
+      ORDER BY date ASC
+    `.catch(() => []);
+    res.json(trend.map(r => ({ date: r.date, amount: Number(r.amount), provider: r.provider })));
+  } catch (e) {
+    res.status(500).json({ error: '获取营收时间序列失败' });
+  }
+});
+
+// GET /api/admin/stats/users?period=7d|30d|90d — 按日新增用户数
+router.get('/users', adminAuth, async (req, res) => {
+  try {
+    const periodMap = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = periodMap[req.query.period] || 30;
+    const daysParam = `-${days} days`;
+    const trend = await prisma.$queryRaw`
+      SELECT date(created_at) as date, COUNT(*) as count
+      FROM users
+      WHERE created_at >= date('now', ${daysParam})
+        AND deleted_at IS NULL
+      GROUP BY date(created_at)
+      ORDER BY date ASC
+    `.catch(() => []);
+    res.json(trend.map(r => ({ date: r.date, count: Number(r.count) })));
+  } catch (e) {
+    res.status(500).json({ error: '获取用户增长失败' });
+  }
+});
+
+// GET /api/admin/stats/withdrawals — 提现申请统计（待审批/已审批/拒绝）
+router.get('/withdrawals', adminAuth, async (req, res) => {
+  try {
+    const summary = await prisma.$queryRaw`
+      SELECT status, COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount
+      FROM withdrawal_requests
+      GROUP BY status
+    `.catch(() => []);
+    const requests = await prisma.$queryRaw`
+      SELECT id, owner_type, owner_id, amount, fee, actual_amount, account_type, status,
+             created_at, processed_at, note
+      FROM withdrawal_requests
+      ORDER BY created_at DESC
+      LIMIT 50
+    `.catch(() => []);
+    const counts = { pending: 0, approved: 0, rejected: 0 };
+    const amounts = { pending: 0, approved: 0, rejected: 0 };
+    summary.forEach(r => {
+      const s = r.status;
+      if (counts[s] !== undefined) {
+        counts[s] = Number(r.count);
+        amounts[s] = Number(r.total_amount);
+      }
+    });
+    res.json({
+      pending: counts.pending,
+      approved: counts.approved,
+      rejected: counts.rejected,
+      amounts,
+      requests: requests.map(r => ({ ...r, amount: Number(r.amount), fee: Number(r.fee || 0), actual_amount: Number(r.actual_amount || 0) })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: '获取提现统计失败' });
+  }
+});
+
+// GET /api/admin/stats/sos — SOS 告警统计（按月）
+router.get('/sos', adminAuth, async (req, res) => {
+  try {
+    const monthly = await prisma.$queryRaw`
+      SELECT strftime('%Y-%m', created_at) as month,
+             COUNT(*) as count,
+             status
+      FROM sos_alerts
+      GROUP BY month, status
+      ORDER BY month DESC
+    `.catch(() => []);
+    const recent = await prisma.$queryRaw`
+      SELECT id, user_id, lat, lng, altitude, message, status, created_at
+      FROM sos_alerts
+      ORDER BY created_at DESC
+      LIMIT 20
+    `.catch(() => []);
+    res.json({ monthly: monthly.map(r => ({ ...r, count: Number(r.count) })), recent });
+  } catch (e) {
+    res.status(500).json({ error: '获取 SOS 统计失败' });
+  }
+});
+
 // GET /api/admin/stats/pending — 待处理事项
 router.get('/pending', adminAuth, async (req, res) => {
   try {
