@@ -16,6 +16,9 @@ const ROOT = path.resolve(__dirname, '..');
 const ROUTES_DIR = path.join(ROOT, 'routes');
 const APP_FILE = path.join(ROOT, 'app.js');
 const SCHEMA_FILE = path.join(ROOT, 'prisma', 'schema.prisma');
+const MOCK_SMS_PHONE = '15500000000';
+const MOCK_SMS_TEMPLATE_ID = 'mock-template';
+const MOCK_SMS_PARAMS = ['1234'];
 
 function read(file) {
   return fs.readFileSync(file, 'utf8');
@@ -75,7 +78,7 @@ async function checkMockDegrade() {
   const report = [];
   try {
     const sms = require('../lib/smsSender');
-    const smsResult = await sms.sendSms('15500000000', 'mock-template', ['1234']);
+    const smsResult = await sms.sendSms(MOCK_SMS_PHONE, MOCK_SMS_TEMPLATE_ID, MOCK_SMS_PARAMS);
     report.push({ module: 'smsSender', ok: !!smsResult?.success, detail: smsResult });
   } catch (e) {
     report.push({ module: 'smsSender', ok: false, detail: e.message });
@@ -107,6 +110,7 @@ async function main() {
   const unmountedRoutes = routeFiles.filter((f) => !mounted.has(f));
   const schemaModels = extractPrismaModels(schemaSource);
   const validDelegates = new Set(schemaModels.map((m) => toPrismaDelegateName(m)));
+  // Prisma Client built-ins used in this repo (Prisma 6.19.x); update when upgrading major versions.
   const internalDelegates = new Set(['$queryRaw', '$queryRawUnsafe', '$executeRaw', '$executeRawUnsafe', '$transaction', '$connect', '$disconnect']);
   const routeDelegates = extractPrismaDelegatesFromRoutes();
   const unknownDelegates = routeDelegates.filter((d) => !validDelegates.has(d) && !internalDelegates.has(d));

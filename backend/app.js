@@ -558,6 +558,9 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: '接口不存在' });
 });
 app.use((req, res) => {
+  if (req.accepts('json')) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
   res.status(404).send('Not Found');
 });
 
