@@ -2448,14 +2448,14 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
-      <div class="absolute inset-0 bg-black/70" @click="showPeakDetail=false"></div>
+      <div class="absolute inset-0 bg-black/70" @click="closePeakDetail()"></div>
       <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
         <template x-if="selectedPeak">
           <div>
             <div class="relative h-52">
               <img :src="selectedPeak.image" :alt="selectedPeak.name" class="w-full h-full object-cover">
               <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-              <button @click="showPeakDetail=false" class="absolute top-4 right-4 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+              <button @click="closePeakDetail()" class="absolute top-4 right-4 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
                 <span class="material-symbols-outlined text-white text-base">close</span>
               </button>
               <div class="absolute bottom-4 left-4">
@@ -2652,11 +2652,31 @@
                 </div>
               </template>
               <div class="flex gap-3">
-                <button x-show="paymentsEnabled" @click="showPeakDetail=false;openCommercialBooking(selectedPeak)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
+                <button x-show="paymentsEnabled" @click="closePeakDetail();openCommercialBooking(selectedPeak)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
                 <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
                 <button class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors">
                   <span class="material-symbols-outlined">bookmark</span>
                 </button>
+              </div>
+              <!-- 山峰位置地图 -->
+              <div class="px-4 pb-6">
+                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                  <span>📍</span> 山峰位置
+                </h3>
+                <div
+                  id="peak-location-map"
+                  class="w-full h-48 rounded-2xl overflow-hidden bg-slate-800"
+                  x-show="selectedPeak && (selectedPeak.latitude != null && selectedPeak.longitude != null)"
+                ></div>
+                <div
+                  x-show="selectedPeak && (selectedPeak.latitude == null || selectedPeak.longitude == null)"
+                  class="w-full h-12 rounded-2xl bg-slate-800/50 flex items-center justify-center text-slate-500 text-xs"
+                >位置坐标暂未收录</div>
+                <p
+                  x-show="selectedPeak && selectedPeak.latitude != null && selectedPeak.longitude != null"
+                  class="text-xs text-slate-500 mt-2 text-center"
+                  x-text="formatPeakCoordinates(selectedPeak)"
+                ></p>
               </div>
               <!-- Summit Window 登顶窗口热力条 -->
               <div x-show="summitWindow.length > 0" class="mt-4">
@@ -5731,6 +5751,7 @@
 
   <!-- FIXED BOTTOM NAV -->
   <nav class="fixed bottom-0 left-0 right-0 z-50 glass" style="max-width:430px;margin:0 auto;padding-left:var(--safe-left);padding-right:var(--safe-right);padding-bottom:var(--safe-bottom);">
+    <!-- Phase 2 - “地图/轨迹” 主导航入口已移除，底部导航由 app-core.js 的 navTabs 驱动 -->
     <div class="flex items-center justify-around px-2 py-2">
       <template x-for="tab in navTabs" :key="tab.id">
         <button @click="switchPrimaryTab(tab.id)"

@@ -71,6 +71,8 @@ export function drawTrackOnMap(map, points) {
   }
 }
 
+/*
+Phase 2 - Track Recording
 export function initTrackMap() {
   if (this.trackMap) {
     if (this.trackMapEngine === 'leaflet') {
@@ -183,4 +185,95 @@ export function renderTrackDetailMap(track) {
       detailMap.setFitView();
     });
   } catch (e) {}
+}
+*/
+
+function clearPeakLocationMap(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return null;
+
+  if (el._leafletMap) {
+    try { el._leafletMap.remove(); } catch (e) {}
+    el._leafletMap = null;
+  }
+  if (el._peakLocationMap) {
+    try {
+      if (typeof el._peakLocationMap.remove === 'function') el._peakLocationMap.remove();
+      else if (typeof el._peakLocationMap.destroy === 'function') el._peakLocationMap.destroy();
+    } catch (e) {}
+    el._peakLocationMap = null;
+  }
+  if (el._leaflet_id) {
+    try { window.L.DomUtil.get(containerId)._leaflet_id = null; } catch (e) {}
+  }
+  el.innerHTML = '';
+  return el;
+}
+
+export async function renderPeakLocationMap(containerId, lat, lng, peakName, altitude) {
+  const el = clearPeakLocationMap(containerId);
+  if (!el || lat == null || lng == null) {
+    if (el) el.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">位置信息暂未收录</div>';
+    return null;
+  }
+
+  const provider = window.__activeMapProvider;
+
+  if (provider === 'mapbox' && window.mapboxgl) {
+    try {
+      const map = new window.mapboxgl.Map({
+        container: containerId,
+        style: 'mapbox://styles/mapbox/outdoors-v12',
+        center: [lng, lat],
+        zoom: 9,
+        interactive: true,
+      });
+      map.on('load', () => {
+        new window.mapboxgl.Marker({ color: '#ef4444' })
+          .setLngLat([lng, lat])
+          .setPopup(new window.mapboxgl.Popup().setHTML(`<b>${peakName}</b><br>${altitude ? altitude + 'm' : ''}`))
+          .addTo(map);
+      });
+      el._peakLocationMap = map;
+      return map;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  if (window.L) {
+    try {
+      const map = window.L.map(containerId, { zoomControl: true }).setView([lat, lng], 9);
+      const tileUrl = window.__osmTileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      window.L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+      const marker = window.L.marker([lat, lng]).addTo(map);
+      marker.bindPopup(`<b>${peakName}</b>${altitude ? '<br>' + altitude + 'm' : ''}`).openPopup();
+      el._leafletMap = map;
+      el._peakLocationMap = map;
+      return map;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  if (typeof AMap !== 'undefined') {
+    try {
+      const map = new AMap.Map(containerId, { zoom: 9, center: [lng, lat], mapStyle: 'amap://styles/dark' });
+      new AMap.Marker({
+        position: new AMap.LngLat(lng, lat),
+        map,
+        label: {
+          content: `<div style="background:#1e293b;color:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px;">${peakName}${altitude ? ' ' + altitude + 'm' : ''}</div>`,
+          offset: new AMap.Pixel(-20, -40),
+        },
+      });
+      el._peakLocationMap = map;
+      return map;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  el.innerHTML = '<div class="flex items-center justify-center h-full text-slate-500 text-sm">地图加载失败</div>';
+  return null;
 }

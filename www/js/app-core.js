@@ -403,7 +403,9 @@ function alpineLink() {
     POLICY_VERSION: '2026-04-20',
     privacySettings: { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false },
     gearImageUploading: false,
+    /* Phase 2 - Track Recording state
     trackRecordedPoints: [],
+    */
     heroSlide: 0,
     heroTouchStartX: 0,
     heroSlides: [
@@ -457,9 +459,11 @@ function alpineLink() {
     sosCountdown: 5,
     sosCountdownTimer: null,
     sosEmergencyPhone: '112',
+    /* Phase 2 - Track Recording state
     mapSearchExpanded: false,
     mapSearchQuery: '',
     showTrackLayerPanel: false,
+    */
     showOfflineMapModal: false,
     offlineMapProgress: 0,
     isOffline: !navigator.onLine,
@@ -535,17 +539,21 @@ function alpineLink() {
     commentImagePreviews: [],
     lightboxUrl: '',
     showLightbox: false,
+    /* Phase 2 - Track Recording state
     trackMap: null,
     trackMapEngine: 'amap',
     trackTileLayer: null,
     trackLocationMarker: null,
     mapLayerOptions: MAP_LAYER_OPTIONS,
     activeMapLayer,
+    */
     _mapCore: null,
     _mapCoreLoading: null,
     amapAvailable: typeof AMap !== 'undefined',
     pendingUploadCount: 0,
+    /* Phase 2 - Track Recording state
     recordingMap: null,
+    */
     selectedConversation: null,
     showChatDetail: false,
     showGearPublish: false,
@@ -777,7 +785,9 @@ function alpineLink() {
     userInsurance: { has_insurance: true, rescue_phone: '400-999-1234', insurer_name: '太平洋山地险', policy_no: 'ALPS20250416' },
     // 新增状态
     showNewTrackModal: false,
+    /* Phase 2 - Track Recording state
     trackRecordingState: 'idle', // idle | recording | paused
+    */
     trackLiveStats: { distance: 0, elevation: 5364, seconds: 0 },
     trackTimer: null,
     newTrackName: '',
@@ -861,9 +871,9 @@ function alpineLink() {
     ],
     teamChatMessages: [],
     navTabs: [
-      { id: 'expedition', icon: 'explore', name: '探险' },
-      { id: 'map', icon: 'map', name: '地图' },
-      { id: 'discover', icon: 'travel_explore', name: '发现' },
+      { id: 'expedition', icon: 'explore', name: '精选路线' },
+      { id: 'discover', icon: 'groups', name: '社区' },
+      { id: 'chat', icon: 'chat_bubble', name: '消息' },
       { id: 'me', icon: 'person', name: '我的' },
     ],
     expeditionCards: [
@@ -907,6 +917,7 @@ function alpineLink() {
 
     // Peak detail
     openPeakDetail(peak) {
+      this.destroyPeakLocationMap();
       this.selectedPeak = peak;
       this.showPeakDetail = true;
       this.peakWeather = null;
@@ -915,9 +926,42 @@ function alpineLink() {
       this.loadPeakWeather(peak);
       this.loadCampWeathers(peak);
       this.loadSummitWindow(peak.id || peak.name);
+      this.$nextTick(async () => {
+        if (peak && peak.latitude != null && peak.longitude != null) {
+          const { renderPeakLocationMap } = await import('./map-core.js');
+          renderPeakLocationMap('peak-location-map', peak.latitude, peak.longitude, peak.name, peak.altitude);
+        }
+      });
     },
     openWorldPeakDetail(peak) { this.openPeakDetail(peak); },
     openAlpineDetail(spot) { this.openPeakDetail(spot); },
+    closePeakDetail() {
+      this.destroyPeakLocationMap();
+      this.showPeakDetail = false;
+    },
+    destroyPeakLocationMap() {
+      const mapEl = document.getElementById('peak-location-map');
+      if (!mapEl) return;
+      if (mapEl._leafletMap) {
+        try { mapEl._leafletMap.remove(); } catch (e) {}
+        mapEl._leafletMap = null;
+      }
+      if (mapEl._peakLocationMap) {
+        try {
+          if (typeof mapEl._peakLocationMap.remove === 'function') mapEl._peakLocationMap.remove();
+          else if (typeof mapEl._peakLocationMap.destroy === 'function') mapEl._peakLocationMap.destroy();
+        } catch (e) {}
+        mapEl._peakLocationMap = null;
+      }
+    },
+    formatPeakCoordinates(peak) {
+      if (!peak || peak.latitude == null || peak.longitude == null) return '';
+      const lat = Math.abs(Number(peak.latitude)).toFixed(4);
+      const lng = Math.abs(Number(peak.longitude)).toFixed(4);
+      const latHemisphere = Number(peak.latitude) >= 0 ? 'N' : 'S';
+      const lngHemisphere = Number(peak.longitude) >= 0 ? 'E' : 'W';
+      return `${lat}°${latHemisphere}, ${lng}°${lngHemisphere}`;
+    },
     async loadPeakWeather(peak) {
       if (!peak) return;
       this.peakWeatherLoading = true;
@@ -1634,6 +1678,8 @@ function alpineLink() {
       }
     },
 
+    /*
+    Phase 2 - Track Recording
     // 初始化轨迹记录地图（懒加载 map-core）
     initTrackMap() {
       if (this._mapCore?.initTrackMap) return this._mapCore.initTrackMap.call(this);
@@ -1650,22 +1696,26 @@ function alpineLink() {
       this.applyTrackMapLayer(layerKey);
       this.showTrackLayerPanel = false;
     },
+    */
+    initTrackMap() {},
+    applyTrackMapLayer() {},
+    switchTrackMapLayer() {},
 
     getPageTitle() {
       const tab = this.resolvePrimaryTab(this.currentPage);
       const titleMap = {
         expedition: '精选路线',
-        map: '实时轨迹地图',
-        discover: '社区发现',
+        discover: '社区',
+        chat: '消息',
         me: '个人中心',
       };
       return titleMap[tab] || '探索与协作';
     },
 
     resolvePrimaryTab(page) {
-      if (page === 'track') return 'map';
       if (page === 'me') return 'me';
-      if (['community', 'chat', 'explore'].includes(page)) return 'discover';
+      if (page === 'chat') return 'chat';
+      if (['community', 'explore'].includes(page)) return 'discover';
       return 'expedition';
     },
 
@@ -1676,14 +1726,11 @@ function alpineLink() {
     switchPrimaryTab(tabId) {
       const pageMap = {
         expedition: 'home',
-        map: 'track',
         discover: 'community',
+        chat: 'chat',
         me: 'me',
       };
       this.currentPage = pageMap[tabId] || 'home';
-      if (tabId === 'map') {
-        this.$nextTick(() => this.initTrackMap());
-      }
     },
 
     openExpeditionDetail(item) {
@@ -1721,6 +1768,8 @@ function alpineLink() {
       this.offlineMapProgress = 0;
     },
 
+    /*
+    Phase 2 - Track Recording
     // GPS 定位（懒加载 map-core）
     locateMe() {
       if (this._mapCore?.locateMe) return this._mapCore.locateMe.call(this);
@@ -1736,6 +1785,10 @@ function alpineLink() {
       if (this._mapCore?.renderTrackDetailMap) return this._mapCore.renderTrackDetailMap.call(this, track);
       return this.ensureMapCore().then((mod) => mod?.renderTrackDetailMap && mod.renderTrackDetailMap.call(this, track));
     },
+    */
+    locateMe() {},
+    locateRecordingMap() {},
+    renderTrackDetailMap() {},
 
     // Track Recording with AMap
     async importGpxFile(event) {
@@ -2876,8 +2929,8 @@ function alpineLink() {
     refreshLocalizedUi() {
       this.navTabs = [
         { id: 'expedition', icon: 'explore', name: this.t('nav_expedition') },
-        { id: 'map', icon: 'map', name: this.t('nav_map') },
-        { id: 'discover', icon: 'travel_explore', name: this.t('nav_discover') },
+        { id: 'discover', icon: 'groups', name: this.t('nav_discover') },
+        { id: 'chat', icon: 'chat_bubble', name: this.t('nav_messages') },
         { id: 'me', icon: 'person', name: this.t('nav_me') },
       ];
     },
