@@ -26,7 +26,7 @@ function requireOwnership(model, idParam = 'id', ownerField = 'userId') {
       const record = await prisma[model].findUnique({ where: { id } });
       if (!record) return res.status(404).json({ error: 'Not found' });
       const admin = await isAdminUser(req.user);
-      if (!admin && record[ownerField] !== req.user.id) {
+      if (!admin && Number(record[ownerField]) !== Number(req.user.id)) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       req.resource = record;
