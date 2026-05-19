@@ -76,6 +76,28 @@
 |--------|----------|--------|--------|------|
 | `SMS_PROVIDER` | 否 | mock | `mock` | 短信服务商。不设置时为 mock 模式（验证码打印到控制台）；后续可切换到腾讯云等云短信服务。|
 
+### 原生推送通知（FCM / APNs）
+
+| 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
+|--------|----------|--------|--------|------|
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | FCM 推送必需（二选一） | — | `{"type":"service_account",...}` | Firebase 服务账号完整 JSON 字符串（Firebase Console → 项目设置 → 服务账号 → 生成私钥）。与下面三个字段二选一 |
+| `FIREBASE_PROJECT_ID` | FCM 推送必需（二选一） | — | `summitlink-app` | Firebase 项目 ID |
+| `FIREBASE_CLIENT_EMAIL` | FCM 推送必需（二选一） | — | `firebase-adminsdk-xxx@project.iam.gserviceaccount.com` | Firebase 服务账号邮箱 |
+| `FIREBASE_PRIVATE_KEY` | FCM 推送必需（二选一） | — | `-----BEGIN RSA PRIVATE KEY-----...` | Firebase 服务账号私钥（换行符用 `\n` 表示）|
+| `APNS_KEY_P8` | APNs iOS 推送必需 | — | `-----BEGIN PRIVATE KEY-----\n...` | APNs .p8 密钥文件完整内容（Apple Developer → Keys）|
+| `APNS_KEY_ID` | APNs iOS 推送必需 | — | `ABC123DEF4` | APNs 密钥 ID（10 位字母数字）|
+| `APNS_TEAM_ID` | APNs iOS 推送必需 | — | `ABCDE12345` | Apple Developer Team ID |
+| `APNS_BUNDLE_ID` | APNs iOS 推送必需 | — | `com.summitlink.app` | iOS App Bundle ID |
+
+> **注意**：以上变量均为可选。未配置时推送功能优雅降级（console.warn + 跳过），不影响主业务流程。
+
+### 向导/俱乐部上架费（Stripe 真实支付）
+
+| 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
+|--------|----------|--------|--------|------|
+| `GUIDE_LISTING_FEE_USD` | 否 | `299` | `299` | 向导上架费（美元）。`PAYMENTS_ENABLED=true` 且 Stripe 已配置时生效 |
+| `CLUB_LISTING_FEE_USD` | 否 | `499` | `499` | 俱乐部上架费（美元）。`PAYMENTS_ENABLED=true` 且 Stripe 已配置时生效 |
+
 ### 社会化登录（预留）
 
 | 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |

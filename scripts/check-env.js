@@ -25,6 +25,18 @@ const OPTIONAL = [
   { key: 'GOOGLE_CLIENT_ID', desc: 'Google OAuth' },
   { key: 'NODE_ENV', desc: '运行环境（production/development）' },
   { key: 'PORT', desc: '服务端口（Railway自动设置）' },
+  // FCM / APNs 原生推送（可选，未配置时推送功能降级）
+  { key: 'FIREBASE_SERVICE_ACCOUNT_JSON', desc: 'FCM Android 推送（Firebase 服务账号 JSON）' },
+  { key: 'FIREBASE_PROJECT_ID', desc: 'FCM 项目 ID（与 SERVICE_ACCOUNT_JSON 二选一）' },
+  { key: 'FIREBASE_CLIENT_EMAIL', desc: 'FCM 服务账号邮箱' },
+  { key: 'FIREBASE_PRIVATE_KEY', desc: 'FCM 服务账号私钥' },
+  { key: 'APNS_KEY_P8', desc: 'APNs iOS 推送密钥（.p8 内容）' },
+  { key: 'APNS_KEY_ID', desc: 'APNs 密钥 ID（10位）' },
+  { key: 'APNS_TEAM_ID', desc: 'Apple Developer Team ID' },
+  { key: 'APNS_BUNDLE_ID', desc: 'iOS App Bundle ID（如 com.summitlink.app）' },
+  // 上架费配置
+  { key: 'GUIDE_LISTING_FEE_USD', desc: '向导上架费（美元，默认 299）' },
+  { key: 'CLUB_LISTING_FEE_USD', desc: '俱乐部上架费（美元，默认 499）' },
 ];
 
 let hasError = false;

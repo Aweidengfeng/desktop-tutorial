@@ -340,15 +340,51 @@ router.get('/:id/photos', async (req, res) => {
   }
 });
 
-// POST /api/guides/payment — 向导入驻支付（预留，后续完善）
-// TODO: 接入真实支付系统（支付宝/微信支付）
+// POST /api/guides/payment — 向导入驻支付
+// 当 PAYMENTS_ENABLED=true 且 Stripe 已配置时，创建真实 Stripe PaymentIntent（$299 USD）
+// 否则保持 mock 行为
 router.post('/payment', guideWriteLimiter, auth, async (req, res) => {
   try {
     const { guide_application_id, amount, payment_method } = req.body;
     if (!guide_application_id || !amount) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
-    // TODO: 调用支付接口，生成订单
+
+    const paymentsEnabled = String(process.env.PAYMENTS_ENABLED || '').toLowerCase() === 'true';
+    const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+    const stripeDisabled = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+
+    if (paymentsEnabled && stripeKey && !stripeDisabled) {
+      // 真实 Stripe PaymentIntent（向导上架费默认 $299）
+      const listingAmountUsd = Math.floor(Number(process.env.GUIDE_LISTING_FEE_USD) || 299);
+      try {
+        const stripe = require('stripe')(stripeKey);
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(listingAmountUsd * 100),
+          currency: 'usd',
+          metadata: {
+            orderType: 'guide_listing',
+            orderId: String(guide_application_id),
+            userId: String(req.user.id),
+          },
+        });
+        return res.json({
+          success: true,
+          order_id: paymentIntent.id,
+          client_secret: paymentIntent.client_secret,
+          amount: listingAmountUsd,
+          currency: 'usd',
+          payment_method: 'stripe',
+          status: 'pending',
+          message: '请使用 Stripe 完成支付',
+        });
+      } catch (stripeErr) {
+        console.error('[guides/payment] Stripe error:', stripeErr.message);
+        return res.status(500).json({ error: '支付创建失败，请稍后重试' });
+      }
+    }
+
+    // Fallback: mock 模式
     const mockOrderId = 'GUIDE_PAY_' + Date.now() + '_' + req.user.id;
     res.json({
       success: true,
@@ -357,7 +393,6 @@ router.post('/payment', guideWriteLimiter, auth, async (req, res) => {
       payment_method: payment_method || 'alipay',
       status: 'pending',
       message: '支付订单已创建，请完成支付',
-      // TODO: 返回支付跳转 URL / 二维码
       pay_url: null,
     });
   } catch (e) {

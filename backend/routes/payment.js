@@ -273,7 +273,52 @@ if (paymentsFeatureDisabled || stripeDisabled) {
         // 用 metadata 优先，回退到 stripe_payments 记录
         const meta = (pi.metadata && pi.metadata.orderType) ? pi.metadata
           : (prev ? { orderType: prev.order_type, orderId: prev.order_id } : null);
-        if (meta) await updateInternalOrder(meta, 'paid');
+        if (meta) {
+          // 处理向导/俱乐部上架费：更新状态为 verified/active
+          if (meta.orderType === 'guide_listing') {
+            const appId = Number(meta.orderId);
+            if (Number.isInteger(appId) && appId > 0) {
+              try {
+                const expiresAt = new Date();
+                expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+                await prisma.$executeRaw`
+                  UPDATE guides SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP,
+                    cert_expires_at = ${expiresAt.toISOString()}
+                  WHERE user_id = (SELECT user_id FROM guide_applications WHERE id = ${appId})
+                    AND status = 'approved_pending_payment'
+                `;
+                await prisma.$executeRaw`
+                  UPDATE guide_applications SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP
+                  WHERE id = ${appId} AND status = 'approved_pending_payment'
+                `;
+              } catch (guideErr) {
+                console.error('Webhook guide_listing update failed:', guideErr.message);
+              }
+            }
+          } else if (meta.orderType === 'club_listing') {
+            const appId = Number(meta.orderId);
+            if (Number.isInteger(appId) && appId > 0) {
+              try {
+                const expiresAt = new Date();
+                expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+                await prisma.$executeRaw`
+                  UPDATE clubs SET status = 'active', verified = 1, listing_fee_paid = 1,
+                    listing_fee_paid_at = CURRENT_TIMESTAMP, cert_expires_at = ${expiresAt.toISOString()}
+                  WHERE creator_id = (SELECT user_id FROM club_applications WHERE id = ${appId})
+                    AND status = 'approved_pending_payment'
+                `;
+                await prisma.$executeRaw`
+                  UPDATE club_applications SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP
+                  WHERE id = ${appId} AND status = 'approved_pending_payment'
+                `;
+              } catch (clubErr) {
+                console.error('Webhook club_listing update failed:', clubErr.message);
+              }
+            }
+          } else {
+            await updateInternalOrder(meta, 'paid');
+          }
+        }
       } else if (event.type === 'payment_intent.payment_failed' && pi) {
         await setStripePaymentStatus(pi.id, 'failed');
       } else if (event.type === 'payment_intent.canceled' && pi) {

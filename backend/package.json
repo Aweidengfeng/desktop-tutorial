@@ -48,6 +48,8 @@
     "@anthropic-ai/sdk": "^0.24.0",
     "@sentry/node": "^8.0.0",
     "cos-nodejs-sdk-v5": "^2.15.4",
+    "firebase-admin": "^13.10.0",
+    "node-apn": "^3.0.0",
     "openai": "^4.52.0",
     "web-push": "^3.6.0"
   }

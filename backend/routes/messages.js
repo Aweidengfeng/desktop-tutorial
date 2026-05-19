@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
 const { messageLimiter } = require('../middleware/rateLimits');
+const { sendPush } = require('../lib/pushSender');
 
 // GET /api/messages/conversations
 router.get('/conversations', auth, async (req, res) => {
@@ -93,6 +94,28 @@ router.post('/conversations/:id/messages', messageLimiter, auth, async (req, res
     const message = (await prisma.$queryRaw`SELECT id, sender_id, content, type, images, is_read, created_at FROM messages WHERE id = ${Number(newMsgId)}`)[0];
     message.images = message.images ? JSON.parse(message.images) : [];
     res.json(message);
+    // 异步推送新消息通知（不阻断响应）
+    setImmediate(async () => {
+      try {
+        const recipientUserId = conv.user1_id === req.user.id ? conv.user2_id : conv.user1_id;
+        const tokens = await prisma.$queryRawUnsafe(
+          `SELECT push_token as token, push_platform as platform FROM users WHERE id = ? AND push_token IS NOT NULL AND push_platform IS NOT NULL`,
+          recipientUserId
+        );
+        if (tokens.length > 0) {
+          const sender = (await prisma.$queryRaw`SELECT name FROM users WHERE id = ${req.user.id}`)[0];
+          const senderName = sender ? sender.name : '用户';
+          const preview = content ? (content.length > 40 ? content.slice(0, 40) + '…' : content) : '[图片]';
+          await sendPush(tokens, {
+            title: `💬 ${senderName}`,
+            body: preview,
+            data: { type: 'new_message', conversationId: String(Number(req.params.id)) },
+          });
+        }
+      } catch (pushErr) {
+        console.warn('[Messages] 推送通知失败:', pushErr.message);
+      }
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

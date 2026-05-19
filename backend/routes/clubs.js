@@ -139,6 +139,103 @@ router.put('/me', clubWriteLimiter, auth, async (req, res) => {
   }
 });
 
+// ── 俱乐部向导管理（需俱乐部管理员身份）─────────────────────────────────
+
+// GET /api/clubs/my/guides — 返回本俱乐部所有挂靠向导列表
+router.get('/my/guides', clubReadLimiter, auth, async (req, res) => {
+  try {
+    const [club] = await prisma.$queryRaw`SELECT * FROM clubs WHERE creator_id = ${req.user.id}`;
+    if (!club) return res.status(403).json({ error: '仅俱乐部管理员可访问' });
+    const guides = await prisma.$queryRaw`
+      SELECT g.id, g.name, g.avatar, g.rating, g.reviews, g.specialty,
+             g.experience_years as experienceYears, g.cert, g.status,
+             g.affiliation_type as affiliationType, g.user_id as userId
+      FROM guides g
+      WHERE g.affiliation_club_id = ${club.id} AND g.status = 'approved'
+      ORDER BY g.rating DESC
+    `;
+    res.json(guides);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/clubs/my/guides/invite — 发送挂靠邀请（通过向导 ID 或邮箱）
+router.post('/my/guides/invite', clubWriteLimiter, auth, async (req, res) => {
+  try {
+    const [club] = await prisma.$queryRaw`SELECT * FROM clubs WHERE creator_id = ${req.user.id}`;
+    if (!club) return res.status(403).json({ error: '仅俱乐部管理员可操作' });
+
+    const { guideId, email } = req.body || {};
+    if (!guideId && !email) {
+      return res.status(400).json({ error: '请提供向导 ID 或邮箱' });
+    }
+
+    let guide = null;
+    if (guideId) {
+      [guide] = await prisma.$queryRaw`SELECT g.*, u.email FROM guides g JOIN users u ON u.id = g.user_id WHERE g.id = ${Number(guideId)}`;
+    } else if (email) {
+      [guide] = await prisma.$queryRaw`SELECT g.*, u.email FROM guides g JOIN users u ON u.id = g.user_id WHERE u.email = ${String(email)}`;
+    }
+
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.status !== 'approved') return res.status(400).json({ error: '向导尚未通过认证' });
+    if (guide.affiliation_club_id && guide.affiliation_club_id !== club.id) {
+      return res.status(400).json({ error: '该向导已挂靠其他俱乐部' });
+    }
+    if (guide.affiliation_club_id === club.id) {
+      return res.status(400).json({ error: '该向导已是本俱乐部成员' });
+    }
+
+    // 直接写入 affiliation_club_id（简单方案，无需独立 invite 表）
+    await prisma.$executeRaw`
+      UPDATE guides SET affiliation_club_id = ${club.id}, affiliation_type = 'affiliated'
+      WHERE id = ${guide.id}
+    `;
+    // 发送站内通知
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO notifications (user_id, type, title, body, link)
+        VALUES (${guide.user_id}, 'club_affiliation_invite', '🤝 俱乐部挂靠通知',
+                ${`${club.name} 已将您纳入旗下向导`}, '/guide-portal')
+      `;
+    } catch (_) {}
+
+    res.json({ success: true, message: '已成功邀请向导挂靠本俱乐部', guideId: guide.id });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/clubs/my/guides/:guideId — 解除挂靠关系
+router.delete('/my/guides/:guideId', clubWriteLimiter, auth, async (req, res) => {
+  try {
+    const [club] = await prisma.$queryRaw`SELECT * FROM clubs WHERE creator_id = ${req.user.id}`;
+    if (!club) return res.status(403).json({ error: '仅俱乐部管理员可操作' });
+
+    const guideId = parseInt(req.params.guideId);
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${guideId} AND affiliation_club_id = ${club.id}`;
+    if (!guide) return res.status(404).json({ error: '向导不存在或不属于本俱乐部' });
+
+    await prisma.$executeRaw`
+      UPDATE guides SET affiliation_club_id = NULL, affiliation_type = NULL
+      WHERE id = ${guideId} AND affiliation_club_id = ${club.id}
+    `;
+    // 发送站内通知
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO notifications (user_id, type, title, body, link)
+        VALUES (${guide.user_id}, 'club_affiliation_removed', '📋 俱乐部挂靠已解除',
+                ${`您已从 ${club.name} 的旗下向导列表移除`}, '/guide-portal')
+      `;
+    } catch (_) {}
+
+    res.json({ success: true, message: '已解除挂靠关系' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/clubs/featured — 精选俱乐部（首页展示，最多6个认证且活跃的俱乐部）
 // 注意：此路由必须在 /:id 之前注册
 router.get('/featured', async (req, res) => {
@@ -590,14 +687,51 @@ router.get('/:id/guides', async (req, res) => {
   }
 });
 
-// POST /api/clubs/payment — 俱乐部入驻支付（预留，后续完善）
-// TODO: 接入真实支付系统（支付宝/微信支付）
+// POST /api/clubs/payment — 俱乐部入驻支付
+// 当 PAYMENTS_ENABLED=true 且 Stripe 已配置时，创建真实 Stripe PaymentIntent（$499 USD）
+// 否则保持 mock 行为
 router.post('/payment', clubWriteLimiter, auth, async (req, res) => {
   try {
     const { club_application_id, amount, payment_method } = req.body;
     if (!club_application_id || !amount) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
+
+    const paymentsEnabled = String(process.env.PAYMENTS_ENABLED || '').toLowerCase() === 'true';
+    const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+    const stripeDisabled = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+
+    if (paymentsEnabled && stripeKey && !stripeDisabled) {
+      // 真实 Stripe PaymentIntent（俱乐部上架费默认 $499）
+      const listingAmountUsd = Math.floor(Number(process.env.CLUB_LISTING_FEE_USD) || 499);
+      try {
+        const stripe = require('stripe')(stripeKey);
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(listingAmountUsd * 100),
+          currency: 'usd',
+          metadata: {
+            orderType: 'club_listing',
+            orderId: String(club_application_id),
+            userId: String(req.user.id),
+          },
+        });
+        return res.json({
+          success: true,
+          order_id: paymentIntent.id,
+          client_secret: paymentIntent.client_secret,
+          amount: listingAmountUsd,
+          currency: 'usd',
+          payment_method: 'stripe',
+          status: 'pending',
+          message: '请使用 Stripe 完成支付',
+        });
+      } catch (stripeErr) {
+        console.error('[clubs/payment] Stripe error:', stripeErr.message);
+        return res.status(500).json({ error: '支付创建失败，请稍后重试' });
+      }
+    }
+
+    // Fallback: mock 模式
     const mockOrderId = 'CLUB_PAY_' + Date.now() + '_' + req.user.id;
     res.json({
       success: true,

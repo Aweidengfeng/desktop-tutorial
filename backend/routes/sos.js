@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
+const { sendPush } = require('../lib/pushSender');
 
 const router = express.Router();
 
@@ -45,6 +46,25 @@ async function createSosAlert(req, res) {
     const alertId = inserted[0].id;
     console.log(`[SOS ALERT] id=${alertId} userId=${userId} lat=${lat} lng=${lng} accuracy=${accuracy}`);
     res.json({ ok: true, alertId });
+
+    // 异步推送 SOS 告警至管理员和向导（不阻塞响应）
+    setImmediate(async () => {
+      try {
+        const recipients = await prisma.$queryRawUnsafe(
+          `SELECT push_token as token, push_platform as platform FROM users
+           WHERE (is_admin = 1 OR is_guide = 1) AND push_token IS NOT NULL AND push_platform IS NOT NULL`
+        );
+        if (recipients.length > 0) {
+          await sendPush(recipients, {
+            title: '🆘 SOS 紧急告警',
+            body: `用户 #${userId} 在 (${lat && lat.toFixed ? lat.toFixed(4) : lat}, ${lng && lng.toFixed ? lng.toFixed(4) : lng}) 触发 SOS`,
+            data: { type: 'sos_alert', alertId: String(alertId), userId: String(userId) },
+          });
+        }
+      } catch (pushErr) {
+        console.warn('[SOS] 推送告警失败:', pushErr.message);
+      }
+    });
   } catch (e) {
     console.error('[SOS] Alert creation failed:', e);
     res.status(500).json({ error: '服务器错误' });
