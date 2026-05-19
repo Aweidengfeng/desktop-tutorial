@@ -1420,11 +1420,19 @@ function alpineLink() {
       this.closeTeamDetail();
     },
     openTeamDetail(team) {
+      if (this.selectedTeam?.id && this._locationSocket && this.selectedTeam.id !== team?.id) {
+        this._locationSocket.emit('leave-expedition', this.selectedTeam.id);
+      }
       this.selectedTeam = team;
       this.showTeamDetail = true;
       this.initLocationSocket(team && team.id ? team.id : null);
     },
-    closeTeamDetail() { this.showTeamDetail = false; },
+    closeTeamDetail() {
+      if (this.selectedTeam?.id && this._locationSocket) {
+        this._locationSocket.emit('leave-expedition', this.selectedTeam.id);
+      }
+      this.showTeamDetail = false;
+    },
     openCreateTeam() { this.showCreateTeam = true; },
     closeCreateTeam() { this.showCreateTeam = false; },
     async createTeam() {
@@ -1827,8 +1835,8 @@ function alpineLink() {
             const lng = parseFloat(longitude.toFixed(6));
             const ele = altitude != null ? parseFloat(altitude.toFixed(1)) : 0;
             this.trackRecordedPoints.push({ lat, lng, ele, ts: Date.now() });
-            const expeditionId = this.selectedTeam?.id || this.selectedExpedition?.id || null;
-            this.reportLocationUpdate(expeditionId, lat, lng, pos.coords.accuracy, ele).catch(() => {});
+            const trackingExpeditionId = this.selectedTeam?.id || this.selectedExpedition?.id || null;
+            this.reportLocationUpdate(trackingExpeditionId, lat, lng, pos.coords.accuracy, ele).catch(() => {});
             const activeMap = this.recordingMap || this.trackMap;
             if (activeMap && typeof AMap !== 'undefined') {
               const lnglat = new AMap.LngLat(lng, lat);
@@ -3934,14 +3942,19 @@ function alpineLink() {
           query: { userId: this.currentUser?.id },
         });
       }
-      if (!this._locationSocket) return;
       this._locationSocket.emit('join-expedition', expeditionId);
       this._locationSocket.off('member-location');
       this._locationSocket.on('member-location', (data) => this.handleMemberLocationUpdate(data));
     },
     broadcastLocationViaSocket(expeditionId, lat, lng, accuracy, altitude) {
       if (!expeditionId || !this._locationSocket || !this._locationSocket.connected) return false;
-      this._locationSocket.emit('location-update', { expeditionId, lat, lng, accuracy, altitude });
+      this._locationSocket.emit('location-update', {
+        expeditionId,
+        lat,
+        lng,
+        accuracy: Number.isFinite(accuracy) ? accuracy : null,
+        altitude: Number.isFinite(altitude) ? altitude : null,
+      });
       return true;
     },
     async reportLocationUpdate(expeditionId, lat, lng, accuracy, altitude) {
@@ -3963,11 +3976,9 @@ function alpineLink() {
     },
     handleMemberLocationUpdate(data) {
       if (!data || !data.userId) return;
-      if (!Array.isArray(this.teamMembers)) this.teamMembers = [];
-      const idx = this.teamMembers.findIndex(m => Number(m.user_id || m.userId) === Number(data.userId));
+      const idx = this.teamMembers.findIndex(m => Number(m.userId) === Number(data.userId));
       const patch = {
         userId: data.userId,
-        user_id: data.userId,
         lat: data.lat,
         lng: data.lng,
         last_seen: new Date(data.timestamp || Date.now()).toISOString(),

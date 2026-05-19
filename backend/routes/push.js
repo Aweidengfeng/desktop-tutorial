@@ -4,9 +4,29 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { sendPushNotification, PUSH_ENABLED } = require('../middleware/webPush');
 
+let nativePushColumnsEnsured = false;
+
 async function ensureNativePushColumns() {
-  try { await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN push_token TEXT'); } catch (e) {}
-  try { await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN push_platform TEXT'); } catch (e) {}
+  if (nativePushColumnsEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN push_token TEXT');
+  } catch (e) {
+    if (!/already exists|duplicate column|duplicate_column|column .* exists/i.test(String(e && e.message ? e.message : e))) {
+      console.warn('[push] ensure column push_token failed:', e && e.message ? e.message : e);
+    }
+  }
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN push_platform TEXT');
+  } catch (e) {
+    if (!/already exists|duplicate column|duplicate_column|column .* exists/i.test(String(e && e.message ? e.message : e))) {
+      console.warn('[push] ensure column push_platform failed:', e && e.message ? e.message : e);
+    }
+  }
+  nativePushColumnsEnsured = true;
+}
+
+async function updateNativePushToken(userId, token, platform) {
+  await prisma.$executeRaw`UPDATE users SET push_token = ${String(token)}, push_platform = ${String(platform)} WHERE id = ${Number(userId)}`;
 }
 
 // GET /api/push/vapid-public-key — 返回 VAPID 公钥
@@ -52,12 +72,8 @@ router.post('/register-token', auth, async (req, res) => {
     return res.status(400).json({ error: '缺少 token 或 platform 参数' });
   }
   try {
-    try {
-      await prisma.$executeRaw`UPDATE users SET push_token = ${String(token)}, push_platform = ${String(platform)} WHERE id = ${Number(req.user.id)}`;
-    } catch (e) {
-      await ensureNativePushColumns();
-      await prisma.$executeRaw`UPDATE users SET push_token = ${String(token)}, push_platform = ${String(platform)} WHERE id = ${Number(req.user.id)}`;
-    }
+    await ensureNativePushColumns();
+    await updateNativePushToken(req.user.id, token, platform);
     res.json({ success: true });
   } catch (e) {
     console.error('[Push] token 注册失败:', e);

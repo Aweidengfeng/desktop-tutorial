@@ -8,8 +8,20 @@ let locationColumnsEnsured = false;
 
 async function ensureLocationColumns() {
   if (locationColumnsEnsured) return;
-  try { await prisma.$executeRawUnsafe('ALTER TABLE user_locations ADD COLUMN accuracy REAL'); } catch (e) {}
-  try { await prisma.$executeRawUnsafe('ALTER TABLE user_locations ADD COLUMN altitude REAL'); } catch (e) {}
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE user_locations ADD COLUMN accuracy REAL');
+  } catch (e) {
+    if (!/already exists|duplicate column|duplicate_column|column .* exists/i.test(String(e && e.message ? e.message : e))) {
+      console.warn('[location] ensure column accuracy failed:', e && e.message ? e.message : e);
+    }
+  }
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE user_locations ADD COLUMN altitude REAL');
+  } catch (e) {
+    if (!/already exists|duplicate column|duplicate_column|column .* exists/i.test(String(e && e.message ? e.message : e))) {
+      console.warn('[location] ensure column altitude failed:', e && e.message ? e.message : e);
+    }
+  }
   locationColumnsEnsured = true;
 }
 
@@ -34,7 +46,7 @@ function initChatGateway(server) {
   });
 
   io.on('connection', (socket) => {
-    socket.userId = socket.userId || socket.handshake.auth?.userId || socket.handshake.query?.userId || null;
+    socket.userId = socket.userId || null;
     const uid = socket.userId;
 
     socket.on('chat:join', ({ conv_id }) => {
@@ -81,7 +93,9 @@ function initChatGateway(server) {
           await prisma.$executeRaw`UPDATE conversation_members SET last_read_msg_id = ${msg_id} WHERE conv_id = ${conv_id} AND user_id = ${uid}`;
         } catch(e) {}
         socket.to(`conv:${conv_id}`).emit('chat:read', { userId: uid, msg_id });
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[location] failed to persist socket location:', e && e.message ? e.message : e);
+      }
     });
 
     socket.on('chat:recall', async ({ msg_id }) => {
@@ -162,24 +176,25 @@ function initChatGateway(server) {
       });
       try {
         await ensureLocationColumns();
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO user_locations (userId, lat, lng, expeditionId, accuracy, altitude, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(userId) DO UPDATE SET
-             lat = excluded.lat,
-             lng = excluded.lng,
-             expeditionId = excluded.expeditionId,
-             accuracy = excluded.accuracy,
-             altitude = excluded.altitude,
-             updatedAt = excluded.updatedAt`,
-          socket.userId ? Number(socket.userId) : null,
-          Number(lat),
-          Number(lng),
-          Number(expeditionId),
-          Number.isFinite(accuracy) ? accuracy : null,
-          Number.isFinite(altitude) ? altitude : null,
-          new Date().toISOString()
-        );
+        await prisma.$executeRaw`
+          INSERT INTO user_locations (userId, lat, lng, expeditionId, accuracy, altitude, updatedAt)
+          VALUES (
+            ${socket.userId ? Number(socket.userId) : null},
+            ${Number(lat)},
+            ${Number(lng)},
+            ${Number(expeditionId)},
+            ${Number.isFinite(accuracy) ? accuracy : null},
+            ${Number.isFinite(altitude) ? altitude : null},
+            ${new Date().toISOString()}
+          )
+          ON CONFLICT(userId) DO UPDATE SET
+            lat = excluded.lat,
+            lng = excluded.lng,
+            expeditionId = excluded.expeditionId,
+            accuracy = excluded.accuracy,
+            altitude = excluded.altitude,
+            updatedAt = excluded.updatedAt
+        `;
       } catch (e) {}
     });
 
