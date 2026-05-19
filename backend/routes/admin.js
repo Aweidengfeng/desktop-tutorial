@@ -1401,12 +1401,26 @@ router.get('/withdrawals', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
     const { status = '', page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
-    let sql = 'SELECT * FROM withdrawal_requests';
+    let sql = `
+      SELECT wr.*, g.name as guide_name, g.user_id as guide_user_id
+      FROM withdrawal_requests wr
+      LEFT JOIN guides g ON g.id = wr.owner_id AND wr.owner_type = 'guide'
+    `;
     const params = [];
-    if (status) { sql += ' WHERE status = ?'; params.push(status); }
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    if (status) { sql += ' WHERE wr.status = ?'; params.push(status); }
+    sql += ' ORDER BY wr.created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), offset);
-    const requests = await prisma.$queryRawUnsafe(sql, ...params);
+    const rows = await prisma.$queryRawUnsafe(sql, ...params);
+    const requests = rows.map((r) => {
+      let accountInfo = {};
+      try { accountInfo = r.account_info ? JSON.parse(r.account_info) : {}; } catch (_) {}
+      return {
+        ...r,
+        note: r.note || r.reject_reason || '',
+        bank_account: r.bank_account || accountInfo.bank_account || '',
+        bank_name: r.bank_name || accountInfo.bank_name || '',
+      };
+    });
     const countSql = status ? 'SELECT COUNT(*) as c FROM withdrawal_requests WHERE status = ?' : 'SELECT COUNT(*) as c FROM withdrawal_requests';
     const total = Number((await prisma.$queryRawUnsafe(countSql, ...(status ? [status] : [])))[0].c);
     res.json({ requests, total, page: parseInt(page), limit: parseInt(limit) });
@@ -1415,15 +1429,57 @@ router.get('/withdrawals', adminWriteLimiter, adminAuth, async (req, res) => {
   }
 });
 
+async function processWithdrawalAction(withdrawalId, action, note = '') {
+  if (!['approve', 'reject'].includes(action)) {
+    return { statusCode: 400, body: { error: '无效 action，有效值: approve|reject' } };
+  }
+  const request = (await prisma.$queryRaw`SELECT * FROM withdrawal_requests WHERE id = ${withdrawalId}`)[0];
+  if (!request) return { statusCode: 404, body: { error: '提现申请不存在' } };
+  if (request.status !== 'pending') return { statusCode: 400, body: { error: '该申请已处理' } };
+
+  const isApprove = action === 'approve';
+  const paymentsEnabled = String(process.env.PAYMENTS_ENABLED || '').toLowerCase() === 'true';
+  const now = new Date().toISOString();
+  const finalNote = String(note || '').trim();
+  await prisma.$executeRaw`
+    UPDATE withdrawal_requests
+    SET status = ${isApprove ? 'approved' : 'rejected'},
+        processed_at = ${now},
+        processed_by = 'admin',
+        note = ${finalNote || (isApprove ? (paymentsEnabled ? '支付开关已开启：当前节点记录 mock 打款结果' : 'PAYMENTS_ENABLED=false：记录 mock 审批') : '管理员驳回')},
+        reject_reason = ${isApprove ? null : (finalNote || '管理员驳回')}
+    WHERE id = ${withdrawalId}
+  `;
+
+  return {
+    statusCode: 200,
+    body: {
+      success: true,
+      status: isApprove ? 'approved' : 'rejected',
+      mock_transfer: isApprove ? true : undefined,
+      payments_enabled: paymentsEnabled,
+      note: finalNote || undefined,
+      message: isApprove ? '已批准提现申请' : '已拒绝提现申请',
+    },
+  };
+}
+
+// PATCH /api/admin/withdrawals/:id — 审批提现
+router.patch('/withdrawals/:id', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { action, note = '' } = req.body || {};
+    const result = await processWithdrawalAction(req.params.id, action, note);
+    res.status(result.statusCode).json(result.body);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // PUT /api/admin/withdrawals/:id/approve — 批准提现
 router.put('/withdrawals/:id/approve', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
-    const request = (await prisma.$queryRaw`SELECT * FROM withdrawal_requests WHERE id = ${req.params.id}`)[0];
-    if (!request) return res.status(404).json({ error: '提现申请不存在' });
-    if (request.status !== 'pending') return res.status(400).json({ error: '该申请已处理' });
-    const now = new Date().toISOString();
-    await prisma.$executeRaw`UPDATE withdrawal_requests SET status = 'approved', processed_at = ${now}, processed_by = 'admin' WHERE id = ${req.params.id}`;
-    res.json({ success: true, message: `已批准提现 ${request.actual_amount} 元` });
+    const result = await processWithdrawalAction(req.params.id, 'approve', req.body?.note || '');
+    res.status(result.statusCode).json(result.body);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -1432,13 +1488,8 @@ router.put('/withdrawals/:id/approve', adminWriteLimiter, adminAuth, async (req,
 // PUT /api/admin/withdrawals/:id/reject — 拒绝提现
 router.put('/withdrawals/:id/reject', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
-    const { reason = '' } = req.body;
-    const request = (await prisma.$queryRaw`SELECT * FROM withdrawal_requests WHERE id = ${req.params.id}`)[0];
-    if (!request) return res.status(404).json({ error: '提现申请不存在' });
-    if (request.status !== 'pending') return res.status(400).json({ error: '该申请已处理' });
-    const now = new Date().toISOString();
-    await prisma.$executeRaw`UPDATE withdrawal_requests SET status = 'rejected', processed_at = ${now}, processed_by = 'admin', reject_reason = ${reason} WHERE id = ${req.params.id}`;
-    res.json({ success: true });
+    const result = await processWithdrawalAction(req.params.id, 'reject', req.body?.reason || req.body?.note || '');
+    res.status(result.statusCode).json(result.body);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

@@ -728,8 +728,7 @@
           <div x-show="financeLoading" class="text-center py-6 text-slate-400">加载中…</div>
           <div x-show="!financeLoading && !financeData" class="text-center py-6 text-slate-400">
             <p class="text-2xl mb-2">💰</p>
-            <p>资金中心功能即将上线</p>
-            <p class="text-xs mt-1">需要绑定收款账户（Stripe Connect / 微信商户号）</p>
+            <p>暂无资金数据</p>
           </div>
           <div x-show="!financeLoading && financeData" class="space-y-4">
             <div class="grid grid-cols-3 gap-4">
@@ -748,11 +747,35 @@
             </div>
             <div class="glass-dark rounded-xl p-4">
               <h3 class="font-semibold mb-3 text-sm">申请提现</h3>
-              <div class="flex gap-3">
-                <input x-model="payoutRequest.amount" type="number" min="100" placeholder="最低提现金额：100" class="flex-1 bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+              <div class="grid md:grid-cols-3 gap-3">
+                <input x-model="payoutRequest.amount" type="number" min="1" placeholder="提现金额" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+                <input x-model="payoutRequest.bank_name" type="text" placeholder="开户行（如招商银行）" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+                <input x-model="payoutRequest.bank_account" type="text" placeholder="银行卡号" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+              </div>
+              <div class="mt-3">
                 <button @click="requestPayout()" :disabled="payoutLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold" x-text="payoutLoading ? '提交中…' : '申请提现'"></button>
               </div>
-              <p class="text-xs text-slate-400 mt-2">· 国际区每周自动到账（Stripe Connect）· 国内行程完成后到账（微信分账）</p>
+              <p class="text-xs text-slate-400 mt-2">提交后进入待审核状态，可在下方查看审批结果。</p>
+            </div>
+            <div class="glass-dark rounded-xl p-4">
+              <h3 class="font-semibold mb-3 text-sm">提现历史</h3>
+              <div x-show="withdrawalHistory.length===0" class="text-xs text-slate-400 py-2">暂无提现记录</div>
+              <div class="space-y-2" x-show="withdrawalHistory.length>0">
+                <template x-for="w in withdrawalHistory" :key="w.id">
+                  <div class="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2">
+                    <div>
+                      <p class="text-sm text-white" x-text="'¥' + Number(w.amount || 0).toFixed(2)"></p>
+                      <p class="text-xs text-slate-400" x-text="(w.bank_name || '-') + ' · ' + (w.bank_account || '-')"></p>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-xs px-2 py-0.5 rounded-full"
+                            :class="w.status==='pending'?'bg-yellow-500/20 text-yellow-300':w.status==='approved'?'bg-emerald-500/20 text-emerald-300':'bg-red-500/20 text-red-300'"
+                            x-text="w.status==='pending'?'待审核':w.status==='approved'?'已批准':'已拒绝'"></span>
+                      <p class="text-[11px] text-slate-500 mt-1" x-text="(w.note || '').slice(0, 24)"></p>
+                    </div>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>
@@ -868,8 +891,9 @@
 
       // Finance Center
       financeData: null, financeLoading: false,
-      payoutRequest: { amount: '' },
+      payoutRequest: { amount: '', bank_account: '', bank_name: '' },
       payoutLoading: false,
+      withdrawalHistory: [],
 
       // Dashboard
       dashboardData: null, dashboardLoading: false,
@@ -1567,10 +1591,21 @@
         const token = this.getAuthToken();
         this.financeLoading = true;
         try {
-          const r = await fetch('/api/platform/merchant/finance', { headers: { Authorization: 'Bearer ' + token } });
-          if (r.ok) this.financeData = await r.json();
+          const r = await fetch('/api/guides/withdrawals', { headers: { Authorization: 'Bearer ' + token } });
+          if (!r.ok) throw new Error('load failed');
+          const d = await r.json();
+          this.withdrawalHistory = d.requests || [];
+          const approved = this.withdrawalHistory.filter(x => x.status === 'approved').reduce((s, x) => s + Number(x.amount || 0), 0);
+          const pending = this.withdrawalHistory.filter(x => x.status === 'pending').reduce((s, x) => s + Number(x.amount || 0), 0);
+          this.financeData = {
+            currency: 'CNY',
+            availableBalance: Number(d.balance || 0),
+            pendingBalance: pending,
+            totalPaid: approved,
+          };
         } catch(e) {
           this.financeData = null;
+          this.withdrawalHistory = [];
         } finally { this.financeLoading = false; }
       },
 
@@ -1578,17 +1613,22 @@
         const token = this.getAuthToken();
         const amount = parseFloat(this.payoutRequest.amount);
         if (!amount || amount <= 0) { this.toast('请输入有效提现金额', 'error'); return; }
+        if (!this.payoutRequest.bank_name || !this.payoutRequest.bank_account) { this.toast('请填写银行卡信息', 'error'); return; }
         this.payoutLoading = true;
         try {
-          const r = await fetch('/api/platform/merchant/payout-request', {
+          const r = await fetch('/api/guides/withdraw', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify({ amount }),
+            body: JSON.stringify({
+              amount,
+              bank_name: this.payoutRequest.bank_name,
+              bank_account: this.payoutRequest.bank_account,
+            }),
           });
           const d = await r.json();
           if (r.ok) {
             this.toast('提现申请已提交');
-            this.payoutRequest.amount = '';
+            this.payoutRequest = { amount: '', bank_account: '', bank_name: '' };
             this.loadFinanceData();
           } else {
             this.toast(d.error || '提现申请失败', 'error');

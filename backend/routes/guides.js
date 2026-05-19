@@ -69,6 +69,80 @@ router.get('/my/profile', guideReadLimiter, auth, async (req, res) => {
   }
 });
 
+// POST /api/guides/withdraw — 向导提现申请（需要JWT）
+router.post('/withdraw', guideWriteLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可申请提现' });
+
+    const amountNum = Number(req.body?.amount);
+    const bankAccount = String(req.body?.bank_account || '').trim();
+    const bankName = String(req.body?.bank_name || '').trim();
+    if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: '提现金额无效' });
+    if (!bankAccount || !bankName) return res.status(400).json({ error: '请填写银行卡号和开户行' });
+
+    const balance = Number(guide.balance || 0);
+    if (balance > 0 && amountNum > balance) return res.status(400).json({ error: '提现金额超过可用余额' });
+
+    const accountInfo = JSON.stringify({ bank_account: bankAccount, bank_name: bankName });
+    const [inserted] = await prisma.$queryRaw`
+      INSERT INTO withdrawal_requests (
+        owner_type, owner_id, guide_id, amount, fee, actual_amount, account_type, account_info,
+        bank_account, bank_name, status, note
+      )
+      VALUES (
+        'guide', ${guide.id}, ${guide.id}, ${amountNum}, 0, ${amountNum}, 'bank', ${accountInfo},
+        ${bankAccount}, ${bankName}, 'pending', NULL
+      )
+      RETURNING id
+    `;
+
+    res.json({
+      success: true,
+      request_id: Number(inserted?.id || 0),
+      status: 'pending',
+      amount: amountNum,
+      bank_account: bankAccount,
+      bank_name: bankName,
+      message: '提现申请已提交，等待管理员审核',
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guides/withdrawals — 当前向导提现历史（需要JWT）
+router.get('/withdrawals', guideReadLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+    const rows = await prisma.$queryRaw`
+      SELECT id, amount, status, note, bank_account, bank_name, account_info, created_at, processed_at
+      FROM withdrawal_requests
+      WHERE owner_type = 'guide' AND owner_id = ${guide.id}
+      ORDER BY created_at DESC
+      LIMIT 100
+    `;
+    const requests = rows.map((r) => {
+      let accountInfo = {};
+      try { accountInfo = r.account_info ? JSON.parse(r.account_info) : {}; } catch (_) {}
+      return {
+        id: r.id,
+        amount: Number(r.amount || 0),
+        status: r.status,
+        note: r.note || '',
+        bank_account: r.bank_account || accountInfo.bank_account || '',
+        bank_name: r.bank_name || accountInfo.bank_name || '',
+        created_at: r.created_at,
+        processed_at: r.processed_at,
+      };
+    });
+    res.json({ requests, balance: Number(guide.balance || 0) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // PUT /api/guides/my/profile — 已登录向导更新主页
 router.put('/my/profile', guideWriteLimiter, auth, async (req, res) => {
   try {

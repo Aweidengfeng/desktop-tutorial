@@ -483,6 +483,7 @@ function alpineLink() {
     sosImages: [],
     showSettings: false,
     settingsType: 'profile',
+    accountDeletionLoading: false,
     showComments: false,
     selectedPostForComment: null,
     showShare: false,
@@ -2789,6 +2790,49 @@ function alpineLink() {
         } catch(e) { this.showToast('网络错误', 'error'); }
       }
       this.showSettings = false;
+    },
+    async exportMyData() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/gdpr/export', { headers: this.getAuthHeaders() });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          this.showToast(d.error || '导出失败', 'error');
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'summitlink-gdpr-export.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        this.showToast('数据导出已开始');
+      } catch (e) {
+        this.showToast('网络错误', 'error');
+      }
+    },
+    async deleteMyAccount() {
+      if (!this.requireAuth()) return;
+      if (!window.confirm('确认注销账号？此操作将清空您的个人信息且不可撤销。')) return;
+      this.accountDeletionLoading = true;
+      try {
+        const res = await fetch('/api/gdpr/delete-account', { method: 'DELETE', headers: this.getAuthHeaders() });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          this.showToast(d.error || '注销失败', 'error');
+          return;
+        }
+        this.doLogout();
+        this.showSettings = false;
+        this.showToast('账号已注销');
+      } catch (e) {
+        this.showToast('网络错误', 'error');
+      } finally {
+        this.accountDeletionLoading = false;
+      }
     },
 
     // Auth methods

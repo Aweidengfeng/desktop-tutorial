@@ -593,8 +593,8 @@ router.post('/cancel-deletion', authWriteLimiter, auth, async (req, res) => {
   }
 });
 
-// POST /api/auth/sms/send — 发送短信验证码（mock：打印到控制台）
-const smsProvider = require('../utils/sms');
+// POST /api/auth/sms/send — 发送短信验证码
+const smsSender = require('../lib/smsSender');
 const emailProvider = require('../utils/email');
 const { sendMail, emailVerifyCode } = require('../middleware/mailer');
 // 内存限流：同一手机号 60 秒内只能请求一次
@@ -627,9 +627,14 @@ router.post('/sms/send', authLimiter, async (req, res) => {
     // 记录发送时间
     smsSendCooldown.set(phone, Date.now());
     // 发送
-    smsProvider.send(phone, code).catch(e => console.error('[SMS]', e.message));
-    const isDev = process.env.SMS_PROVIDER !== 'aliyun';
-    res.json({ success: true, message: isDev ? '验证码已发送（开发模式：查看服务器控制台）' : '验证码已发送，请注意查收' });
+    smsSender.sendSms(phone, process.env.TENCENT_SMS_TEMPLATE_ID, [code])
+      .catch(e => console.error('[SMS]', e.message));
+    const hasTencentCreds = Boolean(
+      (process.env.TENCENT_SMS_SECRET_ID || '').trim() &&
+      (process.env.TENCENT_SMS_SECRET_KEY || '').trim() &&
+      ((process.env.TENCENT_SMS_APP_ID || process.env.TENCENT_SMS_SDK_APP_ID || '').trim())
+    );
+    res.json({ success: true, message: hasTencentCreds ? '验证码已发送，请注意查收' : '验证码已发送（开发模式：查看服务器控制台）' });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

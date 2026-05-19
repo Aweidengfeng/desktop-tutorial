@@ -75,6 +75,11 @@
 | 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
 |--------|----------|--------|--------|------|
 | `SMS_PROVIDER` | 否 | mock | `mock` | 短信服务商。不设置时为 mock 模式（验证码打印到控制台）；后续可切换到腾讯云等云短信服务。|
+| `TENCENT_SMS_SECRET_ID` | 腾讯云短信必需 | — | `AKID...` | 腾讯云短信 SecretId |
+| `TENCENT_SMS_SECRET_KEY` | 腾讯云短信必需 | — | `abcd1234...` | 腾讯云短信 SecretKey |
+| `TENCENT_SMS_APP_ID` | 腾讯云短信必需 | — | `1400xxxxxx` | 腾讯云短信应用 AppID（兼容 `TENCENT_SMS_SDK_APP_ID`） |
+| `TENCENT_SMS_SIGN_NAME` | 腾讯云短信建议配置 | `SummitLink` | `SummitLink` | 腾讯云短信签名 |
+| `TENCENT_SMS_TEMPLATE_ID` | 腾讯云短信建议配置 | — | `1234567` | 腾讯云短信模板 ID（验证码模板） |
 
 ### 原生推送通知（FCM / APNs）
 
