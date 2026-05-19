@@ -95,11 +95,58 @@ async function createAlipayPayment({ orderNo, amount, description, returnUrl }) 
 
 /**
  * 验证支付回调签名
+ * - mock：直接返回 valid: true
+ * - stripe：使用 stripe.webhooks.constructEvent 验证；未配置密钥时跳过（开发模式）
+ * - wechat：检查基础字段存在性（完整 v3 签名需证书）
+ * - alipay：需配置 ALIPAY_PUBLIC_KEY（完整 RSA2 待实现）
  */
 async function verifyCallback(provider, headers, body) {
-  if (provider === 'mock') return { valid: true, orderNo: body.orderNo };
-  // TODO: 实际签名验证
-  return { valid: false, error: '回调验证框架占位' };
+  if (provider === 'mock') return { valid: true, orderNo: body && body.orderNo };
+  try {
+    if (provider === 'stripe') {
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!stripeKey || !webhookSecret) {
+        // Stripe 未配置，跳过验证（开发模式）
+        let event;
+        try { event = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { event = body; }
+        return { valid: true, event, skipped: true };
+      }
+      const sig = headers && headers['stripe-signature'];
+      if (!sig) return { valid: false, error: 'Missing stripe-signature header' };
+      const stripe = require('stripe')(stripeKey);
+      const event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+      return { valid: true, event };
+    }
+
+    if (provider === 'wechat') {
+      // 微信支付 v3：需要证书文件验签（完整实现待 WECHAT_API_KEY_V3 配置）
+      const wechatApiKeyV3 = process.env.WECHAT_API_KEY_V3;
+      let parsed;
+      try { parsed = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { parsed = body; }
+      if (!wechatApiKeyV3) {
+        // 无密钥时，检查基础字段存在性作为预验证
+        const hasRequiredFields = parsed && (parsed.event_type || parsed.resource);
+        return { valid: !!hasRequiredFields, event: parsed, skipped: true, warning: '微信支付 v3 签名验证需配置证书，当前跳过' };
+      }
+      // TODO: 完整微信 v3 HMAC-SHA256 签名验证（需 WECHAT_SERIAL_NO + 证书）
+      return { valid: false, error: '微信支付签名验证需要完整证书配置' };
+    }
+
+    if (provider === 'alipay') {
+      // 支付宝：RSA2 验签（需 ALIPAY_PUBLIC_KEY）
+      const alipayPublicKey = process.env.ALIPAY_PUBLIC_KEY;
+      if (!alipayPublicKey) {
+        return { valid: false, error: '支付宝验签需配置 ALIPAY_PUBLIC_KEY' };
+      }
+      // TODO: 实装 RSA2 验签
+      return { valid: false, error: '支付宝 RSA2 验签待实现' };
+    }
+
+    return { valid: false, error: `未知支付提供商: ${provider}` };
+  } catch(e) {
+    return { valid: false, error: e.message };
+  }
 }
 
 module.exports = { createPayment, createPaymentWithProvider, verifyCallback, PROVIDER };

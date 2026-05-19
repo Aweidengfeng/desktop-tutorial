@@ -7,12 +7,32 @@ const prisma = require('../db/prisma');
 
 const assistantLimiter = rateLimit({ windowMs: 60*1000, max: 10 });
 
-const MOCK_REPLIES = [
-  '根据您的轨迹记录和目标山峰数据，我建议您在出发前做好充分的高反适应训练。',
-  '当前天气条件适合攀登，风速较低，能见度良好。建议早晨6点前出发。',
-  '您选择的路线难度中等，预计需要5-7天。请确保携带足够的补给和保暖装备。',
-  'SummitLink为您提供专业向导服务，您可以在"探索"页面找到认证向导。',
-];
+// 智能本地回复（无 OPENAI_API_KEY 时使用）
+function localAssistantReply(message) {
+  const msg = (message || '').toLowerCase();
+  if (msg.includes('天气') || msg.includes('气候') || msg.includes('weather')) {
+    return '珠峰攀登窗口期通常在5月（季前）和10月（季后）。建议实时查看 Summit Weather 或 Mountain-Forecast，提前5天的预报可靠性较高。';
+  }
+  if (msg.includes('装备') || msg.includes('gear') || msg.includes('背包')) {
+    return '高海拔必备装备：羽绒睡袋（-30°C）、高山靴、冰爪、冰镐、头盔、安全带、下降器、头灯（备用电池）、氧气瓶（8000m以上建议携带）。详细清单请查看装备清单页面。';
+  }
+  if (msg.includes('高反') || msg.includes('高原') || msg.includes('altitude') || msg.includes('acclim')) {
+    return '高反预防：1) 缓慢升高，每天净升高不超过500m。2) "爬高睡低"原则。3) 充分补水。4) 可预防性服用乙酰唑胺（需医嘱）。出现严重头痛、呼吸困难立即下撤。';
+  }
+  if (msg.includes('证件') || msg.includes('permit') || msg.includes('许可')) {
+    return '攀登许可因山峰不同而异：\n• 珠峰（北坡）：中国登山协会颁发，费用约¥35,000/人\n• K2：巴基斯坦体育旅游部，约$2,000\n• 厄尔布鲁士：免许可，仅需注册';
+  }
+  if (msg.includes('向导') || msg.includes('guide') || msg.includes('陪登')) {
+    return '专业向导可大幅提升安全性。在 SummitLink 上可浏览认证向导，按山峰/地区/语言筛选，直接发送消息洽谈行程。';
+  }
+  if (msg.includes('保险') || msg.includes('insurance')) {
+    return '高海拔攀登建议购买涵盖直升机救援的专项户外保险，如 Global Rescue、Ripcord 或国内平安/太平洋的户外险。注意确认覆盖的最高海拔限制。';
+  }
+  if (msg.includes('你好') || msg.includes('hello') || msg.includes('hi') || msg.includes('在吗')) {
+    return '你好！我是 SummitLink AI 助手 🏔 我可以解答攀登相关问题：天气窗口、装备建议、高反预防、许可申请等。有什么可以帮你的？';
+  }
+  return '感谢你的提问！配置 OPENAI_API_KEY 后我将提供更精准的 AI 回答。目前我可以解答：天气窗口 / 装备建议 / 高反预防 / 攀登许可 / 保险建议 等话题，请重新描述你的问题。';
+}
 
 router.post('/chat', assistantLimiter, auth, async (req, res) => {
   try {
@@ -24,11 +44,12 @@ router.post('/chat', assistantLimiter, auth, async (req, res) => {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      const mockReply = MOCK_REPLIES[Math.floor(Math.random() * MOCK_REPLIES.length)];
+      const lastMsg = Array.isArray(messages) ? (messages[messages.length - 1]?.content || '') : '';
+      const reply = localAssistantReply(lastMsg);
       return res.json({
-        reply: mockReply,
+        reply,
         citations: [],
-        mock: true,
+        source: 'local',
       });
     }
 
