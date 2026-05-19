@@ -15,6 +15,7 @@
   <meta name="theme-color" content="#2b6579">
   <meta property="og:title" content="巅峰探索 / SummitLink">
   <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
+  <link rel="manifest" href="/manifest.json">
   <!-- 高德地图 Web JS API v2 — 运行时根据 /api/config/map 动态加载，避免在 Capacitor bundle 中硬编码 Key -->
   <script>
   (function() {
@@ -197,6 +198,9 @@
 </head>
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
 <div class="app-container relative min-h-screen overflow-hidden" :class="darkMode ? 'bg-slate-900' : 'bg-slate-50'">
+  <div id="offline-banner" style="display:none" class="fixed top-0 left-0 right-0 z-[260] bg-amber-500 text-slate-900 text-center text-xs font-semibold py-2">
+    离线模式 — 数据可能不是最新
+  </div>
 
   <!-- Toast Notifications -->
   <div class="fixed top-4 right-4 z-[200] flex flex-col gap-2" style="max-width: 300px;">
@@ -10130,5 +10134,24 @@ function gdprDecline() {
   var banner = document.getElementById('gdpr-banner');
   if (banner) banner.style.display = 'none';
 }
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+function updateOfflineBanner() {
+  var el = document.getElementById('offline-banner');
+  if (!el) return;
+  el.style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online', updateOfflineBanner);
+window.addEventListener('offline', updateOfflineBanner);
+updateOfflineBanner();
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('img:not([loading])').forEach(function(img) {
+    img.setAttribute('loading', 'lazy');
+  });
+});
 </script>
 </html>

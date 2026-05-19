@@ -58,7 +58,10 @@
       <div class="hero-info">
         <div class="row" style="justify-content:space-between;">
           <h1 id="title" style="margin:0;font-size:28px;"></h1>
-          <button id="bookNowTop" class="book-btn" data-i18n="bookNow"></button>
+          <div class="row">
+            <button id="shareTop" class="book-btn" data-i18n="share"></button>
+            <button id="bookNowTop" class="book-btn" data-i18n="bookNow"></button>
+          </div>
         </div>
         <div class="muted" id="subTitle"></div>
         <div class="badges" id="heroBadges"></div>
@@ -160,14 +163,14 @@
   <script>
     const I18N = {
       zh: {
-        bookNow: '立即报名', keyInfo: '关键信息', priceTiers: '价格档位选择器', departureDate: '出发日期', itinerary: '详细行程',
+        bookNow: '立即报名', share: '分享', keyInfo: '关键信息', priceTiers: '价格档位选择器', departureDate: '出发日期', itinerary: '详细行程',
         equipment: '装备清单', riskAndInsurance: '风险声明与必要保险', cancellation: '退订政策', merchantInfo: '向导 / 俱乐部信息',
         reviews: '用户评价', faq: '常见问题', recommendations: '类似路线推荐', privacy: '隐私政策', terms: '用户协议',
         region: '国家/地区', entityCn: '末登峰（北京）科技有限公司', entityUs: 'Unsummit Technology Limited',
         fromPrice: '起步价', difficultySystem: '难度系统'
       },
       en: {
-        bookNow: 'Book Now', keyInfo: 'Key Facts', priceTiers: 'Price Tiers', departureDate: 'Departure Date', itinerary: 'Itinerary',
+        bookNow: 'Book Now', share: 'Share', keyInfo: 'Key Facts', priceTiers: 'Price Tiers', departureDate: 'Departure Date', itinerary: 'Itinerary',
         equipment: 'Equipment', riskAndInsurance: 'Risk & Insurance', cancellation: 'Cancellation Policy', merchantInfo: 'Guide / Club',
         reviews: 'Reviews', faq: 'FAQ', recommendations: 'Similar Routes', privacy: 'Privacy', terms: 'Terms',
         region: 'Region', entityCn: 'Modengfeng (Beijing) Technology Co., Ltd.', entityUs: 'Unsummit Technology Limited',
@@ -300,6 +303,27 @@
       document.getElementById('bookNowBottom').onclick = onClick;
     }
 
+    async function shareExpedition(data) {
+      const payload = {
+        title: data.title || 'SummitLink Expedition',
+        text: data.description || data.peak_name || '',
+        url: location.href,
+      };
+      const NativeShare = window.Capacitor?.Plugins?.Share;
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && NativeShare) {
+        await NativeShare.share(payload).catch(() => {});
+        return;
+      }
+      if (navigator.share) {
+        await navigator.share(payload).catch(() => {});
+        return;
+      }
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(payload.url).catch(() => {});
+        alert(language === 'zh' ? '链接已复制' : 'Link copied');
+      }
+    }
+
     (async function init() {
       const id = getId();
       if (!id) return notFound();
@@ -316,6 +340,8 @@
       if (!resp.ok) return notFound();
       const data = await resp.json();
       render(data);
+      const shareBtn = document.getElementById('shareTop');
+      if (shareBtn) shareBtn.onclick = () => shareExpedition(data);
     })();
   </script>
 </body>

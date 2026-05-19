@@ -46,6 +46,7 @@ const logger = pino({
 });
 
 const express = require('express');
+const compression = require('compression');
 const helmet = require('helmet');
 const { initSentry, sentryRequestHandler, sentryErrorHandler } = require('./middleware/sentry');
 const cors = require('cors');
@@ -67,6 +68,7 @@ const htmlPageLimiter = rateLimit({
 });
 
 const app = express();
+app.use(compression());
 
 initSentry(app);
 app.use(sentryRequestHandler());

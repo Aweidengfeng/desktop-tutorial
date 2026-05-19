@@ -178,3 +178,21 @@ describe('安全测试 6 — JWT 过期返回 401', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ── 7. 公共只读接口缓存头策略 ─────────────────────────────────────────────
+describe('安全测试 7 — 公共 GET 接口缓存头', () => {
+  let app;
+
+  beforeAll(() => {
+    clearDbCache();
+    process.env.NODE_ENV = 'test';
+    app = createApp();
+    createTestDb();
+  });
+
+  test('GET /api/config/map 返回 1 小时缓存头', async () => {
+    const res = await request(app).get('/api/config/map');
+    expect(res.status).toBe(200);
+    expect(String(res.headers['cache-control'] || '')).toContain('max-age=3600');
+  });
+});

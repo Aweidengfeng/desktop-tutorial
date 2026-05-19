@@ -651,6 +651,7 @@ model Booking {
   guide Guide? @relation(fields: [guideId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([userId, status])
   @@map("bookings")
 }
 
@@ -665,6 +666,7 @@ model Order {
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
   @@map("orders")
 }
 
@@ -707,6 +709,8 @@ model Expedition {
 
   orders ExpeditionOrder[]
 
+  @@index([clubId, status])
+  @@index([guideId, status])
   @@map("expeditions")
 }
 
@@ -983,6 +987,7 @@ model SosAlert {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([userId, createdAt])
   @@map("sos_alerts")
 }
 

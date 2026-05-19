@@ -6,6 +6,7 @@
 // 公开接口缓存策略（5分钟）
 const PUBLIC_CACHE_ROUTES = [
   '/api/peaks',
+  '/api/expeditions',
   '/api/mountains',
   '/api/routes',
   '/api/leaderboard',
@@ -38,7 +39,7 @@ function cacheMiddleware(req, res, next) {
 
   if (isPublic) {
     // 5分钟公开缓存
-    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.setHeader('Vary', 'Accept-Encoding, Accept-Language');
   } else {
     res.setHeader('Cache-Control', 'no-store');

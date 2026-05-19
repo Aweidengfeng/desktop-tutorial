@@ -389,6 +389,7 @@ function alpineLink() {
     notifPanelOpen: false,
     userStats: { expeditionCount: null, totalKm: null, climbingDays: null },
     showLogin: false,
+    showBiometricLogin: false,
     showRegister: false,
     loginLoading: false,
     loginType: 'password',
@@ -418,6 +419,8 @@ function alpineLink() {
     gearCategory: '全部',
     activeChatType: 'all',
     currentLang: 'zh',
+    locale: localStorage.getItem('locale') || 'zh-CN',
+    i18nMessages: {},
     showLangPicker: false,
     showSearch: false,
     searchQuery: '',
@@ -459,6 +462,7 @@ function alpineLink() {
     showTrackLayerPanel: false,
     showOfflineMapModal: false,
     offlineMapProgress: 0,
+    isOffline: !navigator.onLine,
     showChatWindow: false,
     activeChatSession: null,
     chatSubTab: 'all',
@@ -537,6 +541,8 @@ function alpineLink() {
     trackLocationMarker: null,
     mapLayerOptions: MAP_LAYER_OPTIONS,
     activeMapLayer,
+    _mapCore: null,
+    _mapCoreLoading: null,
     amapAvailable: typeof AMap !== 'undefined',
     pendingUploadCount: 0,
     recordingMap: null,
@@ -686,7 +692,11 @@ function alpineLink() {
       it: { app_name: 'SummitLink', summit: 'Vetta', search: 'Cerca', language: 'Lingua', home: 'Home', explore: 'Esplora', community: 'Comunità', track: 'Percorso', gear: 'Attrezzatura', me: 'Io', booking: 'Prenotazione', submit: 'Invia', cancel: 'Annulla', close: 'Chiudi', save: 'Salva', confirm: 'Conferma', back: 'Indietro', edit: 'Modifica', delete: 'Elimina', share: 'Condividi', like: 'Mi piace', comment: 'Commenta', follow: 'Segui', login: 'Accedi', logout: 'Esci', settings: 'Impostazioni', sos: 'SOS Emergenza', loading: 'Caricamento...', success: 'Successo', error: 'Errore', weather: 'Meteo', altitude: 'Altitudine', difficulty: 'Difficoltà', country: 'Paese', price: 'Prezzo', date: 'Data', guide: 'Guida', members: 'Membri', notes: 'Note', send_sos: 'Invia SOS', book_now: 'Prenota ora', peak_detail: 'Dettaglio cima', booking_title: 'Prenota scalata' },
       es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
     },
-    t(key) { const lang = this.translations[this.currentLang] || this.translations['zh']; return lang[key] || this.translations['zh'][key] || key; },
+    t(key) {
+      if (this.i18nMessages && this.i18nMessages[key]) return this.i18nMessages[key];
+      const lang = this.translations[this.currentLang] || this.translations.zh;
+      return lang[key] || this.translations.zh[key] || key;
+    },
     nearbyGuides: [],
     summitLeaderboard: [
       { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
@@ -1392,28 +1402,56 @@ function alpineLink() {
       event.target.value = '';
     },
     async uploadAvatar(event) {
-      const file = event.target.files[0];
+      let file = event && event.target && event.target.files ? event.target.files[0] : null;
+      if (!file && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
+          const Camera = window.Capacitor?.Plugins?.Camera;
+          if (Camera) {
+            const photo = await Camera.getPhoto({
+              source: 'PROMPT',
+              quality: 80,
+              resultType: 'base64',
+            });
+            if (photo && photo.base64String) {
+              const mime = photo.format === 'png' ? 'image/png' : 'image/jpeg';
+              const bytes = atob(photo.base64String);
+              const arr = new Uint8Array(bytes.length);
+              for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+              file = new File([arr], `avatar.${photo.format || 'jpg'}`, { type: mime });
+            }
+          }
+        } catch (e) {}
+      }
       if (!file) return;
       const { valid, error } = validateImageFile(file);
-      if (!valid) { alert(error); event.target.value = ''; return; }
+      if (!valid) {
+        alert(error);
+        if (event && event.target) event.target.value = '';
+        return;
+      }
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch('/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + this.authToken }, body: formData });
-        if (res.ok) {
-          const data = await res.json();
+        const res = await fetch('/api/users/avatar', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${this.authToken}` },
+          body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.url) {
           this.userProfile.avatar = data.url;
-          if (this.authToken) {
-            await fetch('/api/auth/profile', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ avatar: data.url, name: this.userProfile.name }) });
-          }
           this.showToast('头像更新成功 ✅');
         } else {
-          this.showToast('头像上传失败', 'error');
+          this.showToast(data.error || '头像上传失败', 'error');
         }
       } catch(e) { this.showToast('头像上传失败', 'error'); }
-      event.target.value = '';
+      if (event && event.target) event.target.value = '';
     },
     triggerAvatarUpload() {
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        this.uploadAvatar();
+        return;
+      }
       if (this.$refs.avatarInput) this.$refs.avatarInput.click();
     },
     async submitGear() {
@@ -1529,8 +1567,24 @@ function alpineLink() {
       this.closeCreateTeam();
     },
 
-    // AMap 工具函数：初始化地图（可复用于多个场景）
+    async ensureMapCore() {
+      if (this._mapCore) return this._mapCore;
+      if (!this._mapCoreLoading) {
+        this._mapCoreLoading = import('/www/js/map-core.js')
+          .then((mod) => {
+            this._mapCore = mod;
+            return mod;
+          })
+          .catch((e) => {
+            console.warn('[map] map-core lazy load failed:', e && e.message ? e.message : e);
+            return null;
+          });
+      }
+      return this._mapCoreLoading;
+    },
+
     initAMap(containerId, options = {}) {
+      if (this._mapCore?.initAMap) return this._mapCore.initAMap(containerId, options);
       if (typeof AMap === 'undefined') return null;
       const defaultOptions = { zoom: 13, center: [116.397428, 39.90923], mapStyle: 'amap://styles/dark' };
       try {
@@ -1538,65 +1592,15 @@ function alpineLink() {
       } catch(e) { return null; }
     },
 
-    // Phase 2.5: 统一地图初始化（高德 / Mapbox 双引擎）
     async initMap(containerId, options = {}) {
-      if (window.__activeMapProvider === 'mapbox' && window.mapboxgl) {
-        try {
-          return new window.mapboxgl.Map({
-            container: containerId,
-            style: 'mapbox://styles/mapbox/outdoors-v12',
-            center: options.center || [86.925, 27.988],
-            zoom: options.zoom || 13,
-          });
-        } catch(e) { return null; }
-      }
-      if (window.__activeMapProvider === 'osm' && window.L) {
-        try {
-          const map = window.L.map(containerId).setView(
-            (options.center && options.center.length === 2)
-              ? [options.center[1], options.center[0]]
-              : [27.988, 86.925],
-            options.zoom || 13,
-          );
-          const tileUrl = window.__osmTileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-          const attribution = window.__osmAttribution || '© OpenStreetMap contributors';
-          window.L.tileLayer(tileUrl, { attribution }).addTo(map);
-          return map;
-        } catch(e) { return null; }
-      }
+      const mapCore = await this.ensureMapCore();
+      if (mapCore?.initMap) return mapCore.initMap.call(this, containerId, options);
       return this.initAMap(containerId, options);
     },
 
-    // Phase 2.5: 轨迹绘制双引擎适配
     drawTrackOnMap(map, points) {
+      if (this._mapCore?.drawTrackOnMap) return this._mapCore.drawTrackOnMap.call(this, map, points);
       if (!map || !points || points.length < 2) return;
-      if (window.__activeMapProvider === 'mapbox' && window.mapboxgl && map.addSource) {
-        const geojson = {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: points.map(p => [p.lng, p.lat]) },
-        };
-        if (map.getSource('track-line')) {
-          map.getSource('track-line').setData(geojson);
-        } else {
-          map.addSource('track-line', { type: 'geojson', data: geojson });
-          map.addLayer({ id: 'track-layer', type: 'line', source: 'track-line',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: { 'line-color': '#3d8a9e', 'line-width': 4 } });
-        }
-        return;
-      }
-      if (window.__activeMapProvider === 'osm' && window.L && typeof map.addLayer === 'function') {
-        try {
-          const latlngs = points.map(p => [p.lat, p.lng]);
-          window.L.polyline(latlngs, { color: '#3d8a9e', weight: 4 }).addTo(map);
-          return;
-        } catch(e) {}
-      }
-      // 高德路径
-      if (typeof AMap !== 'undefined') {
-        const path = points.map(p => new AMap.LngLat(p.lng, p.lat));
-        new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map });
-      }
     },
 
     // Phase 2.3: 同步待上传轨迹（重试最多3次）
@@ -1630,46 +1634,19 @@ function alpineLink() {
       }
     },
 
-    // 初始化轨迹记录地图
+    // 初始化轨迹记录地图（懒加载 map-core）
     initTrackMap() {
-      if (this.trackMap) {
-        if (this.trackMapEngine === 'leaflet') {
-          try { this.trackMap.invalidateSize(); } catch(e) {}
-        } else {
-          try { this.trackMap.resize(); } catch(e) {}
-        }
-        return;
-      }
-      if (window.L && document.getElementById('track-map')) {
-        try {
-          this.trackMap = window.L.map('track-map', { zoomControl: true }).setView([39.90923, 116.397428], 13);
-          this.trackMapEngine = 'leaflet';
-          this.trackTileLayer = null;
-          this.applyTrackMapLayer(this.activeMapLayer);
-          return;
-        } catch (e) {}
-      }
-      this.trackMap = this.initAMap('track-map', { zoom: 13 });
-      this.trackMapEngine = this.trackMap ? 'amap' : '';
+      if (this._mapCore?.initTrackMap) return this._mapCore.initTrackMap.call(this);
+      this.ensureMapCore().then((mod) => mod?.initTrackMap && mod.initTrackMap.call(this));
     },
 
     applyTrackMapLayer(layerKey) {
-      const normalized = this.mapLayerOptions.some(layer => layer.key === layerKey) ? layerKey : 'standard';
-      const layer = this.mapLayerOptions.find(item => item.key === normalized) || this.mapLayerOptions[0];
-      this.activeMapLayer = layer.key;
-      try { localStorage.setItem(MAP_LAYER_STORAGE_KEY, layer.key); } catch (e) {}
-      if (this.trackMapEngine !== 'leaflet' || !this.trackMap || !window.L) return;
-      if (this.trackTileLayer) {
-        try { this.trackMap.removeLayer(this.trackTileLayer); } catch (e) {}
-      }
-      this.trackTileLayer = window.L.tileLayer(layer.tileUrl, {
-        attribution: layer.attribution,
-        maxZoom: 19,
-      });
-      this.trackTileLayer.addTo(this.trackMap);
+      if (this._mapCore?.applyTrackMapLayer) return this._mapCore.applyTrackMapLayer.call(this, layerKey);
+      this.ensureMapCore().then((mod) => mod?.applyTrackMapLayer && mod.applyTrackMapLayer.call(this, layerKey));
     },
 
     switchTrackMapLayer(layerKey) {
+      if (this._mapCore?.switchTrackMapLayer) return this._mapCore.switchTrackMapLayer.call(this, layerKey);
       this.applyTrackMapLayer(layerKey);
       this.showTrackLayerPanel = false;
     },
@@ -1744,84 +1721,20 @@ function alpineLink() {
       this.offlineMapProgress = 0;
     },
 
-    // GPS 定位
+    // GPS 定位（懒加载 map-core）
     locateMe() {
-      this.initTrackMap();
-      if (!this.trackMap) return;
-      if (this.trackMapEngine === 'leaflet') {
-        if (!navigator.geolocation) {
-          this.showToast('当前设备不支持定位', 'error');
-          return;
-        }
-        navigator.geolocation.getCurrentPosition((position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          this.trackMap.setView([lat, lng], 15);
-          if (this.trackLocationMarker) {
-            try { this.trackMap.removeLayer(this.trackLocationMarker); } catch (e) {}
-          }
-          this.trackLocationMarker = window.L.marker([lat, lng]).addTo(this.trackMap);
-        }, (error) => {
-          const code = error && typeof error.code === 'number' ? error.code : 0;
-          const msg = code === 1
-            ? '定位权限被拒绝，请在系统设置中开启定位权限'
-            : code === 3
-              ? '定位超时，请检查网络后重试'
-              : '定位失败，请检查定位权限或网络连接';
-          this.showToast(msg, 'error');
-        }, { enableHighAccuracy: true, timeout: 10000 });
-        return;
-      }
-      if (typeof AMap === 'undefined') return;
-      AMap.plugin('AMap.Geolocation', () => {
-        const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
-        this.trackMap.addControl(geo);
-        geo.getCurrentPosition((status, result) => {
-          if (status === 'complete' && result.position) {
-            this.trackMap.setCenter([result.position.lng, result.position.lat]);
-            this.trackMap.setZoom(15);
-            new AMap.Marker({ position: result.position, map: this.trackMap });
-          } else {
-            this.showToast('定位失败，请检查GPS权限', 'error');
-          }
-        });
-      });
+      if (this._mapCore?.locateMe) return this._mapCore.locateMe.call(this);
+      this.ensureMapCore().then((mod) => mod?.locateMe && mod.locateMe.call(this));
     },
 
     locateRecordingMap() {
-      const activeMap = this.recordingMap || this.trackMap;
-      if (!activeMap || typeof AMap === 'undefined') return;
-      AMap.plugin('AMap.Geolocation', () => {
-        const geo = new AMap.Geolocation({ enableHighAccuracy: true, timeout: 10000 });
-        activeMap.addControl(geo);
-        geo.getCurrentPosition((status, result) => {
-          if (status === 'complete' && result.position) {
-            activeMap.setCenter([result.position.lng, result.position.lat]);
-            activeMap.setZoom(15);
-          } else {
-            this.showToast('定位失败，请检查GPS权限', 'error');
-          }
-        });
-      });
+      if (this._mapCore?.locateRecordingMap) return this._mapCore.locateRecordingMap.call(this);
+      this.ensureMapCore().then((mod) => mod?.locateRecordingMap && mod.locateRecordingMap.call(this));
     },
 
-    // 在轨迹详情弹窗里渲染带 Polyline 的地图（WGS84 → GCJ-02）
     renderTrackDetailMap(track) {
-      if (typeof AMap === 'undefined' || !track || !track.points || track.points.length < 2) return;
-      try {
-        const mapEl = document.getElementById('track-detail-map');
-        if (!mapEl) return;
-        const center = [track.points[0].lng, track.points[0].lat];
-        const detailMap = new AMap.Map('track-detail-map', { zoom: 13, center, mapStyle: 'amap://styles/dark' });
-        AMap.convertFrom(track.points.map(p => [p.lng, p.lat]), 'gps', (status, result) => {
-          const rawPoints = track.points.map(p => new AMap.LngLat(p.lng, p.lat));
-          const path = status === 'complete' ? result.locations : rawPoints;
-          new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map: detailMap });
-          new AMap.Marker({ position: path[0], map: detailMap, label: { content: '起点', offset: new AMap.Pixel(-10, -30) } });
-          new AMap.Marker({ position: path[path.length - 1], map: detailMap, label: { content: '终点', offset: new AMap.Pixel(-10, -30) } });
-          detailMap.setFitView();
-        });
-      } catch(e) {}
+      if (this._mapCore?.renderTrackDetailMap) return this._mapCore.renderTrackDetailMap.call(this, track);
+      this.ensureMapCore().then((mod) => mod?.renderTrackDetailMap && mod.renderTrackDetailMap.call(this, track));
     },
 
     // Track Recording with AMap
@@ -2656,7 +2569,10 @@ function alpineLink() {
       const trackId = track.id ? ('?track=' + track.id) : '';
       const url = window.location.origin + '/summitlink' + trackId;
       const text = `${track.name || '我的轨迹'} 📍${(track.distance_km || track.distance || 0)}km ↑${(track.elevation_gain || track.elevation || 0)}m - 来自巅峰探索 SummitLink`;
-      if (navigator.share) {
+      const NativeShare = window.Capacitor?.Plugins?.Share;
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && NativeShare) {
+        NativeShare.share({ title: track.name || '轨迹分享', text, url }).catch(() => {});
+      } else if (navigator.share) {
         navigator.share({ title: track.name || '轨迹分享', text, url }).catch(() => {});
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(text + '\n' + url).then(() => this.showToast('链接已复制 🔗'));
@@ -2937,8 +2853,39 @@ function alpineLink() {
           await fetch('/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
           this.showToast('隐私设置已保存 ✅');
         } catch(e) { this.showToast('网络错误', 'error'); }
+      } else if (this.settingsType === 'language') {
+        await this.setLocale(this.currentLang === 'en' ? 'en' : 'zh-CN', true);
       }
       this.showSettings = false;
+    },
+    async loadLocalePack(forceLocale) {
+      const target = forceLocale || this.locale || 'zh-CN';
+      try {
+        const res = await fetch(`/i18n/${target}.json`);
+        if (!res.ok) throw new Error('load locale failed');
+        const messages = await res.json();
+        this.i18nMessages = messages || {};
+        this.locale = target;
+        this.currentLang = target.startsWith('en') ? 'en' : 'zh';
+      } catch (e) {
+        this.i18nMessages = {};
+        this.locale = 'zh-CN';
+      }
+      this.refreshLocalizedUi();
+    },
+    refreshLocalizedUi() {
+      this.navTabs = [
+        { id: 'expedition', icon: 'explore', name: this.t('nav_expedition') },
+        { id: 'map', icon: 'map', name: this.t('nav_map') },
+        { id: 'discover', icon: 'travel_explore', name: this.t('nav_discover') },
+        { id: 'me', icon: 'person', name: this.t('nav_me') },
+      ];
+    },
+    async setLocale(nextLocale, shouldPersist = false) {
+      this.locale = nextLocale || 'zh-CN';
+      this.currentLang = this.locale.startsWith('en') ? 'en' : 'zh';
+      if (shouldPersist) localStorage.setItem('locale', this.locale);
+      await this.loadLocalePack(this.locale);
     },
     async exportMyData() {
       if (!this.requireAuth()) return;
@@ -3001,6 +2948,35 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
       finally { this.loginLoading = false; }
     },
+    async loginWithBiometric() {
+      if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+      try {
+        const BiometricAuth = window.Capacitor?.Plugins?.BiometricAuth;
+        const SecureStorage = window.Capacitor?.Plugins?.SecureStorage || window.Capacitor?.Plugins?.SecureStoragePlugin;
+        if (!BiometricAuth || !SecureStorage) {
+          this.showBiometricLogin = false;
+          return;
+        }
+        const avail = await BiometricAuth.isAvailable();
+        if (!avail || avail.isAvailable === false) {
+          this.showBiometricLogin = false;
+          return;
+        }
+        await BiometricAuth.verify({ reason: this.t('biometric_verify') || '请验证身份' });
+        const tokenRes = await SecureStorage.get({ key: 'summitlink_token' });
+        const token = tokenRes && (tokenRes.value || tokenRes.token);
+        if (!token) return;
+        this.authToken = token;
+        localStorage.setItem('summitlink_token', token);
+        await this.verifyToken();
+        if (this.currentUser) {
+          this.showLogin = false;
+          this.showToast(this.t('biometric_login_success') || '生物识别登录成功');
+        }
+      } catch (e) {
+        this.showBiometricLogin = false;
+      }
+    },
     async doRegister() {
       if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
@@ -3023,6 +2999,10 @@ function alpineLink() {
       this.authToken = null;
       this.currentUser = null;
       localStorage.removeItem('summitlink_token');
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        const SecureStorage = window.Capacitor?.Plugins?.SecureStorage || window.Capacitor?.Plugins?.SecureStoragePlugin;
+        if (SecureStorage && SecureStorage.remove) SecureStorage.remove({ key: 'summitlink_token' }).catch(() => {});
+      }
       this.userProfile = { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 };
       this.showToast('已退出登录');
     },
@@ -3195,6 +3175,12 @@ function alpineLink() {
       if (data.refreshToken) localStorage.setItem('summitlink_refresh_token', data.refreshToken);
       this.currentUser = data.user;
       localStorage.setItem('summitlink_token', data.token);
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        const SecureStorage = window.Capacitor?.Plugins?.SecureStorage || window.Capacitor?.Plugins?.SecureStoragePlugin;
+        if (SecureStorage && SecureStorage.set) {
+          SecureStorage.set({ key: 'summitlink_token', value: data.token }).catch(() => {});
+        }
+      }
       this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
       this.showLogin = false;
       this.loginForm = { phone: '', password: '' };
@@ -4368,8 +4354,48 @@ function alpineLink() {
         console.warn('[Push] 原生推送初始化失败（可能在 Web 环境）:', e);
       }
     },
+    applySystemTheme() {
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = isDark ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('al_theme', theme);
+      this.syncStatusBar(theme);
+    },
+    async syncStatusBar(theme) {
+      if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+      const StatusBar = window.Capacitor?.Plugins?.StatusBar;
+      if (!StatusBar) return;
+      try {
+        await StatusBar.setStyle({ style: theme === 'dark' ? 'DARK' : 'LIGHT' });
+        if (StatusBar.setBackgroundColor) {
+          await StatusBar.setBackgroundColor({ color: theme === 'dark' ? '#1a1a2e' : '#f2f5fa' });
+        }
+      } catch (e) {}
+    },
+    async refreshBiometricAvailability() {
+      try {
+        if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) {
+          this.showBiometricLogin = false;
+          return;
+        }
+        const BiometricAuth = window.Capacitor?.Plugins?.BiometricAuth;
+        const available = BiometricAuth && BiometricAuth.isAvailable ? await BiometricAuth.isAvailable() : null;
+        this.showBiometricLogin = !!(available && available.isAvailable !== false);
+      } catch (e) {
+        this.showBiometricLogin = false;
+      }
+    },
 
     async init() {
+      await this.loadLocalePack(this.locale);
+      this.applySystemTheme();
+      if (window.matchMedia) {
+        const media = window.matchMedia('(prefers-color-scheme: dark)');
+        const onThemeChange = () => this.applySystemTheme();
+        if (media.addEventListener) media.addEventListener('change', onThemeChange);
+        else if (media.addListener) media.addListener(onThemeChange);
+      }
+      await this.refreshBiometricAvailability();
       // Auto-rotate hero carousel every 5 seconds
       setInterval(() => {
         this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
@@ -4417,6 +4443,8 @@ function alpineLink() {
       idbGetPendingTracks().then(t => { this.pendingUploadCount = t.length; }).catch(() => {});
       this.syncPendingTracks();
       window.addEventListener('online', () => this.syncPendingTracks());
+      window.addEventListener('online', () => { this.isOffline = false; });
+      window.addEventListener('offline', () => { this.isOffline = true; });
       // Phase 2.5: 检测地图引擎，Mapbox 时懒加载 SDK
       detectMapProvider().then(cfg => {
         if (cfg.provider === 'mapbox' && cfg.token) {
