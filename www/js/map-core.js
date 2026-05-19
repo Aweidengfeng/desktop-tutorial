@@ -210,6 +210,15 @@ function clearPeakLocationMap(containerId) {
   return el;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function renderPeakLocationMap(containerId, lat, lng, peakName, altitude) {
   const el = clearPeakLocationMap(containerId);
   if (!el || lat == null || lng == null) {
@@ -218,6 +227,8 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
   }
 
   const provider = window.__activeMapProvider;
+  const safePeakName = escapeHtml(peakName);
+  const safeAltitude = altitude != null ? escapeHtml(`${altitude}m`) : '';
 
   if (provider === 'mapbox' && window.mapboxgl) {
     try {
@@ -231,7 +242,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
       map.on('load', () => {
         new window.mapboxgl.Marker({ color: '#ef4444' })
           .setLngLat([lng, lat])
-          .setPopup(new window.mapboxgl.Popup().setHTML(`<b>${peakName}</b><br>${altitude ? altitude + 'm' : ''}`))
+          .setPopup(new window.mapboxgl.Popup().setHTML(`<b>${safePeakName}</b><br>${safeAltitude}`))
           .addTo(map);
       });
       el._peakLocationMap = map;
@@ -247,7 +258,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
       const tileUrl = window.__osmTileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
       window.L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
       const marker = window.L.marker([lat, lng]).addTo(map);
-      marker.bindPopup(`<b>${peakName}</b>${altitude ? '<br>' + altitude + 'm' : ''}`).openPopup();
+      marker.bindPopup(`<b>${safePeakName}</b>${safeAltitude ? '<br>' + safeAltitude : ''}`).openPopup();
       el._leafletMap = map;
       el._peakLocationMap = map;
       return map;
@@ -263,7 +274,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
         position: new AMap.LngLat(lng, lat),
         map,
         label: {
-          content: `<div style="background:#1e293b;color:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px;">${peakName}${altitude ? ' ' + altitude + 'm' : ''}</div>`,
+          content: `<div style="background:#1e293b;color:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px;">${safePeakName}${safeAltitude ? ' ' + safeAltitude : ''}</div>`,
           offset: new AMap.Pixel(-20, -40),
         },
       });

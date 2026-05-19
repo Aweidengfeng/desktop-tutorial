@@ -101,15 +101,17 @@ async function main() {
     ...chinaPeaks,
   ];
 
-  for (const peak of allPeaks) {
-    const existingPeak = await prisma.peak.findFirst({
-      where: { name: peak.name },
-      select: { id: true },
-    }).catch(() => null);
+  const existingPeaks = await prisma.peak.findMany({
+    where: { name: { in: allPeaks.map((peak) => peak.name) } },
+    select: { id: true, name: true },
+  }).catch(() => []);
+  const existingPeakIdsByName = new Map(existingPeaks.map((peak) => [peak.name, peak.id]));
 
-    if (existingPeak?.id) {
+  for (const peak of allPeaks) {
+    const existingPeakId = existingPeakIdsByName.get(peak.name);
+    if (existingPeakId) {
       await prisma.peak.update({
-        where: { id: existingPeak.id },
+        where: { id: existingPeakId },
         data: peak,
       }).catch(() => {});
       continue;

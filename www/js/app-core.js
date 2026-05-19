@@ -1704,10 +1704,10 @@ function alpineLink() {
     getPageTitle() {
       const tab = this.resolvePrimaryTab(this.currentPage);
       const titleMap = {
-        expedition: '精选路线',
-        discover: '社区',
-        chat: '消息',
-        me: '个人中心',
+        expedition: this.t('nav_expedition'),
+        discover: this.t('nav_discover'),
+        chat: this.t('nav_messages'),
+        me: this.t('nav_me'),
       };
       return titleMap[tab] || '探索与协作';
     },
