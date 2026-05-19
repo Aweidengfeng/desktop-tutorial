@@ -144,7 +144,9 @@ async function main() {
   ];
 
   for (const contact of rescueContacts) {
-    await prisma.rescueContact.create({ data: contact }).catch(() => {});
+    await prisma.rescueContact.create({ data: contact }).catch((error) => {
+      logSeedWriteError(`救援联系人 ${contact.name}`, '创建', error);
+    });
   }
 
   // ── 保险方案 ──────────────────────────────────────────────
@@ -155,7 +157,9 @@ async function main() {
   ];
 
   for (const plan of insurancePlans) {
-    await prisma.insurancePlan.create({ data: plan }).catch(() => {});
+    await prisma.insurancePlan.create({ data: plan }).catch((error) => {
+      logSeedWriteError(`保险方案 ${plan.name}`, '创建', error);
+    });
   }
 
   // ── 帖子 ──────────────────────────────────────────────────
@@ -200,7 +204,9 @@ async function main() {
           comments: 5,
         },
       ],
-    }).catch(() => {});
+    }).catch((error) => {
+      logSeedWriteError('示例帖子', '批量创建', error);
+    });
   }
 
   // ── 队伍 ──────────────────────────────────────────────────
@@ -212,7 +218,9 @@ async function main() {
         ('珠峰南坡适应队', '珠穆朗玛峰', '2026-05-20', 3, 5, '高级', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '目标南坡 C3 适应+冲顶窗口观测', 'recruiting'),
         ('K2 技术训练队', 'K2', '2026-06-10', 2, 4, '专业', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '冰壁与固定绳技术训练，需 6000m 以上经验', 'recruiting'),
         ('贡嘎山周末拉练', '贡嘎山', '2026-05-25', 4, 6, '中级', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '两日拉练，含高海拔徒步与营地协作', 'recruiting')
-    `.catch(() => {});
+    `.catch((error) => {
+      logSeedWriteError('示例队伍', '创建', error);
+    });
   }
 
   console.log('✅ 种子数据填充完成！');
