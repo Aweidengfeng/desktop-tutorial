@@ -342,6 +342,7 @@ app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/location', require('./routes/location'));
+app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/articles', require('./routes/articles'));
 app.use('/api/profile', require('./routes/profile'));
@@ -369,7 +370,6 @@ app.use('/api/config', require('./routes/config')); // IP感知地图自动切�
 app.use('/api/push', require('./routes/push'));
 app.use('/api/coach', require('./routes/coach'));
 app.use('/api/payment', require('./routes/payment'));
-app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/gdpr', require('./routes/gdpr'));
 app.use('/api/currency', require('./routes/currency'));
 
