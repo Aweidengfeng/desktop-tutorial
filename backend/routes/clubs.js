@@ -780,63 +780,6 @@ router.post('/pay-listing-fee', clubPayRateLimit, auth, async (req, res) => {
   }
 });
 
-// GET /api/clubs/:id/guides — 俱乐部下的向导列表
-router.get('/:id/guides', async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const guides = await prisma.$queryRaw`
-      SELECT id, name, avatar, flag, nationality, rating, reviews,
-             specialty, day_rate as dayRate, cert, experience_years,
-             total_expeditions, bio, peaks_led
-      FROM guides
-      WHERE (affiliation_club_id = ${id} OR user_id IN (
-        SELECT user_id FROM club_members WHERE club_id = ${id}
-      )) AND status = 'approved'
-      ORDER BY rating DESC
-    `;
-    res.json(guides);
-  } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// PUT /api/clubs/:id — 更新俱乐部信息（创建者或管理员）
-router.put('/:id', clubWriteLimiter, auth, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const [club] = await prisma.$queryRaw`SELECT * FROM clubs WHERE id = ${id}`;
-    if (!club) return res.status(404).json({ error: '俱乐部不存在' });
-    const [adminUser] = await prisma.$queryRaw`SELECT is_admin FROM users WHERE id = ${req.user.id}`;
-    if (club.creator_id !== req.user.id && !(adminUser && adminUser.is_admin)) {
-      return res.status(403).json({ error: '无权操作' });
-    }
-    const { name, description, cover, specialty, region, type, contact, wechat, website, logo, intro, price_list, rating, verified } = req.body;
-    const priceListStr = price_list ? (typeof price_list === 'string' ? price_list : JSON.stringify(price_list)) : null;
-    await prisma.$executeRaw`
-      UPDATE clubs SET
-        name = COALESCE(${name || null}, name),
-        description = COALESCE(${description || null}, description),
-        cover = COALESCE(${cover || null}, cover),
-        specialty = COALESCE(${specialty || null}, specialty),
-        region = COALESCE(${region || null}, region),
-        type = COALESCE(${type || null}, type),
-        contact = COALESCE(${contact || null}, contact),
-        wechat = COALESCE(${wechat || null}, wechat),
-        website = COALESCE(${website || null}, website),
-        logo = COALESCE(${logo || null}, logo),
-        intro = COALESCE(${intro || null}, intro),
-        price_list = COALESCE(${priceListStr}, price_list),
-        rating = COALESCE(${rating || null}, rating),
-        verified = COALESCE(${verified !== undefined ? (verified ? 1 : 0) : null}, verified)
-      WHERE id = ${id}
-    `;
-    const [updated] = await prisma.$queryRaw`SELECT * FROM clubs WHERE id = ${id}`;
-    res.json(updated);
-  } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
 // DELETE /api/clubs/:id — 删除俱乐部（管理员）
 router.delete('/:id', clubWriteLimiter, auth, async (req, res) => {
   try {
@@ -845,27 +788,6 @@ router.delete('/:id', clubWriteLimiter, auth, async (req, res) => {
     if (!adminUser || !adminUser.is_admin) return res.status(403).json({ error: '无权操作' });
     await prisma.$executeRaw`UPDATE clubs SET status = 'deleted' WHERE id = ${id}`;
     res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// POST /api/clubs — 管理员创建俱乐部
-router.post('/', clubWriteLimiter, auth, async (req, res) => {
-  try {
-    const [adminUser] = await prisma.$queryRaw`SELECT is_admin FROM users WHERE id = ${req.user.id}`;
-    if (!adminUser || !adminUser.is_admin) return res.status(403).json({ error: '无权操作' });
-    const { name, description, cover, specialty, region, type, contact, wechat, website, logo } = req.body;
-    if (!name) return res.status(400).json({ error: '俱乐部名称不能为空' });
-    await prisma.$executeRaw`
-      INSERT INTO clubs (name, description, cover, specialty, region, type, contact, wechat, website, logo, creator_id, verified)
-      VALUES (${name}, ${description || ''}, ${cover || ''}, ${specialty || ''}, ${region || ''},
-              ${type || '综合'}, ${contact || ''}, ${wechat || ''}, ${website || ''}, ${logo || ''}, ${req.user.id}, 1)
-    `;
-    const [club] = await prisma.$queryRaw`
-      SELECT * FROM clubs WHERE creator_id = ${req.user.id} ORDER BY id DESC LIMIT 1
-    `;
-    res.json(club);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

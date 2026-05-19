@@ -651,29 +651,6 @@ router.get('/camps/:peakId', externalApiLimiter, (req, res) => {
   }
 });
 
-// GET /api/weather/summit-window/:peakId - 7-day summit window score
-router.get('/summit-window/:peakId', externalApiLimiter, (req, res) => {
-  try {
-    const peakId = parseInt(req.params.peakId);
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(); date.setDate(date.getDate() + i);
-      const score = Math.floor(Math.random() * 100);
-      days.push({
-        date: date.toISOString().split('T')[0],
-        score,
-        recommendation: score >= 70 ? 'good' : score >= 40 ? 'marginal' : 'poor',
-        wind_speed: Math.floor(Math.random()*60)+5,
-        temp_c: Math.floor(Math.random()*15)-30,
-        precipitation_mm: Math.random() * 10,
-      });
-    }
-    res.json({ peak_id: peakId, window: days });
-  } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
 // GET /api/weather/avalanche-risk/:peakId - avalanche/altitude sickness risk
 router.get('/avalanche-risk/:peakId', externalApiLimiter, (req, res) => {
   try {

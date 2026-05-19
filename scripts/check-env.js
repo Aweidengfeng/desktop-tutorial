@@ -7,6 +7,7 @@
 const REQUIRED = [
   { key: 'DATABASE_URL', desc: 'PostgreSQL 连接字符串' },
   { key: 'JWT_SECRET', desc: 'JWT签名密钥（最少32字符）' },
+  { key: 'ADMIN_PASSWORD', desc: '管理员登录密码（生产必需）' },
 ];
 
 const RECOMMENDED = [
@@ -14,7 +15,9 @@ const RECOMMENDED = [
   { key: 'STRIPE_PUBLISHABLE_KEY', desc: 'Stripe公开密钥' },
   { key: 'SENTRY_DSN', desc: 'Sentry错误监控（强烈推荐）' },
   { key: 'MAPBOX_TOKEN', desc: 'Mapbox地图Token（海外用户必需）' },
-  { key: 'ENCRYPTION_KEY', desc: 'PII字段加密密钥（32字节hex）' },
+  { key: 'PII_ENCRYPTION_KEY', desc: 'PII字段加密密钥（32字节hex）' },
+  { key: 'CORS_ORIGINS', desc: '生产环境 CORS 白名单（逗号分隔）' },
+  { key: 'API_BASE', desc: '服务对外 URL（用于前端注入）' },
 ];
 
 const OPTIONAL = [
@@ -46,6 +49,8 @@ const OPTIONAL = [
   // 微信支付 / 分账（可选，未配置时自动 mock）
   { key: 'WECHAT_MCH_ID', desc: '微信商户号（未配则支付走 mock）' },
   { key: 'WECHAT_APP_ID', desc: '微信 AppID（未配则支付走 mock）' },
+  { key: 'WECHAT_APPID', desc: '微信 OAuth AppID（登录）' },
+  { key: 'WECHAT_SECRET', desc: '微信 OAuth Secret（登录）' },
   { key: 'WECHAT_API_V3_KEY', desc: '微信支付 API v3 Key（未配则支付走 mock）' },
   { key: 'WECHAT_CERT_SERIAL', desc: '微信商户证书序列号（未配则支付走 mock）' },
   { key: 'WECHAT_PRIVATE_KEY', desc: '微信商户私钥（base64 PEM，未配则支付走 mock）' },
@@ -63,6 +68,17 @@ const OPTIONAL = [
   { key: 'PAYMENT_NOTIFY_URL', desc: '支付回调通知 URL（完整 HTTPS 地址）' },
   // 部署区域
   { key: 'DEPLOY_REGION', desc: '部署区域（cn / us，影响支付提供商默认值）' },
+  { key: 'DATABASE_PROVIDER', desc: '数据库驱动（sqlite / postgresql）' },
+  { key: 'UPLOADS_DIR', desc: '上传目录路径（可选）' },
+  { key: 'ENABLE_API_DOCS', desc: '是否开启 API 文档' },
+  { key: 'ENABLE_SWAGGER', desc: '是否开启 Swagger 文档' },
+  { key: 'ENABLE_ASSISTANT', desc: '是否启用 AI 助手接口' },
+  { key: 'SENTRY_ENV', desc: 'Sentry 环境标识' },
+  { key: 'SENTRY_RELEASE', desc: 'Sentry 发布版本' },
+  { key: 'LOG_LEVEL', desc: '后端日志级别' },
+  { key: 'STRIPE_DISABLED', desc: 'Stripe 降级开关' },
+  { key: 'TENCENT_COS_SECRET_ID', desc: '腾讯云 COS SecretId（兼容变量）' },
+  { key: 'COS_SECRET_ID', desc: 'COS SecretId（兼容变量）' },
 ];
 
 let hasError = false;
