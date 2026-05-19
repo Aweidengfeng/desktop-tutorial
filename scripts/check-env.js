@@ -15,7 +15,7 @@ const RECOMMENDED = [
   { key: 'STRIPE_PUBLISHABLE_KEY', desc: 'Stripe公开密钥' },
   { key: 'SENTRY_DSN', desc: 'Sentry错误监控（强烈推荐）' },
   { key: 'MAPBOX_TOKEN', desc: 'Mapbox地图Token（海外用户必需）' },
-  { key: 'PII_ENCRYPTION_KEY', desc: 'PII字段加密密钥（32字节hex）' },
+  { key: 'PII_ENCRYPTION_KEY', desc: 'PII字段加密密钥（64位hex，等价32字节）' },
   { key: 'CORS_ORIGINS', desc: '生产环境 CORS 白名单（逗号分隔）' },
   { key: 'API_BASE', desc: '服务对外 URL（用于前端注入）' },
 ];

@@ -50,6 +50,15 @@ function extractPrismaModels(schemaSource) {
   return modelNames;
 }
 
+function toPrismaDelegateName(modelName) {
+  if (!modelName) return modelName;
+  const acronymPrefix = modelName.match(/^[A-Z]+(?=[A-Z][a-z]|[0-9]|$)/);
+  if (acronymPrefix) {
+    return acronymPrefix[0].toLowerCase() + modelName.slice(acronymPrefix[0].length);
+  }
+  return modelName[0].toLowerCase() + modelName.slice(1);
+}
+
 function extractPrismaDelegatesFromRoutes() {
   const delegates = new Set();
   const files = getRouteFiles();
@@ -66,7 +75,7 @@ async function checkMockDegrade() {
   const report = [];
   try {
     const sms = require('../lib/smsSender');
-    const smsResult = await sms.sendSms('13800000000', 'mock-template', ['1234']);
+    const smsResult = await sms.sendSms('15500000000', 'mock-template', ['1234']);
     report.push({ module: 'smsSender', ok: !!smsResult?.success, detail: smsResult });
   } catch (e) {
     report.push({ module: 'smsSender', ok: false, detail: e.message });
@@ -97,7 +106,7 @@ async function main() {
 
   const unmountedRoutes = routeFiles.filter((f) => !mounted.has(f));
   const schemaModels = extractPrismaModels(schemaSource);
-  const validDelegates = new Set(schemaModels.map((m) => m[0].toLowerCase() + m.slice(1)));
+  const validDelegates = new Set(schemaModels.map((m) => toPrismaDelegateName(m)));
   const internalDelegates = new Set(['$queryRaw', '$queryRawUnsafe', '$executeRaw', '$executeRawUnsafe', '$transaction', '$connect', '$disconnect']);
   const routeDelegates = extractPrismaDelegatesFromRoutes();
   const unknownDelegates = routeDelegates.filter((d) => !validDelegates.has(d) && !internalDelegates.has(d));
