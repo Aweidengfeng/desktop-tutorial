@@ -84,7 +84,7 @@ const commentPollLimiter = rateLimit({
 // 认证接口精细限制 — 10 req/min/IP（任务五要求）
 const authStrictLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === 'production' ? 10 : 120,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: '登录/注册请求过于频繁，请稍后再试' },

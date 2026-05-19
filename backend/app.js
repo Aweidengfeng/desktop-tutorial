@@ -551,12 +551,18 @@ if (
   console.log('📖 API 文档已启用: /api/docs');
 }
 
-// 根路径
-app.get('/', (req, res) => {
-  res.redirect('/summitlink');
-});
-
 const PORT = process.env.PORT || 8080;
+
+// 404 兜底（必须在所有路由之后）
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: '接口不存在' });
+});
+app.use((req, res) => {
+  if (req.accepts('json')) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+  res.status(404).send('Not Found');
+});
 
 // ── 全局错误处理 ────────────────────────────────────────────────
 // JSON parse error
