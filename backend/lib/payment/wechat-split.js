@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const wechatPay = require('./wechat-pay');
 
 const WECHAT_API_BASE = 'https://api.mch.weixin.qq.com';
+let warnedMock = false;
 
 function isSplitEnabled() {
   return String(process.env.WECHAT_SPLIT_ENABLED || 'false').toLowerCase() === 'true';
@@ -21,6 +22,12 @@ function mockResult(action, extra = {}) {
     message: 'WeChat split mock mode (WECHAT_SPLIT_ENABLED=false or payment env missing).',
     ...extra,
   };
+}
+
+function warnMockOnce(message) {
+  if (warnedMock) return;
+  warnedMock = true;
+  console.warn(message);
 }
 
 function signWechatHeaders(method, path, bodyText, config) {
@@ -62,9 +69,9 @@ async function splitOrder({ transactionId, receivers = [] }) {
   const config = wechatPay.getConfig();
   if (shouldUseMock(config)) {
     if (!isSplitEnabled()) {
-      console.warn('[wechat-split] WECHAT_SPLIT_ENABLED=false，使用 mock 分账响应');
+      warnMockOnce('[wechat-split] WECHAT_SPLIT_ENABLED=false，使用 mock 分账响应');
     } else {
-      console.warn('[wechat-split] 支付配置不完整，使用 mock 分账响应');
+      warnMockOnce('[wechat-split] 支付配置不完整，使用 mock 分账响应');
     }
     return mockResult('splitOrder', {
       transactionId,

@@ -78,7 +78,9 @@ function bindLocationEvents(socket) {
           altitude = excluded.altitude,
           updatedAt = excluded.updatedAt
       `;
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[location] persist socket location failed:', e && e.message ? e.message : e);
+    }
   });
 
   socket.on('leave-expedition', (expeditionId) => {

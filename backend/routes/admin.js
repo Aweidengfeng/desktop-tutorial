@@ -845,7 +845,7 @@ router.get('/tracks/export-pdf', adminWriteLimiter, adminAuth, async (req, res) 
 
     tracks.forEach((track, idx) => {
       if (doc.y > 720) doc.addPage();
-      const points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
+      const points = parseTrackPointsSafe(track.points);
       const chart = buildAsciiChartForAdmin(points);
       doc.fontSize(12).text(`${idx + 1}. #${track.id} ${track.name || track.peak_name || '未命名轨迹'}`);
       doc.fontSize(10).text(
@@ -1575,4 +1575,18 @@ function buildAsciiChartForAdmin(points = [], width = 46, height = 6) {
     grid[y][x] = '*';
   }
   return grid.map((line) => line.join('')).join('\n');
+}
+
+function parseTrackPointsSafe(points) {
+  if (!points) return [];
+  if (Array.isArray(points)) return points;
+  if (typeof points === 'string') {
+    try {
+      const parsed = JSON.parse(points);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  return [];
 }

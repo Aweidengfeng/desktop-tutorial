@@ -1430,7 +1430,6 @@ function alpineLink() {
       this.selectedTeam = team;
       this.showTeamDetail = true;
       this.initExpeditionMap(team && team.id ? team.id : null);
-      this.loadExpeditionLocations(team && team.id ? team.id : null);
     },
     closeTeamDetail() {
       if (this.selectedTeam?.id && this._locationSocket) {
@@ -4056,7 +4055,6 @@ function alpineLink() {
     },
     initLocationSocket(expeditionId) {
       if (!expeditionId || !this.authToken) return;
-      this.loadExpeditionLocations(expeditionId);
       if (!window.io) {
         this.startExpeditionLocationPolling(expeditionId);
         return;

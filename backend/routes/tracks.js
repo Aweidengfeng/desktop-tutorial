@@ -405,7 +405,7 @@ router.get('/:id/export-pdf', exportLimiter, auth, async (req, res) => {
     `;
     if (!track) return res.status(404).json({ error: '轨迹不存在' });
     if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权导出该轨迹' });
-    const points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
+    const points = parsePointsSafe(track.points);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="track_${trackId}.pdf"`);
@@ -436,6 +436,20 @@ function normalizePoint(point = {}) {
     ele: Number(point.ele ?? point.alt ?? point[2] ?? 0),
     ts: point.ts || point.time || null,
   };
+}
+
+function parsePointsSafe(points) {
+  if (!points) return [];
+  if (Array.isArray(points)) return points;
+  if (typeof points === 'string') {
+    try {
+      const parsed = JSON.parse(points);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  return [];
 }
 
 function buildAsciiChart(points = [], width = 58, height = 10) {

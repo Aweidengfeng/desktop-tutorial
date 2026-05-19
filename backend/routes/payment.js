@@ -474,7 +474,7 @@ router.post('/notify/wechat', express.raw({ type: 'application/json' }), async (
     if (orderNo) {
       await prisma.$executeRaw`
         UPDATE payment_orders SET status = 'paid', paid_at = datetime('now') WHERE order_no = ${orderNo}
-      `.catch(() => {});
+      `.catch((err) => console.warn('[payment/notify/wechat] update payment_orders failed:', err.message));
     }
     res.json({ code: 'SUCCESS' });
   } catch (e) {
