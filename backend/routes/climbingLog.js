@@ -105,14 +105,74 @@ router.get('/gear-list/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/climbing-log/gear-list/:id/export-pdf - placeholder
+// POST /api/climbing-log/gear-list/:id/export-pdf - 导出装备清单为可打印 HTML
 router.post('/gear-list/:id/export-pdf', auth, async (req, res) => {
   try {
     const list = (await prisma.$queryRaw`SELECT * FROM smart_gear_lists WHERE id = ${Number(req.params.id)} AND user_id = ${req.user.id}`)[0];
     if (!list) return res.status(404).json({ error: '装备清单不存在' });
-    res.json({ success: true, message: 'PDF导出功能即将上线', list_id: list.id });
+
+    let items = [];
+    try { items = JSON.parse(list.items || '[]'); } catch(e) {}
+
+    // HTML-escape helper to prevent XSS
+    function esc(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    }
+
+    const userName = esc(req.user.name || req.user.username || req.user.email || '攀登者');
+    const now = new Date().toLocaleDateString('zh-CN');
+    const peakName = esc(list.peak_name || '未知山峰');
+
+    const checked = items.filter(i => i.checked);
+    const unchecked = items.filter(i => !i.checked);
+
+    function renderRows(arr, style) {
+      if (!arr.length) return '';
+      return arr.map(i => `<tr style="${style}"><td style="padding:8px 12px;">${esc(i.name)}</td><td style="padding:8px 12px;text-align:center;">${i.checked ? '✅' : '⬜'}</td></tr>`).join('');
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="zh"><head><meta charset="UTF-8">
+<title>SummitLink 装备清单 — ${peakName}</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:32px;color:#1a1a2e;}
+  h1{color:#2b6579;margin-bottom:4px;}
+  h3{color:#0f3460;margin:20px 0 6px;}
+  .meta{color:#666;font-size:14px;margin-bottom:24px;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th{background:#0f3460;color:#fff;padding:10px 12px;text-align:left;}
+  tr:nth-child(even){background:#f5f8fc;}
+  td{border-bottom:1px solid #e0e0e0;}
+  .footer{margin-top:32px;font-size:12px;color:#999;text-align:center;}
+  @media print{body{margin:16px;}}
+</style></head>
+<body>
+  <h1>🏔 SummitLink 装备清单</h1>
+  <div class="meta">
+    山峰：${peakName} &nbsp;|&nbsp; 攀登者：${userName} &nbsp;|&nbsp; 导出日期：${now}
+    ${list.season ? ' &nbsp;|&nbsp; 季节：' + esc(list.season) : ''}
+    ${list.difficulty ? ' &nbsp;|&nbsp; 难度：' + esc(list.difficulty) : ''}
+  </div>
+  ${unchecked.length ? `<h3>待准备（${unchecked.length} 件）</h3>
+  <table>
+    <thead><tr><th>装备名称</th><th style="width:80px;text-align:center;">状态</th></tr></thead>
+    <tbody>${renderRows(unchecked, '')}</tbody>
+  </table>` : ''}
+  ${checked.length ? `<h3>已准备（${checked.length} 件）</h3>
+  <table>
+    <thead><tr><th>装备名称</th><th style="width:80px;text-align:center;">状态</th></tr></thead>
+    <tbody>${renderRows(checked, 'opacity:0.6;')}</tbody>
+  </table>` : ''}
+  ${!items.length ? '<p style="color:#999;text-align:center;padding:24px;">暂无装备记录</p>' : ''}
+  <div class="footer">SummitLink — 连接每一位攀登者 · summitlink.app</div>
+</body></html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="summitlink-gear-${Date.now()}.html"`);
+    res.send(html);
   } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
+    console.error('[GearExport]', e);
+    res.status(500).json({ error: '导出失败' });
   }
 });
 
