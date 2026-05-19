@@ -20,7 +20,7 @@ const usersWriteLimiter = rateLimit({
 
 const avatarUploadDir = process.env.UPLOADS_DIR
   ? path.resolve(process.env.UPLOADS_DIR)
-  : path.join(process.cwd(), 'backend', 'uploads');
+  : path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(avatarUploadDir)) fs.mkdirSync(avatarUploadDir, { recursive: true });
 
 const avatarUpload = multer({
@@ -40,9 +40,20 @@ router.post('/avatar', usersWriteLimiter, auth, (req, res) => {
     if (err) return res.status(400).json({ error: err.message || '上传失败' });
     if (!req.file) return res.status(400).json({ error: '未收到文件' });
     try {
-      const url = `/uploads/${req.file.filename}`;
+      const safeFilename = path.basename(req.file.filename || '');
+      const safeFilePath = path.join(avatarUploadDir, safeFilename);
+      const sig = fs.readFileSync(safeFilePath).subarray(0, 12);
+      const isJpeg = sig[0] === 0xff && sig[1] === 0xd8 && sig[2] === 0xff;
+      const isPng = sig[0] === 0x89 && sig[1] === 0x50 && sig[2] === 0x4e && sig[3] === 0x47;
+      const isGif = sig[0] === 0x47 && sig[1] === 0x49 && sig[2] === 0x46;
+      const isWebp = sig[0] === 0x52 && sig[1] === 0x49 && sig[2] === 0x46 && sig[3] === 0x46 && sig[8] === 0x57 && sig[9] === 0x45 && sig[10] === 0x42 && sig[11] === 0x50;
+      if (!(isJpeg || isPng || isGif || isWebp)) {
+        fs.unlinkSync(safeFilePath);
+        return res.status(400).json({ error: '文件内容不是受支持的图片格式' });
+      }
+      const url = `/uploads/${safeFilename}`;
       await prisma.user.update({ where: { id: req.user.id }, data: { avatar: url } });
-      res.json({ url, filename: req.file.filename });
+      res.json({ url, filename: safeFilename });
     } catch (e) {
       res.status(500).json({ error: '服务器错误' });
     }

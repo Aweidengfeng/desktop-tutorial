@@ -27,7 +27,7 @@ self.addEventListener('activate', (event) => {
 });
 
 function isTile(url) {
-  return /(^https:\/\/[abc]\.tile\.openstreetmap\.org\/)|(webrd0\d+\.is\.autonavi\.com\/)/i.test(url);
+  return /(^https:\/\/[abc]\.tile\.openstreetmap\.org\/)|(^https:\/\/webrd0\d+\.is\.autonavi\.com\/)/i.test(url);
 }
 
 function isCachedApi(pathname) {

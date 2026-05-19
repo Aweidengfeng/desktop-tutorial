@@ -1637,12 +1637,12 @@ function alpineLink() {
     // 初始化轨迹记录地图（懒加载 map-core）
     initTrackMap() {
       if (this._mapCore?.initTrackMap) return this._mapCore.initTrackMap.call(this);
-      this.ensureMapCore().then((mod) => mod?.initTrackMap && mod.initTrackMap.call(this));
+      return this.ensureMapCore().then((mod) => mod?.initTrackMap && mod.initTrackMap.call(this));
     },
 
     applyTrackMapLayer(layerKey) {
       if (this._mapCore?.applyTrackMapLayer) return this._mapCore.applyTrackMapLayer.call(this, layerKey);
-      this.ensureMapCore().then((mod) => mod?.applyTrackMapLayer && mod.applyTrackMapLayer.call(this, layerKey));
+      return this.ensureMapCore().then((mod) => mod?.applyTrackMapLayer && mod.applyTrackMapLayer.call(this, layerKey));
     },
 
     switchTrackMapLayer(layerKey) {
@@ -1724,17 +1724,17 @@ function alpineLink() {
     // GPS 定位（懒加载 map-core）
     locateMe() {
       if (this._mapCore?.locateMe) return this._mapCore.locateMe.call(this);
-      this.ensureMapCore().then((mod) => mod?.locateMe && mod.locateMe.call(this));
+      return this.ensureMapCore().then((mod) => mod?.locateMe && mod.locateMe.call(this));
     },
 
     locateRecordingMap() {
       if (this._mapCore?.locateRecordingMap) return this._mapCore.locateRecordingMap.call(this);
-      this.ensureMapCore().then((mod) => mod?.locateRecordingMap && mod.locateRecordingMap.call(this));
+      return this.ensureMapCore().then((mod) => mod?.locateRecordingMap && mod.locateRecordingMap.call(this));
     },
 
     renderTrackDetailMap(track) {
       if (this._mapCore?.renderTrackDetailMap) return this._mapCore.renderTrackDetailMap.call(this, track);
-      this.ensureMapCore().then((mod) => mod?.renderTrackDetailMap && mod.renderTrackDetailMap.call(this, track));
+      return this.ensureMapCore().then((mod) => mod?.renderTrackDetailMap && mod.renderTrackDetailMap.call(this, track));
     },
 
     // Track Recording with AMap
@@ -2861,7 +2861,7 @@ function alpineLink() {
     async loadLocalePack(forceLocale) {
       const target = forceLocale || this.locale || 'zh-CN';
       try {
-        const res = await fetch(`/i18n/${target}.json`);
+        const res = await fetch(`/www/i18n/${target}.json`);
         if (!res.ok) throw new Error('load locale failed');
         const messages = await res.json();
         this.i18nMessages = messages || {};
