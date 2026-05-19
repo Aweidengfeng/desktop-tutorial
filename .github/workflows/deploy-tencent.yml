@@ -93,19 +93,21 @@ jobs:
 
             # Wait for backend to be healthy (up to 120s, 12 retries x 10s)
             echo "⏳ Waiting for backend health check..."
+            HEALTHY=false
             for i in $(seq 1 12); do
               if curl -sf http://localhost:8080/api/health > /dev/null 2>&1; then
-                echo "✅ Health check passed."
+                echo "✅ Health check passed on attempt $i."
+                HEALTHY=true
                 break
-              fi
-              if [ "$i" -eq 12 ]; then
-                echo "❌ Health check failed after 120s"
-                docker compose logs backend --tail=50
-                exit 1
               fi
               echo "  attempt $i/12 — sleeping 10s..."
               sleep 10
             done
+            if [ "$HEALTHY" != "true" ]; then
+              echo "❌ Health check failed after 120s"
+              docker compose logs backend --tail=50
+              exit 1
+            fi
 
             # Smoke test: /api/config/map must return 200
             MAP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/config/map)

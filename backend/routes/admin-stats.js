@@ -135,15 +135,16 @@ router.get('/revenue', adminAuth, async (req, res) => {
   try {
     const periodMap = { '7d': 7, '30d': 30, '90d': 90 };
     const days = periodMap[req.query.period] || 30;
-    const daysParam = `-${days} days`;
+    // 使用 JS Date 计算截止日期，兼容 SQLite 和 PostgreSQL
+    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
     const trend = await prisma.$queryRaw`
-      SELECT date(created_at) as date,
+      SELECT DATE(created_at) as date,
              COALESCE(SUM(amount), 0) as amount,
              COALESCE(provider, 'unknown') as provider
       FROM payment_orders
       WHERE status = 'paid'
-        AND created_at >= date('now', ${daysParam})
-      GROUP BY date(created_at), provider
+        AND created_at >= ${cutoff}
+      GROUP BY DATE(created_at), provider
       ORDER BY date ASC
     `.catch(() => []);
     res.json(trend.map(r => ({ date: r.date, amount: Number(r.amount), provider: r.provider })));
@@ -157,13 +158,13 @@ router.get('/users', adminAuth, async (req, res) => {
   try {
     const periodMap = { '7d': 7, '30d': 30, '90d': 90 };
     const days = periodMap[req.query.period] || 30;
-    const daysParam = `-${days} days`;
+    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
     const trend = await prisma.$queryRaw`
-      SELECT date(created_at) as date, COUNT(*) as count
+      SELECT DATE(created_at) as date, COUNT(*) as count
       FROM users
-      WHERE created_at >= date('now', ${daysParam})
+      WHERE created_at >= ${cutoff}
         AND deleted_at IS NULL
-      GROUP BY date(created_at)
+      GROUP BY DATE(created_at)
       ORDER BY date ASC
     `.catch(() => []);
     res.json(trend.map(r => ({ date: r.date, count: Number(r.count) })));
@@ -211,21 +212,27 @@ router.get('/withdrawals', adminAuth, async (req, res) => {
 // GET /api/admin/stats/sos — SOS 告警统计（按月）
 router.get('/sos', adminAuth, async (req, res) => {
   try {
-    const monthly = await prisma.$queryRaw`
-      SELECT strftime('%Y-%m', created_at) as month,
-             COUNT(*) as count,
-             status
-      FROM sos_alerts
-      GROUP BY month, status
-      ORDER BY month DESC
-    `.catch(() => []);
+    // 最近告警列表（两个 DB 都支持）
     const recent = await prisma.$queryRaw`
       SELECT id, user_id, lat, lng, altitude, message, status, created_at
       FROM sos_alerts
       ORDER BY created_at DESC
       LIMIT 20
     `.catch(() => []);
-    res.json({ monthly: monthly.map(r => ({ ...r, count: Number(r.count) })), recent });
+    // 按月汇总：用 JS 处理（避免 SQLite strftime vs PostgreSQL TO_CHAR 差异）
+    const all = await prisma.$queryRaw`
+      SELECT created_at, status FROM sos_alerts ORDER BY created_at DESC
+    `.catch(() => []);
+    const monthMap = {};
+    all.forEach(r => {
+      const d = new Date(r.created_at);
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const key = `${month}|${r.status}`;
+      if (!monthMap[key]) monthMap[key] = { month, status: r.status, count: 0 };
+      monthMap[key].count++;
+    });
+    const monthly = Object.values(monthMap).sort((a, b) => b.month.localeCompare(a.month));
+    res.json({ monthly, recent });
   } catch (e) {
     res.status(500).json({ error: '获取 SOS 统计失败' });
   }

@@ -493,7 +493,8 @@ router.post('/wechat/qrcode', auth, async (req, res) => {
     }
     const orderNo = `WX${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     const totalFee = Math.round(Number(amount) * 100); // 转为分
-    const notifyUrl = `${process.env.API_BASE || 'https://summitlink.app'}/api/payment/notify/wechat`;
+    const notifyUrl = process.env.PAYMENT_NOTIFY_URL
+      || `${process.env.API_BASE || 'https://summitlink.app'}/api/payment/notify/wechat`;
     const expireAt = new Date(Date.now() + 120 * 1000).toISOString(); // 120 秒有效期
 
     // 记录支付意向
