@@ -349,6 +349,8 @@ function alpineLink() {
     stripePublishableKey: '',
     stripeClient: null,
     stripeLoadPromise: null,
+    _locationSocket: null,
+    teamMembers: [],
     notifUnreadCount: 0,
     notifUnreadList: [],
     notifPanelOpen: false,
@@ -1417,7 +1419,11 @@ function alpineLink() {
       } catch(e) { this.showToast('申请失败，请重试', 'error'); }
       this.closeTeamDetail();
     },
-    openTeamDetail(team) { this.selectedTeam = team; this.showTeamDetail = true; },
+    openTeamDetail(team) {
+      this.selectedTeam = team;
+      this.showTeamDetail = true;
+      this.initLocationSocket(team && team.id ? team.id : null);
+    },
     closeTeamDetail() { this.showTeamDetail = false; },
     openCreateTeam() { this.showCreateTeam = true; },
     closeCreateTeam() { this.showCreateTeam = false; },
@@ -1821,6 +1827,8 @@ function alpineLink() {
             const lng = parseFloat(longitude.toFixed(6));
             const ele = altitude != null ? parseFloat(altitude.toFixed(1)) : 0;
             this.trackRecordedPoints.push({ lat, lng, ele, ts: Date.now() });
+            const expeditionId = this.selectedTeam?.id || this.selectedExpedition?.id || null;
+            this.reportLocationUpdate(expeditionId, lat, lng, pos.coords.accuracy, ele).catch(() => {});
             const activeMap = this.recordingMap || this.trackMap;
             if (activeMap && typeof AMap !== 'undefined') {
               const lnglat = new AMap.LngLat(lng, lat);
@@ -3918,6 +3926,103 @@ function alpineLink() {
         (p.location && p.location.toLowerCase().includes(q))
       );
     },
+    initLocationSocket(expeditionId) {
+      if (!expeditionId || !window.io || !this.authToken) return;
+      if (!this._locationSocket) {
+        this._locationSocket = window.io({
+          auth: { token: this.authToken, userId: this.currentUser?.id },
+          query: { userId: this.currentUser?.id },
+        });
+      }
+      if (!this._locationSocket) return;
+      this._locationSocket.emit('join-expedition', expeditionId);
+      this._locationSocket.off('member-location');
+      this._locationSocket.on('member-location', (data) => this.handleMemberLocationUpdate(data));
+    },
+    broadcastLocationViaSocket(expeditionId, lat, lng, accuracy, altitude) {
+      if (!expeditionId || !this._locationSocket || !this._locationSocket.connected) return false;
+      this._locationSocket.emit('location-update', { expeditionId, lat, lng, accuracy, altitude });
+      return true;
+    },
+    async reportLocationUpdate(expeditionId, lat, lng, accuracy, altitude) {
+      if (!expeditionId || lat == null || lng == null || !this.authToken) return;
+      const sentViaSocket = this.broadcastLocationViaSocket(expeditionId, lat, lng, accuracy, altitude);
+      if (!sentViaSocket) {
+        await fetch('/api/location/update', {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({
+            expeditionId,
+            lat,
+            lng,
+            accuracy: Number.isFinite(accuracy) ? accuracy : null,
+            altitude: Number.isFinite(altitude) ? altitude : null,
+          }),
+        });
+      }
+    },
+    handleMemberLocationUpdate(data) {
+      if (!data || !data.userId) return;
+      if (!Array.isArray(this.teamMembers)) this.teamMembers = [];
+      const idx = this.teamMembers.findIndex(m => Number(m.user_id || m.userId) === Number(data.userId));
+      const patch = {
+        userId: data.userId,
+        user_id: data.userId,
+        lat: data.lat,
+        lng: data.lng,
+        last_seen: new Date(data.timestamp || Date.now()).toISOString(),
+      };
+      if (idx >= 0) this.teamMembers[idx] = { ...this.teamMembers[idx], ...patch };
+      else this.teamMembers.push(patch);
+    },
+    // ── Capacitor 原生推送 ──────────────────────────────────────
+    async initPushNotifications() {
+      if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+      try {
+        let PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
+        if (!PushNotifications) {
+          const mod = await import('@capacitor/push-notifications');
+          PushNotifications = mod.PushNotifications;
+        }
+        if (!PushNotifications) return;
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== 'granted') {
+          console.warn('[Push] 用户拒绝推送权限');
+          return;
+        }
+        await PushNotifications.register();
+        PushNotifications.addListener('registration', async (token) => {
+          console.log('[Push] FCM/APNs token:', token.value);
+          try {
+            await fetch('/api/push/register-token', {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                token: token.value,
+                platform: window.Capacitor.getPlatform(),
+              }),
+            });
+          } catch (e) {
+            console.warn('[Push] token 上报失败:', e);
+          }
+        });
+        PushNotifications.addListener('registrationError', (err) => {
+          console.error('[Push] 注册失败:', err);
+        });
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('[Push] 收到推送:', notification);
+          this.showToast(notification.body || notification.title || '新消息', 'info');
+        });
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+          console.log('[Push] 点击推送:', action);
+          const data = action.notification?.data || {};
+          if (data.page) this.currentPage = data.page;
+        });
+        console.log('[Push] 原生推送初始化完成');
+      } catch (e) {
+        console.warn('[Push] 原生推送初始化失败（可能在 Web 环境）:', e);
+      }
+    },
 
     async init() {
       // Auto-rotate hero carousel every 5 seconds
@@ -4021,6 +4126,7 @@ function alpineLink() {
           } catch(e) {}
         });
       }
+      this.initPushNotifications();
     },
     async loadPublicConfig() {
       try {

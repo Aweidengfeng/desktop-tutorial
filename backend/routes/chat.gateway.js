@@ -4,6 +4,14 @@ const prisma = require('../db/prisma');
 const { checkText } = require('../utils/moderation');
 
 const SOS_KEYWORDS = ['救命', 'SOS', 'sos', '遇难', '求救', '紧急', '危险', '失联'];
+let locationColumnsEnsured = false;
+
+async function ensureLocationColumns() {
+  if (locationColumnsEnsured) return;
+  try { await prisma.$executeRawUnsafe('ALTER TABLE user_locations ADD COLUMN accuracy REAL'); } catch (e) {}
+  try { await prisma.$executeRawUnsafe('ALTER TABLE user_locations ADD COLUMN altitude REAL'); } catch (e) {}
+  locationColumnsEnsured = true;
+}
 
 function initChatGateway(server) {
   const io = new Server(server, {
@@ -26,6 +34,7 @@ function initChatGateway(server) {
   });
 
   io.on('connection', (socket) => {
+    socket.userId = socket.userId || socket.handshake.auth?.userId || socket.handshake.query?.userId || null;
     const uid = socket.userId;
 
     socket.on('chat:join', ({ conv_id }) => {
@@ -129,6 +138,55 @@ function initChatGateway(server) {
     socket.on('group:typing', ({ chat_id, is_typing }) => {
       if (!chat_id) return;
       socket.to(`group:${chat_id}`).emit('group:typing', { userId: uid, is_typing });
+    });
+
+    // 位置追踪：加入远征房间
+    socket.on('join-expedition', (expeditionId) => {
+      if (!expeditionId) return;
+      socket.join(`expedition:${expeditionId}`);
+      console.log(`[Socket] 用户加入远征房间 expedition:${expeditionId}`);
+    });
+
+    // 位置追踪：广播位置更新
+    socket.on('location-update', async (data) => {
+      const { expeditionId, lat, lng, accuracy, altitude } = data || {};
+      if (!expeditionId || lat === undefined || lng === undefined) return;
+      socket.to(`expedition:${expeditionId}`).emit('member-location', {
+        userId: socket.userId || null,
+        expeditionId,
+        lat,
+        lng,
+        accuracy,
+        altitude,
+        timestamp: Date.now(),
+      });
+      try {
+        await ensureLocationColumns();
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO user_locations (userId, lat, lng, expeditionId, accuracy, altitude, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(userId) DO UPDATE SET
+             lat = excluded.lat,
+             lng = excluded.lng,
+             expeditionId = excluded.expeditionId,
+             accuracy = excluded.accuracy,
+             altitude = excluded.altitude,
+             updatedAt = excluded.updatedAt`,
+          socket.userId ? Number(socket.userId) : null,
+          Number(lat),
+          Number(lng),
+          Number(expeditionId),
+          Number.isFinite(accuracy) ? accuracy : null,
+          Number.isFinite(altitude) ? altitude : null,
+          new Date().toISOString()
+        );
+      } catch (e) {}
+    });
+
+    // 离开远征房间
+    socket.on('leave-expedition', (expeditionId) => {
+      if (!expeditionId) return;
+      socket.leave(`expedition:${expeditionId}`);
     });
   });
 

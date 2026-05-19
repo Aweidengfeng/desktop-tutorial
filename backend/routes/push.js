@@ -4,6 +4,11 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { sendPushNotification, PUSH_ENABLED } = require('../middleware/webPush');
 
+async function ensureNativePushColumns() {
+  try { await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN push_token TEXT'); } catch (e) {}
+  try { await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN push_platform TEXT'); } catch (e) {}
+}
+
 // GET /api/push/vapid-public-key — 返回 VAPID 公钥
 router.get('/vapid-public-key', (req, res) => {
   if (!PUSH_ENABLED) return res.json({ enabled: false });
@@ -37,6 +42,26 @@ router.post('/unsubscribe', auth, async (req, res) => {
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '取消订阅失败' });
+  }
+});
+
+// POST /api/push/register-token — 注册设备推送 token
+router.post('/register-token', auth, async (req, res) => {
+  const { token, platform } = req.body || {};
+  if (!token || !platform) {
+    return res.status(400).json({ error: '缺少 token 或 platform 参数' });
+  }
+  try {
+    try {
+      await prisma.$executeRaw`UPDATE users SET push_token = ${String(token)}, push_platform = ${String(platform)} WHERE id = ${Number(req.user.id)}`;
+    } catch (e) {
+      await ensureNativePushColumns();
+      await prisma.$executeRaw`UPDATE users SET push_token = ${String(token)}, push_platform = ${String(platform)} WHERE id = ${Number(req.user.id)}`;
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[Push] token 注册失败:', e);
+    res.status(500).json({ error: '服务器错误' });
   }
 });
 
