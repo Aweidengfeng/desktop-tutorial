@@ -110,7 +110,8 @@ async function main() {
   const unmountedRoutes = routeFiles.filter((f) => !mounted.has(f));
   const schemaModels = extractPrismaModels(schemaSource);
   const validDelegates = new Set(schemaModels.map((m) => toPrismaDelegateName(m)));
-  // Prisma Client built-ins used in this repo (Prisma 6.19.x); update when upgrading major versions.
+  // Prisma Client built-ins used in this repo (verified with @prisma/client 6.19.3).
+  // If Prisma major/minor is upgraded, re-check this allowlist.
   const internalDelegates = new Set(['$queryRaw', '$queryRawUnsafe', '$executeRaw', '$executeRawUnsafe', '$transaction', '$connect', '$disconnect']);
   const routeDelegates = extractPrismaDelegatesFromRoutes();
   const unknownDelegates = routeDelegates.filter((d) => !validDelegates.has(d) && !internalDelegates.has(d));
