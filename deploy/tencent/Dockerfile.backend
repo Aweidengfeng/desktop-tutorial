@@ -17,9 +17,10 @@ RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
-# 生成 Prisma Client（如有 Prisma schema）
+# 生成 PostgreSQL Prisma Client（腾讯云 CN 节点使用 PostgreSQL，必须用 postgresql provider 生成）
 COPY prisma ./prisma
-RUN npx prisma generate 2>/dev/null || true
+RUN sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma \
+    && npx prisma generate --schema=prisma/schema.prisma
 
 # 复制源码
 COPY . .
