@@ -61,8 +61,11 @@ jobs:
             if [ -f deploy/tencent/docker-compose.yml ]; then
               cp deploy/tencent/docker-compose.yml ./docker-compose.yml
             fi
-            if [ -f deploy/tencent/nginx.conf ]; then
-              cp deploy/tencent/nginx.conf ./nginx.conf
+            if [ -f deploy/tencent/nginx-http.conf ]; then
+              cp deploy/tencent/nginx-http.conf ./nginx-http.conf
+            fi
+            if [ -f deploy/tencent/nginx-https.conf ]; then
+              cp deploy/tencent/nginx-https.conf ./nginx-https.conf
             fi
             if [ -f deploy/tencent/Dockerfile.backend ]; then
               cp deploy/tencent/Dockerfile.backend backend/Dockerfile.backend
@@ -74,8 +77,18 @@ jobs:
               echo "⚠️  .env created from .env.example — please fill in real secrets!"
             fi
 
+            SSL_ENABLED_VALUE="${SSL_ENABLED:-}"
+            if [ -z "$SSL_ENABLED_VALUE" ] && [ -f ".env" ]; then
+              SSL_ENABLED_VALUE="$(grep -E '^SSL_ENABLED=' .env | tail -n 1 | cut -d '=' -f2- | tr -d '[:space:]' || true)"
+            fi
+            if [ "$SSL_ENABLED_VALUE" = "true" ]; then
+              NGINX_SERVICE="nginx-https"
+            else
+              NGINX_SERVICE="nginx-http"
+            fi
+
             # Pull latest dependency images and rebuild
-            docker compose pull postgres nginx --quiet || true
+            docker compose pull postgres "$NGINX_SERVICE" --quiet || true
             docker compose up -d --build --remove-orphans
 
             # Wait for backend to be healthy (up to 60s)

@@ -78,9 +78,39 @@
    ```bash
    docker compose -f docker-compose.cn.yml exec backend npx prisma migrate deploy --schema backend/prisma/schema.prisma
    ```
-7. 配置 Nginx / HTTPS（Let's Encrypt 或腾讯云免费 DV 证书）
+7. 按备案状态切换 Nginx 模式（见下方“ICP 备案期间 / 备案通过后切换”）
 8. 将 `api.unsummit.cn` / `www.unsummit.cn` 解析到 CVM 公网 IP 或腾讯云 CLB
 9. 验证 `/api/health`、`/api/region`、上传接口与备案号展示
+
+## ICP 备案期间 / 备案通过后切换
+
+- `deploy/tencent/.env.example` 默认提供：
+  - `SSL_ENABLED=false`
+  - `COMPOSE_PROFILES=${SSL_ENABLED}`（自动跟随 `SSL_ENABLED`，通常无需手改）
+
+### 备案期间（HTTP）
+
+1. 在 `.env` 中确认：
+   ```env
+   SSL_ENABLED=false
+   ```
+2. 重启服务：
+   ```bash
+   docker compose up -d --build --remove-orphans
+   ```
+3. 此模式只监听 `80`，且不会重定向到 HTTPS（满足 ICP 核查）。
+
+### 备案通过后（HTTPS）
+
+1. 在 `.env` 中改一行：
+   ```env
+   SSL_ENABLED=true
+   ```
+2. 重启服务：
+   ```bash
+   docker compose up -d --build --remove-orphans
+   ```
+3. 此模式会启用 `80 -> 443` 跳转，并监听 `443` 提供 HTTPS。
 
 ## 环境变量清单（CN）
 
