@@ -6,6 +6,10 @@ const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 
+// Load qrcode optionally — graceful degradation when not installed
+let QRCode;
+try { QRCode = require('qrcode'); } catch(e) { /* qrcode 未安装，将使用 SVG 兜底 */ }
+
 const passportLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -22,21 +26,19 @@ router.get('/qr', auth, async (req, res) => {
     let uuid = user && user.passport_uuid;
     if (!uuid) {
       uuid = crypto.randomUUID();
-      try { await prisma.$executeRaw`UPDATE users SET passport_uuid = ${uuid} WHERE id = ${userId}`; } catch(e) {}
+      try { await prisma.$executeRaw`UPDATE users SET passport_uuid = ${uuid} WHERE id = ${userId}`; } catch(e) { console.error('[Passport UUID Update] Failed for user', userId, e); }
     }
     const deepLink = `${process.env.APP_URL || 'https://summitlink.app'}/passport/verify/${uuid}`;
 
-    try {
-      const QRCode = require('qrcode');
+    if (QRCode) {
       const dataUrl = await QRCode.toDataURL(deepLink, { width: 300, margin: 2, color: { dark: '#2b6579', light: '#fff' } });
       return res.json({ qrDataUrl: dataUrl, passportUrl: deepLink, uuid });
-    } catch(qrErr) {
-      // qrcode 未安装，返回 SVG 占位
-      const size = 200;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="#fff"/><rect x="20" y="20" width="60" height="60" fill="none" stroke="#2b6579" stroke-width="8"/><rect x="30" y="30" width="40" height="40" fill="#2b6579"/><rect x="120" y="20" width="60" height="60" fill="none" stroke="#2b6579" stroke-width="8"/><rect x="130" y="30" width="40" height="40" fill="#2b6579"/><rect x="20" y="120" width="60" height="60" fill="none" stroke="#2b6579" stroke-width="8"/><rect x="30" y="130" width="40" height="40" fill="#2b6579"/><text x="${size/2}" y="${size-8}" text-anchor="middle" font-size="9" fill="#666">${uuid.slice(0,8)}</text></svg>`;
-      const b64 = Buffer.from(svg).toString('base64');
-      return res.json({ qrDataUrl: `data:image/svg+xml;base64,${b64}`, passportUrl: deepLink, uuid });
     }
+    // qrcode 未安装，返回 SVG 占位
+    const size = 200;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="${size}" height="${size}" fill="#fff"/><rect x="20" y="20" width="60" height="60" fill="none" stroke="#2b6579" stroke-width="8"/><rect x="30" y="30" width="40" height="40" fill="#2b6579"/><rect x="120" y="20" width="60" height="60" fill="none" stroke="#2b6579" stroke-width="8"/><rect x="130" y="30" width="40" height="40" fill="#2b6579"/><rect x="20" y="120" width="60" height="60" fill="none" stroke="#2b6579" stroke-width="8"/><rect x="30" y="130" width="40" height="40" fill="#2b6579"/><text x="${size/2}" y="${size-8}" text-anchor="middle" font-size="9" fill="#666">${uuid.slice(0,8)}</text></svg>`;
+    const b64 = Buffer.from(svg).toString('base64');
+    return res.json({ qrDataUrl: `data:image/svg+xml;base64,${b64}`, passportUrl: deepLink, uuid });
   } catch(e) {
     console.error('[Passport QR]', e);
     res.status(500).json({ error: '生成失败' });
@@ -217,15 +219,11 @@ router.get('/:id/passport.pdf', passportLimiter, auth, async (req, res) => {
 
     // QR code — 真实二维码（qrcode 可用时）或手绘格线兜底
     const qrY = 345;
-    let qrEmbedded = false;
-    try {
-      const QRCode = require('qrcode');
+    if (QRCode) {
       const qrBuf = await QRCode.toBuffer(verifyUrl, { width: 75, margin: 1, color: { dark: '#2b6579', light: '#ffffff' } });
       const qrX = doc.page.width / 2 - 37.5;
       doc.image(qrBuf, qrX, qrY, { width: 75, height: 75 });
-      qrEmbedded = true;
-    } catch(e) { /* qrcode 未安装，降级到手绘格线 */ }
-    if (!qrEmbedded) {
+    } else {
       doc.roundedRect(doc.page.width / 2 - 40, qrY, 80, 80, 4).fillAndStroke('#1e293b', '#3b82f6');
       // Draw a simple QR-like grid
       doc.fillColor('#3b82f6');

@@ -114,16 +114,21 @@ router.post('/gear-list/:id/export-pdf', auth, async (req, res) => {
     let items = [];
     try { items = JSON.parse(list.items || '[]'); } catch(e) {}
 
-    const userName = req.user.name || req.user.username || req.user.email || '攀登者';
+    // HTML-escape helper to prevent XSS
+    function esc(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+    }
+
+    const userName = esc(req.user.name || req.user.username || req.user.email || '攀登者');
     const now = new Date().toLocaleDateString('zh-CN');
-    const peakName = list.peak_name || '未知山峰';
+    const peakName = esc(list.peak_name || '未知山峰');
 
     const checked = items.filter(i => i.checked);
     const unchecked = items.filter(i => !i.checked);
 
     function renderRows(arr, style) {
       if (!arr.length) return '';
-      return arr.map(i => `<tr style="${style}"><td style="padding:8px 12px;">${i.name || ''}</td><td style="padding:8px 12px;text-align:center;">${i.checked ? '✅' : '⬜'}</td></tr>`).join('');
+      return arr.map(i => `<tr style="${style}"><td style="padding:8px 12px;">${esc(i.name)}</td><td style="padding:8px 12px;text-align:center;">${i.checked ? '✅' : '⬜'}</td></tr>`).join('');
     }
 
     const html = `<!DOCTYPE html>
@@ -145,8 +150,8 @@ router.post('/gear-list/:id/export-pdf', auth, async (req, res) => {
   <h1>🏔 SummitLink 装备清单</h1>
   <div class="meta">
     山峰：${peakName} &nbsp;|&nbsp; 攀登者：${userName} &nbsp;|&nbsp; 导出日期：${now}
-    ${list.season ? ' &nbsp;|&nbsp; 季节：' + list.season : ''}
-    ${list.difficulty ? ' &nbsp;|&nbsp; 难度：' + list.difficulty : ''}
+    ${list.season ? ' &nbsp;|&nbsp; 季节：' + esc(list.season) : ''}
+    ${list.difficulty ? ' &nbsp;|&nbsp; 难度：' + esc(list.difficulty) : ''}
   </div>
   ${unchecked.length ? `<h3>待准备（${unchecked.length} 件）</h3>
   <table>

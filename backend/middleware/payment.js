@@ -109,7 +109,7 @@ async function verifyCallback(provider, headers, body) {
       if (!stripeKey || !webhookSecret) {
         // Stripe 未配置，跳过验证（开发模式）
         let event;
-        try { event = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { event = body; }
+        try { event = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { console.warn('[Stripe Parse]', e.message); event = body; }
         return { valid: true, event, skipped: true };
       }
       const sig = headers && headers['stripe-signature'];
@@ -123,7 +123,7 @@ async function verifyCallback(provider, headers, body) {
       // 微信支付 v3：需要证书文件验签（完整实现待 WECHAT_API_KEY_V3 配置）
       const wechatApiKeyV3 = process.env.WECHAT_API_KEY_V3;
       let parsed;
-      try { parsed = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { parsed = body; }
+      try { parsed = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { console.warn('[WeChat Parse]', e.message); parsed = body; }
       if (!wechatApiKeyV3) {
         // 无密钥时，检查基础字段存在性作为预验证
         const hasRequiredFields = parsed && (parsed.event_type || parsed.resource);
