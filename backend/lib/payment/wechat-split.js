@@ -116,13 +116,28 @@ async function querySplit({ transactionId, outOrderNo }) {
 }
 
 async function addReceiver({ merchantWechatOpenid, name, relationType = 'SERVICE_PROVIDER' }) {
+  const config = wechatPay.getConfig();
+  if (shouldUseMock(config)) {
+    return mockResult('addReceiver', {
+      account: merchantWechatOpenid,
+      relationType,
+      state: 'SUCCESS',
+    });
+  }
   const receiver = {
     type: 'PERSONAL_OPENID',
     account: merchantWechatOpenid,
     name,
     relation_type: relationType,
   };
-  return splitOrder({ transactionId: randomNo('receiver'), receivers: [receiver] });
+  const data = await callWechatSplitApi('POST', '/v3/profitsharing/receivers/add', receiver, config);
+  return {
+    mock: false,
+    account: merchantWechatOpenid,
+    relationType,
+    state: data.result || 'SUCCESS',
+    raw: data,
+  };
 }
 
 async function requestSplit({ orderId, transactionId, merchantAmount, merchantOpenid, description = '向导服务分账' }) {

@@ -6,8 +6,8 @@
  *   PAYMENT_PROVIDER    wechat | alipay | mock（默认 mock）
  *   WECHAT_APP_ID       微信 AppID
  *   WECHAT_MCH_ID       微信商户号
- *   WECHAT_API_V3_KEY   微信支付 v3 API 密钥
- *   WECHAT_CERT_SERIAL  微信证书序列号
+ *   WECHAT_API_V3_KEY（兼容 WECHAT_API_KEY_V3） 微信支付 v3 API 密钥
+ *   WECHAT_CERT_SERIAL（兼容 WECHAT_SERIAL_NO） 微信证书序列号
  *   ALIPAY_APP_ID       支付宝 AppID
  *   ALIPAY_PRIVATE_KEY  支付宝私钥
  *   ALIPAY_PUBLIC_KEY   支付宝公钥
