@@ -6,8 +6,8 @@
  *   PAYMENT_PROVIDER    wechat | alipay | mock（默认 mock）
  *   WECHAT_APP_ID       微信 AppID
  *   WECHAT_MCH_ID       微信商户号
- *   WECHAT_API_KEY_V3   微信支付 v3 API 密钥
- *   WECHAT_SERIAL_NO    微信证书序列号
+ *   WECHAT_API_V3_KEY（兼容 WECHAT_API_KEY_V3） 微信支付 v3 API 密钥
+ *   WECHAT_CERT_SERIAL（兼容 WECHAT_SERIAL_NO） 微信证书序列号
  *   ALIPAY_APP_ID       支付宝 AppID
  *   ALIPAY_PRIVATE_KEY  支付宝私钥
  *   ALIPAY_PUBLIC_KEY   支付宝公钥
@@ -15,6 +15,8 @@
  */
 
 const PROVIDER = process.env.PAYMENT_PROVIDER || 'mock';
+const wechatPay = require('../lib/payment/wechat-pay');
+const alipay = require('../lib/payment/alipay');
 
 function normalizeProvider(provider) {
   const value = String(provider || '').toLowerCase().trim();
@@ -64,32 +66,30 @@ async function createPaymentWithProvider(provider, { orderNo, amount, descriptio
 }
 
 async function createWechatPayment({ orderNo, amount, description, openid }) {
-  // 微信支付 v3 JSAPI 下单
-  const body = {
-    appid: process.env.WECHAT_APP_ID,
-    mchid: process.env.WECHAT_MCH_ID,
-    description,
-    out_trade_no: orderNo,
-    notify_url: process.env.PAYMENT_NOTIFY_URL || 'https://summitlink.com/api/payment/notify/wechat',
-    amount: { total: amount, currency: 'CNY' },
-    payer: { openid },
-  };
-
-  // TODO: 实际微信支付 v3 签名逻辑（需证书文件）
-  // 此处为框架占位，生产接入时补充签名实现
-  console.log('[payment] 微信支付下单 (框架):', orderNo, amount);
+  const payParams = await wechatPay.createOrder({
+    body: description,
+    outTradeNo: orderNo,
+    totalFee: amount,
+    notifyUrl: process.env.PAYMENT_NOTIFY_URL || 'https://summitlink.com/api/payment/notify/wechat',
+    openid,
+  });
   return {
     provider: 'wechat',
-    payParams: { framework: true, message: '请配置微信支付证书后启用' },
+    payParams,
   };
 }
 
 async function createAlipayPayment({ orderNo, amount, description, returnUrl }) {
-  // 支付宝 PC/H5 支付框架
-  console.log('[payment] 支付宝下单 (框架):', orderNo, amount);
+  const payParams = await alipay.createOrder({
+    subject: description,
+    outTradeNo: orderNo,
+    totalAmount: (Number(amount) / 100).toFixed(2),
+    returnUrl,
+    notifyUrl: process.env.PAYMENT_NOTIFY_URL || 'https://summitlink.com/api/payment/notify/alipay',
+  });
   return {
     provider: 'alipay',
-    payParams: { framework: true, message: '请配置支付宝密钥后启用' },
+    payParams,
   };
 }
 
@@ -120,27 +120,34 @@ async function verifyCallback(provider, headers, body) {
     }
 
     if (provider === 'wechat') {
-      // 微信支付 v3：需要证书文件验签（完整实现待 WECHAT_API_KEY_V3 配置）
-      const wechatApiKeyV3 = process.env.WECHAT_API_KEY_V3;
-      let parsed;
-      try { parsed = typeof body === 'string' ? JSON.parse(body) : (Buffer.isBuffer(body) ? JSON.parse(body.toString()) : body); } catch(e) { console.warn('[WeChat Parse]', e.message); parsed = body; }
-      if (!wechatApiKeyV3) {
-        // 无密钥时，检查基础字段存在性作为预验证
-        const hasRequiredFields = parsed && (parsed.event_type || parsed.resource);
-        return { valid: !!hasRequiredFields, event: parsed, skipped: true, warning: '微信支付 v3 签名验证需配置证书，当前跳过' };
-      }
-      // TODO: 完整微信 v3 HMAC-SHA256 签名验证（需 WECHAT_SERIAL_NO + 证书）
-      return { valid: false, error: '微信支付签名验证需要完整证书配置' };
+      const result = await wechatPay.verifyNotify(
+        body,
+        headers && (headers['wechatpay-signature'] || headers['Wechatpay-Signature']),
+        headers && (headers['wechatpay-timestamp'] || headers['Wechatpay-Timestamp']),
+        headers && (headers['wechatpay-nonce'] || headers['Wechatpay-Nonce']),
+      );
+      return {
+        valid: !!result.valid,
+        event: result.payload,
+        orderNo: result.orderNo,
+        mock: !!result.mock,
+        error: result.error,
+      };
     }
 
     if (provider === 'alipay') {
-      // 支付宝：RSA2 验签（需 ALIPAY_PUBLIC_KEY）
-      const alipayPublicKey = process.env.ALIPAY_PUBLIC_KEY;
-      if (!alipayPublicKey) {
-        return { valid: false, error: '支付宝验签需配置 ALIPAY_PUBLIC_KEY' };
+      let params = body;
+      if (Buffer.isBuffer(body)) {
+        params = Object.fromEntries(new URLSearchParams(body.toString('utf8')));
+      } else if (typeof body === 'string') {
+        params = Object.fromEntries(new URLSearchParams(body));
       }
-      // TODO: 实装 RSA2 验签
-      return { valid: false, error: '支付宝 RSA2 验签待实现' };
+      const result = await alipay.verifyNotify(params || {});
+      return {
+        valid: !!result.valid,
+        orderNo: result.outTradeNo,
+        mock: !!result.mock,
+      };
     }
 
     return { valid: false, error: `未知支付提供商: ${provider}` };

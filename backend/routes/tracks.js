@@ -5,6 +5,7 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { validateTrack } = require('../utils/trackValidator');
+const PDFDocument = require('pdfkit');
 
 // 坐标精度规范化（统一保留6位小数）
 function normalizeCoord(v, decimals = 6) {
@@ -393,6 +394,32 @@ ${trkpts}
   }
 });
 
+// GET /api/tracks/:id/export-pdf — 导出轨迹 PDF
+router.get('/:id/export-pdf', exportLimiter, auth, async (req, res) => {
+  try {
+    const trackId = parseInt(req.params.id, 10);
+    const [track] = await prisma.$queryRaw`
+      SELECT id, user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
+             max_elevation, start_elevation, duration, duration_minutes, weather, notes, points, created_at
+      FROM tracks WHERE id = ${trackId}
+    `;
+    if (!track) return res.status(404).json({ error: '轨迹不存在' });
+    if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权导出该轨迹' });
+    const points = parsePointsSafe(track.points);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="track_${trackId}.pdf"`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 36 });
+    doc.pipe(res);
+    renderTrackPdf(doc, track, points, { includeAllPoints: true });
+    doc.end();
+  } catch (e) {
+    console.error('[tracks/export-pdf] failed:', e && e.message ? e.message : e);
+    res.status(500).json({ error: '导出 PDF 失败' });
+  }
+});
+
 /** 转义 XML 特殊字符 */
 function escapeXml(str) {
   return String(str || '')
@@ -401,6 +428,83 @@ function escapeXml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+function normalizePoint(point = {}) {
+  return {
+    lat: Number(point.lat ?? point[1] ?? 0),
+    lng: Number(point.lng ?? point.lon ?? point[0] ?? 0),
+    ele: Number(point.ele ?? point.alt ?? point[2] ?? 0),
+    ts: point.ts || point.time || null,
+  };
+}
+
+function parsePointsSafe(points) {
+  if (!points) return [];
+  if (Array.isArray(points)) return points;
+  if (typeof points === 'string') {
+    try {
+      const parsed = JSON.parse(points);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  return [];
+}
+
+function buildAsciiChart(points = [], width = 58, height = 10) {
+  const normalized = points.map(normalizePoint).filter((p) => Number.isFinite(p.ele));
+  if (normalized.length < 2) return 'N/A';
+  const elevations = normalized.map((p) => p.ele);
+  const min = Math.min(...elevations);
+  const max = Math.max(...elevations);
+  const range = Math.max(max - min, 1);
+  const grid = Array.from({ length: height }, () => Array(width).fill(' '));
+  for (let x = 0; x < width; x += 1) {
+    const idx = Math.min(normalized.length - 1, Math.round((x / (width - 1)) * (normalized.length - 1)));
+    const ratio = (normalized[idx].ele - min) / range;
+    const y = height - 1 - Math.round(ratio * (height - 1));
+    grid[y][x] = '*';
+  }
+  return grid.map((line) => line.join('')).join('\n');
+}
+
+function renderTrackPdf(doc, track, points = [], options = {}) {
+  const normalized = (points || []).map(normalizePoint);
+  const trackName = track.name || track.peak_name || `Track ${track.id}`;
+  const date = track.date || (track.created_at ? String(track.created_at).slice(0, 10) : '-');
+  const distance = Number(track.distance_km || track.distance || 0).toFixed(2);
+  const elevationGain = Number(track.elevation_gain || track.elevation || 0).toFixed(0);
+  const highest = Number(track.max_elevation || Math.max(...normalized.map((p) => p.ele), 0)).toFixed(0);
+
+  doc.fontSize(18).text(`Track Report #${track.id}`, { align: 'left' });
+  doc.moveDown(0.3);
+  doc.fontSize(13).text(`Name: ${trackName}`);
+  doc.fontSize(11).text(`Date: ${date}`);
+  doc.fontSize(11).text(`Distance: ${distance} km`);
+  doc.fontSize(11).text(`Elevation Gain: ${elevationGain} m`);
+  doc.fontSize(11).text(`Highest Point: ${highest} m`);
+  doc.moveDown(0.6);
+
+  doc.fontSize(12).text('Elevation ASCII Chart');
+  doc.font('Courier').fontSize(8).text(buildAsciiChart(normalized));
+  doc.font('Helvetica');
+  doc.moveDown(0.6);
+
+  doc.fontSize(12).text('Track Points');
+  doc.moveDown(0.3);
+  doc.font('Courier').fontSize(8).text('No.   Lat           Lng           Ele(m)   Timestamp');
+  doc.text('--------------------------------------------------------------');
+  const list = options.includeAllPoints ? normalized : normalized.slice(0, 120);
+  list.forEach((p, idx) => {
+    if (doc.y > 780) doc.addPage();
+    const ts = p.ts ? String(p.ts).slice(0, 19).replace('T', ' ') : '-';
+    doc.text(
+      `${String(idx + 1).padStart(3, ' ')}   ${p.lat.toFixed(6).padStart(10, ' ')}   ${p.lng.toFixed(6).padStart(10, ' ')}   ${p.ele.toFixed(1).padStart(6, ' ')}   ${ts}`,
+    );
+  });
+  doc.font('Helvetica');
 }
 
 module.exports = router;

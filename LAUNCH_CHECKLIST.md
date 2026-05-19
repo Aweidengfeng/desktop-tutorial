@@ -25,7 +25,9 @@
 - [ ] **支付宝商户号申请** — 须营业执照 + 对公账户 ｜ 依赖营业执照
 - [ ] **对公银行账户开户** — 须营业执照 ｜ 依赖营业执照
 - [ ] **发票系统对接**（开具电子发票）— 须税务注册完成 ｜ 依赖营业执照
-- [x] **支付接口占位（mock）** — `backend/routes/pay.js` + `backend/routes/expeditions.js` 中已实现 mock 支付，预留 B2 阶段真实对接 ｜ 已完成
+- [x] **Stripe 支付（mock/降级可用）** — `backend/routes/payment.js` 已支持 Stripe 降级与真实切换 ｜ 已完成
+- [x] **微信支付框架（mock 可用）** — `backend/lib/payment/wechat-pay.js` + `middleware/payment.js` ｜ 已完成
+- [x] **支付宝框架（mock 可用）** — `backend/lib/payment/alipay.js` + `middleware/payment.js` ｜ 已完成
 
 ---
 

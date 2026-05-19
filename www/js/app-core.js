@@ -211,6 +211,7 @@ async function idbUpdateTrackStatus(id, status, retries) {
 // ─── Phase 2.5: 地图引擎检测与 SDK 懒加载 ────────────────────────────────────
 window.__activeMapProvider = 'amap';
 const MAP_LAYER_STORAGE_KEY = 'summitlink_map_layer';
+const EXPEDITION_SOCKET_NAMESPACE = '/expedition-tracking';
 const MAP_LAYER_OPTIONS = [
   { key: 'standard', label: '标准', tileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' },
   { key: 'satellite', label: '卫星', tileUrl: 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', attribution: '© AutoNavi' },
@@ -350,6 +351,9 @@ function alpineLink() {
     stripeClient: null,
     stripeLoadPromise: null,
     _locationSocket: null,
+    _locationPollTimer: null,
+    locationConnectionMode: 'none',
+    expeditionLocationPollMs: 30000,
     teamMembers: [],
     notifUnreadCount: 0,
     notifUnreadList: [],
@@ -1426,13 +1430,59 @@ function alpineLink() {
       }
       this.selectedTeam = team;
       this.showTeamDetail = true;
-      this.initLocationSocket(team && team.id ? team.id : null);
+      this.initExpeditionMap(team && team.id ? team.id : null);
     },
     closeTeamDetail() {
       if (this.selectedTeam?.id && this._locationSocket) {
         this._locationSocket.emit('leave-expedition', this.selectedTeam.id);
       }
+      this.stopExpeditionLocationPolling();
+      this.locationConnectionMode = 'none';
       this.showTeamDetail = false;
+    },
+    initExpeditionMap(expeditionId) {
+      this.initLocationSocket(expeditionId);
+    },
+    locationStatusColorClass() {
+      if (this.locationConnectionMode === 'ws') return 'bg-emerald-400';
+      if (this.locationConnectionMode === 'poll') return 'bg-amber-400';
+      return 'bg-red-500';
+    },
+    locationStatusText() {
+      if (this.locationConnectionMode === 'ws') return 'WS 连接';
+      if (this.locationConnectionMode === 'poll') return 'HTTP 轮询';
+      return '未连接';
+    },
+    stopExpeditionLocationPolling() {
+      if (this._locationPollTimer) {
+        clearInterval(this._locationPollTimer);
+        this._locationPollTimer = null;
+      }
+    },
+    startExpeditionLocationPolling(expeditionId) {
+      if (!expeditionId || !this.authToken) {
+        this.locationConnectionMode = 'none';
+        return;
+      }
+      this.stopExpeditionLocationPolling();
+      this.locationConnectionMode = 'poll';
+      this.loadExpeditionLocations(expeditionId);
+      this._locationPollTimer = setInterval(() => {
+        this.loadExpeditionLocations(expeditionId);
+      }, this.expeditionLocationPollMs);
+    },
+    async loadExpeditionLocations(expeditionId) {
+      if (!expeditionId || !this.authToken) return;
+      try {
+        const res = await fetch(`/api/location/team?expeditionId=${encodeURIComponent(expeditionId)}`, {
+          headers: this.getAuthHeaders(),
+        });
+        if (!res.ok) return;
+        const members = await res.json();
+        if (Array.isArray(members)) this.teamMembers = members;
+      } catch (e) {
+        console.warn('[location] loadExpeditionLocations failed:', e && e.message ? e.message : e);
+      }
     },
     openCreateTeam() { this.showCreateTeam = true; },
     closeCreateTeam() { this.showCreateTeam = false; },
@@ -1878,6 +1928,8 @@ function alpineLink() {
         curLng += (Math.random() - 0.48) * 0.0005;
         curEle += (Math.random() - 0.3) * 3;
         this.trackRecordedPoints.push({ lat: curLat, lng: curLng, ele: curEle, ts: Date.now() });
+        const trackingExpeditionId = this.selectedTeam?.id || this.selectedExpedition?.id || null;
+        this.reportLocationUpdate(trackingExpeditionId, curLat, curLng, null, curEle).catch(() => {});
         const activeMap = this.recordingMap || this.trackMap;
         if (activeMap && typeof AMap !== 'undefined') {
           const lnglat = new AMap.LngLat(curLng, curLat);
@@ -2541,6 +2593,34 @@ function alpineLink() {
         navigator.clipboard.writeText(text + '\n' + url).then(() => this.showToast('链接已复制 🔗'));
       } else {
         this.showToast('轨迹：' + (track.name || '我的轨迹'));
+      }
+    },
+    async exportTrackPdf(track) {
+      if (!track || !track.id) {
+        this.showToast('该轨迹暂不支持导出', 'error');
+        return;
+      }
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch(`/api/tracks/${track.id}/export-pdf`, { headers: this.getAuthHeaders() });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          this.showToast(data.error || '导出失败', 'error');
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `track_${track.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        this.showToast('PDF 导出成功');
+      } catch (e) {
+        console.warn('[track] exportTrackPdf failed:', e && e.message ? e.message : e);
+        this.showToast('导出失败，请稍后重试', 'error');
       }
     },
     calcTrackPoints(track) {
@@ -3979,16 +4059,40 @@ function alpineLink() {
       );
     },
     initLocationSocket(expeditionId) {
-      if (!expeditionId || !window.io || !this.authToken) return;
+      if (!expeditionId || !this.authToken) return;
+      if (!window.io) {
+        this.startExpeditionLocationPolling(expeditionId);
+        return;
+      }
       if (!this._locationSocket) {
-        this._locationSocket = window.io({
+        this._locationSocket = window.io(EXPEDITION_SOCKET_NAMESPACE, {
           auth: { token: this.authToken, userId: this.currentUser?.id },
           query: { userId: this.currentUser?.id },
+          transports: ['websocket', 'polling'],
+        });
+        this._locationSocket.on('connect', () => {
+          this.locationConnectionMode = 'ws';
+          if (this.selectedTeam?.id) {
+            this._locationSocket.emit('join-expedition', this.selectedTeam.id);
+          }
+          this.stopExpeditionLocationPolling();
+        });
+        this._locationSocket.on('connect_error', () => {
+          this.startExpeditionLocationPolling(this.selectedTeam?.id || expeditionId);
+        });
+        this._locationSocket.on('disconnect', () => {
+          this.startExpeditionLocationPolling(this.selectedTeam?.id || expeditionId);
         });
       }
       this._locationSocket.emit('join-expedition', expeditionId);
       this._locationSocket.off('member-location');
-      this._locationSocket.on('member-location', (data) => this.handleMemberLocationUpdate(data));
+      this._locationSocket.on('member-location', (data) => {
+        this.locationConnectionMode = 'ws';
+        this.handleMemberLocationUpdate(data);
+      });
+      if (!this._locationSocket.connected) {
+        this.startExpeditionLocationPolling(expeditionId);
+      }
     },
     broadcastLocationViaSocket(expeditionId, lat, lng, accuracy, altitude) {
       if (!expeditionId || !this._locationSocket || !this._locationSocket.connected) return false;

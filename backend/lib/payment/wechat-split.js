@@ -1,169 +1,223 @@
-/**
- * backend/lib/payment/wechat-split.js
- *
- * WeChat Pay profit-sharing (微信支付分账) skeleton.
- *
- * ⚠️  Feature flag: WECHAT_SPLIT_ENABLED=false (default).
- *     All functions return mock responses until the WeChat merchant account
- *     is approved and ICP filing is complete.
- *
- * Integration checklist (activate when ready):
- *  1. Set WECHAT_SPLIT_ENABLED=true in production env
- *  2. Set WECHAT_MCH_ID, WECHAT_API_KEY, WECHAT_CERT_SERIAL, WECHAT_PRIVATE_KEY
- *  3. Pre-register profit-sharing receivers for each merchant (addReceiver)
- *  4. End-to-end smoke test with a real small-amount order
- *
- * Reference: https://pay.weixin.qq.com/wiki/doc/apiv3/apis/chapter8_1_1.shtml
- */
-
 'use strict';
 
-const ENABLED = process.env.WECHAT_SPLIT_ENABLED === 'true';
+const crypto = require('crypto');
+const wechatPay = require('./wechat-pay');
 
-// ─── Config helpers ──────────────────────────────────────────────────────────
+const WECHAT_API_BASE = 'https://api.mch.weixin.qq.com';
+let warnedMock = false;
 
-function getConfig() {
-  return {
-    mchId:       process.env.WECHAT_MCH_ID        || '',
-    apiKey:      process.env.WECHAT_API_KEY        || '',
-    certSerial:  process.env.WECHAT_CERT_SERIAL    || '',
-    privateKey:  process.env.WECHAT_PRIVATE_KEY    || '',
-    apiBase:     'https://api.mch.weixin.qq.com/v3',
-  };
+function isSplitEnabled() {
+  return String(process.env.WECHAT_SPLIT_ENABLED || 'false').toLowerCase() === 'true';
 }
 
-// ─── Mock response helper ────────────────────────────────────────────────────
+function randomNo(prefix = 'split') {
+  return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+}
 
-function mockResponse(extra = {}) {
+function mockResult(action, extra = {}) {
   return {
-    _mock:   true,
-    enabled: false,
-    message: 'WeChat split is disabled (WECHAT_SPLIT_ENABLED=false). Set env var to enable.',
+    mock: true,
+    action,
+    state: 'MOCK_PENDING',
+    message: 'WeChat split mock mode (WECHAT_SPLIT_ENABLED=false or payment env missing).',
     ...extra,
   };
 }
 
-// ─── Pre-register a receiver (must be done before requestSplit) ──────────────
-
-/**
- * addReceiver — 添加分账接收方
- *
- * Registers a merchant's WeChat account as a profit-sharing receiver so that
- * future splits can transfer funds to them without manual confirmation.
- *
- * @param {object} params
- * @param {string} params.merchantWechatOpenid  Merchant's WeChat openid or mchid
- * @param {string} params.name                  Masked display name
- * @param {string} [params.relationType]        Defaults to 'SERVICE_PROVIDER'
- * @returns {Promise<object>}
- */
-async function addReceiver({ merchantWechatOpenid, name, relationType = 'SERVICE_PROVIDER' }) {
-  if (!ENABLED) return mockResponse({ action: 'addReceiver', merchantWechatOpenid });
-
-  // TODO: implement real WeChat v3 API call
-  // POST /v3/profitsharing/receivers/add
-  throw new Error('addReceiver: real WeChat integration not yet activated');
+function warnMockOnce(message) {
+  if (warnedMock) return;
+  warnedMock = true;
+  console.warn(message);
 }
 
-// ─── Request a profit split after order completion ──────────────────────────
+function signWechatHeaders(method, path, bodyText, config) {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const timestamp = `${Math.floor(Date.now() / 1000)}`;
+  const message = `${method}\n${path}\n${timestamp}\n${nonce}\n${bodyText}\n`;
+  const signature = crypto.createSign('RSA-SHA256').update(message).sign(config.privateKey, 'base64');
+  return `WECHATPAY2-SHA256-RSA2048 mchid="${config.mchId}",nonce_str="${nonce}",timestamp="${timestamp}",serial_no="${config.certSerial}",signature="${signature}"`;
+}
 
-/**
- * requestSplit — 请求分账 (微信支付分账 v3)
- *
- * Must be called after the order is marked complete and the platform has
- * confirmed the transaction is beyond the refund window.
- *
- * @param {object} params
- * @param {string} params.orderId           Internal order ID (used as idempotency key)
- * @param {string} params.transactionId     WeChat trade_no from the original payment
- * @param {number} params.merchantAmount    Amount (in fen/cents) to split to the merchant
- * @param {string} params.merchantOpenid    Merchant's WeChat openid
- * @param {string} [params.description]     Transfer description (≤ 80 chars)
- * @returns {Promise<{ out_order_no: string, order_id: string, state: string }>}
- */
-async function requestSplit({ orderId, transactionId, merchantAmount, merchantOpenid, description = '向导服务分账' }) {
-  if (!ENABLED) {
-    return mockResponse({
-      action: 'requestSplit',
-      out_order_no: `SPLIT_MOCK_${orderId}`,
-      orderId,
+async function callWechatSplitApi(method, path, payload, config) {
+  const bodyText = payload ? JSON.stringify(payload) : '';
+  const authorization = signWechatHeaders(method, path, bodyText, config);
+  const res = await fetch(`${WECHAT_API_BASE}${path}`, {
+    method,
+    headers: {
+      Authorization: authorization,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': 'SummitLink/1.0',
+    },
+    body: method === 'GET' ? undefined : bodyText,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.message || data.code || `WeChat split API ${res.status}`);
+    err.status = res.status;
+    err.response = data;
+    throw err;
+  }
+  return data;
+}
+
+function shouldUseMock(config = wechatPay.getConfig()) {
+  return !isSplitEnabled() || wechatPay.isMockMode(config);
+}
+
+async function splitOrder({ transactionId, receivers = [] }) {
+  const config = wechatPay.getConfig();
+  if (shouldUseMock(config)) {
+    if (!isSplitEnabled()) {
+      warnMockOnce('[wechat-split] WECHAT_SPLIT_ENABLED=false，使用 mock 分账响应');
+    } else {
+      warnMockOnce('[wechat-split] 支付配置不完整，使用 mock 分账响应');
+    }
+    return mockResult('splitOrder', {
       transactionId,
-      merchantAmount,
+      outOrderNo: randomNo('split'),
+      receivers,
+    });
+  }
+
+  const outOrderNo = randomNo('split');
+  const payload = {
+    appid: config.appId,
+    transaction_id: transactionId,
+    out_order_no: outOrderNo,
+    receivers,
+    unfreeze_unsplit: true,
+  };
+  const data = await callWechatSplitApi('POST', '/v3/profitsharing/orders', payload, config);
+  return {
+    mock: false,
+    transactionId,
+    outOrderNo,
+    state: data.state || 'PROCESSING',
+    raw: data,
+  };
+}
+
+async function querySplit({ transactionId, outOrderNo }) {
+  const config = wechatPay.getConfig();
+  if (shouldUseMock(config)) {
+    return mockResult('querySplit', {
+      transactionId,
+      outOrderNo: outOrderNo || randomNo('split'),
       state: 'MOCK_PENDING',
     });
   }
 
-  // TODO: implement real WeChat v3 API call
-  // POST /v3/profitsharing/orders
-  // Body: { appid, transaction_id, out_order_no, receivers: [{ type: 'OPENID', account, amount, description }], finish: false }
-  throw new Error('requestSplit: real WeChat integration not yet activated');
+  if (!outOrderNo) {
+    throw new Error('querySplit 需要 outOrderNo');
+  }
+  const path = `/v3/profitsharing/orders/${encodeURIComponent(outOrderNo)}?transaction_id=${encodeURIComponent(transactionId)}`;
+  const data = await callWechatSplitApi('GET', path, null, config);
+  return {
+    mock: false,
+    transactionId,
+    outOrderNo,
+    state: data.state || 'PROCESSING',
+    raw: data,
+  };
 }
 
-// ─── Query split status ──────────────────────────────────────────────────────
-
-/**
- * querySplitStatus — 查询分账结果
- *
- * @param {string} outOrderNo  The out_order_no returned by requestSplit
- * @returns {Promise<object>}
- */
-async function querySplitStatus(outOrderNo) {
-  if (!ENABLED) return mockResponse({ action: 'querySplitStatus', outOrderNo, state: 'MOCK_PENDING' });
-
-  // TODO: GET /v3/profitsharing/orders/{out_order_no}?transaction_id=...
-  throw new Error('querySplitStatus: real WeChat integration not yet activated');
+async function addReceiver({ merchantWechatOpenid, name, relationType = 'SERVICE_PROVIDER' }) {
+  const config = wechatPay.getConfig();
+  if (shouldUseMock(config)) {
+    return mockResult('addReceiver', {
+      account: merchantWechatOpenid,
+      relationType,
+      state: 'SUCCESS',
+    });
+  }
+  const receiver = {
+    type: 'PERSONAL_OPENID',
+    account: merchantWechatOpenid,
+    name,
+    relation_type: relationType,
+  };
+  const data = await callWechatSplitApi('POST', '/v3/profitsharing/receivers/add', receiver, config);
+  return {
+    mock: false,
+    account: merchantWechatOpenid,
+    relationType,
+    state: data.result || 'SUCCESS',
+    raw: data,
+  };
 }
 
-// ─── Finish / close a split order ───────────────────────────────────────────
+async function requestSplit({ orderId, transactionId, merchantAmount, merchantOpenid, description = '向导服务分账' }) {
+  const receivers = [{
+    type: 'PERSONAL_OPENID',
+    account: merchantOpenid,
+    amount: Number(merchantAmount),
+    description,
+  }];
+  const result = await splitOrder({ transactionId, receivers });
+  return {
+    ...result,
+    out_order_no: result.outOrderNo || `SPLIT_${orderId || Date.now()}`,
+    order_id: orderId || null,
+  };
+}
 
-/**
- * finishSplit — 完结分账 (冻结剩余资金，解除冻结)
- *
- * Must be called to release any remaining frozen funds back to the platform
- * after all receivers have been paid.
- *
- * @param {string} outOrderNo
- * @param {string} transactionId
- * @returns {Promise<object>}
- */
+async function querySplitStatus(outOrderNo, transactionId) {
+  const result = await querySplit({ transactionId: transactionId || randomNo('tx'), outOrderNo });
+  return {
+    ...result,
+    out_order_no: result.outOrderNo,
+  };
+}
+
 async function finishSplit(outOrderNo, transactionId) {
-  if (!ENABLED) return mockResponse({ action: 'finishSplit', outOrderNo });
-
-  // TODO: POST /v3/profitsharing/finish-order
-  throw new Error('finishSplit: real WeChat integration not yet activated');
+  const config = wechatPay.getConfig();
+  if (shouldUseMock(config)) {
+    return mockResult('finishSplit', { outOrderNo, transactionId, state: 'FINISHED' });
+  }
+  const payload = {
+    appid: config.appId,
+    transaction_id: transactionId,
+    out_order_no: outOrderNo,
+    description: '分账完结',
+  };
+  const data = await callWechatSplitApi('POST', '/v3/profitsharing/finish-order', payload, config);
+  return {
+    mock: false,
+    outOrderNo,
+    transactionId,
+    state: data.result || 'FINISHED',
+    raw: data,
+  };
 }
 
-// ─── Refund a split ──────────────────────────────────────────────────────────
-
-/**
- * refundSplit — 分账回退
- *
- * Reclaims a previously split amount from a receiver back to the platform.
- * Used when an order is cancelled/disputed after split.
- *
- * @param {object} params
- * @param {string} params.outReturnNo   Unique refund order number
- * @param {string} params.outOrderNo    Original split order number
- * @param {number} params.returnAmount  Amount to reclaim (fen)
- * @param {string} params.description
- * @returns {Promise<object>}
- */
 async function refundSplit({ outReturnNo, outOrderNo, returnAmount, description = '订单取消回退' }) {
-  if (!ENABLED) return mockResponse({ action: 'refundSplit', outReturnNo, outOrderNo });
-
-  // TODO: POST /v3/profitsharing/return-orders
-  throw new Error('refundSplit: real WeChat integration not yet activated');
+  const config = wechatPay.getConfig();
+  if (shouldUseMock(config)) {
+    return mockResult('refundSplit', { outReturnNo, outOrderNo, returnAmount, state: 'SUCCESS' });
+  }
+  const payload = {
+    out_return_no: outReturnNo,
+    out_order_no: outOrderNo,
+    return_amount: Number(returnAmount),
+    description,
+  };
+  const data = await callWechatSplitApi('POST', '/v3/profitsharing/return-orders', payload, config);
+  return {
+    mock: false,
+    outReturnNo,
+    outOrderNo,
+    state: data.result || 'SUCCESS',
+    raw: data,
+  };
 }
-
-// ─── Exports ─────────────────────────────────────────────────────────────────
 
 module.exports = {
-  ENABLED,
+  splitOrder,
+  querySplit,
   addReceiver,
   requestSplit,
   querySplitStatus,
   finishSplit,
   refundSplit,
-  /** Exposed for testing / admin status endpoints */
-  getConfig,
 };

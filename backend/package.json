@@ -19,6 +19,7 @@
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.5.1",
     "@prisma/client": "^6.19.3",
+    "alipay-sdk": "^4.14.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
     "cookie-parser": "^1.4.7",
@@ -38,9 +39,9 @@
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.3",
     "supertest": "^7.2.2",
-    "tencentcloud-sdk-nodejs-sms": "^4.1.228",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "tencentcloud-sdk-nodejs-sms": "^4.1.228"
   },
   "devDependencies": {
     "prisma": "^6.19.3"

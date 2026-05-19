@@ -44,6 +44,26 @@
 | `STRIPE_DISABLED` | 否 | — | `true` | Stripe 优雅降级开关。设为 `true` 时跳过 Stripe SDK 初始化，所有 `/api/payment/*` 返回 `503`。用于 Stripe Live 密钥未就绪时临时恢复生产；拿到 `sk_live_*` 后应删除该变量（或设为 `false`） |
 | `PAYMENTS_ENABLED` | 否 | `false` | `true` | 支付总开关。仅当为 `true` 时开放前端付费入口与后端支付相关接口；为 `false` 时接口返回 `503 payments_disabled`，用于免费版提审阶段。 |
 
+### 微信支付 v3（CN）
+
+| 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
+|--------|----------|--------|--------|------|
+| `WECHAT_MCH_ID` | 微信支付必需 | — | `1900000109` | 微信商户号 |
+| `WECHAT_APP_ID` | 微信支付必需 | — | `wx8888888888888888` | 微信 AppID |
+| `WECHAT_API_V3_KEY` | 微信支付必需 | — | `your_api_v3_key` | 微信支付 API v3 Key |
+| `WECHAT_CERT_SERIAL` | 微信支付必需 | — | `444F4864EA...` | 商户证书序列号 |
+| `WECHAT_PRIVATE_KEY` | 微信支付必需 | — | `LS0tLS1CRUdJTi...` | Base64 编码 PEM 私钥（商户私钥） |
+| `WECHAT_PLATFORM_PUBLIC_KEY` | 否 | — | `LS0tLS1CRUdJTi...` | Base64 编码微信平台公钥（用于回调验签） |
+| `WECHAT_SPLIT_ENABLED` | 否 | `false` | `true` | 微信分账开关。`false` 时分账接口返回 mock，`true` 时调用真实微信分账 API |
+
+### 支付宝（CN）
+
+| 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
+|--------|----------|--------|--------|------|
+| `ALIPAY_APP_ID` | 支付宝必需 | — | `2021000118630000` | 支付宝应用 ID |
+| `ALIPAY_PRIVATE_KEY` | 支付宝必需 | — | `LS0tLS1CRUdJTi...` | Base64 编码 PKCS8 私钥 |
+| `ALIPAY_PUBLIC_KEY` | 支付宝必需 | — | `LS0tLS1CRUdJTi...` | Base64 编码支付宝公钥 |
+
 ### 数据库与存储
 
 | 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |

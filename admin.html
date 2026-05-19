@@ -172,7 +172,10 @@
 
       <!-- 数据总览 -->
       <div x-show="page === 'stats'">
-        <h2 class="text-xl font-bold mb-6">📊 数据总览</h2>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold">📊 数据总览</h2>
+          <button @click="exportAllTracksReport()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-medium">导出所有轨迹报告</button>
+        </div>
         <div x-show="statsLoading" class="text-center text-white/40 py-4">加载中…</div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <template x-for="card in statsCards" :key="card.label">
@@ -2728,6 +2731,27 @@
           a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
           a.download = `invite-codes-${Date.now()}.csv`;
           a.click();
+        },
+        async exportAllTracksReport() {
+          try {
+            const res = await fetch('/api/admin/tracks/export-pdf', { credentials: 'include' });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || '导出失败');
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tracks_report_${new Date().toISOString().slice(0, 10)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            this.showToast('轨迹报告已导出');
+          } catch (e) {
+            this.showToast(e.message || '导出失败', 'error');
+          }
         },
 
         // GMV Reports
