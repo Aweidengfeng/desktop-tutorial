@@ -1443,8 +1443,8 @@ async function processWithdrawalAction(withdrawalId, action, note = '') {
   const finalNote = String(note || '').trim();
   const defaultNote = (() => {
     if (!isApprove) return '管理员驳回';
-    if (paymentsEnabled) return '支付开关已开启：当前节点记录 mock 打款结果';
-    return 'PAYMENTS_ENABLED=false：记录 mock 审批';
+    if (paymentsEnabled) return '已批准：等待真实银行转账处理';
+    return 'PAYMENTS_ENABLED=false：记录 mock 审批结果';
   })();
   await prisma.$executeRaw`
     UPDATE withdrawal_requests
