@@ -16,6 +16,7 @@
   <meta name="theme-color" content="#2b6579">
   <meta property="og:title" content="巅峰探索 / SummitLink">
   <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
+  <link rel="manifest" href="/manifest.json">
   <script>
     tailwind.config = {
       theme: {
@@ -273,6 +274,9 @@
            x-transition:leave-start="opacity-100"
            x-transition:leave-end="opacity-0"></div>
     </template>
+  </div>
+  <div x-show="isOffline" class="fixed top-0 left-0 right-0 z-[260] bg-amber-500 text-slate-900 text-center text-xs font-semibold py-2">
+    <span x-text="t('offline_banner')"></span>
   </div>
 
   <!-- 图片大图预览 Lightbox -->
@@ -2079,30 +2083,31 @@
      class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-5" style="max-width:430px;margin:0 auto;">
   <div class="bg-slate-800 rounded-3xl p-6 w-full">
     <div class="flex items-center justify-between mb-5">
-      <h3 class="font-display font-bold text-xl text-white">登录账号</h3>
+      <h3 class="font-display font-bold text-xl text-white" x-text="t('login_title')"></h3>
       <button @click="showLogin=false" class="p-1.5 rounded-full hover:bg-white/10 transition-colors">
         <span class="material-symbols-outlined text-slate-400">close</span>
       </button>
     </div>
     <!-- Login Type Tabs -->
     <div class="flex bg-slate-700 rounded-xl p-1 mb-4">
-      <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">密码登录</button>
-      <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">短信验证码</button>
+      <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" x-text="t('login_password')"></button>
+      <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" x-text="t('login_sms')"></button>
     </div>
     <!-- Password Login -->
     <div x-show="loginType==='password'" class="space-y-4">
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="loginForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <input x-model="loginForm.phone" type="tel" :placeholder="t('login_phone_placeholder')" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
-        <input x-model="loginForm.password" type="password" placeholder="请输入密码" @keydown.enter="doLogin()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <input x-model="loginForm.password" type="password" :placeholder="t('login_password_placeholder')" @keydown.enter="doLogin()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <button @click="doLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
-        <span x-text="loginLoading ? '登录中…' : '登录'"></span>
+        <span x-text="loginLoading ? '登录中…' : t('login_action')"></span>
       </button>
+      <button x-show="showBiometricLogin" @click="loginWithBiometric()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors" x-text="t('biometric_login')"></button>
     </div>
     <!-- SMS Login -->
     <div x-show="loginType==='sms'" class="space-y-4">
@@ -2146,7 +2151,7 @@
         </button>
       </div>
     </div>
-    <p class="text-center text-slate-400 text-sm mt-4">还没有账号？<button @click="showLogin=false;showRegister=true" class="text-primary-light font-semibold hover:underline">立即注册</button></p>
+    <p class="text-center text-slate-400 text-sm mt-4"><span x-text="t('login_no_account')"></span><button @click="showLogin=false;showRegister=true" class="text-primary-light font-semibold hover:underline" x-text="t('login_register_now')"></button></p>
   </div>
 </div>
 
@@ -2414,8 +2419,8 @@
       </div>
       <div class="space-y-2">
         <template x-for="lang in availableLangs" :key="lang.code">
-          <button @click="currentLang=lang.code; showLangPicker=false"
-                  :class="currentLang===lang.code ? 'ring-2 ring-primary bg-primary/10' : 'hover:bg-white/5'"
+          <button @click="setLocale(lang.code === 'en' ? 'en' : 'zh-CN', true); showLangPicker=false"
+                  :class="(locale === (lang.code === 'en' ? 'en' : 'zh-CN')) ? 'ring-2 ring-primary bg-primary/10' : 'hover:bg-white/5'"
                   class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3 transition-all">
             <div class="flex items-center gap-3">
               <span class="text-2xl" x-text="lang.flag"></span>
@@ -2424,7 +2429,7 @@
                 <p class="text-slate-400 text-xs" x-text="lang.code"></p>
               </div>
             </div>
-            <span x-show="currentLang===lang.code" class="material-symbols-outlined text-primary-light">check_circle</span>
+            <span x-show="locale === (lang.code === 'en' ? 'en' : 'zh-CN')" class="material-symbols-outlined text-primary-light">check_circle</span>
           </button>
         </template>
       </div>
@@ -2938,13 +2943,13 @@
           </div>
           <div x-show="settingsType==='language'" class="space-y-3">
             <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">选择语言</h4>
-            <button @click="currentLang='zh'" :class="currentLang==='zh' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+            <button @click="setLocale('zh-CN', true)" :class="locale==='zh-CN' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
               <div class="flex items-center gap-3"><span class="text-2xl">🇨🇳</span><div class="text-left"><p class="text-white font-semibold">中文</p><p class="text-slate-400 text-xs">简体中文</p></div></div>
-              <span x-show="currentLang==='zh'" class="material-symbols-outlined text-primary-light">check_circle</span>
+              <span x-show="locale==='zh-CN'" class="material-symbols-outlined text-primary-light">check_circle</span>
             </button>
-            <button @click="currentLang='en'" :class="currentLang==='en' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+            <button @click="setLocale('en', true)" :class="locale==='en' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
               <div class="flex items-center gap-3"><span class="text-2xl">🇬🇧</span><div class="text-left"><p class="text-white font-semibold">English</p><p class="text-slate-400 text-xs">English (US)</p></div></div>
-              <span x-show="currentLang==='en'" class="material-symbols-outlined text-primary-light">check_circle</span>
+              <span x-show="locale==='en'" class="material-symbols-outlined text-primary-light">check_circle</span>
             </button>
           </div>
           <div x-show="settingsType==='units'" class="space-y-4">
@@ -5742,7 +5747,7 @@
 
 </div>
 
-<script src="/js/app-core.js"></script>
+<script src="/js/app-core.js" defer></script>
 <!-- Global Footer -->
 <footer class="w-full py-4 text-center text-slate-500 text-xs border-t border-white/5 mt-8" style="max-width:430px;margin:0 auto;">
   © SummitLink · <a href="/legal/privacy" class="hover:text-slate-300 underline">隐私政策</a> · <a href="/legal/terms" class="hover:text-slate-300 underline">用户协议</a> · 投诉邮箱: <a href="mailto:support@summitlink.app" class="hover:text-slate-300">support@summitlink.app</a>
@@ -5816,13 +5821,7 @@ function gdprDecline() {
 
 </body>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('[SW] 注册成功', reg.scope))
-      .catch(err => console.warn('[SW] 注册失败', err));
-  });
-}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
 // Web Push 订阅
 async function subscribePush() {
@@ -5858,5 +5857,11 @@ function urlBase64ToUint8Array(base64String) {
   const rawData = atob(base64);
   return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('img:not([loading])').forEach((img) => {
+    img.setAttribute('loading', 'lazy');
+  });
+});
 </script>
 </html>

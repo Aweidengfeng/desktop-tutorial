@@ -152,3 +152,17 @@
 - [x] **商业化文档** — `docs/COMMERCE.md` + `docs/API.md` B2 接口补充 ｜ 已完成（PR #50）
 - [ ] **真实支付接入** — 当前所有订单支付为 mock，B3 阶段需接入微信/支付宝真实支付 ｜ 依赖营业执照
 - [x] **商业资质材料上传** — 俱乐部和向导商业资质申请表单均已添加文件上传 UI（复用 `/api/upload`），支持营业执照、攀登证书、保险证书、健康证等上传 ｜ 已完成（本次新增）
+
+---
+
+## 十四、PR-43 代码收尾状态（2026-05-19）
+
+- [x] Capacitor 原生生物识别登录入口（可用时显示，失败时静默降级）
+- [x] 原生相机头像上传 + `/api/users/avatar` multipart 接口
+- [x] 远征详情页原生分享（Capacitor Share / navigator.share / 复制链接 fallback）
+- [x] Service Worker 地图瓦片缓存（CacheFirst，200 上限，7 天过期）与关键 API SWR
+- [x] `manifest.json` / 离线横幅 / 图片 lazy loading
+- [x] 地图逻辑拆分为 `www/js/map-core.js` 并在地图场景懒加载
+- [x] 后端 compression 中间件与缓存头优化（`/api/peaks`、`/api/expeditions`、`/api/config/map`）
+- [x] Prisma 高频查询索引补充（Booking / Order / Expedition / SosAlert）
+- [x] i18n 语言包文件与运行时加载切换（`zh-CN` / `en`）

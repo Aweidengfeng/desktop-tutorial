@@ -79,8 +79,7 @@ router.get('/map', configLimiter, (req, res) => {
     country: country || 'unknown',
   };
 
-  // 缓存 10 分钟（比 1 小时更合适 - 兼顾旅行中/VPN 用户的 IP 变化）
-  res.setHeader('Cache-Control', 'public, max-age=600');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
   res.json(response);
 });
 

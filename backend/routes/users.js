@@ -4,6 +4,10 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { decryptPII } = require('../utils/crypto');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const usersReadLimiter = rateLimit({
   windowMs: 60 * 1000, max: 60,
@@ -12,6 +16,48 @@ const usersReadLimiter = rateLimit({
 const usersWriteLimiter = rateLimit({
   windowMs: 60 * 1000, max: 20,
   message: { error: '操作过于频繁' }, standardHeaders: true, legacyHeaders: false,
+});
+
+const avatarUploadDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(avatarUploadDir)) fs.mkdirSync(avatarUploadDir, { recursive: true });
+
+const avatarUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, avatarUploadDir),
+    filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname || '.jpg')}`),
+  }),
+  fileFilter: (_req, file, cb) => {
+    if (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.mimetype)) cb(null, true);
+    else cb(new Error('只允许上传图片文件'));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+router.post('/avatar', usersWriteLimiter, auth, (req, res) => {
+  avatarUpload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message || '上传失败' });
+    if (!req.file) return res.status(400).json({ error: '未收到文件' });
+    try {
+      const safeFilename = path.basename(req.file.filename || '');
+      const safeFilePath = path.join(avatarUploadDir, safeFilename);
+      const sig = fs.readFileSync(safeFilePath).subarray(0, 12);
+      const isJpeg = sig[0] === 0xff && sig[1] === 0xd8 && sig[2] === 0xff;
+      const isPng = sig[0] === 0x89 && sig[1] === 0x50 && sig[2] === 0x4e && sig[3] === 0x47;
+      const isGif = sig[0] === 0x47 && sig[1] === 0x49 && sig[2] === 0x46;
+      const isWebp = sig[0] === 0x52 && sig[1] === 0x49 && sig[2] === 0x46 && sig[3] === 0x46 && sig[8] === 0x57 && sig[9] === 0x45 && sig[10] === 0x42 && sig[11] === 0x50;
+      if (!(isJpeg || isPng || isGif || isWebp)) {
+        fs.unlinkSync(safeFilePath);
+        return res.status(400).json({ error: '文件内容不是受支持的图片格式' });
+      }
+      const url = `/uploads/${safeFilename}`;
+      await prisma.user.update({ where: { id: req.user.id }, data: { avatar: url } });
+      res.json({ url, filename: safeFilename });
+    } catch (e) {
+      res.status(500).json({ error: '服务器错误' });
+    }
+  });
 });
 
 // GET /api/users/me/data-export — GDPR 数据导出（需要JWT）
@@ -442,4 +488,3 @@ router.get('/me/stats', usersReadLimiter, auth, async (req, res) => {
 });
 
 module.exports = router;
-
