@@ -34,7 +34,7 @@ function maskJwt(token) {
   if (!token || typeof token !== 'string') return token;
   const parts = token.split('.');
   if (parts.length === 3) {
-    return parts[0] + '.***.***.';
+    return parts[0] + '.***.' + '***';
   }
   return maskString(token, 6, 0);
 }

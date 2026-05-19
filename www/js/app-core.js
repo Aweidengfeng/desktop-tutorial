@@ -98,8 +98,37 @@ async function apiFetch(url, options = {}) {
     }
     throw new Error('服务暂时不可用，请稍后重试');
   }
+  // 401 — 尝试用 refreshToken 换新 accessToken，然后重试一次
+  if (res.status === 401 && !options._refreshed) {
+    const refreshToken = localStorage.getItem('summitlink_refresh_token');
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData.token) {
+            localStorage.setItem('summitlink_token', refreshData.token);
+            if (refreshData.refreshToken) localStorage.setItem('summitlink_refresh_token', refreshData.refreshToken);
+            // 重试原请求（标记 _refreshed 防止无限递归）
+            const newHeaders = { ...headers, Authorization: 'Bearer ' + refreshData.token };
+            return apiFetch(url, { ...options, headers: newHeaders, _refreshed: true });
+          }
+        }
+      } catch (_) {}
+    }
+    localStorage.removeItem('summitlink_token');
+    localStorage.removeItem('summitlink_refresh_token');
+    // 触发全局登出事件
+    window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
+    throw new Error('登录已过期，请重新登录');
+  }
   if (res.status === 401) {
     localStorage.removeItem('summitlink_token');
+    localStorage.removeItem('summitlink_refresh_token');
     // 触发全局登出事件
     window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
     throw new Error('登录已过期，请重新登录');
@@ -3101,17 +3130,27 @@ function alpineLink() {
         if (!window.google || !window.google.accounts) {
           await new Promise((resolve, reject) => {
             if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
-              const check = setInterval(() => { if (window.google && window.google.accounts) { clearInterval(check); resolve(); } }, 100);
+              // Script tag exists but SDK not ready yet — poll for up to 5s
+              let elapsed = 0;
+              const check = setInterval(() => {
+                elapsed += 100;
+                if (window.google && window.google.accounts) { clearInterval(check); resolve(); }
+                else if (elapsed >= 5000) { clearInterval(check); reject(new Error('Google SDK 加载超时')); }
+              }, 100);
               return;
             }
             const s = document.createElement('script');
             s.src = 'https://accounts.google.com/gsi/client';
             s.async = true;
+            s.onerror = () => reject(new Error('Google SDK 加载失败'));
             s.onload = () => {
-              const check = setInterval(() => { if (window.google && window.google.accounts) { clearInterval(check); resolve(); } }, 100);
-              setTimeout(() => { clearInterval(check); resolve(); }, 3000);
+              let elapsed = 0;
+              const check = setInterval(() => {
+                elapsed += 100;
+                if (window.google && window.google.accounts) { clearInterval(check); resolve(); }
+                else if (elapsed >= 5000) { clearInterval(check); reject(new Error('Google SDK 初始化超时')); }
+              }, 100);
             };
-            s.onerror = reject;
             document.head.appendChild(s);
           });
         }
@@ -3126,21 +3165,19 @@ function alpineLink() {
           });
           window.google.accounts.id.prompt((notification) => {
             if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              // One Tap 不可用时，弹出 Google 选择账号弹窗
-              window.google.accounts.id.renderButton(
-                document.createElement('div'),
-                { theme: 'outline', size: 'large' }
-              );
-              // 触发账号选择弹窗
-              window.google.accounts.oauth2.initTokenClient({
-                client_id: window.__GOOGLE_CLIENT_ID__,
-                scope: 'openid email profile',
-                callback: (tokenResponse) => {
-                  if (tokenResponse && tokenResponse.access_token) resolve(tokenResponse.access_token);
-                  else reject(new Error('Google 授权失败'));
-                },
-                error_callback: reject,
-              }).requestAccessToken({ prompt: 'select_account' });
+              // One Tap 不可用时，使用 OAuth2 access token 流
+              try {
+                const tokenClient = window.google.accounts.oauth2.initTokenClient({
+                  client_id: window.__GOOGLE_CLIENT_ID__,
+                  scope: 'openid email profile',
+                  callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) resolve(tokenResponse.access_token);
+                    else reject(new Error('Google 授权失败'));
+                  },
+                  error_callback: (err) => reject(new Error((err && err.message) || 'Google 授权错误')),
+                });
+                tokenClient.requestAccessToken({ prompt: 'select_account' });
+              } catch (e) { reject(e); }
             }
           });
         });
