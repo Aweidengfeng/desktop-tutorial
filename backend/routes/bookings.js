@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { writeLimiter } = require('../middleware/rateLimits');
 const { sendMail, bookingConfirmEmail } = require('../middleware/mailer');
 const { sendPush } = require('../lib/pushSender');
+const { requireOwnership } = require('../middleware/ownershipGuard');
 
 const poolReadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -266,19 +267,49 @@ router.post('/:id/claim', claimLimiter, auth, async (req, res) => {
 });
 
 // GET /api/bookings/:id
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', auth, requireOwnership('booking'), async (req, res) => {
   try {
     const booking = (await prisma.$queryRaw`
       SELECT b.*, u.name as requester_name, u.avatar as requester_avatar
       FROM bookings b LEFT JOIN users u ON u.id = b.user_id
-      WHERE b.id = ${Number(req.params.id)} AND (b.user_id = ${req.user.id} OR b.pool = 1 OR EXISTS (
-        SELECT 1 FROM guides g WHERE g.id = b.guide_id AND g.user_id = ${req.user.id}
-      ) OR EXISTS (
-        SELECT 1 FROM clubs c WHERE c.id = b.club_id AND c.creator_id = ${req.user.id}
-      ))
+      WHERE b.id = ${Number(req.params.id)}
     `)[0];
     if (!booking) return res.status(404).json({ error: '预约不存在' });
     res.json(booking);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PATCH /api/bookings/:id
+router.patch('/:id', auth, requireOwnership('booking'), async (req, res) => {
+  try {
+    const current = req.resource;
+    if (current.status !== 'pending') return res.status(400).json({ error: '仅待处理预约可修改' });
+    const mountain = req.body?.mountain || current.mountain;
+    const date = req.body?.date || current.date;
+    const members = Number(req.body?.members || current.members || 1);
+    const notes = req.body?.notes !== undefined ? String(req.body.notes || '') : (current.notes || '');
+    await prisma.$executeRaw`
+      UPDATE bookings
+      SET mountain = ${mountain},
+          date = ${date},
+          members = ${members},
+          notes = ${notes}
+      WHERE id = ${current.id}
+    `;
+    const updated = (await prisma.$queryRaw`SELECT * FROM bookings WHERE id = ${current.id}`)[0];
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/bookings/:id
+router.delete('/:id', auth, requireOwnership('booking'), async (req, res) => {
+  try {
+    await prisma.$executeRaw`DELETE FROM bookings WHERE id = ${req.resource.id}`;
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

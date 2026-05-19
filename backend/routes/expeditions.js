@@ -193,6 +193,38 @@ router.post('/payment/notify/stripe', express.raw({ type: 'application/json' }),
 // ── 主路由 ──────────────────────────────────────────────────────
 
 // POST /api/expeditions — 已审核通过的向导/俱乐部发布商业攀登
+/**
+ * @swagger
+ * /api/expeditions:
+ *   post:
+ *     tags: [远征]
+ *     summary: 创建远征
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, base_price]
+ *             properties:
+ *               title: { type: string }
+ *               base_price: { type: number }
+ *               currency: { type: string }
+ *     responses:
+ *       200:
+ *         description: 创建成功
+ *       403:
+ *         description: 非认证向导/俱乐部不可创建
+ *   get:
+ *     tags: [远征]
+ *     summary: 获取远征列表
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: 返回远征列表
+ */
 router.post('/', auth, async (req, res) => {
   try {
     const publisher = await getPublisher(req.user.id);

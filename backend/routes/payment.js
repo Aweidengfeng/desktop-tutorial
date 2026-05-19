@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { createPaymentWithProvider, verifyCallback, PROVIDER } = require('../middleware/payment');
 const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
+const { captureEvent } = require('../middleware/sentry');
 
 const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
 const stripeDisabledByFlag = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
@@ -169,6 +170,14 @@ if (paymentsFeatureDisabled || stripeDisabled) {
 
       res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
     } catch (err) {
+      captureEvent({
+        message: 'payment.create_intent.failed',
+        level: 'error',
+      }, {
+        userId: req.user?.id,
+        tags: { module: 'payment', action: 'create-intent' },
+        extra: { error: err.message, orderType: req.body?.orderType || null, orderId: req.body?.orderId || null },
+      });
       console.error('create-intent error:', err.message);
       res.status(500).json({ error: 'create-intent failed' });
     }
@@ -484,6 +493,30 @@ router.post('/notify/wechat', express.raw({ type: 'application/json' }), async (
 
 // POST /api/payment/wechat/qrcode — 获取微信 NATIVE 支付二维码（适用于非微信内浏览器）
 // 返回 { codeUrl, orderId, expireAt }；mock 模式返回 { codeUrl: 'weixin://...', mock: true }
+/**
+ * @swagger
+ * /api/payment/wechat/qrcode:
+ *   post:
+ *     tags: [订单]
+ *     summary: 生成微信支付二维码
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [order_id, amount]
+ *             properties:
+ *               order_type: { type: string }
+ *               order_id: { type: string }
+ *               amount: { type: number }
+ *               description: { type: string }
+ *     responses:
+ *       200:
+ *         description: 返回二维码链接
+ */
 router.post('/wechat/qrcode', auth, async (req, res) => {
   try {
     const wechatPay = require('../lib/payment/wechat-pay');
@@ -518,6 +551,14 @@ router.post('/wechat/qrcode', auth, async (req, res) => {
       mock: result.mock || false,
     });
   } catch (e) {
+    captureEvent({
+      message: 'payment.wechat_qrcode.failed',
+      level: 'error',
+    }, {
+      userId: req.user?.id,
+      tags: { module: 'payment', action: 'wechat-qrcode' },
+      extra: { error: e.message },
+    });
     console.error('[payment/wechat/qrcode]', e.message);
     res.status(500).json({ error: '生成微信二维码失败' });
   }

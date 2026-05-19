@@ -1,51 +1,55 @@
 #!/bin/bash
-# backup-db.sh — SQLite 数据库定期备份脚本
-# 将 DB 文件备份到 /data/backups/ 并保留最近7天
-# 若 TENCENT_COS_SECRET_ID 存在，同步上传至 COS
+# backup-db.sh — PostgreSQL 备份脚本（本地 + 可选 COS）
+set -euo pipefail
 
-set -e
+BACKUP_DIR="${BACKUP_DIR:-/opt/summitlink/backups}"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+FILENAME="backup_${TIMESTAMP}.sql"
+BACKUP_FILE="${BACKUP_DIR}/${FILENAME}"
 
-DB_PATH="${DATABASE_PATH:-/data/summitlink.db}"
-BACKUP_DIR="${BACKUP_DIR:-/data/backups}"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="${BACKUP_DIR}/summitlink_${TIMESTAMP}.db"
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "❌ DATABASE_URL 未配置"
+  exit 1
+fi
 
-# 确保备份目录存在
 mkdir -p "$BACKUP_DIR"
 
-# 检查数据库文件是否存在
-if [ ! -f "$DB_PATH" ]; then
-  echo "⚠️  数据库文件不存在: $DB_PATH，跳过备份"
-  exit 0
-fi
+echo "🔄 开始 PostgreSQL 备份..."
+pg_dump "$DATABASE_URL" > "$BACKUP_FILE"
+echo "✅ 本地备份完成: $BACKUP_FILE"
 
-# 使用 sqlite3 .backup 命令做一致性热备份（WAL 安全，无损坏风险）
-if command -v sqlite3 > /dev/null 2>&1; then
-  sqlite3 "$DB_PATH" ".backup '$BACKUP_FILE'"
-  echo "✅ 备份完成 (sqlite3 .backup): $BACKUP_FILE"
-else
-  # 降级：cp 备份，同时复制 WAL/SHM（若存在）
-  echo "⚠️  sqlite3 未安装，降级为 cp 备份（可能在 WAL 模式下不完整）"
-  cp "$DB_PATH" "$BACKUP_FILE"
-  [ -f "${DB_PATH}-wal" ] && cp "${DB_PATH}-wal" "${BACKUP_FILE}-wal" || true
-  echo "✅ 备份完成 (cp): $BACKUP_FILE"
-fi
+# 本地保留 7 天
+find "$BACKUP_DIR" -type f -name 'backup_*.sql' -mtime +7 -delete 2>/dev/null || true
+echo "🧹 本地保留策略执行完成（7天）"
 
-# 清理7天前的备份文件
-find "$BACKUP_DIR" -name "summitlink_*.db" -mtime +7 -exec rm -f {} \; 2>/dev/null || true
-echo "🧹 已清理7天前的旧备份"
+COS_SECRET_ID_VALUE="${COS_SECRET_ID:-${TENCENT_COS_SECRET_ID:-}}"
+COS_SECRET_KEY_VALUE="${COS_SECRET_KEY:-${TENCENT_COS_SECRET_KEY:-}}"
+COS_BUCKET_VALUE="${COS_BUCKET:-${TENCENT_COS_BUCKET:-}}"
+COS_REGION_VALUE="${COS_REGION:-${TENCENT_COS_REGION:-ap-shanghai}}"
+COS_PATH_PREFIX="${COS_PATH_PREFIX:-db-backups}"
 
-# COS 上传（若已配置密钥）
-if [ -n "$TENCENT_COS_SECRET_ID" ] && [ -n "$TENCENT_COS_SECRET_KEY" ] && [ -n "$COS_BUCKET" ]; then
-  echo "☁️  上传至腾讯云 COS..."
-  if command -v coscmd > /dev/null 2>&1; then
-    coscmd config -a "$TENCENT_COS_SECRET_ID" -s "$TENCENT_COS_SECRET_KEY" -b "$COS_BUCKET" -r "${COS_REGION:-ap-shanghai}"
-    coscmd upload "$BACKUP_FILE" "backups/$(basename "$BACKUP_FILE")" && echo "✅ COS 上传成功"
+if [ -n "$COS_SECRET_ID_VALUE" ] && [ -n "$COS_SECRET_KEY_VALUE" ] && [ -n "$COS_BUCKET_VALUE" ]; then
+  echo "☁️ 检测到 COS 配置，开始上传..."
+  if command -v coscmd >/dev/null 2>&1; then
+    coscmd config -a "$COS_SECRET_ID_VALUE" -s "$COS_SECRET_KEY_VALUE" -b "$COS_BUCKET_VALUE" -r "$COS_REGION_VALUE" >/dev/null
+    coscmd upload "$BACKUP_FILE" "${COS_PATH_PREFIX}/${FILENAME}"
+    echo "✅ COS 上传完成: ${COS_PATH_PREFIX}/${FILENAME}"
+    COS_CUTOFF_DATE="$(date -d '30 days ago' +%Y%m%d 2>/dev/null || true)"
+    if [ -n "$COS_CUTOFF_DATE" ]; then
+      coscmd list "${COS_PATH_PREFIX}/" 2>/dev/null | awk '{print $1}' | while read -r key; do
+        base="$(basename "$key")"
+        backup_date="$(echo "$base" | sed -n 's/^backup_\([0-9]\{8\}\)_[0-9]\{6\}\.sql$/\1/p')"
+        if [ -n "$backup_date" ] && [ "$backup_date" -lt "$COS_CUTOFF_DATE" ]; then
+          coscmd delete "$key" >/dev/null 2>&1 || true
+        fi
+      done
+      echo "🧹 COS 保留策略执行完成（30天）"
+    fi
   else
-    echo "⚠️  coscmd 未安装，跳过 COS 上传（pip install coscmd 可安装）"
+    echo "⚠️ coscmd 未安装，跳过 COS 上传"
   fi
 else
-  echo "ℹ️  COS 未配置，备份仅保存本地"
+  echo "ℹ️ 未配置 COS_SECRET_ID/COS_SECRET_KEY/COS_BUCKET，跳过 COS 上传"
 fi
 
-echo "✅ 备份完成: summitlink_${TIMESTAMP}.db"
+echo "✅ 备份流程结束"

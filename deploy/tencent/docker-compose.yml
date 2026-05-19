@@ -54,6 +54,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    command: ["sh", "-c", "npx prisma migrate deploy && node app.js"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
       interval: 30s

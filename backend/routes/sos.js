@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
 const { sendPush } = require('../lib/pushSender');
+const { captureEvent } = require('../middleware/sentry');
 
 const router = express.Router();
 
@@ -45,6 +46,14 @@ async function createSosAlert(req, res) {
     `;
     const alertId = inserted[0].id;
     console.log(`[SOS ALERT] id=${alertId} userId=${userId} lat=${lat} lng=${lng} accuracy=${accuracy}`);
+    captureEvent({
+      message: 'sos.alert.created',
+      level: 'warning',
+    }, {
+      userId,
+      tags: { module: 'sos', action: 'alert' },
+      extra: { alertId, lat, lng, accuracy },
+    });
     res.json({ ok: true, alertId });
 
     // 异步推送 SOS 告警至管理员和向导（不阻塞响应）
@@ -93,6 +102,30 @@ async function listSosAlerts(req, res) {
 }
 
 // POST /api/sos（新标准端点） + 兼容旧版 /alert
+/**
+ * @swagger
+ * /api/sos/alert:
+ *   post:
+ *     tags: [通知]
+ *     summary: 创建 SOS 告警
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, lat, lng, accuracy, timestamp]
+ *             properties:
+ *               userId: { type: integer }
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               accuracy: { type: number }
+ *               timestamp: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: 告警已创建
+ */
 router.post('/', sosLimiter, createSosAlert);
 router.post('/alert', sosLimiter, createSosAlert);
 

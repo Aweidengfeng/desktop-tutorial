@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const { requireOwnership } = require('../middleware/ownershipGuard');
 const rateLimit = require('express-rate-limit');
 const { validateTrack } = require('../utils/trackValidator');
 const PDFDocument = require('pdfkit');
@@ -122,19 +123,19 @@ router.get('/my', auth, async (req, res) => {
 });
 
 // GET /api/tracks/:id — 获取轨迹详情
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', auth, requireOwnership('track'), async (req, res) => {
   try {
-    const trackId = parseInt(req.params.id);
+    const trackId = req.resource.id;
     const [track] = await prisma.$queryRaw`
       SELECT id, user_id, name, peak_name, date, distance, distance_km, elevation, elevation_gain,
              max_elevation, start_elevation, duration, duration_minutes, weather, notes, image, points,
              is_manual, proof_images, created_at
       FROM tracks WHERE id = ${trackId}
     `;
-    if (!track) return res.status(404).json({ error: '轨迹不存在' });
-    if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权访问' });
     track.points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
-    track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
+    track.proof_images = track.proof_images
+      ? (typeof track.proof_images === 'string' ? JSON.parse(track.proof_images) : track.proof_images)
+      : [];
     res.json(track);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -290,12 +291,9 @@ router.post('/manual', auth, async (req, res) => {
 });
 
 // DELETE /api/tracks/:id
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, requireOwnership('track'), async (req, res) => {
   try {
-    const trackId = parseInt(req.params.id);
-    const [track] = await prisma.$queryRaw`SELECT * FROM tracks WHERE id = ${trackId}`;
-    if (!track) return res.status(404).json({ error: '轨迹不存在' });
-    if (track.user_id !== req.user.id) return res.status(403).json({ error: '无权删除' });
+    const trackId = req.resource.id;
     await prisma.$executeRaw`DELETE FROM tracks WHERE id = ${trackId}`;
     res.json({ success: true });
   } catch (e) {
