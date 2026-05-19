@@ -1,5 +1,5 @@
 # 📋 SummitLink 任务分工总表
-> **最后更新**：2026-05-18（全栈审计基线 + 第八～十二批 PR 规划）
+> **最后更新**：2026-05-19（PR-35：Schema 补齐 + 修复）
 > **规则**：每次对话/PR完成后自动更新此文件，完成项打 ✅
 > **目标**：SummitLink 全球上架（iOS App Store + Google Play）+ CN 节点商业闭环
 > **审计基线**：`docs/AUDIT_2026-05-18.md`（每次任务对照此文件执行）
@@ -127,13 +127,13 @@
 
 ---
 
-### 🔴 第八批 — 审计阻塞修复（Blockers，上线必须）
-> 来源：`docs/AUDIT_2026-05-18.md` §7.1 全部 7 项
+### 🟤 第八批 — Schema 补齐 + 修复（2026-05-19）
+> 来源：`docs/AUDIT_2026-05-18.md` §4
 
 | # | PR 内容 | 涉及审计项 | 前置条件 | 状态 |
 |---|---------|-----------|---------|------|
 | PR-34 | `index.html` AMap key 动态注入（删除 `YOUR_AMAP_KEY` 硬编码 + 补 `AMAP_SECURITY_CODE` 注入） | §2.2, §5.6 | 无 | ✅ |
-| PR-35 | `nginx.conf` 增加 HTTPS/TLS server 块（Let's Encrypt + HTTP→HTTPS 重定向） | §5.7 | 无 | ⬜ |
+| PR-35 | Prisma schema 补齐（Booking/Guide/Notification/PlatformTransaction/WithdrawalRequest/StripeWebhookEvent/SosAlert.status）+ check-env 变量名修复 + 支付演示模式修复 | 审计 §4 | 无 | ✅ |
 | PR-36 | 短信 SMS 切换真实供应商（腾讯云 SMS，`SMS_PROVIDER=tencent`） | §7.1-6 | B-06 | ⬜ |
 | PR-37 | Stripe 支付路径打通（`PAYMENTS_ENABLED=true`，生产 `sk_live_` key 接入，移除演示 toast） | §3.1, §5.3 | B-03 | ⬜ |
 | PR-38 | Prisma schema 补全缺失字段（`Booking` 缺失字段、`platform_transactions`、`withdrawal_requests`、`stripe_webhook_events`、`user_locations`、`Guide.listing_fee_paid`、`SosAlert.status`、`Notification` 字段） | §4 | 无 | ⬜ |
@@ -208,12 +208,12 @@
 | 我来做 PR第五批 | 3 | 3 | 100% 🎉 |
 | 我来做 PR第六批 | 3 | 3 | 100% 🎉 |
 | 我来做 PR第七批 | 9 | 9 | 100% 🎉 |
-| **我来做 PR第八批（Blockers）** | 5 | 0 | 0% |
+| **我来做 PR第八批（Blockers）** | 5 | 2 | 40% |
 | **我来做 PR第九批（CN支付）** | 4 | 0 | 0% |
 | **我来做 PR第十批（商业闭环）** | 3 | 0 | 0% |
 | **我来做 PR第十一批（移动端）** | 2 | 0 | 0% |
 | **我来做 PR第十二批（完善）** | 4 | 0 | 0% |
-| **总计** | **78** | **40** | **~51%** |
+| **总计** | **78** | **42** | **~54%** |
 
 ---
 
@@ -222,7 +222,7 @@
 ### 🔴 P0 — 上线阻塞（必须最先完成）
 1. Merge Open PR #183 / #182（官网 GitHub Pages 部署）
 2. **PR-34** — AMap 地图 key 动态注入（首屏地图白屏）
-3. **PR-35** — nginx HTTPS/TLS（裸跑 HTTP，无法生产）
+3. **PR-35** — Prisma schema 补齐 + check-env + 支付演示模式修复
 4. **PR-38** — Prisma schema 补全（数据库不一致）
 5. **你完成 B-09~B-12** — 生产环境变量（`PII_ENCRYPTION_KEY`、`JWT_SECRET`、`CORS_ORIGINS`、`DATABASE_URL`）
 
@@ -278,6 +278,7 @@
 | 2026-05-18 | TASK_PLAN.md 扩展：B类增至B-13，新增第八～十二批（PR-34~51），共78项任务 |
 | 2026-05-18 | 明确执行规则：每次对话按 P0→P1→P2→P3 优先级，对照审计基线推进 |
 | 2026-05-18 | PR-34合并：index.html 删除 YOUR_AMAP_KEY 硬编码，改为动态注入；添加根路径 / 注入处理器；app-core.js 新增 loadAMap() 动态加载函数 |
+| 2026-05-19 | PR-35合并：Prisma schema补齐7处缺失字段/模型，check-env AMAP变量名修复，移除演示模式假支付成功提示 |
 
 ---
 

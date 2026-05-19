@@ -307,6 +307,8 @@ model Guide {
   affiliationType     String   @default("freelance") @map("affiliation_type")
   affiliationClubId   Int?     @map("affiliation_club_id")
   affiliationClubName String?  @map("affiliation_club_name")
+  listingFeePaid      Boolean  @default(false) @map("listing_fee_paid")
+  listingFeePaidAt    DateTime? @map("listing_fee_paid_at")
   createdAt           DateTime @default(now()) @map("created_at")
 
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -636,6 +638,11 @@ model Booking {
   notes       String?
   amount      Float    @default(0)
   status      String   @default("pending")
+  clubId      Int?     @map("club_id")
+  clubName    String?  @map("club_name")
+  type        String?  @default("explorer")
+  confirmedAt DateTime? @map("confirmed_at")
+  rejectedReason String? @map("rejected_reason")
   createdAt   DateTime @default(now()) @map("created_at")
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -969,6 +976,7 @@ model SosAlert {
   accuracy  Float?
   timestamp DateTime
   phone     String?
+  status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -1197,6 +1205,9 @@ model Notification {
   userId    Int      @map("user_id")
   type      String?
   content   String?
+  title     String?
+  body      String?
+  link      String?
   relatedId Int?     @map("related_id")
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
@@ -1336,6 +1347,68 @@ model StripePayment {
   user                  User     @relation(fields: [userId], references: [id])
 
   @@map("stripe_payments")
+}
+
+// ─────────────────────────────────────────
+// 平台交易流水（托管结算）
+// ─────────────────────────────────────────
+
+model PlatformTransaction {
+  id              Int       @id @default(autoincrement())
+  orderNo         String?   @unique @map("order_no")
+  userId          Int?      @map("user_id")
+  publisherId     Int?      @map("publisher_id")
+  publisherType   String?   @map("publisher_type")
+  amount          Float     @default(0)
+  platformFee     Float     @default(0) @map("platform_fee")
+  publisherIncome Float     @default(0) @map("publisher_income")
+  status          String    @default("pending")
+  paymentMethod   String?   @map("payment_method")
+  stripePaymentId String?   @map("stripe_payment_id")
+  meta            String?   // JSON
+  createdAt       DateTime  @default(now()) @map("created_at")
+  settledAt       DateTime? @map("settled_at")
+
+  @@index([userId])
+  @@index([publisherId])
+  @@map("platform_transactions")
+}
+
+// ─────────────────────────────────────────
+// 提现申请
+// ─────────────────────────────────────────
+
+model WithdrawalRequest {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  publisherType String?   @map("publisher_type")
+  amount        Float     @default(0)
+  status        String    @default("pending")
+  bankName      String?   @map("bank_name")
+  bankAccount   String?   @map("bank_account")
+  bankHolder    String?   @map("bank_holder")
+  note          String?
+  reviewedBy    Int?      @map("reviewed_by")
+  reviewedAt    DateTime? @map("reviewed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("withdrawal_requests")
+}
+
+// ─────────────────────────────────────────
+// Stripe Webhook 事件幂等记录
+// ─────────────────────────────────────────
+
+model StripeWebhookEvent {
+  id        Int      @id @default(autoincrement())
+  stripeId  String   @unique @map("stripe_id")
+  type      String
+  processed Boolean  @default(false)
+  payload   String?  // JSON
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_webhook_events")
 }
 
 // ─────────────────────────────────────────
