@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { writeLimiter } = require('../middleware/rateLimits');
 const { sendMail, bookingConfirmEmail } = require('../middleware/mailer');
+const { sendPush } = require('../lib/pushSender');
 
 const poolReadLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -148,6 +149,34 @@ router.post('/', writeLimiter, auth, async (req, res) => {
         sendMail({ to: user.email, ...bookingConfirmEmail({ userName: user.name || requesterName, peakName: mountain, date, guideOrClub, orderNo: String(id) }) }).catch(() => {});
       }
     }).catch(() => {});
+    // 异步推送新预约通知（不阻断响应）
+    setImmediate(async () => {
+      try {
+        let recipientUserId = null;
+        if (guide_id) {
+          const guide = (await prisma.$queryRaw`SELECT user_id FROM guides WHERE id = ${guide_id}`)[0];
+          if (guide) recipientUserId = guide.user_id;
+        } else if (club_id) {
+          const club = (await prisma.$queryRaw`SELECT creator_id FROM clubs WHERE id = ${club_id}`)[0];
+          if (club) recipientUserId = club.creator_id;
+        }
+        if (recipientUserId) {
+          const tokens = await prisma.$queryRawUnsafe(
+            `SELECT push_token as token, push_platform as platform FROM users WHERE id = ? AND push_token IS NOT NULL AND push_platform IS NOT NULL`,
+            recipientUserId
+          );
+          if (tokens.length > 0) {
+            await sendPush(tokens, {
+              title: '📅 新预约通知',
+              body: `${requesterName} 预约了 [${mountain}] (${date})`,
+              data: { type: 'booking_request', bookingId: String(booking.id) },
+            });
+          }
+        }
+      } catch (pushErr) {
+        console.warn('[Booking] 推送通知失败:', pushErr.message);
+      }
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

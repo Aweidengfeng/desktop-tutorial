@@ -427,7 +427,7 @@
         <div class="glass rounded-2xl p-6">
           <h2 class="text-lg font-bold mb-4">🧭 旗下向导管理</h2>
           <div class="flex gap-3 mb-4">
-            <input x-model="inviteGuideEmail" type="email" placeholder="向导邮箱（邀请挂靠）" class="flex-1 bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
+            <input x-model="inviteGuideEmail" type="text" placeholder="向导邮箱或向导 ID（邀请挂靠）" class="flex-1 bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none border border-white/10 focus:border-blue-400" />
             <button @click="inviteGuide()" :disabled="inviteGuideLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold" x-text="inviteGuideLoading ? '发送中…' : '邀请向导'"></button>
           </div>
           <p class="text-xs text-slate-400 mb-4">被邀请向导接受后，将出现在下方列表。俱乐部佣金率适用于所有挂靠向导的团报订单。</p>
@@ -436,9 +436,16 @@
           <div class="space-y-2" x-show="!clubGuidesLoading && clubGuides.length > 0">
             <template x-for="g in clubGuides" :key="g.id">
               <div class="glass-dark rounded-xl p-3 flex items-center justify-between">
-                <div>
-                  <span class="font-medium text-sm" x-text="g.displayName || g.display_name || g.email"></span>
-                  <span class="text-xs text-slate-400 ml-2" x-text="g.tier === 'certified' ? '🏅 认证' : g.tier === 'seed' ? '🌱 种子' : '标准'"></span>
+                <div class="flex items-center gap-3">
+                  <img :src="g.avatar || '/img/default-avatar.png'" class="w-9 h-9 rounded-full object-cover" alt="avatar" onerror="this.src='/img/default-avatar.png'" />
+                  <div>
+                    <span class="font-medium text-sm" x-text="g.name || g.displayName || g.email"></span>
+                    <span class="text-xs text-slate-400 ml-2" x-text="g.cert === 'certified' ? '🏅 认证' : g.cert === 'seed' ? '🌱 种子' : '标准'"></span>
+                    <div class="text-xs text-slate-400 mt-0.5">
+                      <span x-text="g.specialty ? '专长：' + g.specialty : ''"></span>
+                      <span class="ml-2" x-text="g.rating ? '⭐ ' + g.rating : ''"></span>
+                    </div>
+                  </div>
                 </div>
                 <button @click="removeGuide(g)" class="px-2 py-1 glass rounded text-xs text-red-300 hover:bg-red-900/30">移除</button>
               </div>
@@ -716,7 +723,7 @@
         const token = this.getAuthToken();
         this.clubGuidesLoading = true;
         try {
-          const r = await fetch('/api/platform/club/guides', { headers: { Authorization: 'Bearer ' + token } });
+          const r = await fetch('/api/clubs/my/guides', { headers: { Authorization: 'Bearer ' + token } });
           if (r.ok) {
             const d = await r.json();
             this.clubGuides = Array.isArray(d) ? d : (d.guides || []);
@@ -726,17 +733,21 @@
 
       async inviteGuide() {
         const token = this.getAuthToken();
-        if (!this.inviteGuideEmail) { this.toast('请输入向导邮箱', 'error'); return; }
+        if (!this.inviteGuideEmail) { this.toast('请输入向导邮箱或 ID', 'error'); return; }
         this.inviteGuideLoading = true;
+        const input = this.inviteGuideEmail.trim();
+        // 如果是纯数字，作为向导 ID；否则作为邮箱
+        const isId = /^\d+$/.test(input);
+        const payload = isId ? { guideId: Number(input) } : { email: input };
         try {
-          const r = await fetch('/api/platform/club/invite-guide', {
+          const r = await fetch('/api/clubs/my/guides/invite', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify({ email: this.inviteGuideEmail }),
+            body: JSON.stringify(payload),
           });
           const d = await r.json();
           if (r.ok) {
-            this.toast('邀请已发送，向导确认后将出现在列表中');
+            this.toast('邀请已发送，向导已加入列表');
             this.inviteGuideEmail = '';
             this.loadClubGuides();
           } else {
@@ -746,10 +757,10 @@
       },
 
       async removeGuide(guide) {
-        if (!confirm(`确认将 ${guide.displayName || guide.email} 移出俱乐部？`)) return;
+        if (!confirm(`确认将 ${guide.name || guide.displayName || guide.email || '该向导'} 移出俱乐部？`)) return;
         const token = this.getAuthToken();
         try {
-          const r = await fetch(`/api/platform/club/guides/${guide.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+          const r = await fetch(`/api/clubs/my/guides/${guide.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
           if (r.ok) {
             this.clubGuides = this.clubGuides.filter(g => g.id !== guide.id);
             this.toast('已移除向导');

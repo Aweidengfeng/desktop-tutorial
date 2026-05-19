@@ -146,6 +146,7 @@
 |---|---------|---------|---------|------|
 | PR-36 | Capacitor 原生推送（FCM/APNs token 注册 + 推送监听 + 后端 register-token 接口）+ Socket.io 实时位置广播（替代 HTTP 轮询） | 审计 §7.2 #8, §3.3 | 无 | ✅ |
 | PR-37 | PDF 装备清单导出（可打印 HTML）+ 护照真实 QR 码（`/qr` 端点 + PDF 内嵌）+ AI 助手关键词智能回复 + verifyCallback 签名验证框架（Stripe 完整，微信/支付宝预框架） | 审计 §7.3 #15~#19 | 无 | ✅ |
+| **PR-38** | **FCM/APNs 服务端推送发送（`backend/lib/pushSender.js`）+ 在 SOS/预约/消息 场景触发推送 + 俱乐部挂靠向导管理 API+UI（`GET/POST/DELETE /api/clubs/my/guides`）+ 向导/俱乐部上架费接真实 Stripe PaymentIntent（`PAYMENTS_ENABLED=true` 时生效）+ 更新环境变量文档** | 审计 §5.5, §7.2 #8,#9, §1.3 | 无 | ✅ |
 
 ---
 
@@ -166,7 +167,7 @@
 
 | # | PR 内容 | 涉及审计项 | 前置条件 | 状态 |
 |---|---------|-----------|---------|------|
-| PR-43 | 向导/俱乐部上架费走真实支付（去 `mockOrderId`，接 Stripe 或微信支付） | §1.2, §1.3, §3.1 | PR-37 或 PR-40 | ⬜ |
+| PR-43 | ~~向导/俱乐部上架费走真实支付（去 `mockOrderId`，接 Stripe 或微信支付）~~ | §1.2, §1.3, §3.1 | PR-37 或 PR-40 | ✅ PR-38 已完成（Stripe）|
 | PR-44 | `POST /api/pay/settle` 接入真实银行转账 / Stripe Connect 分账 | §1.2, §3.1 | PR-37 | ⬜ |
 | PR-45 | 微信分账（`WECHAT_SPLIT_ENABLED=true`，5 处 TODO 实装） | §3.1, §5.3 | PR-40 | ⬜ |
 
@@ -177,8 +178,8 @@
 
 | # | PR 内容 | 涉及审计项 | 前置条件 | 状态 |
 |---|---------|-----------|---------|------|
-| PR-46 | 安装 `@capacitor/push-notifications`，接入 APNs (iOS) + FCM (Android) | §2.2, §5.5 | A-01, A-02 | ⬜ |
-| PR-47 | 位置追踪升级为 WebSocket 实时推送（Socket.io location channel，替代 HTTP 轮询） | §3.3 | 无 | ⬜ |
+| PR-46 | ~~安装 `@capacitor/push-notifications`，接入 APNs (iOS) + FCM (Android)~~ | §2.2, §5.5 | A-01, A-02 | ✅ PR-36+PR-38 已完成 |
+| PR-47 | 位置追踪升级为 WebSocket 实时推送（Socket.io location channel，替代 HTTP 轮询） | §3.3 | 无 | ✅ PR-36 已完成 |
 
 ---
 
