@@ -7,7 +7,7 @@
 /**
  * Click a bottom-nav tab by logical name and wait for its section to appear.
  * @param {import('@playwright/test').Page} page
- * @param {'home'|'explore'|'chat'|'me'} tabName
+ * @param {'home'|'explore'|'discover'|'chat'|'me'} tabName
  */
 async function gotoTab(page, tabName) {
   // Ensure we are on the app page before trying to click nav
@@ -18,12 +18,13 @@ async function gotoTab(page, tabName) {
 
   const nameMap = {
     home: '首页',
-    explore: '探索',
-    chat: '聊天',
+    explore: '社区',
+    discover: '社区',
+    chat: '消息',
     me: '我',
   };
   const label = nameMap[tabName] || tabName;
-  const labelCandidates = tabName === 'explore' ? [label, '找队友'] : [label];
+  const labelCandidates = tabName === 'explore' ? [label, '社区', '发现', '找队友'] : [label];
   let btn = page.locator(`button[data-tab="${tabName}"]`).first();
   if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
     for (const candidate of labelCandidates) {
@@ -37,7 +38,12 @@ async function gotoTab(page, tabName) {
   await btn.waitFor({ state: 'visible', timeout: 8000 });
   await btn.click();
   // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
-  await page.locator(`[x-show*="${tabName}"]`).first().waitFor({ state: 'visible', timeout: 8000 });
+  const xShowKey = tabName === 'explore' ? 'community' : tabName;
+  const exploreFallback = tabName === 'explore' ? ', [x-show*="discover"]' : '';
+  await page
+    .locator(`[x-show*="${xShowKey}"], [x-show*="${tabName}"]${exploreFallback}`)
+    .first()
+    .waitFor({ state: 'visible', timeout: 8000 });
 }
 
 /**
