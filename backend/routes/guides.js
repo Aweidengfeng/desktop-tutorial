@@ -356,7 +356,7 @@ router.post('/payment', guideWriteLimiter, auth, async (req, res) => {
 
     if (paymentsEnabled && stripeKey && !stripeDisabled) {
       // 真实 Stripe PaymentIntent（向导上架费默认 $299）
-      const listingAmountUsd = Number(process.env.GUIDE_LISTING_FEE_USD) || 299;
+      const listingAmountUsd = Math.floor(Number(process.env.GUIDE_LISTING_FEE_USD) || 299);
       try {
         const stripe = require('stripe')(stripeKey);
         const paymentIntent = await stripe.paymentIntents.create({

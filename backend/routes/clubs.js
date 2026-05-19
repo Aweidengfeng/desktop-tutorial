@@ -149,7 +149,7 @@ router.get('/my/guides', clubReadLimiter, auth, async (req, res) => {
     const guides = await prisma.$queryRaw`
       SELECT g.id, g.name, g.avatar, g.rating, g.reviews, g.specialty,
              g.experience_years as experienceYears, g.cert, g.status,
-             g.affiliation_type as affiliationType
+             g.affiliation_type as affiliationType, g.user_id as userId
       FROM guides g
       WHERE g.affiliation_club_id = ${club.id} AND g.status = 'approved'
       ORDER BY g.rating DESC
@@ -703,7 +703,7 @@ router.post('/payment', clubWriteLimiter, auth, async (req, res) => {
 
     if (paymentsEnabled && stripeKey && !stripeDisabled) {
       // 真实 Stripe PaymentIntent（俱乐部上架费默认 $499）
-      const listingAmountUsd = Number(process.env.CLUB_LISTING_FEE_USD) || 499;
+      const listingAmountUsd = Math.floor(Number(process.env.CLUB_LISTING_FEE_USD) || 499);
       try {
         const stripe = require('stripe')(stripeKey);
         const paymentIntent = await stripe.paymentIntents.create({

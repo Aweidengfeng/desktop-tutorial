@@ -70,9 +70,16 @@ function initAPNs() {
       return;
     }
 
+    // 基本校验：确认 P8 内容包含 PEM 标记
+    const p8Content = process.env.APNS_KEY_P8.replace(/\\n/g, '\n');
+    if (!p8Content.includes('-----BEGIN') || !p8Content.includes('-----END')) {
+      console.warn('[Push] APNs 配置有误：APNS_KEY_P8 内容不包含有效的 PEM 格式标记');
+      return;
+    }
+
     apnProvider = new apn.Provider({
       token: {
-        key: Buffer.from(process.env.APNS_KEY_P8),
+        key: Buffer.from(p8Content),
         keyId: process.env.APNS_KEY_ID,
         teamId: process.env.APNS_TEAM_ID,
       },
@@ -121,6 +128,11 @@ async function sendPush(tokens, { title, body, data = {} }) {
       try {
         const admin = require('firebase-admin');
         const messaging = admin.messaging(firebaseApp);
+        // 将 data 中非 null/undefined 的字段转为字符串（FCM 要求 data 值为字符串）
+        const dataStr = {};
+        for (const [k, v] of Object.entries(data)) {
+          if (v != null) dataStr[k] = String(v);
+        }
         // 批量发送（Firebase Admin 最多 500 个/批）
         const chunkSize = 500;
         for (let i = 0; i < androidTokens.length; i += chunkSize) {
@@ -128,9 +140,7 @@ async function sendPush(tokens, { title, body, data = {} }) {
           const messages = chunk.map(token => ({
             token,
             notification: { title, body },
-            data: Object.fromEntries(
-              Object.entries(data).map(([k, v]) => [k, String(v)])
-            ),
+            data: dataStr,
           }));
           const result = await messaging.sendEach(messages);
           const failCount = result.responses.filter(r => !r.success).length;

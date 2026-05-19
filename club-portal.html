@@ -736,8 +736,8 @@
         if (!this.inviteGuideEmail) { this.toast('请输入向导邮箱或 ID', 'error'); return; }
         this.inviteGuideLoading = true;
         const input = this.inviteGuideEmail.trim();
-        // 如果是纯数字，作为向导 ID；否则作为邮箱
-        const isId = /^\d+$/.test(input);
+        // 如果是正整数，作为向导 ID；否则作为邮箱
+        const isId = /^[1-9]\d*$/.test(input);
         const payload = isId ? { guideId: Number(input) } : { email: input };
         try {
           const r = await fetch('/api/clubs/my/guides/invite', {
