@@ -17,6 +17,10 @@ const bcrypt = require('bcrypt');
 const prisma = require('./prisma');
 const { encryptPII } = require('../utils/crypto');
 
+function logSeedWriteError(entityName, action, error) {
+  console.warn(`⚠️  ${entityName} ${action} 失败：`, error?.message || error);
+}
+
 async function main() {
   console.log('📦 开始填充示例数据 (Prisma)...');
 
@@ -116,11 +120,15 @@ async function main() {
       await prisma.peak.update({
         where: { id: existingPeakId },
         data: peak,
-      }).catch(() => {});
+      }).catch((error) => {
+        logSeedWriteError(`山峰 ${peak.name}`, '更新', error);
+      });
       continue;
     }
 
-    await prisma.peak.create({ data: peak }).catch(() => {});
+    await prisma.peak.create({ data: peak }).catch((error) => {
+      logSeedWriteError(`山峰 ${peak.name}`, '创建', error);
+    });
   }
 
   // ── 救援联系人 ────────────────────────────────────────────

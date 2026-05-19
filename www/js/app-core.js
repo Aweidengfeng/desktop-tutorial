@@ -403,9 +403,8 @@ function alpineLink() {
     POLICY_VERSION: '2026-04-20',
     privacySettings: { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false },
     gearImageUploading: false,
-    /* Phase 2 - Track Recording state
+    // Phase 2 - Track Recording state is kept initialized so dormant flows stay reactive.
     trackRecordedPoints: [],
-    */
     heroSlide: 0,
     heroTouchStartX: 0,
     heroSlides: [
@@ -784,9 +783,8 @@ function alpineLink() {
     userInsurance: { has_insurance: true, rescue_phone: '400-999-1234', insurer_name: '太平洋山地险', policy_no: 'ALPS20250416' },
     // 新增状态
     showNewTrackModal: false,
-    /* Phase 2 - Track Recording state
+    // Phase 2 - Track Recording state is kept initialized so dormant flows stay reactive.
     trackRecordingState: 'idle', // idle | recording | paused
-    */
     trackLiveStats: { distance: 0, elevation: 5364, seconds: 0 },
     trackTimer: null,
     newTrackName: '',
