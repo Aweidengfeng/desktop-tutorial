@@ -28,6 +28,7 @@
     "icons:from-svg": "node scripts/convert-svg-to-png.js && node scripts/generate-icons.js"
   },
   "dependencies": {
+    "@capacitor/push-notifications": "^6.0.0",
     "@prisma/client": "^6.6.0",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^12.9.0",
