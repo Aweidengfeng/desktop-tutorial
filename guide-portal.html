@@ -748,7 +748,7 @@
             <div class="glass-dark rounded-xl p-4">
               <h3 class="font-semibold mb-3 text-sm">申请提现</h3>
               <div class="grid md:grid-cols-3 gap-3">
-                <input x-model="payoutRequest.amount" type="number" min="1" placeholder="提现金额" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+                <input x-model="payoutRequest.amount" type="number" min="100" placeholder="提现金额（最低100）" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
                 <input x-model="payoutRequest.bank_name" type="text" placeholder="开户行（如招商银行）" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
                 <input x-model="payoutRequest.bank_account" type="text" placeholder="银行卡号" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
               </div>
@@ -1613,6 +1613,7 @@
         const token = this.getAuthToken();
         const amount = parseFloat(this.payoutRequest.amount);
         if (!amount || amount <= 0) { this.toast('请输入有效提现金额', 'error'); return; }
+        if (amount < 100) { this.toast('最低提现金额为100元', 'error'); return; }
         if (!this.payoutRequest.bank_name || !this.payoutRequest.bank_account) { this.toast('请填写银行卡信息', 'error'); return; }
         this.payoutLoading = true;
         try {

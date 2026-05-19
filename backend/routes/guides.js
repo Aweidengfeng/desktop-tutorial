@@ -79,6 +79,7 @@ router.post('/withdraw', guideWriteLimiter, auth, async (req, res) => {
     const bankAccount = String(req.body?.bank_account || '').trim();
     const bankName = String(req.body?.bank_name || '').trim();
     if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: '提现金额无效' });
+    if (amountNum < 100) return res.status(400).json({ error: '最低提现金额为100元' });
     if (!bankAccount || !bankName) return res.status(400).json({ error: '请填写银行卡号和开户行' });
 
     const balance = Number(guide.balance || 0);

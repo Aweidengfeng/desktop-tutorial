@@ -1441,12 +1441,17 @@ async function processWithdrawalAction(withdrawalId, action, note = '') {
   const paymentsEnabled = String(process.env.PAYMENTS_ENABLED || '').toLowerCase() === 'true';
   const now = new Date().toISOString();
   const finalNote = String(note || '').trim();
+  const defaultNote = (() => {
+    if (!isApprove) return '管理员驳回';
+    if (paymentsEnabled) return '支付开关已开启：当前节点记录 mock 打款结果';
+    return 'PAYMENTS_ENABLED=false：记录 mock 审批';
+  })();
   await prisma.$executeRaw`
     UPDATE withdrawal_requests
     SET status = ${isApprove ? 'approved' : 'rejected'},
         processed_at = ${now},
         processed_by = 'admin',
-        note = ${finalNote || (isApprove ? (paymentsEnabled ? '支付开关已开启：当前节点记录 mock 打款结果' : 'PAYMENTS_ENABLED=false：记录 mock 审批') : '管理员驳回')},
+        note = ${finalNote || defaultNote},
         reject_reason = ${isApprove ? null : (finalNote || '管理员驳回')}
     WHERE id = ${withdrawalId}
   `;

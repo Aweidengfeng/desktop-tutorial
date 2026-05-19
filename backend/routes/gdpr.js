@@ -41,7 +41,10 @@ router.get('/export', auth, async (req, res) => {
     if (!user) return res.status(404).json({ error: '用户不存在' });
 
     const safeDecrypt = (v) => {
-      try { return v ? decryptPII(v) : v; } catch (_) { return null; }
+      try { return v ? decryptPII(v) : v; } catch (err) {
+        console.warn('[gdpr/export] decrypt failed:', err.message);
+        return null;
+      }
     };
     user.phone = safeDecrypt(user.phone);
     user.email = safeDecrypt(user.email);

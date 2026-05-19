@@ -33,7 +33,7 @@ async function sendSms(phone, templateId, params = []) {
       message: status?.Message || '',
     };
   } catch (e) {
-    console.warn('[SMS mock fallback]', e.message);
+    console.warn('[SMS mock fallback]', e);
     return { success: true, mock: true, fallback: true };
   }
 }
