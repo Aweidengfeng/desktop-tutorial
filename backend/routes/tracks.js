@@ -133,7 +133,9 @@ router.get('/:id', auth, requireOwnership('track'), async (req, res) => {
       FROM tracks WHERE id = ${trackId}
     `;
     track.points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
-    track.proof_images = track.proof_images ? JSON.parse(track.proof_images) : [];
+    track.proof_images = track.proof_images
+      ? (typeof track.proof_images === 'string' ? JSON.parse(track.proof_images) : track.proof_images)
+      : [];
     res.json(track);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

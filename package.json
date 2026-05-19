@@ -70,8 +70,9 @@
       "**/backend/tests/fix-duplicate-order-no.test.js",
       "**/backend/tests/payment-degraded.test.js",
       "**/backend/tests/payment-cn-framework.test.js",
-      "**/backend/tests/security.test.js",
-      "**/backend/tests/sentry-pii.test.js",
+        "**/backend/tests/security.test.js",
+        "**/backend/tests/ownershipGuard.test.js",
+        "**/backend/tests/sentry-pii.test.js",
       "**/backend/tests/concurrency.test.js",
       "**/backend/tests/jwt.test.js",
       "**/backend/tests/performance.test.js",
@@ -79,7 +80,8 @@
       "**/backend/tests/commission.test.js",
       "**/backend/tests/region.test.js",
       "**/backend/tests/storage.test.js",
-      "**/backend/tests/sms-sender.test.js"
+        "**/backend/tests/sms-sender.test.js",
+        "**/tests/unit/ownershipGuard.test.js"
     ],
     "testTimeout": 15000
   }

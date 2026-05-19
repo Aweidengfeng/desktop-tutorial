@@ -51,6 +51,7 @@ function scrubString(value) {
 }
 
 function defaultSampleRate(env) {
+  if (env === 'production') return 0.1;
   if (env === 'staging') return 1.0;
   return 0.1;
 }

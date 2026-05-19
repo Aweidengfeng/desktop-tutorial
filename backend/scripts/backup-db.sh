@@ -38,7 +38,7 @@ if [ -n "$COS_SECRET_ID_VALUE" ] && [ -n "$COS_SECRET_KEY_VALUE" ] && [ -n "$COS
     if [ -n "$COS_CUTOFF_DATE" ]; then
       coscmd list "${COS_PATH_PREFIX}/" 2>/dev/null | awk '{print $1}' | while read -r key; do
         base="$(basename "$key")"
-        backup_date="$(echo "$base" | sed -n 's/^backup_\\([0-9]\\{8\\}\\)_[0-9]\\{6\\}\\.sql$/\\1/p')"
+        backup_date="$(echo "$base" | sed -n 's/^backup_\([0-9]\{8\}\)_[0-9]\{6\}\.sql$/\1/p')"
         if [ -n "$backup_date" ] && [ "$backup_date" -lt "$COS_CUTOFF_DATE" ]; then
           coscmd delete "$key" >/dev/null 2>&1 || true
         fi
