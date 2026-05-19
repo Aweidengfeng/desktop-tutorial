@@ -229,6 +229,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
   const provider = window.__activeMapProvider;
   const safePeakName = escapeHtml(peakName);
   const safeAltitude = altitude != null ? escapeHtml(`${altitude}m`) : '';
+  const defaultZoom = 9;
 
   if (provider === 'mapbox' && window.mapboxgl) {
     try {
@@ -236,7 +237,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
         container: containerId,
         style: 'mapbox://styles/mapbox/outdoors-v12',
         center: [lng, lat],
-        zoom: 9,
+        zoom: defaultZoom,
         interactive: true,
       });
       map.on('load', () => {
@@ -254,7 +255,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
 
   if (window.L) {
     try {
-      const map = window.L.map(containerId, { zoomControl: true }).setView([lat, lng], 9);
+      const map = window.L.map(containerId, { zoomControl: true }).setView([lat, lng], defaultZoom);
       const tileUrl = window.__osmTileUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
       window.L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
       const marker = window.L.marker([lat, lng]).addTo(map);
@@ -269,7 +270,7 @@ export async function renderPeakLocationMap(containerId, lat, lng, peakName, alt
 
   if (typeof AMap !== 'undefined') {
     try {
-      const map = new AMap.Map(containerId, { zoom: 9, center: [lng, lat], mapStyle: 'amap://styles/dark' });
+      const map = new AMap.Map(containerId, { zoom: defaultZoom, center: [lng, lat], mapStyle: 'amap://styles/dark' });
       new AMap.Marker({
         position: new AMap.LngLat(lng, lat),
         map,

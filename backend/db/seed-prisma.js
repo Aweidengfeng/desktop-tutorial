@@ -104,7 +104,10 @@ async function main() {
   const existingPeaks = await prisma.peak.findMany({
     where: { name: { in: allPeaks.map((peak) => peak.name) } },
     select: { id: true, name: true },
-  }).catch(() => []);
+  }).catch((error) => {
+    console.warn('⚠️  读取已存在山峰失败，将按新数据继续创建：', error?.message || error);
+    return [];
+  });
   const existingPeakIdsByName = new Map(existingPeaks.map((peak) => [peak.name, peak.id]));
 
   for (const peak of allPeaks) {

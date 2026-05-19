@@ -1697,6 +1697,7 @@ function alpineLink() {
       this.showTrackLayerPanel = false;
     },
     */
+    // Phase 2 stub: keep dormant track entrypoints callable so legacy click paths fail safely.
     initTrackMap() {},
     applyTrackMapLayer() {},
     switchTrackMapLayer() {},
@@ -1786,6 +1787,7 @@ function alpineLink() {
       return this.ensureMapCore().then((mod) => mod?.renderTrackDetailMap && mod.renderTrackDetailMap.call(this, track));
     },
     */
+    // Phase 2 stub: keep dormant track entrypoints callable so legacy click paths fail safely.
     locateMe() {},
     locateRecordingMap() {},
     renderTrackDetailMap() {},
