@@ -70,8 +70,8 @@ function maskPhone(phone) {
  */
 function maskSensitive(str) {
   if (!str || typeof str !== 'string') return str;
-  // JWT token 格式（三段 base64 以点分隔，eyJ 开头）
-  if (/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(str.trim())) {
+  // JWT token 格式（三段 base64url 以点分隔）
+  if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(str.trim())) {
     return maskJwt(str.trim());
   }
   // Stripe secret key 格式（sk_test_ / sk_live_）

@@ -501,7 +501,7 @@ router.post('/wechat/qrcode', auth, async (req, res) => {
       INSERT INTO payment_orders (order_no, user_id, order_type, order_ref_id, amount, status, provider, created_at)
       VALUES (${orderNo}, ${req.user.id}, ${order_type}, ${String(order_id)}, ${amount}, ${'pending'}, ${'wechat'}, datetime('now'))
       ON CONFLICT DO NOTHING
-    `.catch(() => {});
+    `.catch((e) => console.warn('[payment/wechat/qrcode] insert payment_orders failed:', e.message));
 
     const result = await wechatPay.createNativeOrder({
       body: description || 'SummitLink 订单',

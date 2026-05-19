@@ -140,7 +140,7 @@ router.get('/revenue', adminAuth, async (req, res) => {
       SELECT date(created_at) as date,
              COALESCE(SUM(amount), 0) as amount,
              COALESCE(provider, 'unknown') as provider
-      FROM orders
+      FROM payment_orders
       WHERE status = 'paid'
         AND created_at >= date('now', ${daysParam})
       GROUP BY date(created_at), provider

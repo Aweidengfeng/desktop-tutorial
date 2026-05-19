@@ -221,7 +221,10 @@ async function queryOrder({ outTradeNo }) {
       outTradeNo,
     };
   }
-  const path = `/v3/pay/transactions/out-trade-no/${outTradeNo}?mchid=${config.mchId}`;
+  // Sanitize outTradeNo: only allow alphanumeric and common order-no chars to prevent SSRF
+  const safeOrderNo = String(outTradeNo || '').replace(/[^A-Za-z0-9_-]/g, '');
+  if (!safeOrderNo) throw new Error('无效的订单号格式');
+  const path = `/v3/pay/transactions/out-trade-no/${safeOrderNo}?mchid=${config.mchId}`;
   const response = await callWechatApi('GET', path, null, config);
   return {
     mock: false,

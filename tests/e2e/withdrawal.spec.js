@@ -71,7 +71,7 @@ test.describe('提现申请 + 审批 E2E', () => {
         owner_id: userId,
         amount: 100,
         account_type: 'bank',
-        account_info: { bank_name: '中国银行', account_no: '6222001234567890', holder: 'E2E测试' },
+        account_info: { bank_name: '测试银行', account_no: '0000000000000000', holder: 'E2E测试' },
       },
     });
     // 200/201 = 成功；400 = 余额不足（合法）；403 = 无权限（合法）
