@@ -24,7 +24,7 @@ async function doLogin(page) {
   await page.goto('/summitlink');
   await page.waitForLoadState('networkidle');
 
-  const loginBtn = page.locator('button:has-text("登录")').first();
+  const loginBtn = page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first();
   const isLoginVisible = await loginBtn.isVisible({ timeout: 5000 }).catch(() => false);
   if (!isLoginVisible) return;
   await loginBtn.click();
@@ -63,7 +63,7 @@ test.describe('1. 注册页勾选门禁', () => {
     const regBtn = page.locator('button:has-text("注册")').first();
     if (!(await regBtn.isVisible().catch(() => false))) {
       // 先找登录按钮，里面可能有"注册"链接
-      const loginBtn = page.locator('button:has-text("登录")').first();
+      const loginBtn = page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first();
       await loginBtn.click();
       await page.locator('[x-show="showLogin"]').waitFor({ state: 'visible', timeout: 5000 });
       await page.locator('button:has-text("注册")').first().click();
@@ -103,7 +103,7 @@ test.describe('2. 我的订单', () => {
       await expect(meSection).toBeVisible({ timeout: 8000 });
     } else {
       // 降级：只验证登录成功
-      await expect(page.locator('button:has-text("登录")')).not.toBeVisible({ timeout: 5000 });
+      await expect(page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first()).not.toBeVisible({ timeout: 5000 });
     }
   });
 });
@@ -166,7 +166,7 @@ test.describe('4. 全局搜索', () => {
       await expect(searchBtn).toBeVisible();
     } else {
       // 搜索功能可能在找队友页
-      const exploreTab = page.locator('button[data-tab="explore"], nav button:has-text("找队友")').first();
+      const exploreTab = page.locator('button[data-tab="explore"], nav button:has-text("探索"), nav button:has-text("找队友")').first();
       if (await exploreTab.isVisible().catch(() => false)) {
         await exploreTab.click();
         await page.waitForTimeout(1000);
