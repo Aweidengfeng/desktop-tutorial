@@ -2649,18 +2649,28 @@ function alpineLink() {
           headers: { 'Content-Type': 'application/json', ...(this.getAuthHeaders() || {}) },
           body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.demo) {
-            this.showToast('支付暂不可用，请稍后再试', 'error');
-            return;
-          }
-          // 真实 Stripe
-          if (data.clientSecret && window.Stripe && this.stripePublishableKey) {
-            const stripe = window.Stripe(this.stripePublishableKey);
-            const { error } = await stripe.confirmCardPayment(data.clientSecret);
-            if (error) { this.showToast(error.message, 'error'); return; }
-          }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          this.showToast(data.error || data.message || '支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        if (data.demo) {
+          this.showToast('支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        if (!data.clientSecret || !window.Stripe || !this.stripePublishableKey) {
+          this.showToast('支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        const stripe = window.Stripe(this.stripePublishableKey);
+        if (!stripe) {
+          this.showToast('支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret);
+        if (error || !paymentIntent || paymentIntent.status !== 'succeeded') {
+          this.showToast((error && error.message) || '支付暂不可用，请稍后再试', 'error');
+          return;
         }
       } catch(e) {
         this.showToast('支付暂不可用，请稍后再试', 'error');

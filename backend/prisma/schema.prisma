@@ -638,9 +638,10 @@ model Booking {
   notes       String?
   amount      Float    @default(0)
   status      String   @default("pending")
+  pool        Int      @default(0)
   clubId      Int?     @map("club_id")
   clubName    String?  @map("club_name")
-  type        String?  @default("explorer")
+  type        String   @default("guide")
   confirmedAt DateTime? @map("confirmed_at")
   rejectedReason String? @map("rejected_reason")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -1354,23 +1355,23 @@ model StripePayment {
 // ─────────────────────────────────────────
 
 model PlatformTransaction {
-  id              Int       @id @default(autoincrement())
-  orderNo         String?   @unique @map("order_no")
-  userId          Int?      @map("user_id")
-  publisherId     Int?      @map("publisher_id")
-  publisherType   String?   @map("publisher_type")
-  amount          Float     @default(0)
-  platformFee     Float     @default(0) @map("platform_fee")
-  publisherIncome Float     @default(0) @map("publisher_income")
-  status          String    @default("pending")
-  paymentMethod   String?   @map("payment_method")
-  stripePaymentId String?   @map("stripe_payment_id")
-  meta            String?   // JSON
-  createdAt       DateTime  @default(now()) @map("created_at")
-  settledAt       DateTime? @map("settled_at")
+  id             Int       @id @default(autoincrement())
+  orderType      String    @map("order_type")
+  orderId        Int       @map("order_id")
+  orderNo        String?   @map("order_no")
+  userId         Int?      @map("user_id")
+  ownerType      String?   @map("owner_type")
+  ownerId        Int?      @map("owner_id")
+  totalAmount    Float     @map("total_amount")
+  platformFee    Float     @default(0) @map("platform_fee")
+  ownerIncome    Float     @default(0) @map("owner_income")
+  commissionRate Float     @default(0.15) @map("commission_rate")
+  status         String    @default("held")
+  settledAt      DateTime? @map("settled_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
-  @@index([userId])
-  @@index([publisherId])
+  @@index([ownerType, ownerId])
+  @@index([orderType, orderId])
   @@map("platform_transactions")
 }
 
@@ -1379,20 +1380,21 @@ model PlatformTransaction {
 // ─────────────────────────────────────────
 
 model WithdrawalRequest {
-  id            Int       @id @default(autoincrement())
-  userId        Int       @map("user_id")
-  publisherType String?   @map("publisher_type")
-  amount        Float     @default(0)
-  status        String    @default("pending")
-  bankName      String?   @map("bank_name")
-  bankAccount   String?   @map("bank_account")
-  bankHolder    String?   @map("bank_holder")
-  note          String?
-  reviewedBy    Int?      @map("reviewed_by")
-  reviewedAt    DateTime? @map("reviewed_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id           Int       @id @default(autoincrement())
+  ownerType    String    @map("owner_type")
+  ownerId      Int       @map("owner_id")
+  amount       Float
+  fee          Float     @default(0)
+  actualAmount Float     @map("actual_amount")
+  accountType  String    @default("bank") @map("account_type")
+  accountInfo  String?   @map("account_info")
+  status       String    @default("pending")
+  rejectReason String?   @map("reject_reason")
+  processedAt  DateTime? @map("processed_at")
+  processedBy  String?   @map("processed_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
-  @@index([userId])
+  @@index([ownerType, ownerId])
   @@map("withdrawal_requests")
 }
 
@@ -1401,12 +1403,12 @@ model WithdrawalRequest {
 // ─────────────────────────────────────────
 
 model StripeWebhookEvent {
-  id        Int      @id @default(autoincrement())
-  stripeId  String   @unique @map("stripe_id")
-  type      String
-  processed Boolean  @default(false)
-  payload   String?  // JSON
-  createdAt DateTime @default(now()) @map("created_at")
+  id              Int      @id @default(autoincrement())
+  stripeEventId   String   @unique @map("stripe_event_id")
+  type            String?
+  paymentIntentId String?  @map("payment_intent_id")
+  payload         String?  // JSON
+  receivedAt      DateTime @default(now()) @map("received_at")
 
   @@map("stripe_webhook_events")
 }
