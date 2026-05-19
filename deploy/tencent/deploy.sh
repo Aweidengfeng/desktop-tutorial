@@ -45,9 +45,20 @@ cp deploy/tencent/docker-compose.yml docker-compose.yml
 cp deploy/tencent/nginx-http.conf nginx-http.conf
 cp deploy/tencent/nginx-https.conf nginx-https.conf
 
+# 根据 SSL_ENABLED 选择 nginx service（默认 false）
+SSL_ENABLED_VALUE="${SSL_ENABLED:-}"
+if [ -z "$SSL_ENABLED_VALUE" ] && [ -f ".env" ]; then
+  SSL_ENABLED_VALUE="$(grep -E '^SSL_ENABLED=' .env | tail -n 1 | cut -d '=' -f2- | tr -d '[:space:]' || true)"
+fi
+if [ "$SSL_ENABLED_VALUE" = "true" ]; then
+  NGINX_SERVICE="nginx-https"
+else
+  NGINX_SERVICE="nginx-http"
+fi
+
 # 拉取最新镜像
-log "▶ 拉取依赖镜像..."
-docker compose pull postgres nginx-http nginx-https --quiet 2>&1 | tee -a "$LOG_FILE" || true
+log "▶ 拉取依赖镜像（$NGINX_SERVICE）..."
+docker compose pull postgres "$NGINX_SERVICE" --quiet 2>&1 | tee -a "$LOG_FILE" || true
 
 # 重建并启动
 log "▶ docker compose up -d --build..."

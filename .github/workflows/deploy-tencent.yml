@@ -77,8 +77,18 @@ jobs:
               echo "⚠️  .env created from .env.example — please fill in real secrets!"
             fi
 
+            SSL_ENABLED_VALUE="${SSL_ENABLED:-}"
+            if [ -z "$SSL_ENABLED_VALUE" ] && [ -f ".env" ]; then
+              SSL_ENABLED_VALUE="$(grep -E '^SSL_ENABLED=' .env | tail -n 1 | cut -d '=' -f2- | tr -d '[:space:]' || true)"
+            fi
+            if [ "$SSL_ENABLED_VALUE" = "true" ]; then
+              NGINX_SERVICE="nginx-https"
+            else
+              NGINX_SERVICE="nginx-http"
+            fi
+
             # Pull latest dependency images and rebuild
-            docker compose pull postgres nginx-http nginx-https --quiet || true
+            docker compose pull postgres "$NGINX_SERVICE" --quiet || true
             docker compose up -d --build --remove-orphans
 
             # Wait for backend to be healthy (up to 60s)
