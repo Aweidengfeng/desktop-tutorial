@@ -23,8 +23,9 @@ async function gotoTab(page, tabName) {
     chat: '消息',
     me: '我',
   };
+  const isCommunityTab = tabName === 'explore' || tabName === 'discover';
   const label = nameMap[tabName] || tabName;
-  const labelCandidates = tabName === 'explore' ? [label, '社区', '发现', '找队友'] : [label];
+  const labelCandidates = isCommunityTab ? [label, '社区', '发现', '找队友'] : [label];
   let btn = page.locator(`button[data-tab="${tabName}"]`).first();
   if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
     for (const candidate of labelCandidates) {
@@ -38,10 +39,10 @@ async function gotoTab(page, tabName) {
   await btn.waitFor({ state: 'visible', timeout: 8000 });
   await btn.click();
   // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
-  const xShowKey = tabName === 'explore' ? 'community' : tabName;
-  const exploreFallback = tabName === 'explore' ? ', [x-show*="discover"]' : '';
+  const xShowKey = isCommunityTab ? 'community' : tabName;
+  const discoverFallback = isCommunityTab ? ', [x-show*="discover"]' : '';
   await page
-    .locator(`[x-show*="${xShowKey}"], [x-show*="${tabName}"]${exploreFallback}`)
+    .locator(`[x-show*="${xShowKey}"], [x-show*="${tabName}"]${discoverFallback}`)
     .first()
     .waitFor({ state: 'visible', timeout: 8000 });
 }
