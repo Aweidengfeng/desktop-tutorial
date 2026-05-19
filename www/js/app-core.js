@@ -459,11 +459,10 @@ function alpineLink() {
     sosCountdown: 5,
     sosCountdownTimer: null,
     sosEmergencyPhone: '112',
-    /* Phase 2 - Track Recording state
+    // Phase 2 - Track Recording state
     mapSearchExpanded: false,
     mapSearchQuery: '',
     showTrackLayerPanel: false,
-    */
     showOfflineMapModal: false,
     offlineMapProgress: 0,
     isOffline: !navigator.onLine,
