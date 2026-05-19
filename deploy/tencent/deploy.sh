@@ -42,11 +42,10 @@ fi
 # 复制腾讯云专用配置文件
 log "▶ 复制 tencent 专用配置..."
 cp deploy/tencent/docker-compose.yml docker-compose.yml
-cp deploy/tencent/nginx.conf nginx.conf
 
 # 拉取最新镜像
 log "▶ 拉取依赖镜像..."
-docker compose pull postgres nginx --quiet 2>&1 | tee -a "$LOG_FILE" || true
+docker compose pull postgres nginx-http nginx-https --quiet 2>&1 | tee -a "$LOG_FILE" || true
 
 # 重建并启动
 log "▶ docker compose up -d --build..."
