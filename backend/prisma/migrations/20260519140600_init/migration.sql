@@ -1,0 +1,2 @@
+-- Initial migration baseline for formal Prisma migrate workflow.
+-- Existing schema objects are managed by historical migrations and runtime bootstrap.

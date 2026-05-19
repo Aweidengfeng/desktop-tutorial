@@ -10,6 +10,7 @@ const { GUIDE_CERT_LEVELS, CLUB_CERT_LEVELS } = require('../utils/certLevels');
 const { sendMail, certificationResultEmail } = require('../middleware/mailer');
 const PDFDocument = require('pdfkit');
 const stripeConnect = require('../lib/payment/stripe-connect');
+const { captureEvent } = require('../middleware/sentry');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -84,6 +85,20 @@ router.post('/logout', async (req, res) => {
 router.get('/check', adminAuth, async (req, res) => res.json({ ok: true }));
 
 // GET /api/admin/stats
+/**
+ * @swagger
+ * /api/admin/stats:
+ *   get:
+ *     tags: [管理员]
+ *     summary: 获取管理端统计概览
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 返回管理统计数据
+ *       401:
+ *         description: 未授权
+ */
 router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
     const totalUsers = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM users`)[0].c);
@@ -1526,6 +1541,15 @@ async function processWithdrawalAction(withdrawalId, action, note = '') {
       WHERE id = ${request.owner_id}
     `;
   }
+
+  captureEvent({
+    message: 'withdrawal.reviewed',
+    level: isApprove ? 'info' : 'warning',
+  }, {
+    userId: request.user_id || request.owner_id,
+    tags: { module: 'withdrawal', action, ownerType: request.owner_type || 'unknown' },
+    extra: { withdrawalId: Number(withdrawalId), amount: Number(request.amount || 0), stripeTransferId, stripeError, payoutMock },
+  });
 
   return {
     statusCode: 200,

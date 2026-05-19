@@ -16,6 +16,9 @@
     "test:perf": "cd .. && npx jest --no-coverage --runInBand --testTimeout=60000 --testPathPatterns=backend/tests/performance.test.js",
     "test:weak-network": "cd .. && npx jest --no-coverage --runInBand --testPathPatterns=backend/tests/weak-network.test.js"
   },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "dependencies": {
     "@alicloud/dysmsapi20170525": "^4.5.1",
     "@prisma/client": "^6.19.3",

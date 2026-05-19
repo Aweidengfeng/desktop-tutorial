@@ -530,7 +530,11 @@ app.use('/api/health', require('./routes/health'));
 app.use('/health', require('./routes/health'));
 
 // ── OpenAPI 文档（开发和测试环境下开放）──────────────────────────────
-if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
+if (
+  process.env.NODE_ENV !== 'production'
+  || process.env.ENABLE_API_DOCS === 'true'
+  || process.env.ENABLE_SWAGGER === 'true'
+) {
   const swaggerUi = require('swagger-ui-express');
   const swaggerSpec = require('./swagger');
   const swaggerLimiter = rateLimit({

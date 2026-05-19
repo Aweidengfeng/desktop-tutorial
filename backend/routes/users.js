@@ -8,6 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { requireOwnership } = require('../middleware/ownershipGuard');
 
 const usersReadLimiter = rateLimit({
   windowMs: 60 * 1000, max: 60,
@@ -216,6 +217,27 @@ router.delete('/me', usersWriteLimiter, auth, async (req, res) => {
 
     res.clearCookie('token');
     res.json({ success: true, message: '账号已注销' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PATCH /api/users/:id — 仅本人或管理员可更新
+router.patch('/:id', usersWriteLimiter, auth, requireOwnership('user', 'id', 'id'), async (req, res) => {
+  try {
+    const updates = {};
+    if (typeof req.body?.name === 'string') updates.name = req.body.name.trim();
+    if (typeof req.body?.bio === 'string') updates.bio = req.body.bio.trim();
+    if (typeof req.body?.avatar === 'string') updates.avatar = req.body.avatar.trim();
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: '没有可更新字段' });
+    }
+    const user = await prisma.user.update({
+      where: { id: req.resource.id },
+      data: updates,
+      select: { id: true, name: true, username: true, avatar: true, bio: true, level: true },
+    });
+    res.json(user);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

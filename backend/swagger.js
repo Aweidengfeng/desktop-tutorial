@@ -19,7 +19,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.API_BASE || 'http://localhost:3000',
+        url: process.env.API_BASE || 'http://localhost:8080',
         description: '当前服务器',
       },
     ],

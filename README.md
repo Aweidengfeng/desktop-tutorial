@@ -1,186 +1,76 @@
-# 🏔️ SummitLink — 高山探险社交平台
+# SummitLink 🏔️
 
-> 连接攀登者、向导与俱乐部的一站式户外运动平台
+> 专为户外探险设计的全栈平台 — 连接探险者、专业向导与俱乐部
 
-[![CI](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/test.yml)
-[![Load Test](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml/badge.svg)](https://github.com/gaoshanyindi/desktop-tutorial/actions/workflows/load-test.yml)
+## 功能亮点
+- 🗺️ 实时轨迹追踪（AMap/OSM 双引擎，离线缓存）
+- 🆘 一键 SOS 告警（GPS 坐标 + 区域感知拨号）
+- 💳 区域感知支付（微信/支付宝/Stripe）
+- 📱 iOS + Android 原生 App（Capacitor）
+- 🔔 FCM/APNs 实时推送
+- 🌐 多语言支持（中/英）
 
-## 🚀 发布准备（TL;DR）
-
-上架前请按 **「终审清单 → 灰度发布 → Sentry 告警 → 发布执行单」** 顺序走完：
-
-| # | 文档 | 用途 | 何时看 |
-|---|---|---|---|
-| 1 | [`docs/RELEASE_READINESS_CHECKLIST.md`](docs/RELEASE_READINESS_CHECKLIST.md) | 上架前终审清单（10 章 ~50 项，含 🔴 阻断项 10 条） | 提审前 **48h** 完整核对 |
-| 2 | [`docs/GRADUAL_ROLLOUT.md`](docs/GRADUAL_ROLLOUT.md) | 真机灰度发布方案（iOS Phased Release + Android Staged Rollout） | 提审通过、准备放量时 |
-| 3 | [`docs/SENTRY_ALERTS.md`](docs/SENTRY_ALERTS.md) | Sentry 告警规则与 PII 脱敏 | 灰度期间监控指标 |
-| 4 | [`docs/RELEASE_v1.3.0_EXECUTION.md`](docs/RELEASE_v1.3.0_EXECUTION.md) | **v1.3.0 实际发布执行单**（可勾选的 D-Day 操作流水） | 发布当天逐项执行 |
-| 5 | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) | 生产应急手册（值班、回滚、联系人） | 灰度 + 全量后 7 天值班期 |
-
-**核心命令速查：**
-
-```bash
-# 查看当前灰度状态（iOS TestFlight + Android Google Play）
-bash scripts/rollout-status.sh
-
-# 生产/预发冒烟测试（需先设置 API_BASE_URL，避免默认打到 http://localhost:3000）
-API_BASE_URL=https://api.example.com node scripts/smoke-test.js
-
-# 调整 Android staged rollout 比例（1/5/25/50/100）
-bundle exec fastlane android rollout_android percent:5
-
-# 紧急暂停 Android 灰度
-bundle exec fastlane android halt_android
-```
-
-## 📦 发布历史
-
-| 版本 | 日期 | 主题 | 发布说明 |
-|---|---|---|---|
-| v1.3.0 | 2026-05-11 | 移动端上架 + Stripe 生产化 | [详情](docs/releases/v1.3.0.md) |
-| v1.2.0 | 2026-05-02 | AI Coach + 管理后台 | [详情](docs/releases/v1.2.0.md) |
-| v1.1.0 | 2026-05-02 | 全文搜索 + 通知 | [详情](docs/releases/v1.1.0.md) |
-| v1.0.0 | 2026-04-30 | 首发版本 | [详情](docs/releases/v1.0.0.md) |
-
-完整变更见 [CHANGELOG.md](CHANGELOG.md)。
-
-## ✨ 核心功能
-
-| 模块 | 功能 |
+## 技术栈
+| 层次 | 技术 |
 |------|------|
-| 👤 用户体系 | 手机/邮箱注册，JWT鉴权，会员等级（探索者→传奇攀登者） |
-| 🏔️ 山峰数据库 | 全球山峰数据，路线攻略，成功率统计，峰会记录 |
-| 🗺️ 轨迹系统 | GPS轨迹录制，GPX上传解析，IndexedDB断点续传，高德/Mapbox双引擎 |
-| 👥 社区动态 | 图文发布，点赞评论，关注关系，实时群聊（Socket.IO） |
-| 🧭 向导认证 | 申请→审核→支付→认证全流程，rejected可重申请 |
-| 🏢 俱乐部 | 俱乐部认证，成员管理，路线定价 |
-| 📦 装备市场 | 二手装备发布，智能装备清单推荐 |
-| 🎫 预约系统 | 远征订单，SELECT FOR UPDATE防超额，事务保证一致性 |
-| 💬 AI教练 | 高山训练建议，装备推荐（Claude/GPT接入框架） |
-| 🛡️ 管理后台 | 用户/内容/订单管理，数据大屏 |
+| 前端 | Alpine.js + Tailwind CSS + Capacitor |
+| 后端 | Node.js + Express + Prisma ORM |
+| 数据库 | PostgreSQL（生产）/ SQLite（开发）|
+| 部署 | 腾讯云（CN）+ Railway（国际）|
+| CI/CD | GitHub Actions |
 
-## 🚀 快速开始
+## 5 分钟快速启动
 
-### 本地开发
-
+### 开发环境
 ```bash
-# 克隆项目
-git clone https://github.com/gaoshanyindi/desktop-tutorial.git
-cd desktop-tutorial
-
-# 安装依赖
+cd backend
+cp .env.example .env     # 编辑最小配置
 npm install
-cd backend && npm install
-
-# 生成 Prisma Client（SQLite，本地开发）
-DATABASE_PROVIDER=sqlite DATABASE_URL="file:./dev.db" node scripts/generate-prisma-client.js
-
-# 初始化种子数据
-SEED_ON_START=true node db/seed.js
-
-# 启动后端
-PORT=8080 JWT_SECRET=dev-secret node app.js
+npx prisma migrate dev
+npm run dev              # 启动 http://localhost:8080
 ```
 
-访问 http://localhost:8080
+### 最小必需环境变量
+```env
+DATABASE_URL=file:./dev.db
+JWT_SECRET=your-secret-here
+PII_ENCRYPTION_KEY=32-char-key-here
+```
 
-### Docker 生产部署
-
+### 生产部署（腾讯云）
 ```bash
-# 复制环境变量配置
-cp .env.example .env
-# 编辑 .env，填写 DATABASE_URL、JWT_SECRET 等
-
-# 启动多节点
-docker-compose -f docker-compose.prod.yml up -d
+# 配置 GitHub Secrets 后推送到 main 分支即自动部署
+# 详见 docs/DEPLOY_GUIDE.md
 ```
 
-## 🏗️ 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 后端 | Node.js 24 + Express 4 |
-| ORM | Prisma 5（SQLite 开发 / PostgreSQL 生产）|
-| 实时通信 | Socket.IO 4 |
-| 认证 | JWT（jsonwebtoken） |
-| 文件存储 | 本地磁盘 / 腾讯云 COS（中国大陆，可选）/ S3（海外，可选）|
-| 地图 | 高德地图 JS API / Mapbox GL JS（海外）|
-| 前端 | 原生 HTML5 + Tailwind CSS（CDN）|
-| PWA | Service Worker + IndexedDB 断点续传 |
-| 国际化 | 轻量级 i18n（zh/en）|
-| 部署 | Railway（主）/ Docker Compose（多节点）|
-| CI/CD | GitHub Actions（E2E + 压测 + 健康巡检）|
-| 监控 | Sentry（可选）/ 自定义健康检查 |
-
-## ⚙️ 环境变量
-
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `DATABASE_URL` | ✅ | PostgreSQL 连接串 |
-| `DATABASE_PROVIDER` | ✅ | `postgresql` 或 `sqlite` |
-| `JWT_SECRET` | ✅ | JWT 签名密钥（≥32字符）|
-| `ADMIN_PASSWORD` | ✅ | 管理员初始密码 |
-| `PORT` | - | 监听端口，默认 8080 |
-| `MAPBOX_TOKEN` | - | Mapbox GL JS Token（海外地图）|
-| `COS_BUCKET` | - | 腾讯云 COS Bucket（建议含 APPID 后缀）|
-| `COS_REGION` | - | COS Region，如 `ap-beijing` |
-| `COS_SECRET_ID` | - | 腾讯云 SecretId |
-| `COS_SECRET_KEY` | - | 腾讯云 SecretKey |
-| `COS_CDN_DOMAIN` | - | 中国大陆 CDN 域名，如 `https://cdn.unsummit.cn` |
-| `TENCENT_CLOUD_APPID` | - | 腾讯云 APPID（Bucket 命名补全用） |
-| `S3_BUCKET_US` | - | 海外 S3 / R2 Bucket |
-| `S3_REGION_US` | - | 海外对象存储 Region，如 `us-east-1` |
-| `AWS_ACCESS_KEY_ID` | - | 海外对象存储访问密钥 ID |
-| `AWS_SECRET_ACCESS_KEY` | - | 海外对象存储访问密钥 Secret |
-| `SENTRY_DSN` | - | Sentry DSN（错误监控）|
-
-## 📡 API 文档
-
-完整 OpenAPI 3.0 文档见 [`docs/swagger.yaml`](docs/swagger.yaml)。
-
-主要端点：
-
+## 项目结构
 ```
-GET  /api/health          综合健康检查
-GET  /api/health/ready    K8s readiness probe
-GET  /api/health/live     K8s liveness probe
-
-POST /api/auth/send-code  发送验证码
-POST /api/auth/login      登录（手机/邮箱/密码）
-
-GET  /api/peaks           山峰列表
-GET  /api/peaks/:id       山峰详情
-
-GET  /api/posts           社区动态
-POST /api/posts           发布动态
-
-POST /api/tracks          上传轨迹
-POST /api/upload          上传图片
-
-POST /api/bookings        创建预约
-POST /api/expedition-orders  远征下单（防超额）
-
-GET  /api/users/:id       用户资料
-POST /api/users/follow    关注用户
+summitlink/
+├── backend/          # Express API 服务
+│   ├── routes/       # 路由（auth/expeditions/guides/clubs/payment/...）
+│   ├── lib/          # 工具库（push/payment/sms/...）
+│   ├── prisma/       # Schema + 迁移
+│   └── middleware/   # JWT/限流/权限
+├── www/              # 前端（无构建，纯 CDN）
+│   ├── js/           # Alpine.js 应用逻辑
+│   ├── i18n/         # 多语言包
+│   └── sw.js         # Service Worker（PWA）
+├── website/          # 官网（纯静态）
+├── deploy/tencent/   # 腾讯云部署配置
+└── docs/             # 文档
 ```
 
-## 🧪 测试
+## 文档索引
+- [环境变量说明](docs/ENVIRONMENT.md)
+- [部署指南](docs/DEPLOY_GUIDE.md)
+- [推送通知配置](docs/PUSH_NOTIFICATION.md)
+- [API 参考](docs/API_REFERENCE.md)
+- [隐私政策](docs/PRIVACY.md)
+- [上线检查清单](docs/LAUNCH_CHECKLIST_FINAL.md)
+- [审计基线](docs/AUDIT_2026-05-18.md)
 
-```bash
-# API 集成测试
-npm run test:api
+## 贡献
+PRs welcome. 请先阅读 `docs/DEPLOY_GUIDE.md` 启动本地开发环境。
 
-# E2E 测试（Playwright）
-npm run test:e2e
-
-# 50 并发压测
-npm run test:load
-```
-
-## 📦 部署文档
-
-详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-
-## 📄 许可证
-
-MIT © 2026 SummitLink
+## License
+MIT

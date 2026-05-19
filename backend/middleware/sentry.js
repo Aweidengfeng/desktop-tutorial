@@ -51,9 +51,8 @@ function scrubString(value) {
 }
 
 function defaultSampleRate(env) {
-  if (env === 'production') return 0.1;
   if (env === 'staging') return 1.0;
-  return 0;
+  return 0.1;
 }
 
 function resolveSampleRate(envName, env) {
@@ -144,8 +143,7 @@ function initSentry(app) {
   if (!SENTRY_ENABLED) return;
   try {
     Sentry = require('@sentry/node');
-    const runtimeEnvironment = process.env.NODE_ENV || 'development';
-    const sentryEnvironment = process.env.SENTRY_ENV || runtimeEnvironment;
+    const sentryEnvironment = process.env.NODE_ENV || 'development';
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       environment: sentryEnvironment,
@@ -195,6 +193,27 @@ function captureException(err, context) {
   } catch (e) {}
 }
 
+function captureEvent(event, context = {}) {
+  if (!SENTRY_ENABLED || !Sentry) return;
+  try {
+    const userId = context.userId || context.user_id;
+    if (userId && typeof Sentry.withScope === 'function') {
+      Sentry.withScope((scope) => {
+        scope.setUser({ id: hashUserId(userId) });
+        if (context.tags && typeof context.tags === 'object') {
+          Object.entries(context.tags).forEach(([k, v]) => scope.setTag(k, String(v)));
+        }
+        if (context.extra && typeof context.extra === 'object') {
+          Object.entries(scrub(context.extra)).forEach(([k, v]) => scope.setExtra(k, v));
+        }
+        Sentry.captureEvent(event);
+      });
+      return;
+    }
+    Sentry.captureEvent(event);
+  } catch (_) {}
+}
+
 function setSentryUser(user) {
   if (!SENTRY_ENABLED || !Sentry) return;
   const id = hashUserId(user && user.id);
@@ -209,6 +228,7 @@ module.exports = {
   sentryRequestHandler,
   sentryErrorHandler,
   captureException,
+  captureEvent,
   setSentryUser,
   sentryBeforeSend,
   SENTRY_ENABLED,
