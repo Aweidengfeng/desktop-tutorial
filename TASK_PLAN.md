@@ -32,7 +32,7 @@
 | B-03 | 配置 Stripe 密钥 | A-03审核后 → `STRIPE_SECRET_KEY=sk_live_xxx` + `STRIPE_PUBLISHABLE_KEY=pk_live_xxx` | ⬜ |
 | B-04 | 绑定自定义域名 | Railway → Settings → Domains → summitlink.app | ⬜ |
 | B-05 | 配置 Apple Sign In 环境变量 | A-01审核后 → `APPLE_CLIENT_ID` + `APPLE_TEAM_ID` + `APPLE_KEY_ID` | ⬜ |
-| B-06 | 配置腾讯云 5 个 GitHub Secrets | `TENCENT_HOST=49.234.163.103` + `TENCENT_SSH_PORT` + `TENCENT_SSH_USER` + `TENCENT_SSH_KEY` + `TENCENT_DEPLOY_PATH=/opt/summitlink` | ⬜ |
+| B-06 | 配置腾讯云 5 个 GitHub Secrets | `TENCENT_HOST=49.234.163.103` + `TENCENT_SSH_PORT` + `TENCENT_SSH_USER` + `TENCENT_SSH_KEY` + `TENCENT_DEPLOY_PATH=/opt/summitlink` | ✅ |
 | B-07 | DNS 智能分流配置 | Cloudflare Worker geo-router 上线，见 docs/DNS_GEO_ROUTING.md | ⬜ |
 | B-08 | 配置 `TENCENT_COS_*` 三个变量 | `TENCENT_COS_SECRET_ID` + `TENCENT_COS_SECRET_KEY` + `TENCENT_COS_BUCKET` | ⬜ |
 | B-09 ⭐ | 设置生产 `PII_ENCRYPTION_KEY`（32字节真实 key） | **上线阻塞**：未设置则生产 `process.exit(1)`；注意 dev key 加密的历史数据需迁移 | ⬜ |
@@ -147,6 +147,7 @@
 | PR-36 | Capacitor 原生推送（FCM/APNs token 注册 + 推送监听 + 后端 register-token 接口）+ Socket.io 实时位置广播（替代 HTTP 轮询） | 审计 §7.2 #8, §3.3 | 无 | ✅ |
 | PR-37 | PDF 装备清单导出（可打印 HTML）+ 护照真实 QR 码（`/qr` 端点 + PDF 内嵌）+ AI 助手关键词智能回复 + verifyCallback 签名验证框架（Stripe 完整，微信/支付宝预框架） | 审计 §7.3 #15~#19 | 无 | ✅ |
 | **PR-38** | **FCM/APNs 服务端推送发送（`backend/lib/pushSender.js`）+ 在 SOS/预约/消息 场景触发推送 + 俱乐部挂靠向导管理 API+UI（`GET/POST/DELETE /api/clubs/my/guides`）+ 向导/俱乐部上架费接真实 Stripe PaymentIntent（`PAYMENTS_ENABLED=true` 时生效）+ 更新环境变量文档** | 审计 §5.5, §7.2 #8,#9, §1.3 | 无 | ✅ |
+| **PR-39** | **向导提现申请+管理员审批（前后端）+ GDPR 数据导出/注销 + 腾讯云 SMS 发送框架 + 审计文档同步** | 审计 §7.2/§7.3 收尾 | 无 | ✅ |
 
 ---
 

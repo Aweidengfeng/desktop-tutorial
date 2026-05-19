@@ -34,6 +34,12 @@ const OPTIONAL = [
   { key: 'APNS_KEY_ID', desc: 'APNs 密钥 ID（10位）' },
   { key: 'APNS_TEAM_ID', desc: 'Apple Developer Team ID' },
   { key: 'APNS_BUNDLE_ID', desc: 'iOS App Bundle ID（如 com.summitlink.app）' },
+  // 腾讯云短信（可选，未配置时自动 mock）
+  { key: 'TENCENT_SMS_SECRET_ID', desc: '腾讯云短信 SecretId（未配则走 mock）' },
+  { key: 'TENCENT_SMS_SECRET_KEY', desc: '腾讯云短信 SecretKey（未配则走 mock）' },
+  { key: 'TENCENT_SMS_APP_ID', desc: '腾讯云短信 AppID（兼容 TENCENT_SMS_SDK_APP_ID）' },
+  { key: 'TENCENT_SMS_SIGN_NAME', desc: '腾讯云短信签名（可选）' },
+  { key: 'TENCENT_SMS_TEMPLATE_ID', desc: '腾讯云短信模板 ID（可选）' },
   // 上架费配置
   { key: 'GUIDE_LISTING_FEE_USD', desc: '向导上架费（美元，默认 299）' },
   { key: 'CLUB_LISTING_FEE_USD', desc: '俱乐部上架费（美元，默认 499）' },

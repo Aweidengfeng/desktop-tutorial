@@ -307,6 +307,7 @@ model Guide {
   affiliationType     String   @default("freelance") @map("affiliation_type")
   affiliationClubId   Int?     @map("affiliation_club_id")
   affiliationClubName String?  @map("affiliation_club_name")
+  balance             Float    @default(0) @map("balance")
   listingFeePaid      Boolean  @default(false) @map("listing_fee_paid")
   listingFeePaidAt    DateTime? @map("listing_fee_paid_at")
   createdAt           DateTime @default(now()) @map("created_at")
@@ -1381,6 +1382,7 @@ model PlatformTransaction {
 
 model WithdrawalRequest {
   id           Int       @id @default(autoincrement())
+  guideId      Int?      @map("guide_id")
   ownerType    String    @map("owner_type")
   ownerId      Int       @map("owner_id")
   amount       Float
@@ -1388,7 +1390,10 @@ model WithdrawalRequest {
   actualAmount Float     @map("actual_amount")
   accountType  String    @default("bank") @map("account_type")
   accountInfo  String?   @map("account_info")
+  bankAccount  String?   @map("bank_account")
+  bankName     String?   @map("bank_name")
   status       String    @default("pending")
+  note         String?
   rejectReason String?   @map("reject_reason")
   processedAt  DateTime? @map("processed_at")
   processedBy  String?   @map("processed_by")

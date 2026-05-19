@@ -2607,16 +2607,19 @@
         },
         async approveWithdrawal(w) {
           try {
-            const d = await this.api('PUT', `/withdrawals/${w.id}/approve`);
+            const d = await this.api('PATCH', `/withdrawals/${w.id}`, { action: 'approve', note: '管理员批准' });
             w.status = 'approved';
+            w.note = d.note || '管理员批准';
             this.showToast(d.message || '已批准提现');
           } catch(e) { this.showToast(e.message,'error'); }
         },
         async rejectWithdrawal(w) {
-          const reason = prompt('请输入拒绝原因（可选）') || '';
+          const reason = prompt('请输入拒绝原因（必填）') || '';
+          if (!reason.trim()) { this.showToast('请填写拒绝原因', 'error'); return; }
           try {
-            await this.api('PUT', `/withdrawals/${w.id}/reject`, { reason });
+            await this.api('PATCH', `/withdrawals/${w.id}`, { action: 'reject', note: reason });
             w.status = 'rejected';
+            w.note = reason;
             this.showToast('已拒绝提现申请');
           } catch(e) { this.showToast(e.message,'error'); }
         },

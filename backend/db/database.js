@@ -285,6 +285,9 @@ if (!existingGuideCols.includes('wechat')) {
 if (!existingGuideCols.includes('experience_years')) {
   db.exec('ALTER TABLE guides ADD COLUMN experience_years INTEGER DEFAULT 0');
 }
+if (!existingGuideCols.includes('balance')) {
+  db.exec('ALTER TABLE guides ADD COLUMN balance REAL DEFAULT 0');
+}
 
 // 迁移：clubs 表补充字段
 const existingClubCols = db.pragma('table_info(clubs)').map(c => c.name);
@@ -2304,6 +2307,21 @@ CREATE TABLE IF NOT EXISTS platform_transactions (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `);
+
+// 迁移：withdrawal_requests 表补充向导提现字段
+const existingWithdrawalCols = db.pragma('table_info(withdrawal_requests)').map(c => c.name);
+if (!existingWithdrawalCols.includes('guide_id')) {
+  db.exec('ALTER TABLE withdrawal_requests ADD COLUMN guide_id INTEGER');
+}
+if (!existingWithdrawalCols.includes('bank_account')) {
+  db.exec('ALTER TABLE withdrawal_requests ADD COLUMN bank_account TEXT');
+}
+if (!existingWithdrawalCols.includes('bank_name')) {
+  db.exec('ALTER TABLE withdrawal_requests ADD COLUMN bank_name TEXT');
+}
+if (!existingWithdrawalCols.includes('note')) {
+  db.exec('ALTER TABLE withdrawal_requests ADD COLUMN note TEXT');
+}
 
 // ── 2026 Migrations ─────────────────────────────────────────────
 
