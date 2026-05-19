@@ -67,10 +67,19 @@ test.describe('OSM 地名查询', () => {
     await page.waitForLoadState('networkidle');
     // 通过 Alpine.js 调用 geocodeByOSM（mock fetch 测试）
     const hasFn = await page.evaluate(() => {
-      // 检查 Alpine.js 组件数据对象是否有 geocodeByOSM 方法
+      // Alpine v3 优先通过 Alpine.$data 读取，再降级兼容旧内部结构
       const el = document.querySelector('[x-data]');
-      if (!el || !el._x_dataStack) return false;
-      const data = el._x_dataStack[0];
+      if (!el) return false;
+      const data = el._x_dataStack
+        ? el._x_dataStack[0]
+        : (window.Alpine && typeof window.Alpine.$data === 'function' ? window.Alpine.$data(el) : null);
+      if (!data) {
+        if (typeof window.alpineLink === 'function') {
+          const obj = window.alpineLink();
+          return typeof obj?.geocodeByOSM === 'function';
+        }
+        return false;
+      }
       return typeof data.geocodeByOSM === 'function';
     });
     expect(hasFn).toBe(true);

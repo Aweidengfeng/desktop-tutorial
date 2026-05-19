@@ -18,14 +18,21 @@ async function gotoTab(page, tabName) {
 
   const nameMap = {
     home: '首页',
-    explore: '找队友',
+    explore: '探索',
     chat: '聊天',
     me: '我',
   };
   const label = nameMap[tabName] || tabName;
-  let btn = page.locator('nav button').filter({ hasText: label }).first();
+  const labelCandidates = tabName === 'explore' ? [label, '找队友'] : [label];
+  let btn = page.locator(`button[data-tab="${tabName}"]`).first();
   if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
-    btn = page.locator(`nav button:has-text("${label}")`).first();
+    for (const candidate of labelCandidates) {
+      const candidateBtn = page.locator(`nav button:has-text("${candidate}")`).first();
+      if (await candidateBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
+        btn = candidateBtn;
+        break;
+      }
+    }
   }
   await btn.waitFor({ state: 'visible', timeout: 8000 });
   await btn.click();
@@ -69,7 +76,7 @@ async function gotoExploreCategory(page, category) {
  */
 async function loginAsTestUser(page, { username = '13800138000', password = '123456' } = {}) {
   // Open the login modal via the nav-bar button
-  const loginBtn = page.locator('button:has-text("登录")').first();
+  const loginBtn = page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first();
   await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
   await loginBtn.click();
 
