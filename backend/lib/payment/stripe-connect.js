@@ -26,7 +26,8 @@ function getStripeClient() {
 }
 
 function isMock() {
-  return !process.env.STRIPE_SECRET_KEY;
+  const stripeDisabled = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+  return !process.env.STRIPE_SECRET_KEY || stripeDisabled;
 }
 
 /**

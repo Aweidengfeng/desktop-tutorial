@@ -118,7 +118,7 @@ async function apiFetch(url, options = {}) {
             return apiFetch(url, { ...options, headers: newHeaders, _refreshed: true });
           }
         }
-      } catch (_) {}
+      } catch (refreshErr) { console.error('[apiFetch] refresh token failed:', refreshErr && refreshErr.message); }
     }
     localStorage.removeItem('summitlink_token');
     localStorage.removeItem('summitlink_refresh_token');

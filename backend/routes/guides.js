@@ -842,7 +842,7 @@ router.post('/payment/notify/wechat', async (req, res) => {
       const result = await wechatPay.verifyNotify(rawBody, signature, timestamp, nonce);
       verified = !!(result && result.valid);
       notifyPayload = (result && result.payload) || {};
-    } catch (_) { verified = false; }
+    } catch (err) { console.error('[guides/notify/wechat] verifyNotify error:', err.message); verified = false; }
     if (!verified) {
       return res.status(200).send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[SIGN_ERROR]]></return_msg></xml>');
     }
