@@ -27,7 +27,7 @@ async function gotoTab(page, tabName) {
   let btn = page.locator(`button[data-tab="${tabName}"]`).first();
   if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
     for (const candidate of labelCandidates) {
-      const candidateBtn = page.locator(`nav button:has-text("${candidate}")`).first();
+      const candidateBtn = page.locator('nav button').filter({ hasText: candidate }).first();
       if (await candidateBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
         btn = candidateBtn;
         break;
