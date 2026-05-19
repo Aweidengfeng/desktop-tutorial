@@ -471,9 +471,11 @@ router.post('/notify/wechat', express.raw({ type: 'application/json' }), async (
   try {
     const { valid, orderNo } = await verifyCallback('wechat', req.headers, req.body);
     if (!valid) return res.status(400).json({ error: '签名验证失败' });
-    await prisma.$executeRaw`
-      UPDATE payment_orders SET status = 'paid', paid_at = datetime('now') WHERE order_no = ${orderNo}
-    `.catch(() => {});
+    if (orderNo) {
+      await prisma.$executeRaw`
+        UPDATE payment_orders SET status = 'paid', paid_at = datetime('now') WHERE order_no = ${orderNo}
+      `.catch(() => {});
+    }
     res.json({ code: 'SUCCESS' });
   } catch (e) {
     res.status(500).json({ error: e.message });

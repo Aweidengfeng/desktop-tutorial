@@ -3,6 +3,7 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
+const { createPaymentWithProvider } = require('../middleware/payment');
 
 const payLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -16,7 +17,7 @@ const payLimiter = rateLimit({
 router.post('/create', async (req, res) => {
   if (!paymentsEnabled()) return paymentsDisabledResponse(res);
   try {
-    const { amount, method } = req.body;
+    const { amount, method, description, openid, return_url } = req.body;
     const orderNo = 'SL' + Date.now();
     let userId = null;
     const authHeader = req.headers['authorization'];
@@ -32,10 +33,27 @@ router.post('/create', async (req, res) => {
       INSERT INTO orders (user_id, order_no, amount, method, status)
       VALUES (${userId}, ${orderNo}, ${amount}, ${method || 'alipay'}, 'pending')
     `;
+    const selectedMethod = String(method || 'alipay').toLowerCase();
+    const paymentResult = await createPaymentWithProvider(selectedMethod, {
+      orderNo,
+      amount: Math.round(Number(amount || 0) * 100),
+      description: description || 'SummitLink 订单',
+      openid,
+      returnUrl: return_url,
+    }).catch(() => ({
+      provider: selectedMethod,
+      payParams: {
+        mock: true,
+        orderNo,
+      },
+    }));
     res.json({
       success: true,
       orderNo,
-      message: '订单创建成功（演示模式，实际支付需对接SDK）',
+      ...paymentResult,
+      message: paymentResult?.payParams?.mock
+        ? '订单创建成功（mock 模式）'
+        : '订单创建成功',
     });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

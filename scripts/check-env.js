@@ -43,6 +43,18 @@ const OPTIONAL = [
   // 上架费配置
   { key: 'GUIDE_LISTING_FEE_USD', desc: '向导上架费（美元，默认 299）' },
   { key: 'CLUB_LISTING_FEE_USD', desc: '俱乐部上架费（美元，默认 499）' },
+  // 微信支付 / 分账（可选，未配置时自动 mock）
+  { key: 'WECHAT_MCH_ID', desc: '微信商户号（未配则支付走 mock）' },
+  { key: 'WECHAT_APP_ID', desc: '微信 AppID（未配则支付走 mock）' },
+  { key: 'WECHAT_API_V3_KEY', desc: '微信支付 API v3 Key（未配则支付走 mock）' },
+  { key: 'WECHAT_CERT_SERIAL', desc: '微信商户证书序列号（未配则支付走 mock）' },
+  { key: 'WECHAT_PRIVATE_KEY', desc: '微信商户私钥（base64 PEM，未配则支付走 mock）' },
+  { key: 'WECHAT_PLATFORM_PUBLIC_KEY', desc: '微信平台公钥（回调验签可选）' },
+  { key: 'WECHAT_SPLIT_ENABLED', desc: '微信分账开关（默认 false，false 时走 mock）' },
+  // 支付宝（可选，未配置时自动 mock）
+  { key: 'ALIPAY_APP_ID', desc: '支付宝 AppID（未配则支付走 mock）' },
+  { key: 'ALIPAY_PRIVATE_KEY', desc: '支付宝私钥（base64 PKCS8，未配则支付走 mock）' },
+  { key: 'ALIPAY_PUBLIC_KEY', desc: '支付宝公钥（base64，未配则支付走 mock）' },
 ];
 
 let hasError = false;

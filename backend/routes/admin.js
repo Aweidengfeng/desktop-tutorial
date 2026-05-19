@@ -8,6 +8,7 @@ const adminAuth = require('../middleware/adminAuth');
 const devOnly = require('../middleware/devOnly');
 const { GUIDE_CERT_LEVELS, CLUB_CERT_LEVELS } = require('../utils/certLevels');
 const { sendMail, certificationResultEmail } = require('../middleware/mailer');
+const PDFDocument = require('pdfkit');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -827,6 +828,38 @@ router.get('/tracks', adminWriteLimiter, adminAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
 });
 
+// GET /api/admin/tracks/export-pdf — 导出全量轨迹汇总 PDF
+router.get('/tracks/export-pdf', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const tracks = await prisma.$queryRaw`
+      SELECT id, name, peak_name, date, distance, distance_km, elevation, elevation_gain, max_elevation, points, created_at
+      FROM tracks ORDER BY created_at DESC LIMIT 300
+    `;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="tracks_report_${new Date().toISOString().slice(0, 10)}.pdf"`);
+    const doc = new PDFDocument({ size: 'A4', margin: 36 });
+    doc.pipe(res);
+    doc.fontSize(18).text('SummitLink Tracks Summary Report');
+    doc.fontSize(10).fillColor('#666').text(`Generated at: ${new Date().toISOString()}`);
+    doc.fillColor('black').moveDown(0.8);
+
+    tracks.forEach((track, idx) => {
+      if (doc.y > 720) doc.addPage();
+      const points = track.points ? (typeof track.points === 'string' ? JSON.parse(track.points) : track.points) : [];
+      const chart = buildAsciiChartForAdmin(points);
+      doc.fontSize(12).text(`${idx + 1}. #${track.id} ${track.name || track.peak_name || '未命名轨迹'}`);
+      doc.fontSize(10).text(
+        `Date: ${track.date || String(track.created_at || '').slice(0, 10)} | Distance: ${Number(track.distance_km || track.distance || 0).toFixed(2)} km | Gain: ${Number(track.elevation_gain || track.elevation || 0).toFixed(0)} m | Max: ${Number(track.max_elevation || 0).toFixed(0)} m`,
+      );
+      doc.font('Courier').fontSize(8).text(chart);
+      doc.font('Helvetica').moveDown(0.6);
+    });
+    doc.end();
+  } catch (e) {
+    res.status(500).json({ error: '导出失败' });
+  }
+});
+
 // POST /api/admin/tracks/:id/unflag - 解除标记并补发积分
 router.post('/tracks/:id/unflag', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
@@ -1528,3 +1561,18 @@ router.post('/backup', adminWriteLimiter, adminAuth, (req, res) => {
 });
 
 module.exports = router;
+
+function buildAsciiChartForAdmin(points = [], width = 46, height = 6) {
+  const normalized = (points || []).map((p) => Number(p.ele ?? p.alt ?? p[2] ?? 0)).filter((v) => Number.isFinite(v));
+  if (normalized.length < 2) return 'N/A';
+  const min = Math.min(...normalized);
+  const max = Math.max(...normalized);
+  const range = Math.max(max - min, 1);
+  const grid = Array.from({ length: height }, () => Array(width).fill(' '));
+  for (let x = 0; x < width; x += 1) {
+    const idx = Math.min(normalized.length - 1, Math.round((x / (width - 1)) * (normalized.length - 1)));
+    const y = height - 1 - Math.round(((normalized[idx] - min) / range) * (height - 1));
+    grid[y][x] = '*';
+  }
+  return grid.map((line) => line.join('')).join('\n');
+}

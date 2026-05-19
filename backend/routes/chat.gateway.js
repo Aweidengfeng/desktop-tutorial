@@ -25,6 +25,68 @@ async function ensureLocationColumns() {
   locationColumnsEnsured = true;
 }
 
+function socketAuth(socket, next) {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error('auth_required'));
+  try {
+    const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+    const decoded = jwt.verify(token, secret);
+    socket.userId = decoded.id;
+    next();
+  } catch (e) {
+    next(new Error('invalid_token'));
+  }
+}
+
+function bindLocationEvents(socket) {
+  socket.on('join-expedition', (expeditionId) => {
+    if (!expeditionId) return;
+    socket.join(`expedition:${expeditionId}`);
+    console.log(`[Socket] 用户加入远征房间 expedition:${expeditionId}`);
+  });
+
+  socket.on('location-update', async (data) => {
+    const { expeditionId, lat, lng, accuracy, altitude } = data || {};
+    if (!expeditionId || lat === undefined || lng === undefined) return;
+    socket.to(`expedition:${expeditionId}`).emit('member-location', {
+      userId: socket.userId || null,
+      expeditionId,
+      lat,
+      lng,
+      accuracy,
+      altitude,
+      timestamp: Date.now(),
+    });
+    try {
+      await ensureLocationColumns();
+      await prisma.$executeRaw`
+        INSERT INTO user_locations (userId, lat, lng, expeditionId, accuracy, altitude, updatedAt)
+        VALUES (
+          ${socket.userId ? Number(socket.userId) : null},
+          ${Number(lat)},
+          ${Number(lng)},
+          ${Number(expeditionId)},
+          ${Number.isFinite(accuracy) ? accuracy : null},
+          ${Number.isFinite(altitude) ? altitude : null},
+          ${new Date().toISOString()}
+        )
+        ON CONFLICT(userId) DO UPDATE SET
+          lat = excluded.lat,
+          lng = excluded.lng,
+          expeditionId = excluded.expeditionId,
+          accuracy = excluded.accuracy,
+          altitude = excluded.altitude,
+          updatedAt = excluded.updatedAt
+      `;
+    } catch (e) {}
+  });
+
+  socket.on('leave-expedition', (expeditionId) => {
+    if (!expeditionId) return;
+    socket.leave(`expedition:${expeditionId}`);
+  });
+}
+
 function initChatGateway(server) {
   const io = new Server(server, {
     cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -32,17 +94,11 @@ function initChatGateway(server) {
     pingTimeout: 5000,
   });
 
-  io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error('auth_required'));
-    try {
-      const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
-      const decoded = jwt.verify(token, secret);
-      socket.userId = decoded.id;
-      next();
-    } catch (e) {
-      next(new Error('invalid_token'));
-    }
+  io.use(socketAuth);
+  const expeditionTracking = io.of('/expedition-tracking');
+  expeditionTracking.use(socketAuth);
+  expeditionTracking.on('connection', (socket) => {
+    bindLocationEvents(socket);
   });
 
   io.on('connection', (socket) => {
@@ -154,55 +210,7 @@ function initChatGateway(server) {
       socket.to(`group:${chat_id}`).emit('group:typing', { userId: uid, is_typing });
     });
 
-    // 位置追踪：加入远征房间
-    socket.on('join-expedition', (expeditionId) => {
-      if (!expeditionId) return;
-      socket.join(`expedition:${expeditionId}`);
-      console.log(`[Socket] 用户加入远征房间 expedition:${expeditionId}`);
-    });
-
-    // 位置追踪：广播位置更新
-    socket.on('location-update', async (data) => {
-      const { expeditionId, lat, lng, accuracy, altitude } = data || {};
-      if (!expeditionId || lat === undefined || lng === undefined) return;
-      socket.to(`expedition:${expeditionId}`).emit('member-location', {
-        userId: socket.userId || null,
-        expeditionId,
-        lat,
-        lng,
-        accuracy,
-        altitude,
-        timestamp: Date.now(),
-      });
-      try {
-        await ensureLocationColumns();
-        await prisma.$executeRaw`
-          INSERT INTO user_locations (userId, lat, lng, expeditionId, accuracy, altitude, updatedAt)
-          VALUES (
-            ${socket.userId ? Number(socket.userId) : null},
-            ${Number(lat)},
-            ${Number(lng)},
-            ${Number(expeditionId)},
-            ${Number.isFinite(accuracy) ? accuracy : null},
-            ${Number.isFinite(altitude) ? altitude : null},
-            ${new Date().toISOString()}
-          )
-          ON CONFLICT(userId) DO UPDATE SET
-            lat = excluded.lat,
-            lng = excluded.lng,
-            expeditionId = excluded.expeditionId,
-            accuracy = excluded.accuracy,
-            altitude = excluded.altitude,
-            updatedAt = excluded.updatedAt
-        `;
-      } catch (e) {}
-    });
-
-    // 离开远征房间
-    socket.on('leave-expedition', (expeditionId) => {
-      if (!expeditionId) return;
-      socket.leave(`expedition:${expeditionId}`);
-    });
+    bindLocationEvents(socket);
   });
 
   return io;

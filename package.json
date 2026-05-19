@@ -65,6 +65,7 @@
       "**/tests/sos.test.js",
       "**/backend/tests/fix-duplicate-order-no.test.js",
       "**/backend/tests/payment-degraded.test.js",
+      "**/backend/tests/payment-cn-framework.test.js",
       "**/backend/tests/security.test.js",
       "**/backend/tests/sentry-pii.test.js",
       "**/backend/tests/concurrency.test.js",
