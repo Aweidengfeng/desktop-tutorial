@@ -482,4 +482,77 @@ router.post('/notify/wechat', express.raw({ type: 'application/json' }), async (
   }
 });
 
+// POST /api/payment/wechat/qrcode — 获取微信 NATIVE 支付二维码（适用于非微信内浏览器）
+// 返回 { codeUrl, orderId, expireAt }；mock 模式返回 { codeUrl: 'weixin://...', mock: true }
+router.post('/wechat/qrcode', auth, async (req, res) => {
+  try {
+    const wechatPay = require('../lib/payment/wechat-pay');
+    const { order_type = 'expedition', order_id, amount, description } = req.body || {};
+    if (!order_id || !amount || amount <= 0) {
+      return res.status(400).json({ error: '订单信息不完整' });
+    }
+    const orderNo = `WX${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const totalFee = Math.round(Number(amount) * 100); // 转为分
+    const notifyUrl = process.env.PAYMENT_NOTIFY_URL
+      || `${process.env.API_BASE || 'https://summitlink.app'}/api/payment/notify/wechat`;
+    const expireAt = new Date(Date.now() + 120 * 1000).toISOString(); // 120 秒有效期
+
+    // 记录支付意向
+    await prisma.$executeRaw`
+      INSERT INTO payment_orders (order_no, user_id, order_type, order_ref_id, amount, status, provider, created_at)
+      VALUES (${orderNo}, ${req.user.id}, ${order_type}, ${String(order_id)}, ${amount}, ${'pending'}, ${'wechat'}, datetime('now'))
+      ON CONFLICT DO NOTHING
+    `.catch((e) => console.warn('[payment/wechat/qrcode] insert payment_orders failed:', e.message));
+
+    const result = await wechatPay.createNativeOrder({
+      body: description || 'SummitLink 订单',
+      outTradeNo: orderNo,
+      totalFee,
+      notifyUrl,
+    });
+
+    res.json({
+      codeUrl: result.codeUrl,
+      orderId: orderNo,
+      expireAt,
+      mock: result.mock || false,
+    });
+  } catch (e) {
+    console.error('[payment/wechat/qrcode]', e.message);
+    res.status(500).json({ error: '生成微信二维码失败' });
+  }
+});
+
+// GET /api/payment/wechat/query?orderId=xxx — 轮询微信支付状态
+router.get('/wechat/query', auth, async (req, res) => {
+  try {
+    const wechatPay = require('../lib/payment/wechat-pay');
+    const { orderId } = req.query;
+    if (!orderId) return res.status(400).json({ error: '缺少 orderId 参数' });
+
+    // 先从本地 DB 查询
+    const rows = await prisma.$queryRaw`
+      SELECT status FROM payment_orders WHERE order_no = ${orderId} AND user_id = ${req.user.id}
+    `.catch(() => []);
+    if (rows.length > 0 && rows[0].status === 'paid') {
+      return res.json({ paid: true, status: 'paid', orderId });
+    }
+
+    // 向微信查询（mock 模式直接返回）
+    const result = await wechatPay.queryOrder({ outTradeNo: orderId });
+    const paid = result.tradeState === 'SUCCESS';
+
+    if (paid) {
+      await prisma.$executeRaw`
+        UPDATE payment_orders SET status = 'paid', paid_at = datetime('now') WHERE order_no = ${orderId}
+      `.catch(() => {});
+    }
+
+    res.json({ paid, status: result.tradeState, orderId, mock: result.mock || false });
+  } catch (e) {
+    console.error('[payment/wechat/query]', e.message);
+    res.status(500).json({ error: '查询支付状态失败' });
+  }
+});
+
 module.exports = router;

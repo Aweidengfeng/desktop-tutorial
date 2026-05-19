@@ -55,6 +55,14 @@ const OPTIONAL = [
   { key: 'ALIPAY_APP_ID', desc: '支付宝 AppID（未配则支付走 mock）' },
   { key: 'ALIPAY_PRIVATE_KEY', desc: '支付宝私钥（base64 PKCS8，未配则支付走 mock）' },
   { key: 'ALIPAY_PUBLIC_KEY', desc: '支付宝公钥（base64，未配则支付走 mock）' },
+  // 地图相关（PR-34 新增）
+  { key: 'OPENWEATHER_API_KEY', desc: '天气 API Key（未配则天气功能降级）' },
+  // 向导提现 / Stripe Connect（PR-39 新增）
+  { key: 'STRIPE_CONNECT_CLIENT_ID', desc: 'Stripe Connect 平台 Client ID（向导提现转账）' },
+  // 微信 H5 QR 码（PR-42 新增）
+  { key: 'PAYMENT_NOTIFY_URL', desc: '支付回调通知 URL（完整 HTTPS 地址）' },
+  // 部署区域
+  { key: 'DEPLOY_REGION', desc: '部署区域（cn / us，影响支付提供商默认值）' },
 ];
 
 let hasError = false;
@@ -95,10 +103,12 @@ OPTIONAL.forEach(({ key, desc }) => {
 console.log('');
 
 if (hasError && process.env.NODE_ENV === 'production') {
-  console.error('💥 必需环境变量缺失，生产环境禁止启动！\n');
+  const count = REQUIRED.filter(({ key }) => !process.env[key]).length;
+  console.error(`\n❌ 发现 ${count} 个必须变量未配置，服务可能无法正常启动！\n`);
   process.exit(1);
 } else if (hasError) {
-  console.warn('⚠️  开发模式：跳过必需变量检查\n');
+  const count = REQUIRED.filter(({ key }) => !process.env[key]).length;
+  console.warn(`\n⚠️  开发模式：发现 ${count} 个必须变量未配置（允许继续）\n`);
 } else {
-  console.log('✅ 环境变量检查通过，启动服务...\n');
+  console.log('\n✅ 环境变量检查完毕\n');
 }

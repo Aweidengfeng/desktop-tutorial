@@ -181,6 +181,59 @@ async function verifyNotify(rawBody, signature, timestamp, nonce) {
   };
 }
 
+async function createNativeOrder({ body, outTradeNo, totalFee, notifyUrl }) {
+  const config = getConfig();
+  const missing = getMissingRequired(config);
+  if (missing.length > 0) {
+    warnMock('createNativeOrder', missing);
+    return {
+      mock: true,
+      codeUrl: 'weixin://wxpay/bizpayurl?pr=mock',
+      outTradeNo: outTradeNo || `mock_${Date.now()}`,
+    };
+  }
+  const path = '/v3/pay/transactions/native';
+  const requestBody = {
+    appid: config.appId,
+    mchid: config.mchId,
+    description: body || 'SummitLink 订单',
+    out_trade_no: outTradeNo,
+    notify_url: notifyUrl,
+    amount: { total: Number(totalFee), currency: 'CNY' },
+  };
+  const response = await callWechatApi('POST', path, requestBody, config);
+  return {
+    mock: false,
+    codeUrl: response.code_url,
+    outTradeNo,
+    raw: response,
+  };
+}
+
+async function queryOrder({ outTradeNo }) {
+  const config = getConfig();
+  const missing = getMissingRequired(config);
+  if (missing.length > 0) {
+    warnMock('queryOrder', missing);
+    return {
+      mock: true,
+      tradeState: 'SUCCESS',
+      outTradeNo,
+    };
+  }
+  // Sanitize outTradeNo: only allow alphanumeric and common order-no chars to prevent SSRF
+  const safeOrderNo = String(outTradeNo || '').replace(/[^A-Za-z0-9_-]/g, '');
+  if (!safeOrderNo) throw new Error('无效的订单号格式');
+  const path = `/v3/pay/transactions/out-trade-no/${safeOrderNo}?mchid=${config.mchId}`;
+  const response = await callWechatApi('GET', path, null, config);
+  return {
+    mock: false,
+    tradeState: response.trade_state || 'NOTPAY',
+    outTradeNo,
+    raw: response,
+  };
+}
+
 async function createRefund({ outTradeNo, outRefundNo, totalFee, refundFee }) {
   const config = getConfig();
   const missing = getMissingRequired(config);
@@ -218,6 +271,8 @@ async function createRefund({ outTradeNo, outRefundNo, totalFee, refundFee }) {
 
 module.exports = {
   createOrder,
+  createNativeOrder,
+  queryOrder,
   verifyNotify,
   createRefund,
   getConfig,

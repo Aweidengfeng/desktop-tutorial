@@ -130,6 +130,114 @@ router.get('/revenue/trend', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/admin/stats/revenue?period=7d|30d|90d — 按日营收时间序列（含 provider）
+router.get('/revenue', adminAuth, async (req, res) => {
+  try {
+    const periodMap = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = periodMap[req.query.period] || 30;
+    // 使用 JS Date 计算截止日期，兼容 SQLite 和 PostgreSQL
+    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const trend = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date,
+             COALESCE(SUM(amount), 0) as amount,
+             COALESCE(provider, 'unknown') as provider
+      FROM payment_orders
+      WHERE status = 'paid'
+        AND created_at >= ${cutoff}
+      GROUP BY DATE(created_at), provider
+      ORDER BY date ASC
+    `.catch(() => []);
+    res.json(trend.map(r => ({ date: r.date, amount: Number(r.amount), provider: r.provider })));
+  } catch (e) {
+    res.status(500).json({ error: '获取营收时间序列失败' });
+  }
+});
+
+// GET /api/admin/stats/users?period=7d|30d|90d — 按日新增用户数
+router.get('/users', adminAuth, async (req, res) => {
+  try {
+    const periodMap = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = periodMap[req.query.period] || 30;
+    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const trend = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date, COUNT(*) as count
+      FROM users
+      WHERE created_at >= ${cutoff}
+        AND deleted_at IS NULL
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `.catch(() => []);
+    res.json(trend.map(r => ({ date: r.date, count: Number(r.count) })));
+  } catch (e) {
+    res.status(500).json({ error: '获取用户增长失败' });
+  }
+});
+
+// GET /api/admin/stats/withdrawals — 提现申请统计（待审批/已审批/拒绝）
+router.get('/withdrawals', adminAuth, async (req, res) => {
+  try {
+    const summary = await prisma.$queryRaw`
+      SELECT status, COUNT(*) as count, COALESCE(SUM(amount), 0) as total_amount
+      FROM withdrawal_requests
+      GROUP BY status
+    `.catch(() => []);
+    const requests = await prisma.$queryRaw`
+      SELECT id, owner_type, owner_id, amount, fee, actual_amount, account_type, status,
+             created_at, processed_at, note
+      FROM withdrawal_requests
+      ORDER BY created_at DESC
+      LIMIT 50
+    `.catch(() => []);
+    const counts = { pending: 0, approved: 0, rejected: 0 };
+    const amounts = { pending: 0, approved: 0, rejected: 0 };
+    summary.forEach(r => {
+      const s = r.status;
+      if (counts[s] !== undefined) {
+        counts[s] = Number(r.count);
+        amounts[s] = Number(r.total_amount);
+      }
+    });
+    res.json({
+      pending: counts.pending,
+      approved: counts.approved,
+      rejected: counts.rejected,
+      amounts,
+      requests: requests.map(r => ({ ...r, amount: Number(r.amount), fee: Number(r.fee || 0), actual_amount: Number(r.actual_amount || 0) })),
+    });
+  } catch (e) {
+    res.status(500).json({ error: '获取提现统计失败' });
+  }
+});
+
+// GET /api/admin/stats/sos — SOS 告警统计（按月）
+router.get('/sos', adminAuth, async (req, res) => {
+  try {
+    // 最近告警列表（两个 DB 都支持）
+    const recent = await prisma.$queryRaw`
+      SELECT id, user_id, lat, lng, altitude, message, status, created_at
+      FROM sos_alerts
+      ORDER BY created_at DESC
+      LIMIT 20
+    `.catch(() => []);
+    // 按月汇总：用 JS 处理（避免 SQLite strftime vs PostgreSQL TO_CHAR 差异）
+    const all = await prisma.$queryRaw`
+      SELECT created_at, status FROM sos_alerts ORDER BY created_at DESC
+    `.catch(() => []);
+    const monthMap = {};
+    all.forEach(r => {
+      const d = new Date(r.created_at);
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const key = `${month}|${r.status}`;
+      if (!monthMap[key]) monthMap[key] = { month, status: r.status, count: 0 };
+      monthMap[key].count++;
+    });
+    const monthly = Object.values(monthMap).sort((a, b) => b.month.localeCompare(a.month));
+    res.json({ monthly, recent });
+  } catch (e) {
+    res.status(500).json({ error: '获取 SOS 统计失败' });
+  }
+});
+
 // GET /api/admin/stats/pending — 待处理事项
 router.get('/pending', adminAuth, async (req, res) => {
   try {

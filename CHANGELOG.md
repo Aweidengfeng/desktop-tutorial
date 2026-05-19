@@ -5,6 +5,21 @@ All notable changes to SummitLink are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
+## [Unreleased]
+### Added - PR-42
+- E2E 测试：支付/提现/GDPR/地图流程（`tests/e2e/payment.spec.js` / `withdrawal.spec.js` / `gdpr.spec.js` / `map.spec.js`）
+- 管理员统计看板：`GET /api/admin/stats/revenue?period=7d|30d|90d`、`/users`、`/withdrawals`、`/sos` 时间序列接口
+- 微信支付 H5 二维码（`POST /api/payment/wechat/qrcode`，含 mock 模式）+ 轮询状态（`GET /api/payment/wechat/query`）
+- `backend/lib/payment/wechat-pay.js` 新增 `createNativeOrder` / `queryOrder` 函数
+- `deploy/tencent/docker-compose.yml` 新增 `OPENWEATHER_API_KEY` / `AMAP_SECURITY_CODE` 环境变量透传
+- `scripts/check-env.js` 新增 PR-42 可选变量，统一最终输出格式
+
+### Fixed - PR-42
+- 腾讯云 Dockerfile 构建时 Prisma generate 前增加占位 `DATABASE_URL` 避免 schema 校验失败
+- 健康检查重试改为 12 × 10s = 120s，失败时输出 `docker compose logs backend`
+- 腾讯云 docker-compose `start_period` 从 60s 提升至 90s，为 Prisma migration 预留更多时间
+- `backend/utils/maskSensitive.js` 新增 `pk_...` Stripe 公钥脱敏及手机号检测
+
 ## [1.4.0] - 2026-05-17
 
 ### Added

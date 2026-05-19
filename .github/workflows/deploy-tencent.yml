@@ -91,19 +91,32 @@ jobs:
             docker compose pull postgres "$NGINX_SERVICE" --quiet || true
             docker compose up -d --build --remove-orphans
 
-            # Wait for backend to be healthy (up to 60s)
+            # Wait for backend to be healthy (up to 120s, 12 retries x 10s)
             echo "⏳ Waiting for backend health check..."
+            HEALTHY=false
             for i in $(seq 1 12); do
               if curl -sf http://localhost:8080/api/health > /dev/null 2>&1; then
-                echo "✅ Health check passed."
-                exit 0
+                echo "✅ Health check passed on attempt $i."
+                HEALTHY=true
+                break
               fi
-              echo "  attempt $i/12 — sleeping 5s..."
-              sleep 5
+              echo "  attempt $i/12 — sleeping 10s..."
+              sleep 10
             done
-            echo "❌ Health check failed after 60s"
-            docker compose logs backend --tail=50
-            exit 1
+            if [ "$HEALTHY" != "true" ]; then
+              echo "❌ Health check failed after 120s"
+              docker compose logs backend --tail=50
+              exit 1
+            fi
+
+            # Smoke test: /api/config/map must return 200
+            MAP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/config/map)
+            if [ "$MAP_CODE" != "200" ]; then
+              echo "❌ Smoke test failed: /api/config/map returned HTTP $MAP_CODE"
+              docker compose logs backend --tail=50
+              exit 1
+            fi
+            echo "✅ Smoke test passed: /api/config/map → 200"
 
       - name: Verify deployment health
         uses: appleboy/ssh-action@v1

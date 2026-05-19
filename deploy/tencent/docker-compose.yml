@@ -34,6 +34,8 @@ services:
       ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
       MAP_PROVIDER: ${MAP_PROVIDER:-amap}
       AMAP_KEY: ${AMAP_KEY:-}
+      AMAP_SECURITY_CODE: ${AMAP_SECURITY_CODE:-}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-cos}
       COS_SECRET_ID: ${TENCENT_COS_SECRET_ID:-}
       COS_SECRET_KEY: ${TENCENT_COS_SECRET_KEY:-}
@@ -57,7 +59,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
     logging:
       driver: json-file
       options:

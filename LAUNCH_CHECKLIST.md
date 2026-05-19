@@ -109,7 +109,7 @@
 
 ## 十、测试
 
-- [x] **E2E 测试框架（Playwright）** — `tests/e2e.spec.js`、`tests/weather-camps.spec.js`、`tests/commercial-peaks.spec.js`、`tests/e2e-new-features.spec.js` 已存在 ｜ 已完成（见 PR #22, #44, #45, #49）
+- [x] **E2E 测试框架（Playwright）** — `tests/e2e.spec.js`、`tests/weather-camps.spec.js`、`tests/commercial-peaks.spec.js`、`tests/e2e-new-features.spec.js`、`tests/e2e/payment.spec.js`、`tests/e2e/withdrawal.spec.js`、`tests/e2e/gdpr.spec.js`、`tests/e2e/map.spec.js` 已存在 ｜ 已完成（见 PR #22, #44, #45, #49, PR-42）
 - [x] **CI 自动运行测试** — `.github/workflows/test.yml` 在每次 push/PR 时运行 API 测试 + E2E 测试；CI 步骤包含安装后端依赖 ｜ 已完成
 - [x] **API 集成测试** — `tests/api.test.js` 已存在，覆盖主要接口；新增 `tests/api-new-features.test.js`（jest + supertest + in-memory SQLite）覆盖 PR #47+#48 全部 12 项新功能，共 37 个用例 ｜ 已完成
 - [x] **新功能 API/E2E 覆盖** — PR #47 + PR #48 所有新接口（注册同意、AI 开关、订单状态机、可疑轨迹、内容审核、天气缓存、审核流转、全局搜索、登顶窗口热力、电子护照、通知、请求 ID）均有测试覆盖 ｜ 已完成（见 PR #49）

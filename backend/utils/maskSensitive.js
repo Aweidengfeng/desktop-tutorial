@@ -70,13 +70,21 @@ function maskPhone(phone) {
  */
 function maskSensitive(str) {
   if (!str || typeof str !== 'string') return str;
-  // JWT token 格式（三段 base64 以点分隔）
+  // JWT token 格式（三段 base64url 以点分隔）
   if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(str.trim())) {
     return maskJwt(str.trim());
   }
-  // Stripe secret key 格式
+  // Stripe secret key 格式（sk_test_ / sk_live_）
   if (/^sk_(test|live)_/.test(str)) {
     return str.slice(0, 10) + '***';
+  }
+  // Stripe publishable key 格式（pk_test_ / pk_live_）
+  if (/^pk_(test|live)_/.test(str)) {
+    return str.slice(0, 10) + '***';
+  }
+  // 中国大陆手机号（11位，以1开头）
+  if (/^1[3-9]\d{9}$/.test(str.replace(/\D/g, ''))) {
+    return maskPhone(str);
   }
   // 通用：保留前4后4
   return maskString(str);
