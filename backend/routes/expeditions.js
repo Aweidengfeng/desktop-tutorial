@@ -22,6 +22,9 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const devOnly = require('../middleware/devOnly');
 const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
+const { detectRegion } = require('../lib/region');
+const wechatPay = require('../lib/payment/wechat-pay');
+const { paymentLimiter } = require('../middleware/rateLimits');
 
 // 下单限流：每分钟最多20次，防止刷单
 const orderLimiter = rateLimit({
@@ -120,6 +123,70 @@ router.post('/orders/:id/mock-pay', devOnly, auth, async (req, res) => {
     res.json({ success: true, status: 'paid', order_no: order.order_no });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ── 支付回调路由（放在 /:id 之前，防止被当作 id 解析）──────────
+
+// POST /api/expeditions/payment/notify/wechat — 微信支付回调
+router.post('/payment/notify/wechat', async (req, res) => {
+  try {
+    const rawBody = req.body;
+    const signature = req.headers['wechatpay-signature'] || '';
+    const timestamp = req.headers['wechatpay-timestamp'] || '';
+    const nonce = req.headers['wechatpay-nonce'] || '';
+    let verified = false;
+    let notifyPayload = {};
+    try {
+      const result = await wechatPay.verifyNotify(rawBody, signature, timestamp, nonce);
+      verified = !!(result && result.valid);
+      notifyPayload = (result && result.payload) || {};
+    } catch (err) { console.error('[expeditions/notify/wechat] verifyNotify error:', err.message); verified = false; }
+    if (!verified) {
+      return res.status(200).send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[SIGN_ERROR]]></return_msg></xml>');
+    }
+    const outTradeNo = notifyPayload.out_trade_no || null;
+    if (outTradeNo) {
+      const now = new Date().toISOString();
+      await prisma.$executeRaw`
+        UPDATE expedition_orders SET status = 'paid', paid_at = ${now}
+        WHERE order_no = ${outTradeNo} AND status = 'pending_payment'
+      `;
+    }
+    res.status(200).send('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
+  } catch (e) {
+    res.status(200).send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[SERVER_ERROR]]></return_msg></xml>');
+  }
+});
+
+// POST /api/expeditions/payment/notify/stripe — Stripe webhook 回调
+router.post('/payment/notify/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+  const webhookSecret = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+  if (!stripeKey) return res.status(200).json({ received: true });
+  try {
+    const stripe = require('stripe')(stripeKey);
+    let event;
+    if (webhookSecret) {
+      const sig = req.headers['stripe-signature'];
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    }
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object;
+      const orderNo = pi.metadata && pi.metadata.orderNo;
+      if (orderNo) {
+        const now = new Date().toISOString();
+        await prisma.$executeRaw`
+          UPDATE expedition_orders SET status = 'paid', paid_at = ${now}
+          WHERE order_no = ${orderNo} AND status = 'pending_payment'
+        `;
+      }
+    }
+    res.status(200).json({ received: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 });
 
@@ -464,6 +531,72 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
   } catch (e) {
     if (e && e.status === 409) return res.status(409).json({ error: e.message });
     if (e && e.status === 404) return res.status(404).json({ error: e.message });
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/expeditions/:id/book — 区域感知支付唤起（在下单后调用）
+router.post('/:id/book', paymentLimiter, auth, async (req, res) => {
+  try {
+    const expId = parseInt(req.params.id);
+    const { order_no, openid } = req.body || {};
+    if (!order_no) return res.status(400).json({ error: '缺少 order_no 参数' });
+
+    const [order] = await prisma.$queryRaw`
+      SELECT * FROM expedition_orders WHERE order_no = ${order_no} AND user_id = ${req.user.id}
+    `;
+    if (!order) return res.status(404).json({ error: '订单不存在' });
+    if (order.status === 'paid') return res.json({ provider: 'paid', message: '订单已支付' });
+    if (order.status !== 'pending_payment') {
+      return res.status(400).json({ error: `订单状态为 ${order.status}，无法发起支付` });
+    }
+
+    const [expedition] = await prisma.$queryRaw`SELECT title FROM expeditions WHERE id = ${expId}`;
+    const description = expedition ? expedition.title : 'SummitLink 远征';
+    const amountFen = Math.round(Number(order.total || 0) * 100); // 元→分
+
+    const region = detectRegion(req);
+    const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
+    const stripeDisabled = String(process.env.STRIPE_DISABLED || '').toLowerCase() === 'true';
+
+    // CN 区域 → 微信支付
+    if (region === 'cn') {
+      const notifyUrl = `${process.env.API_BASE || 'https://summitlink.app'}/api/expeditions/payment/notify/wechat`;
+      const payParams = await wechatPay.createOrder({
+        body: description,
+        outTradeNo: order.order_no,
+        totalFee: amountFen,
+        notifyUrl,
+        openid: openid || null,
+      });
+      return res.json({ provider: 'wechat', payParams });
+    }
+
+    // 非 CN + Stripe 已配置 → Stripe PaymentIntent
+    if (stripeKey && !stripeDisabled) {
+      try {
+        const stripe = require('stripe')(stripeKey);
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountFen,
+          currency: 'cny',
+          metadata: {
+            orderNo: order.order_no,
+            expeditionId: String(expId),
+            userId: String(req.user.id),
+          },
+          description,
+        });
+        return res.json({ provider: 'stripe', clientSecret: paymentIntent.client_secret });
+      } catch (stripeErr) {
+        console.error('[expeditions/book] Stripe error:', stripeErr.message);
+        // 降级到 mock
+      }
+    }
+
+    // 降级 mock
+    const mockOrderId = 'mock_' + order.order_no;
+    return res.json({ provider: 'mock', orderId: mockOrderId });
+  } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
 });

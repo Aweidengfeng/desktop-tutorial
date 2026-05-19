@@ -98,8 +98,37 @@ async function apiFetch(url, options = {}) {
     }
     throw new Error('服务暂时不可用，请稍后重试');
   }
+  // 401 — 尝试用 refreshToken 换新 accessToken，然后重试一次
+  if (res.status === 401 && !options._refreshed) {
+    const refreshToken = localStorage.getItem('summitlink_refresh_token');
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData.token) {
+            localStorage.setItem('summitlink_token', refreshData.token);
+            if (refreshData.refreshToken) localStorage.setItem('summitlink_refresh_token', refreshData.refreshToken);
+            // 重试原请求（标记 _refreshed 防止无限递归）
+            const newHeaders = { ...headers, Authorization: 'Bearer ' + refreshData.token };
+            return apiFetch(url, { ...options, headers: newHeaders, _refreshed: true });
+          }
+        }
+      } catch (refreshErr) { console.error('[apiFetch] refresh token failed:', refreshErr && refreshErr.message); }
+    }
+    localStorage.removeItem('summitlink_token');
+    localStorage.removeItem('summitlink_refresh_token');
+    // 触发全局登出事件
+    window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
+    throw new Error('登录已过期，请重新登录');
+  }
   if (res.status === 401) {
     localStorage.removeItem('summitlink_token');
+    localStorage.removeItem('summitlink_refresh_token');
     // 触发全局登出事件
     window.dispatchEvent(new CustomEvent('summitlink:session-expired'));
     throw new Error('登录已过期，请重新登录');
@@ -2165,11 +2194,51 @@ function alpineLink() {
         }
       } catch(e) {}
     },
-    async payExpeditionOrder(orderId) {
+    async payExpeditionOrder(orderId, orderNo, expeditionId) {
       try {
-        const res = await fetch(`/api/orders/${orderId}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
-        if (res.ok) { this.showToast('支付成功'); this.loadMyOrders(); }
-        else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+        // 若没有 orderNo，退回旧流程
+        if (!orderNo || !expeditionId) {
+          const res = await fetch(`/api/orders/${orderId}/pay`, { method: 'POST', headers: this.getAuthHeaders() });
+          if (res.ok) { this.showToast('支付成功'); this.loadMyOrders(); }
+          else { const d = await res.json(); this.showToast(d.error || '支付失败', 'error'); }
+          return;
+        }
+        // 区域感知支付唤起
+        const bookRes = await fetch(`/api/expeditions/${expeditionId}/book`, {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ order_no: orderNo }),
+        });
+        const bookData = await bookRes.json();
+        if (!bookRes.ok) { this.showToast(bookData.error || '支付发起失败', 'error'); return; }
+
+        if (bookData.provider === 'wechat') {
+          // 微信支付唤起
+          if (window.wx && window.wx.chooseWXPay && bookData.payParams && !bookData.payParams.mock) {
+            window.wx.chooseWXPay({
+              ...bookData.payParams,
+              success: () => { this.showToast('支付成功 🎉'); this.loadMyOrders(); },
+              fail: (e) => this.showToast((e && e.errMsg) || '支付取消', 'error'),
+            });
+          } else if (bookData.payParams && bookData.payParams.mock) {
+            this.showToast('支付成功（mock 模式）🎉');
+            this.loadMyOrders();
+          } else {
+            this.showToast('请在微信内打开以完成支付', 'warning');
+          }
+        } else if (bookData.provider === 'stripe') {
+          // Stripe 支付
+          const stripe = await this.ensureStripeLoaded();
+          if (!stripe) { this.showToast('Stripe 支付暂不可用', 'error'); return; }
+          const { error } = await stripe.confirmCardPayment(bookData.clientSecret);
+          if (error) { this.showToast(error.message || '支付失败', 'error'); return; }
+          this.showToast('支付成功 🎉');
+          this.loadMyOrders();
+        } else {
+          // mock 模式
+          this.showToast('支付成功（测试模式）🎉');
+          this.loadMyOrders();
+        }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async cancelExpeditionOrder(orderId) {
@@ -2996,17 +3065,134 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async doAppleLogin() {
-      // Mock: generate a fake identity token
-      const fakeToken = 'apple_mock_' + Date.now();
+      // 未配置 Apple Client ID 时降级提示
+      if (!window.__APPLE_CLIENT_ID__) {
+        this.showToast('Apple 登录暂不可用', 'error');
+        return;
+      }
       try {
-        const res = await fetch('/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: fakeToken }) });
+        // Capacitor 原生场景
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+          try {
+            const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+            const result = await SignInWithApple.authorize({
+              clientId: window.__APPLE_CLIENT_ID__,
+              redirectURI: window.location.origin,
+              scopes: 'email name',
+            });
+            const idToken = result && result.response && result.response.identityToken;
+            const userObj = result && result.response && result.response.user;
+            if (!idToken) { this.showToast('Apple 登录失败', 'error'); return; }
+            const res = await fetch('/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: idToken, user: userObj }) });
+            const data = await res.json();
+            if (!res.ok) { this.showToast(data.error || 'Apple 登录失败', 'error'); return; }
+            this._handleLoginSuccess(data);
+            return;
+          } catch(capErr) { console.error('[apple] capacitor error', capErr); }
+        }
+        // Web 场景：加载 Apple JS SDK
+        if (!window.AppleID) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+        window.AppleID.auth.init({
+          clientId: window.__APPLE_CLIENT_ID__,
+          scope: 'name email',
+          redirectURI: window.location.origin,
+          usePopup: true,
+        });
+        const appleResult = await window.AppleID.auth.signIn();
+        const idToken = appleResult && appleResult.authorization && appleResult.authorization.id_token;
+        const user = appleResult && appleResult.user;
+        if (!idToken) { this.showToast('Apple 登录失败，未获取到 id_token', 'error'); return; }
+        const res = await fetch('/api/auth/apple', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identityToken: idToken, user }) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || 'Apple 登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
-      } catch(e) { this.showToast('网络错误', 'error'); }
+      } catch(e) {
+        if (e && e.error === 'popup_closed_by_user') return; // 用户主动关闭
+        console.error('[apple login]', e);
+        this.showToast('Apple 登录失败，请重试', 'error');
+      }
+    },
+    async doGoogleLogin() {
+      if (!window.__GOOGLE_CLIENT_ID__) {
+        this.showToast('Google 登录暂不可用', 'error');
+        return;
+      }
+      try {
+        // 加载 Google Identity Services (GIS)
+        if (!window.google || !window.google.accounts) {
+          await new Promise((resolve, reject) => {
+            if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+              // Script tag exists but SDK not ready yet — poll for up to 5s
+              let elapsed = 0;
+              const check = setInterval(() => {
+                elapsed += 100;
+                if (window.google && window.google.accounts) { clearInterval(check); resolve(); }
+                else if (elapsed >= 5000) { clearInterval(check); reject(new Error('Google SDK 加载超时')); }
+              }, 100);
+              return;
+            }
+            const s = document.createElement('script');
+            s.src = 'https://accounts.google.com/gsi/client';
+            s.async = true;
+            s.onerror = () => reject(new Error('Google SDK 加载失败'));
+            s.onload = () => {
+              let elapsed = 0;
+              const check = setInterval(() => {
+                elapsed += 100;
+                if (window.google && window.google.accounts) { clearInterval(check); resolve(); }
+                else if (elapsed >= 5000) { clearInterval(check); reject(new Error('Google SDK 初始化超时')); }
+              }, 100);
+            };
+            document.head.appendChild(s);
+          });
+        }
+        const credential = await new Promise((resolve, reject) => {
+          window.google.accounts.id.initialize({
+            client_id: window.__GOOGLE_CLIENT_ID__,
+            callback: (response) => {
+              if (response && response.credential) resolve(response.credential);
+              else reject(new Error('未获取到 Google credential'));
+            },
+            cancel_on_tap_outside: true,
+          });
+          window.google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+              // One Tap 不可用时，使用 OAuth2 access token 流
+              try {
+                const tokenClient = window.google.accounts.oauth2.initTokenClient({
+                  client_id: window.__GOOGLE_CLIENT_ID__,
+                  scope: 'openid email profile',
+                  callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) resolve(tokenResponse.access_token);
+                    else reject(new Error('Google 授权失败'));
+                  },
+                  error_callback: (err) => reject(new Error((err && err.message) || 'Google 授权错误')),
+                });
+                tokenClient.requestAccessToken({ prompt: 'select_account' });
+              } catch (e) { reject(e); }
+            }
+          });
+        });
+        const res = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: credential }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || 'Google 登录失败', 'error'); return; }
+        this._handleLoginSuccess(data);
+      } catch(e) {
+        console.error('[google login]', e);
+        this.showToast('Google 登录失败，请重试', 'error');
+      }
     },
     _handleLoginSuccess(data) {
       this.authToken = data.token;
+      if (data.refreshToken) localStorage.setItem('summitlink_refresh_token', data.refreshToken);
       this.currentUser = data.user;
       localStorage.setItem('summitlink_token', data.token);
       this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
@@ -4283,6 +4469,18 @@ function alpineLink() {
               this.openTrackDetail(track);
             }
           } catch(e) {}
+        });
+      }
+      // Handle payment result URL: /summitlink?payment=success&orderId=xxx
+      const paymentResult = urlParams.get('payment');
+      if (paymentResult === 'success') {
+        const payOrderId = urlParams.get('orderId');
+        this.$nextTick(() => {
+          this.showToast('支付成功！订单' + (payOrderId ? ' #' + payOrderId : '') + ' 已完成 🎉');
+          // 自动刷新预约列表
+          if (this.authToken) {
+            setTimeout(() => { try { this.loadMyOrders(); } catch(_) {} }, 500);
+          }
         });
       }
       this.initPushNotifications();

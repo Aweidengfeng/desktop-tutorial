@@ -215,13 +215,14 @@ const renderMainPage = (req, res) => {
     const sentryDsn = process.env.SENTRY_DSN || '';
     const apiBase = process.env.API_BASE || '';
     const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+    const appleClientId = process.env.APPLE_CLIENT_ID || '';
     const injected = `<head>
   <script>
     window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)};
     window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};
     window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};
     window.__AMAP_KEY__ = ${JSON.stringify(amapKey)};
-    window.__AMAP_SECURITY_CODE__ = ${JSON.stringify(amapSecurityCode)};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}
+    window.__AMAP_SECURITY_CODE__ = ${JSON.stringify(amapSecurityCode)};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}${appleClientId ? `\n    window.__APPLE_CLIENT_ID__ = ${JSON.stringify(appleClientId)};` : ''}
   </script>`;
     result = result.replace('<head>', injected);
     // 在 AMap script 标签之前注入安全密钥配置（高德官方要求：必须先于 AMap JS 加载）
@@ -290,6 +291,11 @@ if (process.env.DATABASE_PROVIDER === 'postgresql') {
 
 // 全局速率限制兜底（仅对 /api 前缀，不影响静态文件服务）
 app.use('/api', defaultLimiter);
+// 精细限流：auth/gdpr（任务五要求）
+// payment 限流分别在 expeditions/guides/pay 路由内通过 paymentLimiter 中间件应用
+const { authStrictLimiter, gdprLimiter } = require('./middleware/rateLimits');
+app.use('/api/auth', authStrictLimiter);
+app.use('/api/gdpr', gdprLimiter);
 
 // HTTP 缓存头（在路由挂载之前）
 app.use(cacheMiddleware);

@@ -81,9 +81,37 @@ const commentPollLimiter = rateLimit({
   message: { error: '轮询过于频繁' },
 });
 
+// 认证接口精细限制 — 10 req/min/IP（任务五要求）
+const authStrictLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '登录/注册请求过于频繁，请稍后再试' },
+});
+
+// GDPR 数据接口 — 5 req/hour/IP
+const gdprLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'GDPR 请求频率超出限制，请1小时后再试' },
+});
+
+// 支付接口 — 20 req/min/IP
+const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '支付请求过于频繁，请稍后再试' },
+});
+
 module.exports = {
   defaultLimiter,
   authLimiter,
+  authStrictLimiter,
   writeLimiter,
   messageLimiter,
   uploadLimiter,
@@ -91,4 +119,6 @@ module.exports = {
   externalApiLimiter,
   adminLimiter,
   commentPollLimiter,
+  gdprLimiter,
+  paymentLimiter,
 };
