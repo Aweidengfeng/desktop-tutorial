@@ -1181,6 +1181,9 @@ const existingSosAlertCols = db.pragma('table_info(sos_alerts)').map(c => c.name
 if (!existingSosAlertCols.includes('accuracy')) {
   db.exec('ALTER TABLE sos_alerts ADD COLUMN accuracy REAL');
 }
+if (!existingSosAlertCols.includes('status')) {
+  db.exec("ALTER TABLE sos_alerts ADD COLUMN status TEXT DEFAULT 'active'");
+}
 
 // 种子数据：登山线路（仅当表使用 legacy 列模式时运行）
 try {

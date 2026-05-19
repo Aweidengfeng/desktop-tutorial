@@ -2649,32 +2649,31 @@ function alpineLink() {
           headers: { 'Content-Type': 'application/json', ...(this.getAuthHeaders() || {}) },
           body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.demo) {
-            // 演示模式：显示 toast，3秒后跳转确认
-            this.showToast('演示模式：支付已模拟成功 🎉');
-            setTimeout(() => {
-              if (this._pendingOrder) { this._pendingOrder.status = '已托管'; this._pendingOrder = null; }
-              this.showPayment = false;
-              this.showToast('款项已托管平台，服务完成后结算 🎉');
-            }, 3000);
-            return;
-          }
-          // 真实 Stripe
-          if (data.clientSecret && window.Stripe && this.stripePublishableKey) {
-            const stripe = window.Stripe(this.stripePublishableKey);
-            const { error } = await stripe.confirmCardPayment(data.clientSecret);
-            if (error) { this.showToast(error.message, 'error'); return; }
-          }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          this.showToast(data.error || data.message || '支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        if (data.demo) {
+          this.showToast('支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        if (!data.clientSecret || !window.Stripe || !this.stripePublishableKey) {
+          this.showToast('支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        const stripe = window.Stripe(this.stripePublishableKey);
+        if (!stripe) {
+          this.showToast('支付暂不可用，请稍后再试', 'error');
+          return;
+        }
+        const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret);
+        if (error || !paymentIntent || paymentIntent.status !== 'succeeded') {
+          this.showToast((error && error.message) || '支付暂不可用，请稍后再试', 'error');
+          return;
         }
       } catch(e) {
-      // 降级：演示模式 toast（STRIPE_SECRET_KEY 未配置或网络不可达时触发）
-      this.showToast('演示模式：支付已模拟成功 🎉');
-        setTimeout(() => {
-          if (this._pendingOrder) { this._pendingOrder.status = '已托管'; this._pendingOrder = null; }
-          this.showPayment = false;
-        }, 3000);
+        this.showToast('支付暂不可用，请稍后再试', 'error');
         return;
       }
       // Update pending order status to "已托管"
@@ -2695,7 +2694,7 @@ function alpineLink() {
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showGuideApply = false;
-        this.showToast('申请已提交，7天内审核完成 ✅');
+        this.showToast('向导/俱乐部上架费支付功能即将上线，请联系客服', 'warning');
         this.guideApplyForm = { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' };
         // TODO: 引导用户到支付页面 /api/guides/payment
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
@@ -2710,7 +2709,7 @@ function alpineLink() {
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showClubApplyModal = false;
-        this.showToast('申请已提交，请完成支付以激活审核 ✅');
+        this.showToast('向导/俱乐部上架费支付功能即将上线，请联系客服', 'warning');
         this.clubApplyForm = { club_name: '', cert_url: '', contact: '', wechat: '', specialty: '', region: '', description: '', website: '' };
         // TODO: 跳转支付页面 POST /api/clubs/payment
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }

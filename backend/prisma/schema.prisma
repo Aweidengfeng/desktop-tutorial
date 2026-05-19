@@ -307,6 +307,8 @@ model Guide {
   affiliationType     String   @default("freelance") @map("affiliation_type")
   affiliationClubId   Int?     @map("affiliation_club_id")
   affiliationClubName String?  @map("affiliation_club_name")
+  listingFeePaid      Boolean  @default(false) @map("listing_fee_paid")
+  listingFeePaidAt    DateTime? @map("listing_fee_paid_at")
   createdAt           DateTime @default(now()) @map("created_at")
 
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -636,6 +638,12 @@ model Booking {
   notes       String?
   amount      Float    @default(0)
   status      String   @default("pending")
+  pool        Int      @default(0)
+  clubId      Int?     @map("club_id")
+  clubName    String?  @map("club_name")
+  type        String   @default("guide")
+  confirmedAt DateTime? @map("confirmed_at")
+  rejectedReason String? @map("rejected_reason")
   createdAt   DateTime @default(now()) @map("created_at")
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -969,6 +977,7 @@ model SosAlert {
   accuracy  Float?
   timestamp DateTime
   phone     String?
+  status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -1197,6 +1206,9 @@ model Notification {
   userId    Int      @map("user_id")
   type      String?
   content   String?
+  title     String?
+  body      String?
+  link      String?
   relatedId Int?     @map("related_id")
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
@@ -1336,6 +1348,69 @@ model StripePayment {
   user                  User     @relation(fields: [userId], references: [id])
 
   @@map("stripe_payments")
+}
+
+// ─────────────────────────────────────────
+// 平台交易流水（托管结算）
+// ─────────────────────────────────────────
+
+model PlatformTransaction {
+  id             Int       @id @default(autoincrement())
+  orderType      String    @map("order_type")
+  orderId        Int       @map("order_id")
+  orderNo        String?   @map("order_no")
+  userId         Int?      @map("user_id")
+  ownerType      String?   @map("owner_type")
+  ownerId        Int?      @map("owner_id")
+  totalAmount    Float     @map("total_amount")
+  platformFee    Float     @default(0) @map("platform_fee")
+  ownerIncome    Float     @default(0) @map("owner_income")
+  commissionRate Float     @default(0.15) @map("commission_rate")
+  status         String    @default("held")
+  settledAt      DateTime? @map("settled_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([ownerType, ownerId])
+  @@index([orderType, orderId])
+  @@map("platform_transactions")
+}
+
+// ─────────────────────────────────────────
+// 提现申请
+// ─────────────────────────────────────────
+
+model WithdrawalRequest {
+  id           Int       @id @default(autoincrement())
+  ownerType    String    @map("owner_type")
+  ownerId      Int       @map("owner_id")
+  amount       Float
+  fee          Float     @default(0)
+  actualAmount Float     @map("actual_amount")
+  accountType  String    @default("bank") @map("account_type")
+  accountInfo  String?   @map("account_info")
+  status       String    @default("pending")
+  rejectReason String?   @map("reject_reason")
+  processedAt  DateTime? @map("processed_at")
+  processedBy  String?   @map("processed_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([ownerType, ownerId])
+  @@map("withdrawal_requests")
+}
+
+// ─────────────────────────────────────────
+// Stripe Webhook 事件幂等记录
+// ─────────────────────────────────────────
+
+model StripeWebhookEvent {
+  id              Int      @id @default(autoincrement())
+  stripeEventId   String   @unique @map("stripe_event_id")
+  type            String?
+  paymentIntentId String?  @map("payment_intent_id")
+  payload         String?  // JSON
+  receivedAt      DateTime @default(now()) @map("received_at")
+
+  @@map("stripe_webhook_events")
 }
 
 // ─────────────────────────────────────────
