@@ -1,7 +1,7 @@
 {
-  "nav_expedition": "Expedition",
-  "nav_map": "Map",
-  "nav_discover": "Discover",
+  "nav_expedition": "Routes",
+  "nav_discover": "Community",
+  "nav_messages": "Messages",
   "nav_me": "Me",
   "login_title": "Sign in to SummitLink",
   "login_password": "Password",

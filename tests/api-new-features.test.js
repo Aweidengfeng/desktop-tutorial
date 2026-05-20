@@ -484,6 +484,37 @@ describe('9. 登顶窗口热力 GET /api/weather/summit-window/:peakId', () => {
   });
 });
 
+// ── 9.1 山峰坐标字段 ───────────────────────────────────────────────────────────
+describe('9.1 山峰坐标字段 GET /api/peaks', () => {
+  let app, db, peakId;
+
+  beforeAll(() => {
+    clearDbCache();
+    app = createApp();
+    db  = require('../backend/db/database');
+    peakId = db.prepare(`
+      INSERT INTO peaks (name, altitude, type, latitude, longitude)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('坐标测试峰', 6123, 'china', 29.594, 101.8787).lastInsertRowid;
+  });
+
+  test('列表接口返回 latitude / longitude', async () => {
+    const res = await request(app).get('/api/peaks');
+    expect(res.status).toBe(200);
+    const peak = res.body.find((item) => item.id === Number(peakId));
+    expect(peak).toBeTruthy();
+    expect(peak.latitude).toBeCloseTo(29.594, 3);
+    expect(peak.longitude).toBeCloseTo(101.8787, 4);
+  });
+
+  test('详情接口返回 latitude / longitude', async () => {
+    const res = await request(app).get(`/api/peaks/${peakId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.latitude).toBeCloseTo(29.594, 3);
+    expect(res.body.longitude).toBeCloseTo(101.8787, 4);
+  });
+});
+
 // ── 10. 电子护照 ─────────────────────────────────────────────────────────────
 describe('10. 电子护照 GET /api/certificates/:trackId', () => {
   let app, db, userToken, userId;
