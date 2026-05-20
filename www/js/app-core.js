@@ -63,7 +63,6 @@ const PEAK_NAME_ALIASES = {
   '乔戈里峰': 'K2',
   '丹拿利峰': '麦金利山',
   '德纳里山': '麦金利山',
-  '安纳普尔纳峰': '安纳普尔纳峰',
   '加舒尔布鲁姆I峰': '迦舒布鲁姆I峰',
   '加舒尔布鲁姆II峰': '迦舒布鲁姆II峰',
 };
@@ -3386,7 +3385,7 @@ function alpineLink() {
         if (data.leaders && data.leaders.length > 0) {
           this.summitLeaderboard = data.leaders.map((l, i) => {
             const avatar = String(l.avatar || '');
-            const avatarLooksBroken = !avatar || avatar.includes('question') || avatar.includes('placeholder');
+            const avatarLooksBroken = !avatar || /(question-mark|placeholder-avatar|default-avatar)/i.test(avatar);
             return {
               ...l,
               avatar: avatarLooksBroken ? `https://i.pravatar.cc/150?u=leaderboard_${l.id || i}_${encodeURIComponent(l.name || 'user')}` : avatar,
@@ -3559,7 +3558,7 @@ function alpineLink() {
         const el = document.getElementById('chat-messages-container');
         if (el) el.scrollTop = el.scrollHeight;
       });
-      const hasSocketTextPath = !!(this._chatSocket && this._chatSocket.connected && this.activeChatSession.conversationId && text && images.length === 0);
+      const hasSocketTextPath = this._chatSocket && this._chatSocket.connected && this.activeChatSession.conversationId && text && images.length === 0;
       if (hasSocketTextPath) {
         this.joinChatConversationSocket(this.activeChatSession.conversationId);
         this._chatSocket.emit('chat:message', { conv_id: this.activeChatSession.conversationId, content: text, type: 'text' });
@@ -3584,7 +3583,7 @@ function alpineLink() {
       if (!this.authToken || !window.io || this._chatSocket) return;
       this._chatSocket = window.io('/', {
         auth: { token: this.authToken },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
       });
       this._chatSocket.on('connect', () => {
         if (this.activeChatSession?.conversationId) {
@@ -4673,7 +4672,6 @@ function alpineLink() {
       this.loadPopularPeaksWeather();
       this.loadRescueContacts();
       this.loadConversations();
-      this.initChatSocket();
       // Load notification count after token verify
       this.$watch('authToken', (val) => {
         if (val) { this.loadUnreadCount(); this.loadTracks(); this.loadConversations(); this.initChatSocket(); }
