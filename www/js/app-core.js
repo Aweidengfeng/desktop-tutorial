@@ -36,6 +36,56 @@ const COMMERCIAL_PEAKS = [
   { id: 34, name: '亚拉雪山', nameEn: 'Yala Snow Mountain', altitude: 5820, country: '中国', region: '横断山脉', difficulty: '入门6000m', season: '春季(4-6月)/秋季(9-10月)', operators: ['四川高山探险', '康定山地向导', '蓝天户外'], routes: '南坡常规路线', oxygen: false, annualClimbers: 200, annualTeams: 18, isEstimated: true, campKey: '亚拉雪山' },
 ];
 
+const PEAK_DETAIL_FALLBACK = {
+  '珠穆朗玛峰': { altitude: 8849, firstAscent: '1953-05-29', firstAscentBy: '埃德蒙·希拉里、丹增·诺尔盖', locationDetail: '中国西藏/尼泊尔交界，喜马拉雅山脉', difficulty: '极难', bestSeason: '春季(4-5月)', description: '世界最高峰，常见商业线路为南坡东南山脊与北坡东北山脊。' },
+  'K2': { altitude: 8611, firstAscent: '1954-07-31', firstAscentBy: '阿基里·孔帕尼奥尼、利诺·拉切代利', locationDetail: '喀喇昆仑山脉，巴基斯坦/中国边境', difficulty: '极难', bestSeason: '夏季(6-8月)', description: '技术难度与客观风险极高，被称为“野蛮之山”。' },
+  '干城章嘉峰': { altitude: 8586, firstAscent: '1955-05-25', firstAscentBy: '乔治·班德、乔·布朗', locationDetail: '印度/尼泊尔边界，喜马拉雅山脉', difficulty: '极难', bestSeason: '春季(4-5月)', description: '世界第三高峰，气候多变，攀登窗口短。' },
+  '洛子峰': { altitude: 8516, firstAscent: '1956-05-18', firstAscentBy: '恩斯特·赖斯、弗里茨·卢克辛格', locationDetail: '珠峰南侧，中国/尼泊尔边境', difficulty: '极难', bestSeason: '春季(4-5月)', description: '与珠峰共享部分路线，后段技术性显著提升。' },
+  '马卡鲁峰': { altitude: 8485, firstAscent: '1955-05-15', firstAscentBy: '让·库西、利昂内尔·特雷', locationDetail: '中国/尼泊尔边境，喜马拉雅山脉', difficulty: '极难', bestSeason: '春季(4-5月)', description: '金字塔形山体，后段攀登陡峭。' },
+  '卓奥友峰': { altitude: 8201, firstAscent: '1954-10-19', firstAscentBy: '赫伯特·蒂希、塞帕·杰尔岑', locationDetail: '中国/尼泊尔边境，喜马拉雅山脉', difficulty: '高难', bestSeason: '秋季(9-10月)', description: '常被视作8000米级入门峰，但高海拔风险仍高。' },
+  '道拉吉里峰': { altitude: 8167, firstAscent: '1960-05-13', firstAscentBy: '瑞士/奥地利联合队', locationDetail: '尼泊尔中西部，喜马拉雅山脉', difficulty: '极难', bestSeason: '春季(4-5月)', description: '气流复杂，雪崩与落石风险较高。' },
+  '马纳斯卢峰': { altitude: 8163, firstAscent: '1956-05-09', firstAscentBy: '今西寿雄、甲斐宗次', locationDetail: '尼泊尔中部，喜马拉雅山脉', difficulty: '高难', bestSeason: '秋季(9-10月)', description: '近年来商业队增多，需重点防范雪崩风险。' },
+  '南迦帕尔巴特峰': { altitude: 8126, firstAscent: '1953-07-03', firstAscentBy: '赫尔曼·布尔', locationDetail: '巴基斯坦吉尔吉特-巴尔蒂斯坦', difficulty: '极难', bestSeason: '夏季(6-8月)', description: '独立山体突出，历史事故多。' },
+  '安纳普尔纳峰': { altitude: 8091, firstAscent: '1950-06-03', firstAscentBy: '莫里斯·埃尔佐格、路易·拉什纳尔', locationDetail: '尼泊尔中北部，喜马拉雅山脉', difficulty: '极难', bestSeason: '春季(4-5月)', description: '以雪崩风险著称，需严格窗口和队伍管理。' },
+  '迦舒布鲁姆I峰': { altitude: 8080, firstAscent: '1958-07-05', firstAscentBy: '皮特·斯科宁、安迪·考夫曼', locationDetail: '喀喇昆仑山脉，巴基斯坦/中国边境', difficulty: '极难', bestSeason: '夏季(6-8月)', description: '冰裂缝与复杂雪坡并存。' },
+  '布洛阿特峰': { altitude: 8051, firstAscent: '1957-06-09', firstAscentBy: '福里茨·温特施泰勒等4人', locationDetail: '喀喇昆仑山脉，巴基斯坦/中国边境', difficulty: '高难', bestSeason: '夏季(6-8月)', description: '常与K2同季攀登，天气变化迅速。' },
+  '迦舒布鲁姆II峰': { altitude: 8034, firstAscent: '1956-07-07', firstAscentBy: '福里茨·莫拉韦克等3人', locationDetail: '喀喇昆仑山脉，巴基斯坦/中国边境', difficulty: '高难', bestSeason: '夏季(6-8月)', description: '相对“友好”的8000米峰，仍需高海拔经验。' },
+  '希夏邦马峰': { altitude: 8027, firstAscent: '1964-05-02', firstAscentBy: '中国登山队', locationDetail: '中国西藏，喜马拉雅山脉', difficulty: '高难', bestSeason: '春季/秋季', description: '唯一完全位于中国境内的8000米级山峰。' },
+  '麦金利山': { altitude: 6190, firstAscent: '1913-06-07', firstAscentBy: '哈德森·斯塔克队', locationDetail: '美国阿拉斯加', difficulty: '高难', bestSeason: '5-6月', description: '极寒与风暴是主要挑战。' },
+  '阿空加瓜峰': { altitude: 6961, firstAscent: '1897-01-14', firstAscentBy: '马提亚斯·祖布里根', locationDetail: '阿根廷安第斯山脉', difficulty: '高难', bestSeason: '12-2月', description: '七大洲中最高的非技术峰之一。' },
+  '乞力马扎罗山': { altitude: 5895, firstAscent: '1889-10-06', firstAscentBy: '汉斯·迈耶、路德维希·普切勒', locationDetail: '坦桑尼亚', difficulty: '中等', bestSeason: '1-3月/6-10月', description: '高海拔徒步线路成熟，适合高海拔适应训练。' },
+  '厄尔布鲁士山': { altitude: 5642, firstAscent: '1874-08-10', firstAscentBy: '克劳福德·格罗夫团队', locationDetail: '俄罗斯高加索', difficulty: '中等', bestSeason: '6-8月', description: '欧洲最高峰，天气骤变频繁。' },
+  '文森峰': { altitude: 4892, firstAscent: '1966-12-18', firstAscentBy: '尼古拉斯·克林奇队', locationDetail: '南极洲埃尔斯沃思山脉', difficulty: '高难', bestSeason: '11-1月', description: '后勤成本与极地气候是核心挑战。' },
+  '科修斯科山': { altitude: 2228, firstAscent: '1840-03-12', firstAscentBy: '保罗·埃德蒙·斯特泽莱茨基', locationDetail: '澳大利亚新南威尔士州', difficulty: '入门', bestSeason: '11-3月', description: '七大洲体系中常用大洋洲峰，徒步难度低。' },
+};
+
+const PEAK_NAME_ALIASES = {
+  '乔戈里峰': 'K2',
+  '丹拿利峰': '麦金利山',
+  '德纳里山': '麦金利山',
+  '安纳普尔纳峰': '安纳普尔纳峰',
+  '加舒尔布鲁姆I峰': '迦舒布鲁姆I峰',
+  '加舒尔布鲁姆II峰': '迦舒布鲁姆II峰',
+};
+
+function enrichPeakDetail(peak = {}) {
+  const normalizedName = PEAK_NAME_ALIASES[peak.name] || peak.name;
+  const fallback = PEAK_DETAIL_FALLBACK[normalizedName];
+  if (!fallback) return peak;
+  return {
+    ...fallback,
+    ...peak,
+    firstAscent: peak.firstAscent || fallback.firstAscent,
+    bestSeason: peak.bestSeason || fallback.bestSeason,
+    seasonDetail: peak.seasonDetail || fallback.bestSeason,
+    description: peak.description || fallback.description,
+    locationDetail: peak.locationDetail || fallback.locationDetail,
+    firstAscentBy: peak.firstAscentBy || fallback.firstAscentBy,
+    altitude: peak.altitude || fallback.altitude,
+    difficulty: peak.difficulty || fallback.difficulty,
+  };
+}
+
 // ─── 图片上传预校验工具函数（Phase 0.4）───────────────────────────────
 function validateImageFile(file) {
   const MAX_SIZE = 5 * 1024 * 1024;
@@ -534,7 +584,11 @@ function alpineLink() {
     activeChatConv: null,
     chatInput: '',
     chatImagePreviews: [],
+    chatVideoPreview: '',
+    chatVideoFile: null,
     commentImagePreviews: [],
+    _chatSocket: null,
+    _socketBoundConversations: new Set(),
     lightboxUrl: '',
     showLightbox: false,
     trackMap: null,
@@ -591,6 +645,9 @@ function alpineLink() {
       { name: '厄尔布鲁士', nameEn: 'Elbrus', altitude: 5642, temp: -18, wind: 32, humidity: 48, condition: '晴', conditionIcon: '☀️' },
       { name: '阿玛达布拉姆', nameEn: 'Ama Dablam', altitude: 6814, temp: -15, wind: 22, humidity: 40, condition: '晴', conditionIcon: '☀️' },
     ],
+    activePopularPeak: null,
+    popularPeakWeatherDetail: null,
+    popularPeakWeatherLoading: false,
     banners: [],
     // 我的成就
     showAchievementsModal: false,
@@ -3261,7 +3318,7 @@ function alpineLink() {
         const res = await fetch('/api/peaks?type=' + t);
         if (!res.ok) return;
         const data = await res.json();
-        const mapped = data.map(p => ({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
+        const mapped = data.map(p => enrichPeakDetail({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
         if (t === '8000ers') this.eightThousanders = mapped;
         else if (t === 'continental') this.continentalPeaks = mapped;
         else if (t === 'world') this.worldPeaks = mapped;
@@ -3327,7 +3384,15 @@ function alpineLink() {
         if (!res.ok) return;
         const data = await res.json();
         if (data.leaders && data.leaders.length > 0) {
-          this.summitLeaderboard = data.leaders.map((l, i) => ({ ...l, flag: l.flag || '🏔️' }));
+          this.summitLeaderboard = data.leaders.map((l, i) => {
+            const avatar = String(l.avatar || '');
+            const avatarLooksBroken = !avatar || avatar.includes('question') || avatar.includes('placeholder');
+            return {
+              ...l,
+              avatar: avatarLooksBroken ? `https://i.pravatar.cc/150?u=leaderboard_${l.id || i}_${encodeURIComponent(l.name || 'user')}` : avatar,
+              flag: l.flag || '🏔️',
+            };
+          });
         }
         if (data.my_rank) { this.myLeaderboardRank = data.my_rank; }
       } catch(e) {
@@ -3389,6 +3454,7 @@ function alpineLink() {
     // Chat/Messages
     async loadConversations() {
       if (!this.authToken) return;
+      this.initChatSocket();
       try {
         const res = await fetch('/api/messages/conversations', { headers: this.getAuthHeaders() });
         if (res.ok) {
@@ -3426,10 +3492,16 @@ function alpineLink() {
               from: m.sender_id === myId ? 'me' : 'them',
               text: m.content || null,
               images: m.images || [],
+              status: m.sender_id === myId ? (m.is_read ? 'read' : 'sent') : null,
               time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
             }));
             this._chatLastMsgId = msgs.length > 0 ? msgs[msgs.length - 1].id : 0;
             this.activeChatSession.unread = 0;
+            this.joinChatConversationSocket(session.conversationId);
+            const lastIncoming = [...msgs].reverse().find((m) => m.sender_id !== myId);
+            if (lastIncoming && this._chatSocket && this._chatSocket.connected) {
+              this._chatSocket.emit('chat:read', { conv_id: session.conversationId, msg_id: lastIncoming.id });
+            }
           }
         } catch(e) {}
       }
@@ -3456,10 +3528,15 @@ function alpineLink() {
               from: m.sender_id === myId ? 'me' : 'them',
               text: m.content || null,
               images: m.images || [],
+              status: m.sender_id === myId ? (m.is_read ? 'read' : 'sent') : null,
               time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
             }));
             this.activeChatSession.messages.push(...newMsgs);
             this._chatLastMsgId = msgs[msgs.length - 1].id;
+            const lastIncoming = [...msgs].reverse().find((m) => m.sender_id !== myId);
+            if (lastIncoming && this._chatSocket && this._chatSocket.connected) {
+              this._chatSocket.emit('chat:read', { conv_id: conversationId, msg_id: lastIncoming.id });
+            }
             this.$nextTick(() => {
               const el = document.getElementById('chat-messages-container');
               if (el) el.scrollTop = el.scrollHeight;
@@ -3475,13 +3552,19 @@ function alpineLink() {
       const images = [...this.chatImagePreviews];
       const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
       const msgType = text && images.length > 0 ? 'mixed' : (images.length > 0 ? 'image' : 'text');
-      this.activeChatSession.messages.push({ from: 'me', text: text || null, images, time });
+      this.activeChatSession.messages.push({ from: 'me', text: text || null, images, time, status: 'sent' });
       this.chatInput = '';
       this.chatImagePreviews = [];
       this.$nextTick(() => {
         const el = document.getElementById('chat-messages-container');
         if (el) el.scrollTop = el.scrollHeight;
       });
+      const hasSocketTextPath = !!(this._chatSocket && this._chatSocket.connected && this.activeChatSession.conversationId && text && images.length === 0);
+      if (hasSocketTextPath) {
+        this.joinChatConversationSocket(this.activeChatSession.conversationId);
+        this._chatSocket.emit('chat:message', { conv_id: this.activeChatSession.conversationId, content: text, type: 'text' });
+        return;
+      }
       if (this.authToken && this.activeChatSession.conversationId) {
         try {
           let uploadedUrls = [];
@@ -3496,6 +3579,66 @@ function alpineLink() {
           });
         } catch(e) {}
       }
+    },
+    initChatSocket() {
+      if (!this.authToken || !window.io || this._chatSocket) return;
+      this._chatSocket = window.io('/', {
+        auth: { token: this.authToken },
+        transports: ['websocket', 'polling'],
+      });
+      this._chatSocket.on('connect', () => {
+        if (this.activeChatSession?.conversationId) {
+          this.joinChatConversationSocket(this.activeChatSession.conversationId);
+        }
+      });
+      this._chatSocket.on('chat:message', (msg) => {
+        if (!msg || !msg.conversation_id) return;
+        const convId = Number(msg.conversation_id);
+        const myId = this.currentUser ? Number(this.currentUser.id) : null;
+        const fromMe = myId != null && Number(msg.sender_id) === myId;
+        const normalized = {
+          id: msg.id,
+          from: fromMe ? 'me' : 'them',
+          text: msg.content || null,
+          images: (msg.images && Array.isArray(msg.images)) ? msg.images : [],
+          status: fromMe ? 'sent' : null,
+          time: new Date(msg.created_at || Date.now()).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        };
+        const target = this.chatSessions.find((s) => Number(s.conversationId) === convId);
+        if (target) {
+          target.lastMsg = normalized.text || (normalized.images.length > 0 ? '[图片]' : '');
+          target.time = normalized.time;
+        }
+        if (this.activeChatSession && Number(this.activeChatSession.conversationId) === convId) {
+          const exists = this.activeChatSession.messages.some((m) => m.id && Number(m.id) === Number(normalized.id));
+          if (!exists) this.activeChatSession.messages.push(normalized);
+          this._chatLastMsgId = Math.max(this._chatLastMsgId || 0, Number(normalized.id) || 0);
+          if (!fromMe) this._chatSocket.emit('chat:read', { conv_id: convId, msg_id: normalized.id });
+          this.$nextTick(() => {
+            const el = document.getElementById('chat-messages-container');
+            if (el) el.scrollTop = el.scrollHeight;
+          });
+        } else if (target && !fromMe) {
+          target.unread = (target.unread || 0) + 1;
+        }
+      });
+      this._chatSocket.on('chat:read', ({ msg_id, userId }) => {
+        if (!this.activeChatSession || !Array.isArray(this.activeChatSession.messages)) return;
+        const myId = this.currentUser ? Number(this.currentUser.id) : null;
+        if (myId != null && Number(userId) === myId) return;
+        this.activeChatSession.messages = this.activeChatSession.messages.map((m) => {
+          if (m.from === 'me' && m.id && Number(m.id) <= Number(msg_id)) {
+            return { ...m, status: 'read' };
+          }
+          return m;
+        });
+      });
+    },
+    joinChatConversationSocket(conversationId) {
+      if (!conversationId || !this._chatSocket || !this._chatSocket.connected) return;
+      if (this._socketBoundConversations.has(conversationId)) return;
+      this._chatSocket.emit('chat:join', { conv_id: conversationId });
+      this._socketBoundConversations.add(conversationId);
     },
 
     // 通用图片上传（接受 blob URL 数组，返回服务器 URL 数组）
@@ -4203,6 +4346,52 @@ function alpineLink() {
         }
       } catch(e) {}
     },
+    openWeatherQuery() {
+      this.currentPage = 'explore';
+      this.$nextTick(() => {
+        const input = document.querySelector('input[x-model="weatherSearch"]');
+        if (input) {
+          input.focus();
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    },
+    async togglePopularPeakWeather(peak) {
+      if (!peak) return;
+      if (this.activePopularPeak && this.activePopularPeak.name === peak.name) {
+        this.activePopularPeak = null;
+        this.popularPeakWeatherDetail = null;
+        return;
+      }
+      this.activePopularPeak = peak;
+      this.popularPeakWeatherLoading = true;
+      const detail = enrichPeakDetail({ name: peak.name, altitude: peak.altitude });
+      this.popularPeakWeatherDetail = {
+        ...detail,
+        location: detail.locationDetail || detail.country || '-',
+        weather: null,
+        advice: '请结合向导建议与装备情况谨慎攀登',
+      };
+      try {
+        const res = await fetch('/api/weather?location=' + encodeURIComponent(peak.name));
+        if (res.ok) {
+          const weather = await res.json();
+          this.popularPeakWeatherDetail = {
+            ...this.popularPeakWeatherDetail,
+            weather,
+            advice: this.buildPopularPeakAdvice(weather),
+          };
+        }
+      } catch (e) {}
+      this.popularPeakWeatherLoading = false;
+    },
+    buildPopularPeakAdvice(weather) {
+      if (!weather || weather.error) return '天气服务暂不可用，建议保守决策并确认备用下撤计划。';
+      if (Number(weather.wind) >= 45) return '高风速预警，建议暂停冲顶并等待更稳定窗口。';
+      if (Number(weather.visibility) <= 3) return '能见度较低，建议缩短行程并加强导航与结组保护。';
+      if (Number(weather.temp) <= -25) return '低温风险高，务必加强保暖并控制暴露时间。';
+      return '天气相对稳定，可按计划推进，持续监测风速与能见度变化。';
+    },
 
     // ─── Banners (Problem 6) ────────────────────────────────────────────────
     async loadBanners() {
@@ -4484,9 +4673,10 @@ function alpineLink() {
       this.loadPopularPeaksWeather();
       this.loadRescueContacts();
       this.loadConversations();
+      this.initChatSocket();
       // Load notification count after token verify
       this.$watch('authToken', (val) => {
-        if (val) { this.loadUnreadCount(); this.loadTracks(); }
+        if (val) { this.loadUnreadCount(); this.loadTracks(); this.loadConversations(); this.initChatSocket(); }
       });
       if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
       // Phase 2.3: 页面加载时同步待上传轨迹；网络恢复时也自动触发
