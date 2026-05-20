@@ -12,7 +12,7 @@
 | Secret 名称 | 获取方式 | 必需 |
 |------------|---------|------|
 | `RAILWAY_TOKEN` | Railway Dashboard → Account Settings → Tokens → New Token | 可选（用于 CLI 触发部署） |
-| `PRODUCTION_API_URL` | Railway 项目 → 你的服务 URL（如 `https://xxx.railway.app`） | ✅（冒烟测试必需） |
+| `PRODUCTION_API_URL` | Railway 项目 → 你的服务 URL（如 `https://xxx.railway.app`） | 可选（配置后会执行生产冒烟测试） |
 
 ## 健康检查（Health Check Workflow）
 
