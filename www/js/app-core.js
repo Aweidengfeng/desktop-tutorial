@@ -2845,12 +2845,12 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
     goToPage(id) {
+      let targetPage = id;
       if (id === 'track') {
         this.showToast('地图录制功能 Phase 2 即将上线', 'info');
-        this.currentPage = 'home';
-        return;
+        targetPage = 'home';
       }
-      this.currentPage = id;
+      this.currentPage = targetPage;
     },
     viewImage(url) { window.open(url, '_blank'); },
     viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
