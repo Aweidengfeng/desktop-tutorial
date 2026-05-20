@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>巅峰探索 / SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="/js/app-core.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <script>
+    // Global fallback for i18n t() function until Alpine/app-core loads
+    window.t = function(key) { return key; };
+    // Global showLightbox function – delegates into the Alpine component
+    window.showLightbox = function(url) {
+      var el = document.querySelector('body[x-data]');
+      if (el && el._x_dataStack && el._x_dataStack[0]) {
+        el._x_dataStack[0].lightboxUrl = url;
+        el._x_dataStack[0].showLightbox = true;
+      }
+    };
+  </script>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -5755,6 +5768,7 @@
     <div class="flex items-center justify-around px-2 py-2">
       <template x-for="tab in navTabs" :key="tab.id">
         <button @click="switchPrimaryTab(tab.id)"
+                :data-tab="tab.id === 'discover' ? 'explore' : tab.id"
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
                 :class="isPrimaryTabActive(tab.id) ? 'bg-primary/20 text-primary-light' : 'text-slate-500 hover:text-slate-300'">
           <span class="material-symbols-outlined text-2xl"
@@ -5768,7 +5782,6 @@
 
 </div>
 
-<script src="/js/app-core.js" defer></script>
 <!-- Global Footer -->
 <footer class="w-full py-4 text-center text-slate-500 text-xs border-t border-white/5 mt-8" style="max-width:430px;margin:0 auto;">
   © SummitLink · <a href="/legal/privacy" class="hover:text-slate-300 underline">隐私政策</a> · <a href="/legal/terms" class="hover:text-slate-300 underline">用户协议</a> · 投诉邮箱: <a href="mailto:support@summitlink.app" class="hover:text-slate-300">support@summitlink.app</a>
