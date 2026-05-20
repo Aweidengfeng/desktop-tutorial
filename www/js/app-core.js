@@ -537,21 +537,17 @@ function alpineLink() {
     commentImagePreviews: [],
     lightboxUrl: '',
     showLightbox: false,
-    /* Phase 2 - Track Recording state
     trackMap: null,
     trackMapEngine: 'amap',
     trackTileLayer: null,
     trackLocationMarker: null,
     mapLayerOptions: MAP_LAYER_OPTIONS,
     activeMapLayer,
-    */
     _mapCore: null,
     _mapCoreLoading: null,
     amapAvailable: typeof AMap !== 'undefined',
     pendingUploadCount: 0,
-    /* Phase 2 - Track Recording state
     recordingMap: null,
-    */
     selectedConversation: null,
     showChatDetail: false,
     showGearPublish: false,
@@ -2849,10 +2845,12 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
     goToPage(id) {
-      this.currentPage = id;
+      let targetPage = id;
       if (id === 'track') {
-        this.$nextTick(() => this.initTrackMap());
+        this.showToast('地图录制功能 Phase 2 即将上线', 'info');
+        targetPage = 'home';
       }
+      this.currentPage = targetPage;
     },
     viewImage(url) { window.open(url, '_blank'); },
     viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
@@ -2862,7 +2860,7 @@ function alpineLink() {
     openSettings(type) { this.settingsType = type; this.showSettings = true; },
     handleMenuAction(action) {
       if (action === 'gear') { this.currentPage = 'gear'; }
-      else if (action === 'track') { this.currentPage = 'track'; }
+      else if (action === 'track') { this.showToast('轨迹录制即将在 Phase 2 上线 🗺️', 'info'); }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
       else if (action === 'achievements') { this.openAchievements(); }
       else if (action === 'membership') { this.openMembership(); }
@@ -4529,12 +4527,6 @@ function alpineLink() {
       });
       // Watch communityPosts to sync filteredCommunityPosts
       this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });
-      // Watch currentPage to init AMap when entering track page
-      this.$watch('currentPage', (val) => {
-        if (val === 'track') {
-          this.$nextTick(() => setTimeout(() => this.initTrackMap(), 150));
-        }
-      });
       // Handle shared track URL: /summitlink?track=ID
       const urlParams = new URLSearchParams(window.location.search);
       const sharedTrackId = urlParams.get('track');
@@ -4544,7 +4536,7 @@ function alpineLink() {
             const res = await fetch('/api/tracks/' + sharedTrackId);
             if (res.ok) {
               const track = await res.json();
-              this.currentPage = 'track';
+              this.currentPage = 'home';
               await this.$nextTick();
               this.openTrackDetail(track);
             }
