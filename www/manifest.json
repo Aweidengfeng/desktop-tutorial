@@ -3,7 +3,7 @@
   "short_name": "SummitLink",
   "theme_color": "#1a1a2e",
   "background_color": "#1a1a2e",
-  "display": "standalone",
+  "display": "browser",
   "start_url": "/",
   "icons": [
     {

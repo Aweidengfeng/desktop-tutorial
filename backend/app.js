@@ -124,6 +124,7 @@ app.use(helmet({
         "'unsafe-eval'", // Alpine.js x-data 内嵌表达式编译需要
         'https://cdn.tailwindcss.com',
         'https://cdn.jsdelivr.net',
+        'https://cdn.socket.io',
         'https://webapi.amap.com',
         'https://*.amap.com',
         'https://api.mapbox.com',

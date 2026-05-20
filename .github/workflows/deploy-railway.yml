@@ -161,7 +161,8 @@ jobs:
           if [ "${{ steps.deploy.outcome }}" == "success" ]; then
             echo "✅ Railway deployment triggered successfully"
           else
-            echo "ℹ️ Railway CLI deploy step skipped. Railway auto-deploys on push to main via GitHub integration."
+            echo "⚠️ Railway CLI deploy step skipped because RAILWAY_TOKEN is not set."
+            echo "ℹ️ Ensure Railway GitHub integration is enabled, or set RAILWAY_TOKEN for explicit CLI deployments."
           fi
 
   smoke-test:
@@ -169,6 +170,8 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: always()
+    env:
+      PRODUCTION_API_URL: ${{ secrets.PRODUCTION_API_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -178,17 +181,19 @@ jobs:
           node-version: '20'
 
       - name: Validate production API URL
-        run: |
-          if [ -z "${{ secrets.PRODUCTION_API_URL }}" ]; then
-            echo "❌ PRODUCTION_API_URL secret is required for smoke tests."
-            exit 1
-          fi
+        if: ${{ env.PRODUCTION_API_URL != '' }}
+        run: echo "✅ PRODUCTION_API_URL is set"
+
+      - name: Skip smoke tests when production URL is missing
+        if: ${{ env.PRODUCTION_API_URL == '' }}
+        run: echo "ℹ️ PRODUCTION_API_URL is not set. Skipping production smoke-test steps."
 
       - name: Wait for deployment health check
+        if: ${{ env.PRODUCTION_API_URL != '' }}
         run: |
           # 30 attempts × 10s = 5 minutes total wait time
           for i in $(seq 1 30); do
-            response=$(curl -sS -w "\n%{http_code}" "${{ secrets.PRODUCTION_API_URL }}/api/health" || true)
+            response=$(curl -sS -w "\n%{http_code}" "${{ env.PRODUCTION_API_URL }}/api/health" || true)
             code=$(echo "$response" | tail -n1)
             body=$(echo "$response" | sed '$d')
             if [ "$code" = "200" ]; then
@@ -206,10 +211,16 @@ jobs:
           exit 1
 
       - name: Run smoke tests
+        if: ${{ env.PRODUCTION_API_URL != '' }}
         run: node scripts/smoke-test.js
         env:
-          API_BASE_URL: ${{ secrets.PRODUCTION_API_URL }}
+          API_BASE_URL: ${{ env.PRODUCTION_API_URL }}
         continue-on-error: true
 
-      - name: Report results
-        run: echo "🚀 Deployment pipeline complete. Check Railway dashboard for deployment status."
+      - name: Report smoke test results
+        if: ${{ env.PRODUCTION_API_URL != '' }}
+        run: echo "🚀 Deployment + smoke-test pipeline complete. Check Railway dashboard for deployment status."
+
+      - name: Report smoke test skipped
+        if: ${{ env.PRODUCTION_API_URL == '' }}
+        run: echo "🚀 Deployment pipeline complete. Smoke tests skipped because PRODUCTION_API_URL is not configured."
