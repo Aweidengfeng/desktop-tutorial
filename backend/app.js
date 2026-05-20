@@ -142,6 +142,11 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       connectSrc: [
         "'self'",
+        'https://cdn.tailwindcss.com',
+        'https://cdn.jsdelivr.net',
+        'https://fonts.googleapis.com',
+        'https://fonts.gstatic.com',
+        'https://i.pravatar.cc',
         'https://*.amap.com',
         'https://restapi.amap.com',
         'https://api.mapbox.com',
