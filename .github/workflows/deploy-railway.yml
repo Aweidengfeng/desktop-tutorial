@@ -217,5 +217,10 @@ jobs:
           API_BASE_URL: ${{ env.PRODUCTION_API_URL }}
         continue-on-error: true
 
-      - name: Report results
-        run: echo "🚀 Deployment pipeline complete. Check Railway dashboard for deployment status."
+      - name: Report smoke test results
+        if: ${{ env.PRODUCTION_API_URL != '' }}
+        run: echo "🚀 Deployment + smoke-test pipeline complete. Check Railway dashboard for deployment status."
+
+      - name: Report smoke test skipped
+        if: ${{ env.PRODUCTION_API_URL == '' }}
+        run: echo "🚀 Deployment pipeline complete. Smoke tests skipped because PRODUCTION_API_URL is not configured."
