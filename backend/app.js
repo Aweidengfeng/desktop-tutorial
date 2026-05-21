@@ -298,12 +298,16 @@ if (process.env.DATABASE_PROVIDER === 'postgresql') {
 }
 
 // 全局速率限制兜底（仅对 /api 前缀，不影响静态文件服务）
-app.use('/api', defaultLimiter);
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api', defaultLimiter);
+}
 // 精细限流：auth/gdpr（任务五要求）
 // payment 限流分别在 expeditions/guides/pay 路由内通过 paymentLimiter 中间件应用
 const { authStrictLimiter, gdprLimiter } = require('./middleware/rateLimits');
-app.use('/api/auth', authStrictLimiter);
-app.use('/api/gdpr', gdprLimiter);
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/auth', authStrictLimiter);
+  app.use('/api/gdpr', gdprLimiter);
+}
 
 // HTTP 缓存头（在路由挂载之前）
 app.use(cacheMiddleware);

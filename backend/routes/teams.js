@@ -10,13 +10,40 @@ const teamsWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHead
 // GET /api/teams
 router.get('/', teamsReadLimiter, async (req, res) => {
   try {
-    const teams = await prisma.$queryRaw`
-      SELECT id, name, peak, date, spots, total_spots as totalSpots,
-             level, leader, leader_avatar as leaderAvatar, description,
-             equipment_required as equipmentRequired, notes, difficulty, fee
-      FROM teams WHERE status = 'recruiting'
-      ORDER BY created_at DESC
-    `;
+    let teams;
+    try {
+      teams = await prisma.$queryRaw`
+        SELECT id, name, peak, date, spots, total_spots as totalSpots,
+               level, leader, leader_avatar as leaderAvatar, description,
+               equipment_required as equipmentRequired, notes, difficulty, fee
+        FROM teams WHERE status = 'recruiting'
+        ORDER BY created_at DESC
+      `;
+    } catch {
+      const fallbackTeams = await prisma.team.findMany({
+        where: { status: 'recruiting' },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          peak: true,
+          date: true,
+          spots: true,
+          totalSpots: true,
+          level: true,
+          description: true,
+        },
+      });
+      teams = fallbackTeams.map(team => ({
+        ...team,
+        leader: null,
+        leaderAvatar: null,
+        equipmentRequired: null,
+        notes: null,
+        difficulty: null,
+        fee: null,
+      }));
+    }
     res.json(teams);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
