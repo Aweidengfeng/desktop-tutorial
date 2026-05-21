@@ -19,7 +19,8 @@ router.get('/', teamsReadLimiter, async (req, res) => {
         FROM teams WHERE status = 'recruiting'
         ORDER BY created_at DESC
       `;
-    } catch {
+    } catch (rawErr) {
+      console.warn('[teams] Raw SQL query failed, falling back to Prisma ORM:', rawErr.message);
       const fallbackTeams = await prisma.team.findMany({
         where: { status: 'recruiting' },
         orderBy: { createdAt: 'desc' },

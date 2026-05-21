@@ -49,7 +49,8 @@ router.get('/', async (req, res) => {
                content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
         FROM posts ORDER BY created_at DESC
       `;
-    } catch {
+    } catch (rawErr) {
+      console.warn('[posts] Raw SQL query failed, falling back to Prisma ORM:', rawErr.message);
       posts = await prisma.post.findMany({
         orderBy: { createdAt: 'desc' },
         select: {
