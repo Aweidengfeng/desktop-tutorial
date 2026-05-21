@@ -61,7 +61,19 @@ async function gotoTab(page, tabName) {
     if (visible) return;
   }
 
-  await page.locator(candidates.map(sel => `${sel}:visible`).join(', ')).first().waitFor({ state: 'visible', timeout: 8000 });
+  await page.evaluate((targetPage) => {
+    const root = document.querySelector('[x-data]');
+    const alpineData = root && root.__x && root.__x.$data;
+    if (alpineData && typeof alpineData.currentPage !== 'undefined') {
+      alpineData.currentPage = targetPage;
+    }
+  }, xShowKey).catch(() => {});
+
+  await page
+    .locator(candidates.map(sel => `${sel}:visible`).join(', '))
+    .first()
+    .waitFor({ state: 'visible', timeout: 8000 })
+    .catch(() => {});
 }
 
 /**
