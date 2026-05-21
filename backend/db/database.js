@@ -2332,10 +2332,28 @@ if (!existingUserColsPush.includes('push_token')) {
 if (!existingUserColsPush.includes('push_platform')) {
   db.exec('ALTER TABLE users ADD COLUMN push_platform TEXT DEFAULT NULL');
 }
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_users_push_token ON users(push_token)
+const desiredUsersPushTokenIndexSql = `
+  CREATE INDEX idx_users_push_token ON users(push_token)
   WHERE push_token IS NOT NULL AND push_platform IS NOT NULL;
-`);
+`;
+const existingUsersPushTokenIndex = db.prepare(`
+  SELECT sql
+  FROM sqlite_master
+  WHERE type = 'index' AND name = ?
+`).get('idx_users_push_token');
+const normalizeIndexSql = (sql) => (sql || '').replace(/\s+/g, ' ').trim().toLowerCase();
+if (
+  existingUsersPushTokenIndex &&
+  normalizeIndexSql(existingUsersPushTokenIndex.sql) !== normalizeIndexSql(desiredUsersPushTokenIndexSql)
+) {
+  db.exec('DROP INDEX IF EXISTS idx_users_push_token');
+}
+if (
+  !existingUsersPushTokenIndex ||
+  normalizeIndexSql(existingUsersPushTokenIndex.sql) !== normalizeIndexSql(desiredUsersPushTokenIndexSql)
+) {
+  db.exec(desiredUsersPushTokenIndexSql);
+}
 
 // Extend messages table
 const msgCols = db.pragma('table_info(messages)').map(c => c.name);
