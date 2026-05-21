@@ -372,34 +372,6 @@
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
-      <div class="px-4 pt-2 pb-2">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="font-display font-bold text-xl text-white">精选探险</h2>
-          <a href="/expedition-detail.html?id=featured" class="text-xs text-primary-light">查看全部</a>
-        </div>
-        <div class="space-y-3">
-          <template x-for="item in expeditionCards" :key="item.id">
-            <button @click="openExpeditionDetail(item)" class="w-full text-left glass rounded-2xl overflow-hidden">
-              <template x-if="item.cover">
-                <img :src="item.cover" :alt="item.name" class="w-full h-28 object-cover">
-              </template>
-              <template x-if="!item.cover">
-                <div class="w-full h-28 flex items-center justify-center text-white/60 font-bold text-lg"
-                     :style="'background: ' + getExpeditionGradient(item.name || item.id || '')">
-                  <span x-text="(item.name || '探险').slice(0, 2)"></span>
-                </div>
-              </template>
-              <div class="p-3">
-                <p class="font-semibold text-white" x-text="item.name"></p>
-                <div class="mt-1 flex items-center justify-between text-xs text-slate-300">
-                  <span x-text="item.region"></span>
-                  <span class="px-2 py-0.5 rounded-full bg-white/10" x-text="item.difficulty"></span>
-                </div>
-              </div>
-            </button>
-          </template>
-        </div>
-      </div>
       <!-- Hero Carousel -->
       <div class="relative overflow-hidden" style="height:240px;" x-data="{}" @touchstart="heroTouchStartX=$event.touches[0].clientX" @touchend="if($event.changedTouches[0].clientX - heroTouchStartX > 50) heroSlide=(heroSlide-1+heroSlides.length)%heroSlides.length; else if(heroTouchStartX - $event.changedTouches[0].clientX > 50) heroSlide=(heroSlide+1)%heroSlides.length">
         <template x-for="(slide,i) in heroSlides" :key="i">
@@ -436,7 +408,8 @@
         </div>
         <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
           <template x-for="pw in popularPeaksWeather" :key="pw.name">
-            <div @click="currentPage='explore';activeCategory='8000ers'" class="flex-shrink-0 glass rounded-2xl p-3 cursor-pointer hover:bg-white/10 transition-colors min-w-[120px]">
+            <div @click="togglePopularPeakWeather(pw)" class="flex-shrink-0 glass rounded-2xl p-3 cursor-pointer hover:bg-white/10 transition-colors min-w-[120px]"
+                 :class="activePopularPeak && activePopularPeak.name === pw.name ? 'ring-1 ring-primary/70 bg-white/10' : ''">
               <div class="flex items-center justify-between mb-1">
                 <span class="text-lg" x-text="pw.conditionIcon"></span>
                 <span class="text-[10px] bg-primary/20 text-primary-light px-1.5 py-0.5 rounded-full" x-text="pw.altitude + 'm'"></span>
@@ -452,6 +425,32 @@
           </template>
           <div x-show="popularPeaksWeather.length === 0" class="flex-shrink-0 glass rounded-2xl p-3 min-w-[120px] text-center text-slate-500 text-xs py-6">加载中...</div>
         </div>
+        <div x-show="activePopularPeak" class="mt-3 glass rounded-2xl p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-white font-bold text-sm" x-text="activePopularPeak && activePopularPeak.name"></h4>
+            <button @click="activePopularPeak=null;popularPeakWeatherDetail=null" class="text-slate-400 hover:text-white">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+          <template x-if="popularPeakWeatherLoading">
+            <p class="text-slate-400 text-xs">实时天气加载中...</p>
+          </template>
+          <template x-if="!popularPeakWeatherLoading && popularPeakWeatherDetail">
+            <div class="space-y-2">
+              <p class="text-slate-300 text-xs" x-text="popularPeakWeatherDetail.description"></p>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">海拔：<span class="text-white font-semibold" x-text="popularPeakWeatherDetail.altitude + 'm'"></span></div>
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">位置：<span class="text-white font-semibold" x-text="popularPeakWeatherDetail.location"></span></div>
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">难度：<span class="text-white font-semibold" x-text="popularPeakWeatherDetail.difficulty"></span></div>
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">天气：<span class="text-white font-semibold" x-text="(popularPeakWeatherDetail.weather && popularPeakWeatherDetail.weather.description) || '-'"></span></div>
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">温度：<span class="text-white font-semibold" x-text="(popularPeakWeatherDetail.weather && popularPeakWeatherDetail.weather.temp + '°C') || '-'"></span></div>
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">风速：<span class="text-white font-semibold" x-text="(popularPeakWeatherDetail.weather && popularPeakWeatherDetail.weather.wind + 'km/h') || '-'"></span></div>
+                <div class="bg-slate-800 rounded-lg px-2 py-1.5 text-slate-300">能见度：<span class="text-white font-semibold" x-text="(popularPeakWeatherDetail.weather && popularPeakWeatherDetail.weather.visibility + 'km') || '-'"></span></div>
+              </div>
+              <p class="text-primary-light text-xs font-semibold" x-text="'攀登建议：' + (popularPeakWeatherDetail.advice || '请结合向导建议与装备情况谨慎攀登')"></p>
+            </div>
+          </template>
+        </div>
       </div>
 
       <!-- Quick Links Grid -->
@@ -465,9 +464,9 @@
             <span class="text-2xl">🧗</span>
             <span class="text-xs text-slate-300 font-medium text-center leading-tight">找向导</span>
           </button>
-          <button @click="currentPage='track'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">📍</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">记录轨迹</span>
+          <button @click="openWeatherQuery()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">☁️</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">天气查询</span>
           </button>
           <button @click="openInsurance()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
             <span class="text-2xl">🛡️</span>
@@ -676,6 +675,34 @@
             <span class="material-symbols-outlined text-4xl">emoji_events</span>
             <p class="mt-2">本月暂无排名，开始你的第一次攀登！</p>
           </div>
+        </div>
+      </div>
+      <div class="px-4 pt-2 pb-2">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-bold text-xl text-white">精选探险</h2>
+          <a href="/expedition-detail.html?id=featured" class="text-xs text-primary-light">查看全部</a>
+        </div>
+        <div class="space-y-3">
+          <template x-for="item in expeditionCards" :key="item.id">
+            <button @click="openExpeditionDetail(item)" class="w-full text-left glass rounded-2xl overflow-hidden">
+              <template x-if="item.cover">
+                <img :src="item.cover" :alt="item.name" class="w-full h-28 object-cover">
+              </template>
+              <template x-if="!item.cover">
+                <div class="w-full h-28 flex items-center justify-center text-white/60 font-bold text-lg"
+                     :style="'background: ' + getExpeditionGradient(item.name || item.id || '')">
+                  <span x-text="(item.name || '探险').slice(0, 2)"></span>
+                </div>
+              </template>
+              <div class="p-3">
+                <p class="font-semibold text-white" x-text="item.name"></p>
+                <div class="mt-1 flex items-center justify-between text-xs text-slate-300">
+                  <span x-text="item.region"></span>
+                  <span class="px-2 py-0.5 rounded-full bg-white/10" x-text="item.difficulty"></span>
+                </div>
+              </div>
+            </button>
+          </template>
         </div>
       </div>
     </section>
@@ -1607,7 +1634,7 @@
         <!-- Session List: 全部/向导/俱乐部 -->
         <div x-show="chatSubTab !== 'square'" class="space-y-1">
           <template x-for="session in chatSessions.filter(s => chatSubTab === 'all' || s.type === chatSubTab || (chatSubTab === 'club' && s.type === 'club'))" :key="session.id">
-            <div @click="activeChatSession=session;showChatWindow=true" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer">
+            <div @click="openChatSession(session)" class="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors cursor-pointer">
               <div class="relative flex-shrink-0">
                 <img :src="session.avatar" class="w-12 h-12 rounded-full object-cover">
                 <span class="absolute -bottom-0.5 -right-0.5 text-sm" x-text="session.flag"></span>
@@ -2505,6 +2532,22 @@
                       <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.firstAscent"></p>
                     </div>
                   </template>
+                </div>
+              </template>
+              <template x-if="selectedPeak.firstAscentBy || selectedPeak.locationDetail || selectedPeak.bestSeason">
+                <div class="grid grid-cols-1 gap-2 mb-4">
+                  <div x-show="selectedPeak.firstAscentBy" class="bg-slate-800 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">首登者</p>
+                    <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.firstAscentBy"></p>
+                  </div>
+                  <div x-show="selectedPeak.locationDetail" class="bg-slate-800 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">地理位置</p>
+                    <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.locationDetail"></p>
+                  </div>
+                  <div x-show="selectedPeak.bestSeason" class="bg-slate-800 rounded-xl p-3">
+                    <p class="text-xs text-slate-400">最佳季节</p>
+                    <p class="text-white font-bold text-xs mt-1" x-text="selectedPeak.bestSeason"></p>
+                  </div>
                 </div>
               </template>
               <!-- 营地分层天气 -->
@@ -3922,7 +3965,7 @@
                     </template>
                   </div>
                 </template>
-                <p class="text-slate-500 text-xs mt-1" x-text="msg.time + (msg.from === 'me' ? ' ✓✓' : '')"></p>
+                <p class="text-slate-500 text-xs mt-1" x-text="msg.time + (msg.from === 'me' ? (msg.status === 'read' ? ' ✓✓' : ' ✓') : '')"></p>
               </div>
             </div>
           </template>
