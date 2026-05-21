@@ -197,8 +197,8 @@ router.get('/feed', feedLimiter, async (req, res) => {
     const parsed = posts.map(p => ({
       ...p,
       feed_score: p.feed_score !== undefined ? Number(p.feed_score) : undefined,
-      tags: p.tags ? JSON.parse(p.tags) : [],
-      images: p.images ? JSON.parse(p.images) : [],
+      tags: parseJsonArray(p.tags),
+      images: parseJsonArray(p.images),
     }));
     const nextCursor = parsed.length === lim ? parsed[parsed.length - 1].id : null;
     res.json({ posts: parsed, nextCursor });
@@ -254,9 +254,9 @@ router.get('/:id', async (req, res) => {
       FROM posts WHERE id = ${id}
     `;
     if (!post) return res.status(404).json({ error: '动态不存在' });
-    post.tags = post.tags ? JSON.parse(post.tags) : [];
-    post.emojis = post.emojis ? JSON.parse(post.emojis) : [];
-    post.images = post.images ? JSON.parse(post.images) : [];
+    post.tags = parseJsonArray(post.tags);
+    post.emojis = parseJsonArray(post.emojis);
+    post.images = parseJsonArray(post.images);
     res.json(post);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -295,9 +295,9 @@ router.post('/', postWriteLimiter, auth, async (req, res) => {
              content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
       FROM posts WHERE user_id = ${req.user.id} ORDER BY id DESC LIMIT 1
     `;
-    post.tags = post.tags ? JSON.parse(post.tags) : [];
-    post.emojis = post.emojis ? JSON.parse(post.emojis) : [];
-    post.images = post.images ? JSON.parse(post.images) : [];
+    post.tags = parseJsonArray(post.tags);
+    post.emojis = parseJsonArray(post.emojis);
+    post.images = parseJsonArray(post.images);
     res.json(post);
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
