@@ -657,7 +657,6 @@ function alpineLink() {
     showMembershipModal: false,
     membershipData: null,
     membershipLoading: false,
-    leaderboardSort: 'count',
     communitySearchQuery: '',
     filteredCommunityPosts: [],
     showGuideApply: false,
@@ -757,18 +756,6 @@ function alpineLink() {
       return lang[key] || this.translations.zh[key] || key;
     },
     nearbyGuides: [],
-    summitLeaderboard: [
-      { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
-      { id: 2, name: 'Pemba Sherpa', flag: '🇳🇵', avatar: 'https://i.pravatar.cc/150?u=lb2', peak: 'K2 8611m', date: '4月10日' },
-      { id: 3, name: 'Hans Weber', flag: '🇩🇪', avatar: 'https://i.pravatar.cc/150?u=lb3', peak: '干城章嘉 8586m', date: '4月9日' },
-      { id: 4, name: 'Sofia Martínez', flag: '🇪🇸', avatar: 'https://i.pravatar.cc/150?u=lb4', peak: '洛子峰 8516m', date: '4月8日' },
-      { id: 5, name: '张伟峰', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb5', peak: '马卡鲁 8485m', date: '4月7日' },
-      { id: 6, name: 'Raj Thapa', flag: '🇮🇳', avatar: 'https://i.pravatar.cc/150?u=lb6', peak: '卓奥友 8188m', date: '4月6日' },
-      { id: 7, name: 'Emma Wilson', flag: '🇬🇧', avatar: 'https://i.pravatar.cc/150?u=lb7', peak: '道拉吉里 8167m', date: '4月5日' },
-      { id: 8, name: 'Kenji Tanaka', flag: '🇯🇵', avatar: 'https://i.pravatar.cc/150?u=lb8', peak: '马纳斯鲁 8163m', date: '4月4日' },
-      { id: 9, name: 'Carlos Lima', flag: '🇧🇷', avatar: 'https://i.pravatar.cc/150?u=lb9', peak: '安纳普尔纳 8091m', date: '4月3日' },
-      { id: 10, name: 'Fatima Hassan', flag: '🇵🇰', avatar: 'https://i.pravatar.cc/150?u=lb10', peak: '南伽帕尔巴特 8126m', date: '4月2日' },
-    ],
     eightThousanders: [],
     continentalPeaks: [],
     worldPeaks: [],
@@ -865,8 +852,6 @@ function alpineLink() {
     showMyOrders: false,
     myOrdersFilter: '全部',
     myOrdersSubTab: 'expedition',
-    myLeaderboardRank: { rank: 8, summit_count: 2, max_elevation: 6178, total_distance: 87.3 },
-    showLeaderboardInfo: false,
     myOrders: [
       { id: 'o1', title: '珠峰BC徒步向导预约', type: '向导预约', date: '2025-04-10', amount: 35000, fee: 525, total: 35525, status: '已托管' },
       { id: 'o2', title: '马特洪峰技术攀登营报名', type: '俱乐部活动', date: '2025-03-28', amount: 12000, fee: 180, total: 12180, status: '服务中' },
@@ -3373,32 +3358,7 @@ function alpineLink() {
         this.filteredCommunityPosts = this.communityPosts;
       } catch(e) {} finally { this.postsLoading = false; }
     },
-    async loadLeaderboard() {
-      // Backend API contract:
-      // GET /api/leaderboard?sort=count|elevation|distance&year=YYYY&month=MM
-      // Returns: { leaders: [{id, name, avatar, flag, summit_count, max_elevation, total_distance, best_peak}], my_rank: {rank, ...} }
-      // Backend auto-aggregates every hour via cron: SELECT user_id, COUNT(*) as summit_count, MAX(max_elevation) as max_elevation, SUM(distance_km) as total_distance FROM tracks WHERE month=current_month GROUP BY user_id ORDER BY {sort} DESC
-      // My rank: GET /api/leaderboard/my-rank?sort=count|elevation|distance
-      try {
-        const res = await fetch('/api/leaderboard?sort=' + (this.leaderboardSort || 'count'));
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.leaders && data.leaders.length > 0) {
-          this.summitLeaderboard = data.leaders.map((l, i) => {
-            const avatar = String(l.avatar || '');
-            const avatarLooksBroken = !avatar || /(question-mark|placeholder-avatar|default-avatar)/i.test(avatar);
-            return {
-              ...l,
-              avatar: avatarLooksBroken ? `https://i.pravatar.cc/150?u=leaderboard_${l.id || i}_${encodeURIComponent(l.name || 'user')}` : avatar,
-              flag: l.flag || '🏔️',
-            };
-          });
-        }
-        if (data.my_rank) { this.myLeaderboardRank = data.my_rank; }
-      } catch(e) {
-        // Fallback: use static mock data (already initialized in state)
-      }
-    },
+    // loadLeaderboard() — 已删除，本月攀登榜移至二期
     async loadWeather() {
       try {
         const res = await fetch('/api/weather?location=珠峰大本营');
@@ -4667,7 +4627,6 @@ function alpineLink() {
       this.loadTeams();
       this.loadGear('buy');
       this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
-      this.loadLeaderboard();
       this.loadWeather();
       this.loadClubs();
       this.loadFeaturedClubs();

@@ -600,79 +600,10 @@
         </div>
       </div>
 
-      <!-- Recent Tracks -->
-      <div class="px-4 mb-5">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-display font-bold text-white">最近轨迹</h3>
-          <button @click="currentPage='track'" class="text-xs text-primary-light">查看全部</button>
-        </div>
-        <div class="space-y-3">
-          <template x-for="track in tracks" :key="track.id">
-            <div @click="openTrackDetail(track)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
-              <img :src="track.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400'" :alt="track.name" class="w-20 h-20 object-cover flex-shrink-0">
-              <div class="py-3 pr-3 flex-1 min-w-0">
-                <p class="text-white text-sm font-semibold truncate" x-text="track.name"></p>
-                <p class="text-slate-400 text-xs mt-1" x-text="track.date"></p>
-                <div class="flex gap-3 mt-2">
-                  <span class="text-xs text-slate-300">📍 <span x-text="(track.distance_km || track.distance || 0) + 'km'"></span></span>
-                  <span class="text-xs text-slate-300">↑ <span x-text="(track.elevation_gain || track.elevation || 0) + 'm'"></span></span>
-                  <span class="text-xs text-slate-300">⏱ <span x-text="track.duration"></span></span>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
+      <!-- Recent Tracks — 移至二期，暂不展示前端入口 -->
+      <!-- TODO Phase 2: 最近轨迹入口，后端接口 /api/tracks 已保留 -->
 
-      <!-- 本月登顶榜 -->
-      <div class="px-4 mb-5">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="font-display font-bold text-white">🏆 本月攀登榜</h3>
-          <button @click="showLeaderboardInfo=true" class="text-xs text-primary-light flex items-center gap-1">
-            <span class="material-symbols-outlined text-sm">info</span>规则
-          </button>
-        </div>
-        <!-- 规则说明 -->
-        <div class="bg-slate-800/60 rounded-xl px-3 py-2 mb-3 text-xs text-slate-400 leading-relaxed">
-          📊 榜单由系统每小时自动聚合用户本月上传轨迹数据计算，月初自动归档上月并重置。按次数 = 登顶次数；按海拔 = 最高海拔；按里程 = 本月累计里程。
-        </div>
-        <!-- 我的名次 -->
-        <template x-if="currentUser && myLeaderboardRank">
-          <div class="bg-primary/10 border border-primary/30 rounded-xl px-3 py-2 mb-3 flex items-center gap-3">
-            <span class="text-primary-light font-bold text-sm">我的名次</span>
-            <span class="text-white font-bold text-lg" x-text="'# ' + myLeaderboardRank.rank"></span>
-            <span class="text-slate-400 text-xs ml-auto" x-text="leaderboardSort==='elevation' ? (myLeaderboardRank.max_elevation + 'm') : leaderboardSort==='distance' ? (myLeaderboardRank.total_distance + 'km') : (myLeaderboardRank.summit_count + '次')"></span>
-          </div>
-        </template>
-        <!-- Sort Tabs -->
-        <div class="flex gap-1 bg-slate-800 rounded-xl p-1 mb-3">
-          <button @click="leaderboardSort='count';loadLeaderboard()" :class="leaderboardSort==='count' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">按次数</button>
-          <button @click="leaderboardSort='elevation';loadLeaderboard()" :class="leaderboardSort==='elevation' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">按海拔</button>
-          <button @click="leaderboardSort='distance';loadLeaderboard()" :class="leaderboardSort==='distance' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all">按里程</button>
-        </div>
-        <div class="glass rounded-2xl overflow-hidden">
-          <template x-for="(entry, idx) in summitLeaderboard" :key="entry.id || idx">
-            <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0">
-              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                   :class="idx===0 ? 'bg-yellow-500 text-white' : idx===1 ? 'bg-slate-400 text-white' : idx===2 ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-400'"
-                   x-text="idx+1"></div>
-              <img :src="entry.avatar || ('https://i.pravatar.cc/150?u=lb' + (entry.id || idx))" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
-              <div class="flex-1 min-w-0">
-                <p class="text-white text-sm font-semibold truncate" x-text="entry.name"></p>
-                <p class="text-slate-400 text-xs truncate" x-text="entry.best_peak || entry.peak || ''"></p>
-              </div>
-              <div class="text-right flex-shrink-0">
-                <p class="text-primary-light text-xs font-bold" x-text="leaderboardSort==='elevation' ? ((entry.max_elevation || 0) + 'm') : leaderboardSort==='distance' ? ((entry.total_distance || 0) + 'km') : ((entry.summit_count || 0) + '次')"></p>
-                <p class="text-slate-500 text-[11px]" x-text="entry.date || (entry.level || '')"></p>
-              </div>
-            </div>
-          </template>
-          <div x-show="summitLeaderboard.length === 0" class="text-center py-8 text-slate-500 text-sm">
-            <span class="material-symbols-outlined text-4xl">emoji_events</span>
-            <p class="mt-2">本月暂无排名，开始你的第一次攀登！</p>
-          </div>
-        </div>
-      </div>
+      <!-- 本月攀登榜 — 已删除，移至二期开发 -->
     </section>
 
     <!-- EXPLORE PAGE -->
@@ -5998,29 +5929,7 @@
     </div>
   </div>
 
-  <!-- ===== LEADERBOARD INFO MODAL ===== -->
-  <div x-show="showLeaderboardInfo"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0 scale-95"
-       x-transition:enter-end="opacity-100 scale-100"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100 scale-100"
-       x-transition:leave-end="opacity-0 scale-95"
-       class="fixed inset-0 z-[150] flex items-center justify-center bg-black/50" style="max-width:430px;margin:0 auto;">
-    <div class="bg-slate-800 rounded-2xl p-5 mx-4 w-full">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-white font-bold text-lg">🏆 排行榜规则</h3>
-        <button @click="showLeaderboardInfo=false" class="p-1 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-400 text-sm">close</span></button>
-      </div>
-      <div class="space-y-3 text-sm text-slate-400 leading-relaxed">
-        <p>📊 <strong class="text-white">数据来源：</strong>用户本月上传的轨迹记录（里程、海拔、登顶次数）</p>
-        <p>⏱ <strong class="text-white">自动计算：</strong>后端每小时自动聚合。月初归档上月榜单并重置</p>
-        <p>📈 <strong class="text-white">排行维度：</strong>按次数（登顶次数）/ 按海拔（最高记录）/ 按里程（累计）</p>
-        <p>🎯 <strong class="text-white">上榜条件：</strong>本月至少上传1条经GPS验证的轨迹记录</p>
-      </div>
-      <button @click="showLeaderboardInfo=false" class="w-full bg-primary text-white font-bold py-3 rounded-xl mt-4 transition-colors">知道了</button>
-    </div>
-  </div>
+  <!-- LEADERBOARD INFO MODAL — 已删除，本月攀登榜移至二期 -->
 
   <!-- SOS 二次确认弹窗 -->
   <div x-show="showSOSConfirm"
@@ -6317,7 +6226,6 @@ function alpineLink() {
     showMembershipModal: false,
     membershipData: null,
     membershipLoading: false,
-    leaderboardSort: 'count',
     communitySearchQuery: '',
     filteredCommunityPosts: [],
     showGuideApply: false,
@@ -6390,18 +6298,6 @@ function alpineLink() {
     selectedPostComments: [],
     commentsLoading: false,
     nearbyGuides: [],
-    summitLeaderboard: [
-      { id: 1, name: '冰川行者', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb1', peak: '珠穆朗玛峰 8849m', date: '4月12日' },
-      { id: 2, name: 'Pemba Sherpa', flag: '🇳🇵', avatar: 'https://i.pravatar.cc/150?u=lb2', peak: 'K2 8611m', date: '4月10日' },
-      { id: 3, name: 'Hans Weber', flag: '🇩🇪', avatar: 'https://i.pravatar.cc/150?u=lb3', peak: '干城章嘉 8586m', date: '4月9日' },
-      { id: 4, name: 'Sofia Martínez', flag: '🇪🇸', avatar: 'https://i.pravatar.cc/150?u=lb4', peak: '洛子峰 8516m', date: '4月8日' },
-      { id: 5, name: '张伟峰', flag: '🇨🇳', avatar: 'https://i.pravatar.cc/150?u=lb5', peak: '马卡鲁 8485m', date: '4月7日' },
-      { id: 6, name: 'Raj Thapa', flag: '🇮🇳', avatar: 'https://i.pravatar.cc/150?u=lb6', peak: '卓奥友 8188m', date: '4月6日' },
-      { id: 7, name: 'Emma Wilson', flag: '🇬🇧', avatar: 'https://i.pravatar.cc/150?u=lb7', peak: '道拉吉里 8167m', date: '4月5日' },
-      { id: 8, name: 'Kenji Tanaka', flag: '🇯🇵', avatar: 'https://i.pravatar.cc/150?u=lb8', peak: '马纳斯鲁 8163m', date: '4月4日' },
-      { id: 9, name: 'Carlos Lima', flag: '🇧🇷', avatar: 'https://i.pravatar.cc/150?u=lb9', peak: '安纳普尔纳 8091m', date: '4月3日' },
-      { id: 10, name: 'Fatima Hassan', flag: '🇵🇰', avatar: 'https://i.pravatar.cc/150?u=lb10', peak: '南伽帕尔巴特 8126m', date: '4月2日' },
-    ],
     eightThousanders: [],
     continentalPeaks: [],
     worldPeaks: [],
@@ -6505,8 +6401,6 @@ function alpineLink() {
     showMyOrders: false,
     myOrdersFilter: '全部',
     myOrdersSubTab: 'expedition',
-    myLeaderboardRank: { rank: 8, summit_count: 2, max_elevation: 6178, total_distance: 87.3 },
-    showLeaderboardInfo: false,
     myOrders: [
       { id: 'o1', title: '珠峰BC徒步向导预约', type: '向导预约', date: '2025-04-10', amount: 35000, fee: 525, total: 35525, status: '已托管' },
       { id: 'o2', title: '马特洪峰技术攀登营报名', type: '俱乐部活动', date: '2025-03-28', amount: 12000, fee: 180, total: 12180, status: '服务中' },
@@ -9062,24 +8956,7 @@ function alpineLink() {
         this.filteredCommunityPosts = this.communityPosts;
       } catch(e) {} finally { this.postsLoading = false; }
     },
-    async loadLeaderboard() {
-      // Backend API contract:
-      // GET /api/leaderboard?sort=count|elevation|distance&year=YYYY&month=MM
-      // Returns: { leaders: [{id, name, avatar, flag, summit_count, max_elevation, total_distance, best_peak}], my_rank: {rank, ...} }
-      // Backend auto-aggregates every hour via cron: SELECT user_id, COUNT(*) as summit_count, MAX(max_elevation) as max_elevation, SUM(distance_km) as total_distance FROM tracks WHERE month=current_month GROUP BY user_id ORDER BY {sort} DESC
-      // My rank: GET /api/leaderboard/my-rank?sort=count|elevation|distance
-      try {
-        const res = await fetch(API_BASE + '/api/leaderboard?sort=' + (this.leaderboardSort || 'count'));
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.leaders && data.leaders.length > 0) {
-          this.summitLeaderboard = data.leaders.map((l, i) => ({ ...l, flag: l.flag || '🏔️' }));
-        }
-        if (data.my_rank) { this.myLeaderboardRank = data.my_rank; }
-      } catch(e) {
-        // Fallback: use static mock data (already initialized in state)
-      }
-    },
+    // loadLeaderboard() — 已删除，本月攀登榜移至二期
     async loadWeather() {
       try {
         const res = await fetch(API_BASE + '/api/weather?location=珠峰大本营');
@@ -9992,7 +9869,6 @@ function alpineLink() {
       this.loadTeams();
       this.loadGear('buy');
       this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
-      this.loadLeaderboard();
       this.loadWeather();
       this.loadClubs();
       this.loadFeaturedClubs();
