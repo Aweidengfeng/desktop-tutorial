@@ -9,6 +9,18 @@ const postWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeade
 const feedLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求太频繁' } });
 const saveLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '操作太频繁' } });
 
+function parseJsonArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // GET /api/posts?type=all
 /**
  * @swagger
@@ -30,16 +42,36 @@ const saveLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: t
  */
 router.get('/', async (req, res) => {
   try {
-    const posts = await prisma.$queryRaw`
-      SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
-      FROM posts ORDER BY created_at DESC
-    `;
+    let posts;
+    try {
+      posts = await prisma.$queryRaw`
+        SELECT id, author_name as authorName, author_avatar as authorAvatar,
+               content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
+        FROM posts ORDER BY created_at DESC
+      `;
+    } catch (rawErr) {
+      console.warn('[posts] Raw SQL query failed, falling back to Prisma ORM:', rawErr.message);
+      posts = await prisma.post.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          authorName: true,
+          authorAvatar: true,
+          content: true,
+          image: true,
+          location: true,
+          likes: true,
+          comments: true,
+          createdAt: true,
+        },
+      });
+    }
     const parsed = posts.map(p => ({
       ...p,
-      tags: p.tags ? JSON.parse(p.tags) : [],
-      emojis: p.emojis ? JSON.parse(p.emojis) : [],
-      images: p.images ? JSON.parse(p.images) : []
+      videoUrl: p.videoUrl || null,
+      tags: parseJsonArray(p.tags),
+      emojis: parseJsonArray(p.emojis),
+      images: parseJsonArray(p.images)
     }));
     res.json(parsed);
   } catch (e) {

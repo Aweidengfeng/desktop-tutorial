@@ -298,12 +298,26 @@ if (process.env.DATABASE_PROVIDER === 'postgresql') {
 }
 
 // 全局速率限制兜底（仅对 /api 前缀，不影响静态文件服务）
-app.use('/api', defaultLimiter);
+const testApiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '测试环境请求过于频繁' },
+});
+app.use('/api', process.env.NODE_ENV === 'test' ? testApiLimiter : defaultLimiter);
 // 精细限流：auth/gdpr（任务五要求）
 // payment 限流分别在 expeditions/guides/pay 路由内通过 paymentLimiter 中间件应用
 const { authStrictLimiter, gdprLimiter } = require('./middleware/rateLimits');
-app.use('/api/auth', authStrictLimiter);
-app.use('/api/gdpr', gdprLimiter);
+const testStrictLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '测试环境请求过于频繁' },
+});
+app.use('/api/auth', process.env.NODE_ENV === 'test' ? testStrictLimiter : authStrictLimiter);
+app.use('/api/gdpr', process.env.NODE_ENV === 'test' ? testStrictLimiter : gdprLimiter);
 
 // HTTP 缓存头（在路由挂载之前）
 app.use(cacheMiddleware);

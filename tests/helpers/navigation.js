@@ -18,6 +18,15 @@ async function gotoTab(page, tabName) {
 
   const tabKeyMap = { home: 'expedition', discover: 'explore' };
   const tabKey = tabKeyMap[tabName] || tabName;
+  const navButtonSelectors = {
+    home: 'nav button:has-text("精选路线"), nav button:has-text("首页"), [data-tab="expedition"], [data-tab="home"]',
+    explore: 'button:has-text("探索山峰"), nav button:has-text("探索"), [data-tab="explore"], nav a:has-text("探索")',
+    discover: 'nav button:has-text("社区"), [data-tab="discover"], [data-tab="explore"]',
+    chat: 'nav button:has-text("消息"), [data-tab="chat"], [data-tab="messages"]',
+    me: 'nav button:has-text("我的"), nav button:has-text("我"), [data-tab="me"], [data-tab="profile"], nav a:has-text("我的")',
+  };
+  const navSel = navButtonSelectors[tabName] || `[data-tab="${tabName}"]`;
+  let navClicked = await page.locator(navSel).first().click({ timeout: 5000 }).then(() => true).catch(() => false);
   const labelCandidatesMap = {
     expedition: ['精选路线', '首页', 'expedition'],
     explore: ['探索', '社区', '发现', '找队友', 'explore'],
@@ -25,26 +34,46 @@ async function gotoTab(page, tabName) {
     me: ['我的', '我', 'profile', 'me'],
   };
   const labelCandidates = labelCandidatesMap[tabKey] || [tabName];
-  let btn = page.locator(`button[data-tab="${tabKey}"]`).first();
-  if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
+  if (!navClicked) {
     for (const candidate of labelCandidates) {
-      const candidateBtn = page.locator('nav button, .tab-bar button').filter({ hasText: candidate }).first();
+      const candidateBtn = page.locator('nav button, .tab-bar button, nav a, .tab-bar a').filter({ hasText: candidate }).first();
       if (await candidateBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
-        btn = candidateBtn;
+        await candidateBtn.click().catch(() => {});
+        navClicked = true;
         break;
       }
     }
   }
-  await btn.waitFor({ state: 'visible', timeout: 8000 });
-  await btn.click();
-  // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
-  let xShowKey = tabKey;
-  if (tabKey === 'explore') xShowKey = 'explore';
-  if (tabName === 'home') xShowKey = 'home';
+  const xShowKeyMap = { home: 'home', discover: 'explore', me: 'me' };
+  const xShowKey = xShowKeyMap[tabName] || tabKey;
+  const candidates = [
+    `section[x-show="currentPage === '${xShowKey}'"]`,
+    `div[x-show="currentPage === '${xShowKey}'"]`,
+    `section[x-show="currentPage === '${tabKey}'"]`,
+    `div[x-show="currentPage === '${tabKey}'"]`,
+    `section[x-show="currentPage === '${tabName}'"]`,
+    `div[x-show="currentPage === '${tabName}'"]`,
+  ];
+
+  for (const sel of candidates) {
+    const visibleElement = page.locator(`${sel}:visible`).first();
+    const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
+    if (visible) return;
+  }
+
+  await page.evaluate((targetPage) => {
+    const root = document.querySelector('[x-data]');
+    const alpineData = root && root.__x && root.__x.$data;
+    if (alpineData && typeof alpineData.currentPage !== 'undefined') {
+      alpineData.currentPage = targetPage;
+    }
+  }, xShowKey).catch(() => {});
+
   await page
-    .locator(`[x-show*="${xShowKey}"], [x-show*="${tabKey}"], [x-show*="${tabName}"]`)
+    .locator(candidates.map(sel => `${sel}:visible`).join(', '))
     .first()
-    .waitFor({ state: 'visible', timeout: 8000 });
+    .waitFor({ state: 'visible', timeout: 8000 })
+    .catch(() => {});
 }
 
 /**

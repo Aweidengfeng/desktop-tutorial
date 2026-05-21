@@ -185,7 +185,10 @@ function isValidPhone(phone) {
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 10 : 100,
+  max: ({
+    production: 10,
+    test: 1000,
+  })[process.env.NODE_ENV] || 100,
   message: { error: '登录尝试次数过多，请15分钟后再试' },
   standardHeaders: true,
   legacyHeaders: false,
