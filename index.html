@@ -318,6 +318,12 @@
         </div>
       </div>
       <div class="flex items-center gap-1">
+        <button x-show="!authToken"
+                data-action="login"
+                @click="showLogin=true"
+                class="h-10 px-3 rounded-2xl bg-primary text-white text-sm font-semibold hover:bg-primary-light transition-colors">
+          登录
+        </button>
         <!-- 通知铃铛 -->
         <button data-testid="notification-bell" @click="openNotificationPanel()"
                 class="relative w-10 h-10 rounded-2xl bg-white/10 text-slate-200 flex items-center justify-center">
@@ -720,6 +726,7 @@
             <div class="flex-1 flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2 relative">
               <span class="material-symbols-outlined text-slate-400 text-lg">wb_sunny</span>
               <input x-model="weatherSearch" type="text"
+                     data-testid="weather-search"
                      placeholder="搜索全球任意地点天气... / Search weather anywhere..."
                      class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500"
                      @keydown.enter="showOsmSuggestions=false;searchWeather()"

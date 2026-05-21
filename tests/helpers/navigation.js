@@ -16,20 +16,18 @@ async function gotoTab(page, tabName) {
     await page.waitForLoadState('networkidle');
   }
 
-  const nameMap = {
-    home: '首页',
-    explore: '社区',
-    discover: '社区',
-    chat: '消息',
-    me: '我',
+  const tabKey = tabName === 'home' ? 'expedition' : (tabName === 'discover' ? 'explore' : tabName);
+  const labelCandidatesMap = {
+    expedition: ['精选路线', '首页', 'expedition'],
+    explore: ['探索', '社区', '发现', '找队友', 'explore'],
+    chat: ['消息', 'chat'],
+    me: ['我的', '我', 'profile', 'me'],
   };
-  const isCommunityTab = tabName === 'explore' || tabName === 'discover';
-  const label = nameMap[tabName] || tabName;
-  const labelCandidates = isCommunityTab ? [label, '社区', '发现', '找队友'] : [label];
-  let btn = page.locator(`button[data-tab="${tabName}"]`).first();
+  const labelCandidates = labelCandidatesMap[tabKey] || [tabName];
+  let btn = page.locator(`button[data-tab="${tabKey}"]`).first();
   if (!(await btn.isVisible({ timeout: 3000 }).catch(() => false))) {
     for (const candidate of labelCandidates) {
-      const candidateBtn = page.locator('nav button').filter({ hasText: candidate }).first();
+      const candidateBtn = page.locator(`nav button:has-text("${candidate}"), .tab-bar button:has-text("${candidate}")`).first();
       if (await candidateBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
         btn = candidateBtn;
         break;
@@ -39,10 +37,9 @@ async function gotoTab(page, tabName) {
   await btn.waitFor({ state: 'visible', timeout: 8000 });
   await btn.click();
   // Wait for the corresponding section to become visible (x-show sets display based on currentPage)
-  const xShowKey = isCommunityTab ? 'community' : tabName;
-  const discoverFallback = isCommunityTab ? ', [x-show*="discover"]' : '';
+  const xShowKey = tabKey === 'explore' ? 'explore' : (tabName === 'home' ? 'home' : tabKey);
   await page
-    .locator(`[x-show*="${xShowKey}"], [x-show*="${tabName}"]${discoverFallback}`)
+    .locator(`[x-show*="${xShowKey}"], [x-show*="${tabKey}"], [x-show*="${tabName}"]`)
     .first()
     .waitFor({ state: 'visible', timeout: 8000 });
 }
@@ -66,8 +63,9 @@ async function gotoExploreCategory(page, category) {
 
   if (category && categoryMap[category]) {
     const catLabel = categoryMap[category];
-    // Category buttons are inside the explore section scroll row
-    await page.locator(`button:has-text("${catLabel}")`).first().click();
+    const exploreSection = page.locator(`section[x-show*="currentPage === 'explore'"]`).first();
+    await exploreSection.waitFor({ state: 'visible', timeout: 8000 });
+    await exploreSection.locator(`button:has-text("${catLabel}")`).first().click();
     // Wait for the category content section to become visible.
     // Use exact x-show attribute value to avoid strict mode violations
     // (e.g. 'commercial' appears in many other x-show expressions in the booking modal)
@@ -83,7 +81,7 @@ async function gotoExploreCategory(page, category) {
  */
 async function loginAsTestUser(page, { username = '13800138000', password = '123456' } = {}) {
   // Open the login modal via the nav-bar button
-  const loginBtn = page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first();
+  const loginBtn = page.locator('button:visible:has-text("登录"), button:visible:has-text("注册"), [data-action="login"]').first();
   await loginBtn.waitFor({ state: 'visible', timeout: 10000 });
   await loginBtn.click();
 
