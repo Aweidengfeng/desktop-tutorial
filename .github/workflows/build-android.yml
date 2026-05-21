@@ -112,7 +112,7 @@ jobs:
         if: always() && hashFiles('android/app/build/outputs/bundle/release/*.aab') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: summitlink-release-${{ github.ref_name }}.aab
+          name: summitlink-release-${{ replace(github.ref_name, '/', '-') }}.aab
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
 
@@ -120,7 +120,7 @@ jobs:
         if: always() && hashFiles('android/app/build/outputs/bundle/debug/*.aab') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: summitlink-debug-${{ github.ref_name }}.aab
+          name: summitlink-debug-${{ replace(github.ref_name, '/', '-') }}.aab
           path: android/app/build/outputs/bundle/debug/*.aab
           retention-days: 30
 
