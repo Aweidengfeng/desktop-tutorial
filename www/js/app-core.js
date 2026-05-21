@@ -501,6 +501,7 @@ function alpineLink() {
     osmLastRequestTime: 0,
     osmSearchDebounceTimer: null,
     showBooking: false,
+    showPayment: false,
     bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '' },
     showSOS: false,
     showSOSConfirm: false,
@@ -4646,7 +4647,9 @@ function alpineLink() {
         this.showLogin = true;
       };
       window.addEventListener('summitlink:session-expired', onSessionExpired);
-      this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
+      if (typeof this.$cleanup === 'function') {
+        this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
+      }
       await this.loadPublicConfig();
       if (this.paymentsEnabled) {
         try {

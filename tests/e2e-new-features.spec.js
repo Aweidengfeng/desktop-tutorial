@@ -24,7 +24,7 @@ async function doLogin(page) {
   await page.goto('/summitlink');
   await page.waitForLoadState('networkidle');
 
-  const loginBtn = page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first();
+  const loginBtn = page.locator('button:visible:has-text("登录"), button:visible:has-text("注册"), [data-action="login"]').first();
   const isLoginVisible = await loginBtn.isVisible({ timeout: 5000 }).catch(() => false);
   if (!isLoginVisible) return;
   await loginBtn.click();
@@ -63,7 +63,7 @@ test.describe('1. 注册页勾选门禁', () => {
     const regBtn = page.locator('button:has-text("注册")').first();
     if (!(await regBtn.isVisible().catch(() => false))) {
       // 先找登录按钮，里面可能有"注册"链接
-      const loginBtn = page.locator('button:visible:has-text("登录"):not(:has-text("退出"))').first();
+      const loginBtn = page.locator('button:visible:has-text("登录"), button:visible:has-text("注册"), [data-action="login"]').first();
       await loginBtn.click();
       await page.locator('[x-show="showLogin"]').waitFor({ state: 'visible', timeout: 5000 });
       await page.locator('button:has-text("注册")').first().click();
