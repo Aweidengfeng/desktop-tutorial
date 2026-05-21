@@ -1756,6 +1756,15 @@ CREATE TABLE IF NOT EXISTS guide_service_orders (
 );
 `);
 
+// 兼容迁移顺序：确保 users 推送字段在索引创建前存在
+const existingUserColsPushIndex = db.pragma('table_info(users)').map(c => c.name);
+if (!existingUserColsPushIndex.includes('push_token')) {
+  db.exec('ALTER TABLE users ADD COLUMN push_token TEXT DEFAULT NULL');
+}
+if (!existingUserColsPushIndex.includes('push_platform')) {
+  db.exec('ALTER TABLE users ADD COLUMN push_platform TEXT DEFAULT NULL');
+}
+
 // ── 性能索引（幂等，CREATE INDEX IF NOT EXISTS）────────────────────────────
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_posts_user_id        ON posts(user_id);
@@ -1783,6 +1792,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_clubs_creator        ON clubs(creator_id);
   CREATE INDEX IF NOT EXISTS idx_club_members_club    ON club_members(club_id);
   CREATE INDEX IF NOT EXISTS idx_club_members_user    ON club_members(user_id);
+  CREATE INDEX IF NOT EXISTS idx_users_push_token     ON users(push_token) WHERE push_token IS NOT NULL;
 `);
 
 // 装备订单表
@@ -2324,6 +2334,15 @@ if (!existingWithdrawalCols.includes('note')) {
 }
 
 // ── 2026 Migrations ─────────────────────────────────────────────
+
+// 迁移：users 表补充 push_token 字段（FCM/APNs 推送令牌）
+const existingUserColsPush = db.pragma('table_info(users)').map(c => c.name);
+if (!existingUserColsPush.includes('push_token')) {
+  db.exec('ALTER TABLE users ADD COLUMN push_token TEXT DEFAULT NULL');
+}
+if (!existingUserColsPush.includes('push_platform')) {
+  db.exec('ALTER TABLE users ADD COLUMN push_platform TEXT DEFAULT NULL');
+}
 
 // Extend messages table
 const msgCols = db.pragma('table_info(messages)').map(c => c.name);
