@@ -26,6 +26,11 @@
     },
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "BiometricAuth": {
+      "androidTitle": "SummitLink 身份验证",
+      "androidSubtitle": "使用生物识别登录",
+      "iosFallbackTitle": "使用密码"
     }
   },
   "server": {
