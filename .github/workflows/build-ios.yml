@@ -61,7 +61,7 @@ jobs:
           cat capacitor.config.json | head -20
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm install
 
       - name: Ensure Capacitor iOS dependencies
         run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/ios
