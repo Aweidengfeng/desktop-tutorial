@@ -64,23 +64,9 @@ test.describe('1. 注册页勾选门禁', () => {
     if (!(await regBtn.isVisible().catch(() => false))) {
       // 先找登录按钮，里面可能有"注册"链接
       const loginBtn = page.locator('button:visible:has-text("登录"), button:visible:has-text("注册"), [data-action="login"]').first();
-      if (await loginBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await loginBtn.click();
-        await page.locator('[x-show="showLogin"]').waitFor({ state: 'visible', timeout: 5000 });
-        await page.locator('button:has-text("注册")').first().click();
-      } else {
-        await page.evaluate(() => {
-          const el = document.querySelector('body[x-data]');
-          if (!el) return;
-          const data = el._x_dataStack
-            ? el._x_dataStack[0]
-            : (window.Alpine && typeof window.Alpine.$data === 'function' ? window.Alpine.$data(el) : null);
-          if (data) {
-            data.showLogin = false;
-            data.showRegister = true;
-          }
-        });
-      }
+      await loginBtn.click();
+      await page.locator('[x-show="showLogin"]').waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('button:has-text("注册")').first().click();
     }
 
     const regBox = page.locator('[x-show="showRegister"]');
