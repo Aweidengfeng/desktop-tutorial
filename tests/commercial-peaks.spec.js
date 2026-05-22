@@ -2,35 +2,23 @@ const { test, expect } = require('@playwright/test');
 const { gotoExploreCategory, gotoTab } = require('./helpers/navigation');
 
 test.describe('商业向导攀登统计模块', () => {
-  test('商业攀登 Tab 应该显示至少25座商业山峰', async ({ page }) => {
+  test('商业攀登 Tab 应显示「全部/向导/俱乐部」筛选', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
-    // PR #43 后商业攀登 Tab 藏在探索页二级分类中
     await gotoExploreCategory(page, 'commercial');
-    await page.waitForTimeout(500);
-    // 应该显示商业山峰卡片
-    const cards = page.locator('[data-commercial-peak]');
-    const count = await cards.count();
-    expect(count).toBeGreaterThanOrEqual(25);
+    await expect(page.locator('button:has-text("全部")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("向导")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("俱乐部")').first()).toBeVisible();
   });
 
-  test('商业攀登统计应该支持按海拔排序', async ({ page }) => {
+  test('商业攀登应支持向导/俱乐部独立展示', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
-    // PR #43 后商业攀登 Tab 藏在探索页二级分类中
     await gotoExploreCategory(page, 'commercial');
-    await page.waitForTimeout(500);
-    // 选择按海拔排序
-    const sortSelect = page.locator('select[x-model*="sortBy"]').first();
-    if (await sortSelect.isVisible()) {
-      await sortSelect.selectOption('altitude');
-    }
-    // 验证第一个峰是最高的
-    const firstAlt = page.locator('[data-commercial-peak]').first().locator('[data-altitude]');
-    if (await firstAlt.isVisible()) {
-      const altVal = await firstAlt.getAttribute('data-altitude-value');
-      expect(parseInt(altVal || '0')).toBeGreaterThan(5000);
-    }
+    await page.locator('button:has-text("向导")').first().click();
+    await expect(page.locator('text=服务山峰：').first()).toBeVisible({ timeout: 10000 });
+    await page.locator('button:has-text("俱乐部")').first().click();
+    await expect(page.locator('text=攀登山峰：').first()).toBeVisible({ timeout: 10000 });
   });
 });
 

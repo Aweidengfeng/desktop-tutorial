@@ -768,12 +768,12 @@ function alpineLink() {
     climbingSpots: [],
     categories: [
       { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
-      { id: 'continental', name: '洲最高峰', icon: 'public' },
+      { id: 'continental', name: '七大洲最高峰', icon: 'public' },
       { id: 'world', name: '世界经典', icon: 'travel_explore' },
       { id: 'alpine', name: '技术攀登', icon: 'terrain' },
-      { id: 'guides', name: '专业向导', icon: 'person_pin' },
       { id: 'commercial', name: '商业攀登', icon: 'groups' },
     ],
+    commercialSourceTab: 'all',
     communityPosts: [
       { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
       { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
@@ -961,6 +961,19 @@ function alpineLink() {
       window.location.href = 'expedition-detail.html?peak=' + encodeURIComponent(peakName);
     },
     openPeakDetail(peak) {
+      if (!peak) return;
+      if (typeof peak === 'number' || (typeof peak === 'string' && /^\d+$/.test(peak))) {
+        const peakId = Number(peak);
+        const allPeaks = [
+          ...(this.eightThousanders || []),
+          ...(this.continentalPeaks || []),
+          ...(this.worldPeaks || []),
+          ...(this.climbingSpots || []),
+        ];
+        const found = allPeaks.find(p => Number(p.id) === peakId);
+        if (found) return this.openPeakDetail(found);
+        return;
+      }
       this.destroyPeakLocationMap();
       this.selectedPeak = peak;
       this.showPeakDetail = true;
@@ -1010,12 +1023,10 @@ function alpineLink() {
       if (!peak) return;
       this.peakWeatherLoading = true;
       try {
-        let url;
-        if (peak.latitude !== null && peak.latitude !== undefined && peak.longitude !== null && peak.longitude !== undefined) {
-          url = `/api/weather?lat=${peak.latitude}&lon=${peak.longitude}&location=${encodeURIComponent(peak.name)}`;
-        } else {
-          url = `/api/weather?location=${encodeURIComponent(peak.name)}`;
-        }
+        const hasPeakId = peak && peak.id !== undefined && peak.id !== null && !Number.isNaN(Number(peak.id));
+        const url = hasPeakId
+          ? `/api/peaks/${Number(peak.id)}/weather`
+          : `/api/weather?location=${encodeURIComponent(peak.name)}`;
         const res = await fetch(url);
         if (res.ok) this.peakWeather = await res.json();
       } catch(e) {}
@@ -1081,6 +1092,27 @@ function alpineLink() {
         peaks = [...peaks].sort((a, b) => (order[b.difficulty] || 0) - (order[a.difficulty] || 0));
       }
       return peaks;
+    },
+    getCommercialGuideProducts() {
+      const guides = this.guides.length ? this.guides : this.nearbyGuides;
+      return (guides || []).map(g => ({
+        ...g,
+        languages: Array.isArray(g.languages) && g.languages.length ? g.languages : ['中文'],
+        servicePeaks: Array.isArray(g.peaks_led) && g.peaks_led.length
+          ? g.peaks_led.join('、')
+          : (g.specialty || '多山峰定制服务'),
+        priceLabel: (g.dayRate || g.price) ? `¥${Number(g.dayRate || g.price).toLocaleString()}/天` : '价格咨询',
+      }));
+    },
+    getCommercialClubProducts() {
+      return (this.clubs || []).map(c => ({
+        ...c,
+        logo: c.logo || c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=200',
+        climbPeak: c.specialty || '多条官方山峰路线',
+        departureTime: c.next_departure || '近期出发',
+        priceLabel: c.price ? `¥${Number(c.price).toLocaleString()}` : '价格咨询',
+        quotaLabel: c.spots ? `${c.spots} 个名额` : '名额以活动页为准',
+      }));
     },
     // OpenStreetMap Nominatim 地名查询（带缓存和节流）
     async geocodeByOSM(name) {
@@ -3313,7 +3345,15 @@ function alpineLink() {
     async loadPeaks(type) {
       try {
         const t = type || this.activeCategory;
-        const res = await fetch('/api/peaks?type=' + t);
+        const categoryMap = {
+          '8000ers': 'eight_thousanders',
+          continental: 'seven_summits',
+          world: 'classic',
+          alpine: 'technical',
+        };
+        const apiCategory = categoryMap[t];
+        if (!apiCategory) return;
+        const res = await fetch('/api/peaks?category=' + apiCategory);
         if (!res.ok) return;
         const data = await res.json();
         const mapped = data.map(p => enrichPeakDetail({ ...p, countryFlag: p.countryFlag || '', icon: '🏔️', nameEn: p.nameEn || p.name }));
@@ -4414,7 +4454,7 @@ function alpineLink() {
             this.banners = data;
             this.heroSlides = data.map(b => ({
               name: b.title, sub: b.subtitle || '', image: b.image_url,
-              linkType: b.link_type, linkTarget: b.link_target,
+              linkType: b.link_type, linkTarget: b.link_target, peak: b.peak || b.peak_name || b.link_target,
             }));
           }
         }
@@ -4427,7 +4467,11 @@ function alpineLink() {
         const peakName = slide.peak || slide.name || slide.linkTarget;
         this.navigateToPeakDetail(peakName);
       } else if (slide.linkType === 'page') {
-        if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
+        if (slide.linkTarget === 'guides') {
+          this.currentPage = 'explore';
+          this.activeCategory = 'commercial';
+          this.commercialSourceTab = 'guides';
+        }
         else { this.currentPage = slide.linkTarget || 'explore'; }
       } else if (slide.linkType === 'insurance') {
         this.openInsurance();
@@ -4721,7 +4765,10 @@ function alpineLink() {
       // Watch activeCategory changes to reload peaks
       this.$watch('activeCategory', (val) => {
         if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
-        if (val === 'guides') this.loadGuides();
+        if (val === 'commercial') {
+          this.loadGuides();
+          this.loadClubs();
+        }
       });
       // Watch activeChatType to load articles when articles tab is selected
       this.$watch('activeChatType', (val) => {

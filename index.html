@@ -467,7 +467,7 @@
             <span class="text-2xl">🏔️</span>
             <span class="text-xs text-slate-300 font-medium text-center leading-tight">探索山峰</span>
           </button>
-          <button @click="currentPage='explore';activeCategory='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+          <button @click="currentPage='explore';activeCategory='commercial';commercialSourceTab='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
             <span class="text-2xl">🧗</span>
             <span class="text-xs text-slate-300 font-medium text-center leading-tight">找向导</span>
           </button>
@@ -533,7 +533,7 @@
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-1">
           <h3 class="font-display font-bold text-white">向导推荐</h3>
-          <button @click="currentPage='explore';activeCategory='guides'" class="text-xs text-primary-light">查看全部</button>
+          <button @click="currentPage='explore';activeCategory='commercial';commercialSourceTab='guides'" class="text-xs text-primary-light">查看全部</button>
         </div>
         <p class="px-4 text-slate-400 text-xs mb-3">根据您的目标山峰为您精选专业向导</p>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
@@ -813,7 +813,7 @@
         <div x-show="activeCategory === '8000ers'">
           <div class="grid grid-cols-2 gap-3">
             <template x-for="peak in eightThousanders" :key="peak.id">
-              <div @click="navigateToPeakDetail(peak.name)" class="rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
+              <div @click="openPeakDetail(peak)" class="rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
                 <div class="relative h-32">
                   <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
                   <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
@@ -826,9 +826,13 @@
                   </div>
                 </div>
                 <div class="bg-slate-800 px-3 py-2">
-                  <div class="flex justify-between items-center">
-                    <span class="text-xs text-slate-400 truncate mr-1" x-text="peak.country"></span>
+                  <div class="flex justify-between items-center gap-1">
+                    <span class="text-xs text-slate-400 truncate mr-1" x-text="peak.country + (peak.continent ? (' / ' + peak.continent) : '')"></span>
                     <span class="text-xs text-primary-light font-semibold" x-text="peak.difficulty"></span>
+                  </div>
+                  <div class="mt-1 flex justify-between items-center gap-1">
+                    <span class="text-[11px] text-emerald-400 truncate" x-text="'成功率 ' + (peak.successRate || '-')"></span>
+                    <span class="text-[11px] text-slate-500 truncate" x-text="peak.nameEn"></span>
                   </div>
                 </div>
               </div>
@@ -840,7 +844,7 @@
         <div x-show="activeCategory === 'continental'">
           <div class="space-y-3">
             <template x-for="peak in continentalPeaks" :key="peak.id">
-              <div @click="navigateToPeakDetail(peak.name)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div @click="openPeakDetail(peak)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
                 <img :src="peak.image" :alt="peak.name" class="w-24 h-24 object-cover flex-shrink-0">
                 <div class="py-3 flex-1 pr-3">
                   <div class="flex items-start justify-between gap-2">
@@ -850,10 +854,11 @@
                     </div>
                     <span class="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-slate-300 flex-shrink-0" x-text="peak.continent"></span>
                   </div>
-                  <div class="flex gap-3 mt-2">
+                  <div class="flex gap-3 mt-2 flex-wrap">
                     <span class="text-xs text-primary-light font-bold" x-text="peak.altitude + 'm'"></span>
                     <span class="text-xs text-slate-400" x-text="peak.country"></span>
                     <span class="text-xs text-orange-400" x-text="peak.difficulty"></span>
+                    <span class="text-xs text-emerald-400" x-text="'成功率 ' + (peak.successRate || '-')"></span>
                   </div>
                 </div>
               </div>
@@ -865,7 +870,7 @@
         <div x-show="activeCategory === 'world'">
           <div class="space-y-3">
             <template x-for="peak in worldPeaks" :key="peak.id">
-              <div @click="navigateToPeakDetail(peak.name)" class="glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
+              <div @click="openPeakDetail(peak)" class="glass rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 transition-colors">
                 <div class="relative h-36">
                   <img :src="peak.image" :alt="peak.name" class="w-full h-full object-cover">
                   <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
@@ -875,6 +880,9 @@
                   </div>
                   <div class="absolute top-3 right-3">
                     <span class="text-xs bg-primary/80 px-2 py-0.5 rounded-full text-white" x-text="peak.country"></span>
+                  </div>
+                  <div class="absolute top-3 left-3">
+                    <span class="text-xs bg-emerald-500/70 px-2 py-0.5 rounded-full text-white" x-text="'成功率 ' + (peak.successRate || '-')"></span>
                   </div>
                 </div>
               </div>
@@ -886,14 +894,15 @@
         <div x-show="activeCategory === 'alpine'">
           <div class="space-y-3">
             <template x-for="spot in climbingSpots" :key="spot.id">
-              <div @click="navigateToPeakDetail(spot.name)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+              <div @click="openPeakDetail(spot)" class="glass rounded-2xl overflow-hidden flex gap-3 cursor-pointer hover:bg-white/10 transition-colors">
                 <img :src="spot.image" :alt="spot.name" class="w-24 h-24 object-cover flex-shrink-0">
                 <div class="py-3 flex-1">
                   <p class="text-white font-semibold" x-text="spot.name"></p>
                   <p class="text-slate-400 text-xs" x-text="spot.nameEn"></p>
-                  <div class="flex gap-2 mt-2">
+                  <div class="flex gap-2 mt-2 flex-wrap">
                     <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full" x-text="spot.difficulty"></span>
                     <span class="text-xs text-slate-400" x-text="spot.country"></span>
+                    <span class="text-xs text-emerald-400" x-text="'成功率 ' + (spot.successRate || '-')"></span>
                   </div>
                 </div>
               </div>
@@ -904,159 +913,59 @@
         <!-- No match (intentional bug state when activeCategory='summits') -->
         <!-- 商业攀登模块 -->
         <div x-show="activeCategory === 'commercial'" class="pb-4">
-          <!-- 顶部统计概览 -->
           <div class="mb-4">
-            <h3 class="font-display font-bold text-white mb-1 text-base">🏔️ 全球热门商业向导带队攀登雪山</h3>
-            <p class="text-slate-400 text-xs mb-3">浏览热门雪山商业攀登路线，选择山峰后可在线预约</p>
-            <!-- 选择向导 / 选择俱乐部 入口 -->
-            <div class="grid grid-cols-2 gap-2 mb-3">
-              <button @click="currentPage='explore';activeCategory='guides'" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-semibold hover:bg-orange-500/30 transition-colors">
-                <span class="material-symbols-outlined text-base">person_pin</span>
-                选择向导
-              </button>
-              <button @click="currentPage='community';activeChatType='clubs'" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-semibold hover:bg-purple-500/30 transition-colors">
-                <span class="material-symbols-outlined text-base">groups</span>
-                选择俱乐部
-              </button>
+            <h3 class="font-display font-bold text-white mb-1 text-base">🏔️ 商业攀登</h3>
+            <p class="text-slate-400 text-xs mb-3">向导与俱乐部发布的商业攀登产品</p>
+            <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+              <button @click="commercialSourceTab='all'" :class="commercialSourceTab==='all' ? 'bg-primary text-white' : 'glass text-slate-300'" class="px-4 py-2 rounded-full text-sm font-medium transition-all">全部</button>
+              <button @click="commercialSourceTab='guides'" :class="commercialSourceTab==='guides' ? 'bg-primary text-white' : 'glass text-slate-300'" class="px-4 py-2 rounded-full text-sm font-medium transition-all">向导</button>
+              <button @click="commercialSourceTab='clubs'" :class="commercialSourceTab==='clubs' ? 'bg-primary text-white' : 'glass text-slate-300'" class="px-4 py-2 rounded-full text-sm font-medium transition-all">俱乐部</button>
             </div>
           </div>
-          <!-- 筛选控件 - 自定义 pill 样式 -->
-          <div class="flex gap-2 mb-3 overflow-x-auto scroll-hide pb-1">
-            <!-- 地区筛选 -->
-            <div class="relative flex-shrink-0" x-data="{ openRegion: false }">
-              <button @click="openRegion=!openRegion"
-                      class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all"
-                      :class="commercialFilter.region ? 'border-primary-light text-primary-light' : ''">
-                <span x-text="commercialFilter.region || '全部地区'"></span>
-                <span class="material-symbols-outlined text-xs" style="font-size:14px">expand_more</span>
-              </button>
-              <div x-show="openRegion" @click.away="openRegion=false"
-                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
-                <button @click="commercialFilter.region=''; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="!commercialFilter.region ? 'text-primary-light font-semibold' : ''">全部地区</button>
-                <button @click="commercialFilter.region='喜马拉雅'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='喜马拉雅' ? 'text-primary-light' : ''">喜马拉雅</button>
-                <button @click="commercialFilter.region='喀喇昆仑'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='喀喇昆仑' ? 'text-primary-light' : ''">喀喇昆仑</button>
-                <button @click="commercialFilter.region='帕米尔'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='帕米尔' ? 'text-primary-light' : ''">帕米尔</button>
-                <button @click="commercialFilter.region='横断山脉'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='横断山脉' ? 'text-primary-light' : ''">横断山脉</button>
-                <button @click="commercialFilter.region='安第斯'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='安第斯' ? 'text-primary-light' : ''">安第斯</button>
-                <button @click="commercialFilter.region='非洲'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.region==='非洲' ? 'text-primary-light' : ''">非洲</button>
-                <button @click="commercialFilter.region='北美'; openRegion=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.region==='北美' ? 'text-primary-light' : ''">北美</button>
-              </div>
-            </div>
-            <!-- 难度筛选 -->
-            <div class="relative flex-shrink-0" x-data="{ openDiff: false }">
-              <button @click="openDiff=!openDiff"
-                      class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all"
-                      :class="commercialFilter.difficulty ? 'border-primary-light text-primary-light' : ''">
-                <span x-text="commercialFilter.difficulty || '全部难度'"></span>
-                <span class="material-symbols-outlined text-xs" style="font-size:14px">expand_more</span>
-              </button>
-              <div x-show="openDiff" @click.away="openDiff=false"
-                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[120px]">
-                <button @click="commercialFilter.difficulty=''; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="!commercialFilter.difficulty ? 'text-primary-light font-semibold' : ''">全部难度</button>
-                <button @click="commercialFilter.difficulty='入门6000m'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='入门6000m' ? 'text-primary-light' : ''">入门6000m</button>
-                <button @click="commercialFilter.difficulty='进阶7000m'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='进阶7000m' ? 'text-primary-light' : ''">进阶7000m</button>
-                <button @click="commercialFilter.difficulty='技术型'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.difficulty==='技术型' ? 'text-primary-light' : ''">技术型</button>
-                <button @click="commercialFilter.difficulty='8000m级'; openDiff=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.difficulty==='8000m级' ? 'text-primary-light' : ''">8000m级</button>
-              </div>
-            </div>
-            <!-- 排序筛选 -->
-            <div class="relative flex-shrink-0" x-data="{ openSort: false }">
-              <button @click="openSort=!openSort"
-                      class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-slate-600 bg-slate-800/80 text-slate-300 text-xs font-medium whitespace-nowrap backdrop-blur-sm active:scale-95 transition-all">
-                <span x-text="commercialFilter.sortBy === 'altitude' ? '按海拔' : commercialFilter.sortBy === 'annualClimbers' ? '按年攀登量' : '按难度'"></span>
-                <span class="material-symbols-outlined text-xs" style="font-size:14px">swap_vert</span>
-              </button>
-              <div x-show="openSort" @click.away="openSort=false"
-                   class="absolute top-9 left-0 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-xl min-w-[130px]">
-                <button @click="commercialFilter.sortBy='altitude'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-t-xl" :class="commercialFilter.sortBy==='altitude' ? 'text-primary-light font-semibold' : ''">按海拔</button>
-                <button @click="commercialFilter.sortBy='annualClimbers'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700" :class="commercialFilter.sortBy==='annualClimbers' ? 'text-primary-light font-semibold' : ''">按年攀登量</button>
-                <button @click="commercialFilter.sortBy='difficulty'; openSort=false" class="block w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 rounded-b-xl" :class="commercialFilter.sortBy==='difficulty' ? 'text-primary-light font-semibold' : ''">按难度</button>
-              </div>
-            </div>
-          </div>
-          <!-- 山峰卡片列表 -->
+
           <div class="space-y-3">
-            <template x-for="peak in getFilteredCommercialPeaks()" :key="peak.id">
-              <div class="bg-slate-800 rounded-2xl p-3" data-commercial-peak>
-                <div class="flex items-start justify-between mb-2">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <span class="text-white font-bold text-sm" x-text="peak.name"></span>
-                      <span class="text-slate-400 text-xs" x-text="peak.nameEn"></span>
-                      <template x-if="peak.isEstimated">
-                        <span class="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">估算</span>
-                      </template>
-                    </div>
-                    <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <span class="text-xs text-slate-400" x-text="peak.country"></span>
-                      <span class="text-slate-600">·</span>
-                      <span class="text-xs text-slate-400" x-text="peak.region"></span>
-                    </div>
+            <template x-for="g in getCommercialGuideProducts()" :key="'guide-'+g.id">
+              <div x-show="commercialSourceTab === 'all' || commercialSourceTab === 'guides'" @click="openGuideProfile(g.id, g)" class="glass rounded-2xl p-3 flex items-start gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+                <img :src="g.avatar" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-white font-semibold truncate" x-text="g.name"></p>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full" x-show="g.flag || g.verified">认证</span>
                   </div>
-                  <div class="text-right flex-shrink-0 ml-2">
-                    <p class="text-primary-light font-bold text-base" data-altitude :data-altitude-value="peak.altitude" x-text="peak.altitude.toLocaleString()+'m'"></p>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                          :class="peak.difficulty==='8000m级'?'bg-red-500/20 text-red-400':peak.difficulty==='技术型'?'bg-orange-500/20 text-orange-400':peak.difficulty==='进阶7000m'?'bg-yellow-500/20 text-yellow-400':'bg-green-500/20 text-green-400'"
-                          x-text="peak.difficulty"></span>
+                  <p class="text-slate-400 text-xs mt-0.5 truncate" x-text="'服务山峰：' + g.servicePeaks"></p>
+                  <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span class="text-primary-light text-xs font-semibold" x-text="g.priceLabel"></span>
+                    <span class="text-slate-500 text-xs truncate" x-text="'语言：' + (g.languages || ['中文']).join('/')"></span>
+                    <span class="text-yellow-400 text-xs" x-text="'★ ' + (g.rating || 'N/A')"></span>
                   </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 mb-2">
-                  <div class="bg-slate-700/60 rounded-lg p-2">
-                    <p class="text-slate-400 text-[10px]">年攀登人数</p>
-                    <p class="text-white text-xs font-bold" x-text="peak.annualClimbers.toLocaleString()+'人'"></p>
-                  </div>
-                  <div class="bg-slate-700/60 rounded-lg p-2">
-                    <p class="text-slate-400 text-[10px]">年商业队伍</p>
-                    <p class="text-white text-xs font-bold" x-text="peak.annualTeams+'支'"></p>
-                  </div>
-                  <div class="bg-slate-700/60 rounded-lg p-2">
-                    <p class="text-slate-400 text-[10px]">最佳季节</p>
-                    <p class="text-white text-xs font-bold truncate" x-text="peak.season"></p>
-                  </div>
-                  <div class="bg-slate-700/60 rounded-lg p-2">
-                    <p class="text-slate-400 text-[10px]">补充氧气</p>
-                    <p class="text-white text-xs font-bold" x-text="peak.oxygen ? '通常使用' : '通常不用'"></p>
+              </div>
+            </template>
+
+            <template x-for="c in getCommercialClubProducts()" :key="'club-'+c.id">
+              <div x-show="commercialSourceTab === 'all' || commercialSourceTab === 'clubs'" @click="openClubProfile(c.id)" class="glass rounded-2xl p-3 flex items-start gap-3 cursor-pointer hover:bg-white/10 transition-colors">
+                <img :src="c.logo" class="w-14 h-14 rounded-xl object-cover flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                  <p class="text-white font-semibold truncate" x-text="c.name"></p>
+                  <p class="text-slate-400 text-xs mt-0.5 truncate" x-text="'攀登山峰：' + c.climbPeak"></p>
+                  <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    <span class="text-slate-300 text-xs" x-text="'出发时间：' + c.departureTime"></span>
+                    <span class="text-primary-light text-xs font-semibold" x-text="c.priceLabel"></span>
+                    <span class="text-slate-500 text-xs" x-text="c.quotaLabel"></span>
                   </div>
                 </div>
-                <div class="mb-2">
-                  <p class="text-slate-400 text-[10px] mb-1">主要路线</p>
-                  <p class="text-slate-300 text-xs" x-text="peak.routes"></p>
-                </div>
-                <div class="mb-2">
-                  <p class="text-slate-400 text-[10px] mb-1">主要运营商</p>
-                  <div class="flex flex-wrap gap-1">
-                    <template x-for="op in peak.operators.slice(0,4)" :key="op">
-                      <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded" x-text="op"></span>
-                    </template>
-                    <template x-if="peak.operators.length > 4">
-                      <span class="text-[10px] text-slate-500" x-text="'+' + (peak.operators.length-4) + '家'"></span>
-                    </template>
-                  </div>
-                </div>
-                <template x-if="peak.campKey">
-                  <button @click="weatherSearch=peak.campKey; showOsmSuggestions=false; searchWeather(); $nextTick(()=>document.querySelector('[x-show=\'showWeatherSearchResult\']')?.scrollIntoView({behavior:'smooth',block:'start'}))"
-                          class="w-full mt-1 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary-light text-xs rounded-lg transition-colors flex items-center justify-center gap-1">
-                    <span class="material-symbols-outlined text-sm">wb_sunny</span>
-                    查看营地天气
-                  </button>
-                </template>
-                <button x-show="paymentsEnabled" @click="openCommercialBooking(peak)" class="w-full mt-2 py-2 bg-primary hover:bg-primary-light text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1">
-                  <span class="material-symbols-outlined text-sm">calendar_add_on</span>
-                  预约攀登
-                </button>
-                <span x-show="!paymentsEnabled" class="block w-full mt-2 py-2 text-center text-gray-400 text-xs font-semibold">即将上线 (Coming Soon)</span>
               </div>
             </template>
           </div>
         </div>
 
-        <div x-show="!['8000ers','continental','world','alpine','guides','commercial'].includes(activeCategory)" class="text-center py-12">
+        <div x-show="!['8000ers','continental','world','alpine','commercial'].includes(activeCategory)" class="text-center py-12">
           <span class="material-symbols-outlined text-slate-600 text-6xl">landscape</span>
           <p class="text-slate-500 mt-3">请选择分类</p>
         </div>
 
         <!-- Expeditions Placeholder -->
-        <div class="mt-6">
+        <div x-show="activeCategory === 'commercial'" class="mt-6">
           <h3 class="font-display font-bold text-white mb-3">远征计划</h3>
           <div class="glass rounded-2xl p-6 text-center">
             <span class="material-symbols-outlined text-slate-500 text-4xl">flag</span>
@@ -1065,7 +974,7 @@
         </div>
 
         <!-- 定制攀登入口 -->
-        <div class="mt-4">
+        <div x-show="activeCategory === 'commercial'" class="mt-4">
           <div @click="openCustomsForm()" class="rounded-2xl p-4 cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-4" style="background: linear-gradient(135deg,#2b6579,#1e4f60);">
             <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
               <span class="material-symbols-outlined text-white text-2xl">route</span>
@@ -1079,7 +988,7 @@
         </div>
 
         <!-- Guides Section -->
-        <div class="mt-4 mb-2">
+        <div x-show="activeCategory === 'commercial'" class="mt-4 mb-2">
           <h3 class="font-display font-bold text-white mb-3">专业向导</h3>
           <div class="space-y-3">
             <template x-for="g in (guides.length ? guides : nearbyGuides)" :key="g.id">
@@ -2621,7 +2530,7 @@
                 <p class="text-slate-400 text-sm mb-4" x-text="selectedPeak.description"></p>
               </template>
               <!-- Extended info (年攀登人数、商业队伍、季节、辅助氧气、主要路线) -->
-              <template x-if="selectedPeak.mainRoute || selectedPeak.seasonDetail || selectedPeak.annualClimbers">
+              <template x-if="selectedPeak.mainRoute || selectedPeak.seasonDetail || selectedPeak.bestSeason || selectedPeak.annualClimbers">
                 <div class="grid grid-cols-2 gap-2 mb-4">
                   <template x-if="selectedPeak.mainRoute">
                     <div class="bg-slate-800 rounded-xl p-2.5 col-span-2">
@@ -2629,10 +2538,10 @@
                       <p class="text-white text-xs font-semibold" x-text="selectedPeak.mainRoute"></p>
                     </div>
                   </template>
-                  <template x-if="selectedPeak.seasonDetail">
+                  <template x-if="selectedPeak.seasonDetail || selectedPeak.bestSeason">
                     <div class="bg-slate-800 rounded-xl p-2.5 col-span-2">
                       <p class="text-xs text-slate-400 mb-0.5">攀登季节</p>
-                      <p class="text-white text-xs font-semibold" x-text="selectedPeak.seasonDetail"></p>
+                      <p class="text-white text-xs font-semibold" x-text="selectedPeak.seasonDetail || selectedPeak.bestSeason"></p>
                     </div>
                   </template>
                   <template x-if="selectedPeak.annualClimbers">
@@ -2653,9 +2562,18 @@
                   </div>
                 </div>
               </template>
+              <template x-if="selectedPeak.gallery && selectedPeak.gallery.length">
+                <div class="mb-4">
+                  <p class="text-xs text-slate-400 mb-2">图片画廊</p>
+                  <div class="flex gap-2 overflow-x-auto scroll-hide pb-1">
+                    <template x-for="(img, idx) in selectedPeak.gallery" :key="idx">
+                      <img :src="img" :alt="selectedPeak.name + ' gallery'" class="w-28 h-20 rounded-xl object-cover flex-shrink-0">
+                    </template>
+                  </div>
+                </div>
+              </template>
               <div class="flex gap-3">
-                <button x-show="paymentsEnabled" @click="closePeakDetail();openCommercialBooking(selectedPeak)" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">预约攀登</button>
-                <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
+                <button @click="closePeakDetail()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">关闭详情</button>
                 <button class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors">
                   <span class="material-symbols-outlined">bookmark</span>
                 </button>
