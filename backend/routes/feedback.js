@@ -20,7 +20,7 @@ router.post('/', feedbackLimiter, async (req, res) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const jwt = require('jsonwebtoken');
       const token = authHeader.slice(7);
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'summitlink_dev_secret');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production');
       userId = decoded.id || null;
     }
   } catch (_) {}
@@ -34,14 +34,15 @@ router.post('/', feedbackLimiter, async (req, res) => {
   }
 
   try {
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO feedback (user_id, type, content, contact, created_at) VALUES (?, ?, ?, ?, datetime('now'))`,
-      userId,
-      String(type).slice(0, 50),
-      String(content).trim(),
-      contact ? String(contact).slice(0, 200) : null,
-    );
-    return res.json({ success: true });
+    const record = await prisma.feedback.create({
+      data: {
+        userId,
+        type: String(type).slice(0, 50),
+        content: String(content).trim(),
+        contact: contact ? String(contact).slice(0, 200) : null,
+      },
+    });
+    return res.json({ success: true, id: record.id });
   } catch (e) {
     console.error('[feedback] insert error:', e.message);
     return res.status(500).json({ error: '提交失败，请稍后重试' });
