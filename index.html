@@ -333,9 +333,41 @@
                 class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
                 x-text="notifUnreadCount > 99 ? '99+' : notifUnreadCount"></span>
         </button>
-        <button @click="showSettings=true; settingsType='profile'" class="w-10 h-10 rounded-2xl bg-white/10 text-slate-200 flex items-center justify-center">
-          <span class="material-symbols-outlined text-xl">menu</span>
+        <button @click="showSearch=true; $nextTick(() => $refs.globalSearchInput && $refs.globalSearchInput.focus())" class="w-10 h-10 rounded-2xl bg-white/10 text-slate-200 flex items-center justify-center">
+          <span class="material-symbols-outlined text-xl">search</span>
         </button>
+      </div>
+    </div>
+    <div x-show="showSearch"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
+         class="px-4 pb-3">
+      <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
+        <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
+        <input x-ref="globalSearchInput" x-model="searchQuery" @input.debounce.300ms="performSearch()" type="text" placeholder="搜索山峰、向导、俱乐部、动态..." class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
+        <button @click="showSearch=false;searchQuery='';searchResults=[]" class="text-slate-400 hover:text-white">
+          <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+      </div>
+      <div x-show="!searchResults.length" class="flex gap-2 mt-2 overflow-x-auto scroll-hide pb-1">
+        <template x-for="(h, i) in searchHistory" :key="h + i">
+          <button @click="searchByKeyword(h)" class="flex-shrink-0 px-3 py-1 rounded-full bg-slate-700 text-slate-300 text-xs hover:bg-slate-600 transition-colors" x-text="h"></button>
+        </template>
+      </div>
+      <div x-show="searchResults.length > 0" class="mt-2 space-y-2 max-h-72 overflow-y-auto">
+        <template x-for="item in searchResults" :key="item.id || item.name || item.title">
+          <button @click="selectSearchResult(item)" class="w-full text-left px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors flex items-center gap-2">
+            <span class="text-base" x-text="item.type === 'peak' ? '🏔️' : item.type === 'guide' ? '🧗' : item.type === 'club' ? '🏛️' : item.type === 'gear' ? '🎒' : '🔎'"></span>
+            <div class="min-w-0 flex-1">
+              <p class="text-white text-xs font-semibold truncate" x-text="item.name || item.title || item.content"></p>
+              <p class="text-slate-400 text-[10px] truncate" x-text="item.country || item.specialty || item.type || ''"></p>
+            </div>
+          </button>
+        </template>
       </div>
     </div>
   </header>
@@ -493,9 +525,9 @@
             <span class="text-2xl">👥</span>
             <span class="text-xs text-slate-300 font-medium text-center leading-tight">找队友</span>
           </button>
-          <button @click="openCustomsForm()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🗺️</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">定制计划</span>
+          <button @click="currentPage='explore';activeCategory='commercial'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <span class="text-2xl">🏔️</span>
+            <span class="text-xs text-slate-300 font-medium text-center leading-tight">商业攀登</span>
           </button>
         </div>
       </div>
@@ -1046,7 +1078,7 @@
         </div>
         <!-- Tab Bar -->
         <div class="flex gap-4 overflow-x-auto scroll-hide pb-3 mb-4 border-b border-white/10">
-          <template x-for="tab in [{id:'all',name:'全部'},{id:'posts',name:'动态'},{id:'diary',name:'日记'},{id:'clubs',name:'俱乐部'},{id:'teams',name:'组队'},{id:'articles',name:'攻略'}]" :key="tab.id">
+          <template x-for="tab in communityTabs" :key="tab.id">
             <button @click="activeChatType=tab.id"
                     :class="activeChatType===tab.id ? 'text-primary-light border-b-2 border-primary-light' : 'text-slate-400'"
                     class="flex-shrink-0 pb-1 text-sm font-medium transition-colors" x-text="tab.name"></button>
@@ -1213,6 +1245,9 @@
               </div>
             </div>
           </template>
+          <div x-show="climbDiaries.length === 0" class="text-center py-10 text-slate-400 text-sm">
+            暂无日记，成为第一个分享的人 📖
+          </div>
         </div>
 
         <!-- Clubs Section -->
@@ -3186,11 +3221,23 @@
       <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
         <div class="p-5">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-display font-bold text-white">发布动态</h3>
+            <h3 class="font-display font-bold text-white" x-text="newPost.category === 'guide' ? '发布攻略' : '发布动态'"></h3>
             <div class="flex gap-2">
               <button @click="showPostEditor=false" class="px-4 py-1.5 text-slate-400 text-sm hover:text-white transition-colors">取消</button>
               <button @click="submitPost()" class="px-4 py-1.5 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary-light transition-colors">发布</button>
             </div>
+          </div>
+          <div class="flex gap-2 mb-3">
+            <button @click="newPost.category = 'post'"
+                    :class="newPost.category === 'post' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' : 'glass text-white/50'"
+                    class="flex-1 py-2 rounded-xl text-sm border border-white/10 transition">
+              📢 动态
+            </button>
+            <button @click="newPost.category = 'guide'"
+                    :class="newPost.category === 'guide' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' : 'glass text-white/50'"
+                    class="flex-1 py-2 rounded-xl text-sm border border-white/10 transition">
+              📖 攻略
+            </button>
           </div>
           <div class="flex items-start gap-3 mb-4">
             <img :src="userProfile.avatar" class="w-9 h-9 rounded-full object-cover flex-shrink-0">

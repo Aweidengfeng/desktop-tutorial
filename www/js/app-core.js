@@ -468,6 +468,14 @@ function alpineLink() {
     gearMode: 'buy',
     gearCategory: '全部',
     activeChatType: 'all',
+    communityTabs: [
+      { id: 'all', name: '全部' },
+      { id: 'posts', name: '动态' },
+      { id: 'diary', name: '日记' },
+      { id: 'teams', name: '组队' },
+      { id: 'articles', name: '攻略' },
+      { id: 'clubs', name: '俱乐部' },
+    ],
     currentLang: 'zh',
     locale: localStorage.getItem('locale') || 'zh-CN',
     i18nMessages: {},
@@ -578,7 +586,7 @@ function alpineLink() {
     showShare: false,
     selectedPostForShare: null,
     showPostEditor: false,
-    newPost: { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '' },
+    newPost: { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '', category: 'post' },
     showPostEmojiPicker: false,
     showChat: false,
     activeChatConv: null,
@@ -772,11 +780,7 @@ function alpineLink() {
       { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
       { id: 3, author: '王芳', authorAvatar: 'https://i.pravatar.cc/150?u=wang', timeAgo: '1天前', content: '马特洪峰北壁首次尝试，虽然未能登顶，但收获了宝贵的经验。山在那里，我还会回来的。', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '马特洪峰, 瑞士', likes: 89, comments: 15, isLiked: false, isFavorited: false, commentPreview: [{ author: '陈强', text: '勇敢！下次一定能成功！' }] },
     ],
-    climbDiaries: [
-      { id: 1, title: '珠峰BC到C1的旅程', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', avatar: 'https://i.pravatar.cc/150?u=zhang', altitude: 6065, difficulty: '极难', duration: '3天', date: '2024-05-10', peak: '珠穆朗玛峰', likes: 234, comments: 45, views: 1200, tags: ['珠峰', '高海拔', '远征'], excerpt: '从大本营出发，穿越冰川到达C1营地，记录了沿途的风景和挑战...' },
-      { id: 2, title: 'K2绝壁攀登记录', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', author: '李明', avatar: 'https://i.pravatar.cc/150?u=li', altitude: 8611, difficulty: '极难', duration: '45天', date: '2024-07-25', peak: 'K2', likes: 567, comments: 89, views: 3400, tags: ['K2', '技术攀登', '挑战'], excerpt: '历时45天的K2远征，经历了风暴、高反和团队合作的考验...' },
-      { id: 3, title: '马特洪峰北壁技术路线', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', author: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', altitude: 4478, difficulty: '难', duration: '2天', date: '2024-08-15', peak: '马特洪峰', likes: 123, comments: 28, views: 890, tags: ['阿尔卑斯', '技术路线', '欧洲'], excerpt: '马特洪峰北壁是阿尔卑斯最具挑战性的路线之一，本文记录了攀登过程...' },
-    ],
+    climbDiaries: [],
     clubs: [],
     expeditions: [],
     guides: [],
@@ -1388,16 +1392,16 @@ function alpineLink() {
         }
         const res = await apiFetch('/api/posts', {
           method: 'POST',
-          body: { content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl },
+          body: { content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl, category: this.newPost.category || 'post' },
         });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
         this.communityPosts.unshift({ ...data, author: data.authorName, timeAgo: '刚刚', isLiked: false, isFavorited: false, commentPreview: [] });
       } catch(e) {
         const imageUrls = this.newPost.images;
-        this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: imageUrls[0] || null, images: imageUrls, location: this.newPost.location || '', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
+        this.communityPosts.unshift({ id: Date.now(), author: this.userProfile.name, authorAvatar: this.userProfile.avatar, timeAgo: '刚刚', content: this.newPost.content, image: imageUrls[0] || null, images: imageUrls, location: this.newPost.location || '', category: this.newPost.category || 'post', likes: 0, comments: 0, isLiked: false, isFavorited: false, commentPreview: [] });
       }
-      this.newPost = { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '' };
+      this.newPost = { content: '', location: '', images: [], videoPreview: '', videoFile: null, videoUrl: '', category: 'post' };
       this.showPostEditor = false;
       this.showToast('发布成功！');
     },
