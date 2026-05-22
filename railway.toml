@@ -3,6 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "backend/Dockerfile"
 
 [deploy]
-startCommand = "cd backend && node scripts/generate-prisma-client.js --push && (node db/seed.js || true) && node app.js"
+startCommand = "/bin/sh -c \"cd backend && node scripts/generate-prisma-client.js --push && (node db/seed.js || true) && node app.js\""
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
