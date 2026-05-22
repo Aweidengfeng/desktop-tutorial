@@ -87,8 +87,10 @@ async function main() {
 
   try {
     const api = config.api || {};
-    if (isPlaceholderUrl(api.baseURL)) {
-      throw new Error('api.baseURL 当前是占位值，请在 config.json 中设置为真实 API URL 后再执行测试。');
+    const resolvedBaseURL = process.env.BASE_URL || api.baseURL;
+
+    if (isPlaceholderUrl(resolvedBaseURL)) {
+      throw new Error('api.baseURL 当前是占位值，请在 config.json 中设置为真实 API URL，或通过 BASE_URL 环境变量传入。');
     }
 
     const tests = Array.isArray(api.tests) ? api.tests : [];
@@ -119,7 +121,7 @@ async function main() {
         const response = await axios({
           method: item.request.method,
           url: t.url,
-          baseURL: api.baseURL,
+          baseURL: resolvedBaseURL,
           timeout: api.timeoutMs || 10000,
           headers,
           data: t.body,
