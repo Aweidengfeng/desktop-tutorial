@@ -4463,16 +4463,30 @@ function alpineLink() {
     handleBannerClick(slide) {
       if (!slide.linkType || slide.linkType === 'none') return;
       if (slide.linkType === 'peak') {
-        // 优先用 slide.peak，其次用 slide.name（中文山峰名），最后用 linkTarget
         const peakName = slide.peak || slide.name || slide.linkTarget;
-        this.navigateToPeakDetail(peakName);
+        // 先在已加载数据中查找
+        const allPeaks = [
+          ...(this.eightThousanders || []),
+          ...(this.continentalPeaks || []),
+          ...(this.worldPeaks || []),
+          ...(this.climbingSpots || []),
+        ];
+        const found = allPeaks.find(p => p.name === peakName || p.nameEn === peakName);
+        if (found) {
+          this.openPeakDetail(found);
+        } else {
+          // 找不到时跳转到探索页并加载对应分类
+          this.currentPage = 'explore';
+          this.activeCategory = '8000ers';
+        }
       } else if (slide.linkType === 'page') {
         if (slide.linkTarget === 'guides') {
           this.currentPage = 'explore';
           this.activeCategory = 'commercial';
           this.commercialSourceTab = 'guides';
+        } else {
+          this.currentPage = slide.linkTarget || 'explore';
         }
-        else { this.currentPage = slide.linkTarget || 'explore'; }
       } else if (slide.linkType === 'insurance') {
         this.openInsurance();
       }
@@ -4770,6 +4784,8 @@ function alpineLink() {
           this.loadClubs();
         }
       });
+      // 初始化时主动加载默认分类数据
+      this.loadPeaks(this.activeCategory);
       // Watch activeChatType to load articles when articles tab is selected
       this.$watch('activeChatType', (val) => {
         if (val === 'articles' && this.articles.length === 0) this.loadArticles();
