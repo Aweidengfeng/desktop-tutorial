@@ -1,0 +1,647 @@
+{
+  "frontend": {
+    "url": "https://your-app-url.example.com",
+    "headless": true,
+    "timeoutMs": 30000,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "actions": [
+      {
+        "type": "waitForSelector",
+        "selector": "body"
+      },
+      {
+        "type": "fill",
+        "selector": "input[name='email']",
+        "value": "{{testUser.email}}",
+        "optional": true
+      },
+      {
+        "type": "fill",
+        "selector": "input[name='password']",
+        "value": "{{testUser.password}}",
+        "optional": true
+      },
+      {
+        "type": "click",
+        "selector": "button[type='submit']",
+        "optional": true
+      },
+      {
+        "type": "wait",
+        "ms": 1000,
+        "optional": true
+      }
+    ],
+    "expectedResponses": [
+      {
+        "urlIncludes": "/api/auth/login",
+        "status": 200,
+        "schema": "authResponse",
+        "optional": true
+      },
+      {
+        "urlIncludes": "/api/users",
+        "status": 200,
+        "schema": "userResponse",
+        "optional": true
+      }
+    ]
+  },
+  "api": {
+    "baseURL": "https://your-api-url.example.com",
+    "timeoutMs": 10000,
+    "defaultHeaders": {
+      "Content-Type": "application/json"
+    },
+    "tests": [
+      {
+        "name": "register",
+        "method": "POST",
+        "url": "/api/auth/register",
+        "body": {
+          "email": "{{testUser.email}}",
+          "password": "{{testUser.password}}",
+          "name": "{{testUser.name}}"
+        },
+        "expectedStatus": [
+          200,
+          201,
+          409
+        ],
+        "expectedSchema": "genericApiResponse",
+        "optional": true
+      },
+      {
+        "name": "login",
+        "method": "POST",
+        "url": "/api/auth/login",
+        "body": {
+          "email": "{{testUser.email}}",
+          "password": "{{testUser.password}}"
+        },
+        "expectedStatus": [
+          200,
+          201
+        ],
+        "expectedSchema": "authResponse",
+        "extractTokenPath": "token"
+      },
+      {
+        "name": "get user profile",
+        "method": "GET",
+        "url": "/api/users/me",
+        "headers": {
+          "Authorization": "Bearer {{token}}"
+        },
+        "expectedStatus": 200,
+        "expectedSchema": "userResponse",
+        "optional": true
+      },
+      {
+        "name": "update user profile",
+        "method": "PUT",
+        "url": "/api/users/me",
+        "headers": {
+          "Authorization": "Bearer {{token}}"
+        },
+        "body": {
+          "name": "{{testUser.name}}-updated"
+        },
+        "expectedStatus": [
+          200,
+          204
+        ],
+        "expectedSchema": "genericApiResponse",
+        "optional": true
+      },
+      {
+        "name": "invalid login empty password",
+        "method": "POST",
+        "url": "/api/auth/login",
+        "body": {
+          "email": "{{testUser.email}}",
+          "password": ""
+        },
+        "expectedStatus": [
+          400,
+          401,
+          422
+        ],
+        "expectedSchema": "errorResponse"
+      },
+      {
+        "name": "invalid login wrong type",
+        "method": "POST",
+        "url": "/api/auth/login",
+        "body": {
+          "email": 123,
+          "password": true
+        },
+        "expectedStatus": [
+          400,
+          401,
+          422
+        ],
+        "expectedSchema": "errorResponse",
+        "optional": true
+      },
+      {
+        "name": "delete test user",
+        "method": "DELETE",
+        "url": "/api/users/me",
+        "headers": {
+          "Authorization": "Bearer {{token}}"
+        },
+        "expectedStatus": [
+          200,
+          202,
+          204,
+          404
+        ],
+        "expectedSchema": "deleteResponse",
+        "optional": true
+      }
+    ]
+  },
+  "database": {
+    "enabled": false,
+    "type": "postgresql",
+    "postgresql": {
+      "host": "localhost",
+      "port": 5432,
+      "user": "postgres",
+      "password": "password",
+      "database": "app_test"
+    },
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "root",
+      "password": "password",
+      "database": "app_test"
+    },
+    "mongodb": {
+      "uri": "mongodb://127.0.0.1:27017",
+      "dbName": "app_test"
+    },
+    "sqlSteps": [
+      {
+        "name": "create table",
+        "query": "CREATE TABLE IF NOT EXISTS test_users (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, name VARCHAR(255) NOT NULL)"
+      },
+      {
+        "name": "cleanup",
+        "query": "DELETE FROM test_users"
+      },
+      {
+        "name": "insert",
+        "query": "INSERT INTO test_users (email, name) VALUES ($1, $2)",
+        "params": [
+          "{{testUser.email}}",
+          "{{testUser.name}}"
+        ],
+        "optional": true
+      },
+      {
+        "name": "query",
+        "query": "SELECT email, name FROM test_users WHERE email = $1",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "rowCount": 1,
+          "firstRow": {
+            "email": "{{testUser.email}}"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "update",
+        "query": "UPDATE test_users SET name = $1 WHERE email = $2",
+        "params": [
+          "{{testUser.name}}-db",
+          "{{testUser.email}}"
+        ],
+        "optional": true
+      },
+      {
+        "name": "query updated",
+        "query": "SELECT name FROM test_users WHERE email = $1",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "rowCount": 1,
+          "firstRow": {
+            "name": "{{testUser.name}}-db"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "unique constraint",
+        "query": "INSERT INTO test_users (email, name) VALUES ($1, $2)",
+        "params": [
+          "{{testUser.email}}",
+          "duplicate"
+        ],
+        "optional": true
+      },
+      {
+        "name": "not null constraint",
+        "query": "INSERT INTO test_users (email, name) VALUES ($1, $2)",
+        "params": [
+          "",
+          ""
+        ],
+        "optional": true
+      },
+      {
+        "name": "delete",
+        "query": "DELETE FROM test_users WHERE email = $1",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "optional": true
+      }
+    ],
+    "mongoSteps": [
+      {
+        "name": "mongo cleanup",
+        "operation": "deleteMany",
+        "collection": "test_users",
+        "filter": {
+          "email": "{{testUser.email}}"
+        },
+        "expected": {
+          "deletedCount": 0
+        },
+        "optional": true
+      },
+      {
+        "name": "mongo insert",
+        "operation": "insertOne",
+        "collection": "test_users",
+        "document": {
+          "email": "{{testUser.email}}",
+          "name": "{{testUser.name}}"
+        },
+        "expected": {
+          "insertedCount": 1
+        },
+        "optional": true
+      },
+      {
+        "name": "mongo find",
+        "operation": "findOne",
+        "collection": "test_users",
+        "filter": {
+          "email": "{{testUser.email}}"
+        },
+        "expected": {
+          "document": {
+            "email": "{{testUser.email}}"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "mongo update",
+        "operation": "updateOne",
+        "collection": "test_users",
+        "filter": {
+          "email": "{{testUser.email}}"
+        },
+        "update": {
+          "$set": {
+            "name": "{{testUser.name}}-mongo"
+          }
+        },
+        "expected": {
+          "matchedCount": 1
+        },
+        "optional": true
+      },
+      {
+        "name": "mongo delete",
+        "operation": "deleteOne",
+        "collection": "test_users",
+        "filter": {
+          "email": "{{testUser.email}}"
+        },
+        "expected": {
+          "deletedCount": 1
+        },
+        "optional": true
+      }
+    ],
+    "sqlStepsPostgresql": [
+      {
+        "name": "create table",
+        "query": "CREATE TABLE IF NOT EXISTS test_users (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, name VARCHAR(255) NOT NULL)"
+      },
+      {
+        "name": "cleanup",
+        "query": "DELETE FROM test_users"
+      },
+      {
+        "name": "insert",
+        "query": "INSERT INTO test_users (email, name) VALUES ($1, $2)",
+        "params": [
+          "{{testUser.email}}",
+          "{{testUser.name}}"
+        ],
+        "optional": true
+      },
+      {
+        "name": "query",
+        "query": "SELECT email, name FROM test_users WHERE email = $1",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "rowCount": 1,
+          "firstRow": {
+            "email": "{{testUser.email}}"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "update",
+        "query": "UPDATE test_users SET name = $1 WHERE email = $2",
+        "params": [
+          "{{testUser.name}}-db",
+          "{{testUser.email}}"
+        ],
+        "optional": true
+      },
+      {
+        "name": "query updated",
+        "query": "SELECT name FROM test_users WHERE email = $1",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "rowCount": 1,
+          "firstRow": {
+            "name": "{{testUser.name}}-db"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "unique constraint",
+        "query": "INSERT INTO test_users (email, name) VALUES ($1, $2)",
+        "params": [
+          "{{testUser.email}}",
+          "duplicate"
+        ],
+        "optional": true
+      },
+      {
+        "name": "not null constraint",
+        "query": "INSERT INTO test_users (email, name) VALUES ($1, $2)",
+        "params": [
+          "",
+          ""
+        ],
+        "optional": true
+      },
+      {
+        "name": "delete",
+        "query": "DELETE FROM test_users WHERE email = $1",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "optional": true
+      }
+    ],
+    "sqlStepsMysql": [
+      {
+        "name": "create table",
+        "query": "CREATE TABLE IF NOT EXISTS test_users (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, name VARCHAR(255) NOT NULL)"
+      },
+      {
+        "name": "cleanup",
+        "query": "DELETE FROM test_users"
+      },
+      {
+        "name": "insert",
+        "query": "INSERT INTO test_users (email, name) VALUES (?, ?)",
+        "params": [
+          "{{testUser.email}}",
+          "{{testUser.name}}"
+        ],
+        "expected": {
+          "affectedRows": 1
+        },
+        "optional": true
+      },
+      {
+        "name": "query",
+        "query": "SELECT email, name FROM test_users WHERE email = ?",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "rowCount": 1,
+          "firstRow": {
+            "email": "{{testUser.email}}"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "update",
+        "query": "UPDATE test_users SET name = ? WHERE email = ?",
+        "params": [
+          "{{testUser.name}}-db",
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "affectedRows": 1
+        },
+        "optional": true
+      },
+      {
+        "name": "query updated",
+        "query": "SELECT name FROM test_users WHERE email = ?",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "rowCount": 1,
+          "firstRow": {
+            "name": "{{testUser.name}}-db"
+          }
+        },
+        "optional": true
+      },
+      {
+        "name": "unique constraint",
+        "query": "INSERT INTO test_users (email, name) VALUES (?, ?)",
+        "params": [
+          "{{testUser.email}}",
+          "duplicate"
+        ],
+        "optional": true
+      },
+      {
+        "name": "not null constraint",
+        "query": "INSERT INTO test_users (email, name) VALUES (?, ?)",
+        "params": [
+          null,
+          ""
+        ],
+        "optional": true
+      },
+      {
+        "name": "delete",
+        "query": "DELETE FROM test_users WHERE email = ?",
+        "params": [
+          "{{testUser.email}}"
+        ],
+        "expected": {
+          "affectedRows": 1
+        },
+        "optional": true
+      }
+    ]
+  },
+  "auth": {
+    "token": ""
+  },
+  "testUser": {
+    "email": "railway-test@example.com",
+    "password": "ChangeMe123!",
+    "name": "Railway Tester"
+  },
+  "expectedJsonSchemas": {
+    "genericApiResponse": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "authResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "user": {
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "token"
+          ]
+        },
+        {
+          "required": [
+            "message"
+          ]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "userResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "user": {
+          "type": "object"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "email"
+          ]
+        },
+        {
+          "required": [
+            "user"
+          ]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "errorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": [
+            "string",
+            "object",
+            "array"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": [
+            "array",
+            "object"
+          ]
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "error"
+          ]
+        },
+        {
+          "required": [
+            "message"
+          ]
+        }
+      ],
+      "additionalProperties": true
+    },
+    "deleteResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "deleted": {
+          "type": [
+            "boolean",
+            "number"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "logging": {
+    "dir": "logs",
+    "printToConsole": true
+  }
+}
