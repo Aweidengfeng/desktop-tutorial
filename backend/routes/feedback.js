@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
-const auth = require('../middleware/auth');
 
 const feedbackLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -26,7 +25,7 @@ router.post('/', feedbackLimiter, async (req, res) => {
     }
   } catch (_) {}
 
-  const { type = 'general', content, contact } = req.body || {};
+  const { type = 'suggestion', content, contact } = req.body || {};
   if (!content || String(content).trim().length === 0) {
     return res.status(400).json({ error: '反馈内容不能为空' });
   }
@@ -35,30 +34,17 @@ router.post('/', feedbackLimiter, async (req, res) => {
   }
 
   try {
-    const result = await prisma.$queryRawUnsafe(
-      `INSERT INTO feedback (user_id, type, content, contact, created_at) VALUES (?, ?, ?, ?, datetime('now')) RETURNING id`,
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO feedback (user_id, type, content, contact, created_at) VALUES (?, ?, ?, ?, datetime('now'))`,
       userId,
       String(type).slice(0, 50),
       String(content).trim(),
       contact ? String(contact).slice(0, 200) : null,
     );
-    const id = Array.isArray(result) && result.length > 0 ? result[0].id : null;
-    return res.json({ success: true, id });
+    return res.json({ success: true });
   } catch (e) {
-    // SQLite 不支持 RETURNING，fallback
-    try {
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO feedback (user_id, type, content, contact, created_at) VALUES (?, ?, ?, ?, datetime('now'))`,
-        userId,
-        String(type).slice(0, 50),
-        String(content).trim(),
-        contact ? String(contact).slice(0, 200) : null,
-      );
-      return res.json({ success: true });
-    } catch (e2) {
-      console.error('[feedback] insert error:', e2.message);
-      return res.status(500).json({ error: '提交失败，请稍后重试' });
-    }
+    console.error('[feedback] insert error:', e.message);
+    return res.status(500).json({ error: '提交失败，请稍后重试' });
   }
 });
 

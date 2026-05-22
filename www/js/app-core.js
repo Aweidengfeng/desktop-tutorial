@@ -957,6 +957,9 @@ function alpineLink() {
     removeHistory(index) { this.searchHistory.splice(index, 1); },
 
     // Peak detail
+    navigateToPeakDetail(peakName) {
+      window.location.href = 'expedition-detail.html?peak=' + encodeURIComponent(peakName);
+    },
     openPeakDetail(peak) {
       this.destroyPeakLocationMap();
       this.selectedPeak = peak;
@@ -2912,7 +2915,7 @@ function alpineLink() {
       if (type === 'help') { this.feedbackForm = { type: 'suggestion', content: '', contact: '' }; }
     },
     handleMenuAction(action) {
-      if (action === 'track') { this.currentPage = 'profile'; this.meSection = 'tracks'; }
+      if (action === 'track') { this.currentPage = 'track'; }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
       else if (action === 'achievements') { this.openAchievements(); }
       else if (action === 'membership') { this.openMembership(); }
@@ -4420,9 +4423,9 @@ function alpineLink() {
     handleBannerClick(slide) {
       if (!slide.linkType || slide.linkType === 'none') return;
       if (slide.linkType === 'peak') {
-        // 优先用 slide.name（中文山峰名）跳转到详情页
+        // 优先用 slide.peak，其次用 slide.name（中文山峰名），最后用 linkTarget
         const peakName = slide.peak || slide.name || slide.linkTarget;
-        window.location.href = 'expedition-detail.html?peak=' + encodeURIComponent(peakName);
+        this.navigateToPeakDetail(peakName);
       } else if (slide.linkType === 'page') {
         if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
         else { this.currentPage = slide.linkTarget || 'explore'; }
