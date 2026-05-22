@@ -778,11 +778,7 @@ function alpineLink() {
       { id: 3, title: '马特洪峰北壁技术路线', cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', author: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', altitude: 4478, difficulty: '难', duration: '2天', date: '2024-08-15', peak: '马特洪峰', likes: 123, comments: 28, views: 890, tags: ['阿尔卑斯', '技术路线', '欧洲'], excerpt: '马特洪峰北壁是阿尔卑斯最具挑战性的路线之一，本文记录了攀登过程...' },
     ],
     clubs: [],
-    expeditions: [
-      { id: 1, title: '2025珠峰商业远征', peak: '珠穆朗玛峰', date: '2025-04-01', duration: '60天', difficulty: '极难', spots: 3, totalSpots: 8, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang', price: 380000, image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', description: '专业向导带领的珠峰南坡商业远征，全程高山支援，适合有经验的攀登者' },
-      { id: 2, title: 'K2夏季挑战队', peak: 'K2', date: '2025-06-15', duration: '45天', difficulty: '极难', spots: 2, totalSpots: 6, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li', price: 450000, image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', description: 'K2 标准路线挑战，要求参与者有8000米以上攀登经历' },
-      { id: 3, title: '马特洪峰技术攀登营', peak: '马特洪峰', date: '2025-08-01', duration: '14天', difficulty: '难', spots: 4, totalSpots: 6, leader: '王芳', leaderAvatar: 'https://i.pravatar.cc/150?u=wang', price: 35000, image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '由资深向导带领的马特洪峰技术攀登，含技术培训和北壁尝试' },
-    ],
+    expeditions: [],
     guides: [],
     gearItems: [
       { id: 1, name: '黑钻Momentum高山靴', brand: 'Black Diamond', price: 2800, condition: '九成新', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', description: '用过两次，无明显磨损，尺码43', seller: '张磊', sellerAvatar: 'https://i.pravatar.cc/150?u=zhang' },
@@ -910,11 +906,7 @@ function alpineLink() {
       { id: 'chat', icon: 'chat_bubble', name: '消息' },
       { id: 'me', icon: 'person', name: '我的' },
     ],
-    expeditionCards: [
-      { id: 1001, name: '珠峰南坡标准线', region: '尼泊尔 · 春季窗口', difficulty: '高海拔', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=900' },
-      { id: 1002, name: '慕士塔格技术攀登', region: '新疆 · 冰川训练', difficulty: '技术', cover: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900' },
-      { id: 1003, name: '阿尼玛卿连续穿越', region: '青海 · 轻量远征', difficulty: '进阶', cover: 'https://images.unsplash.com/photo-1508261305436-e5b4b38b7f35?w=900' },
-    ],
+    expeditionCards: [],
     weather: { location: '珠穆朗玛峰大本营', condition: 'partly_cloudy', temp: -8, wind: 25, humidity: 45, visibility: 12 },
     userProfile: { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 },
 
