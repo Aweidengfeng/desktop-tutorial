@@ -22,11 +22,11 @@ RUN npm ci --omit=dev
 # 生成 PostgreSQL Prisma Client（腾讯云 CN 节点使用 PostgreSQL，必须用 postgresql provider 生成）
 # 设置占位 DATABASE_URL 避免 schema validation 报错（运行时会被真实 URL 替换）
 COPY prisma ./prisma
-RUN sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma \
-    && DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" npx prisma generate --schema=prisma/schema.prisma
-
 # 复制源码
 COPY . .
+
+RUN sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma \
+    && DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" npx prisma generate --schema=prisma/schema.prisma
 
 # ---- 运行阶段 ----
 FROM node:20-alpine AS runner
