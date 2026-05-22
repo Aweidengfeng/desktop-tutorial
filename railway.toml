@@ -1,5 +1,7 @@
 [build]
 builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+buildContext = "backend"
 
 [deploy]
 startCommand = "node scripts/generate-prisma-client.js --push && node db/seed.js && node app.js"
