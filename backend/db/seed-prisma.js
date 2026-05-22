@@ -213,13 +213,43 @@ async function main() {
   const teamCount = await prisma.team.count();
   if (teamCount === 0 && demoUser) {
     try {
-      await prisma.$executeRaw`
-        INSERT INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, status)
-        VALUES
-          ('珠峰南坡适应队', '珠穆朗玛峰', '2026-05-20', 3, 5, '高级', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '目标南坡 C3 适应+冲顶窗口观测', 'recruiting'),
-          ('K2 技术训练队', 'K2', '2026-06-10', 2, 4, '专业', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '冰壁与固定绳技术训练，需 6000m 以上经验', 'recruiting'),
-          ('贡嘎山周末拉练', '贡嘎山', '2026-05-25', 4, 6, '中级', ${demoUser.name}, ${demoUser.avatar}, ${demoUser.id}, '两日拉练，含高海拔徒步与营地协作', 'recruiting')
-      `;
+      await prisma.team.createMany({
+        data: [
+          {
+            name: '珠峰南坡适应队',
+            peak: '珠穆朗玛峰',
+            date: '2026-05-20',
+            spots: 3,
+            totalSpots: 5,
+            level: '高级',
+            leaderId: demoUser.id,
+            description: '目标南坡 C3 适应+冲顶窗口观测',
+            status: 'recruiting',
+          },
+          {
+            name: 'K2 技术训练队',
+            peak: 'K2',
+            date: '2026-06-10',
+            spots: 2,
+            totalSpots: 4,
+            level: '专业',
+            leaderId: demoUser.id,
+            description: '冰壁与固定绳技术训练，需 6000m 以上经验',
+            status: 'recruiting',
+          },
+          {
+            name: '贡嘎山周末拉练',
+            peak: '贡嘎山',
+            date: '2026-05-25',
+            spots: 4,
+            totalSpots: 6,
+            level: '中级',
+            leaderId: demoUser.id,
+            description: '两日拉练，含高海拔徒步与营地协作',
+            status: 'recruiting',
+          },
+        ],
+      });
     } catch (error) {
       logSeedWriteError('示例队伍', '创建', error);
     }
