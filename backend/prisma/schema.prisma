@@ -99,6 +99,7 @@ model User {
   activityOrders       ActivityOrder[]
   guideServiceOrders   GuideServiceOrder[]
   stripePayments       StripePayment[]
+  feedbacks            Feedback[]
 
   @@map("users")
 }
@@ -1642,4 +1643,20 @@ model InviteCode {
   createdAt   DateTime  @default(now()) @map("created_at")
 
   @@map("invite_codes")
+}
+
+// ─────────────────────────────────────────
+// 帮助与反馈
+// ─────────────────────────────────────────
+
+model Feedback {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  type       String   @default("general")
+  content    String
+  contact    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@map("feedback")
 }

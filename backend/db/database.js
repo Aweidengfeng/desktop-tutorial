@@ -1507,6 +1507,15 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
 CREATE TABLE IF NOT EXISTS expedition_orders_new_fields_marker (
   id INTEGER PRIMARY KEY
 );
+
+CREATE TABLE IF NOT EXISTS feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  type TEXT DEFAULT 'general',
+  content TEXT NOT NULL,
+  contact TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // ── A7: expeditions 和 expedition_orders 表 ──────────────────
