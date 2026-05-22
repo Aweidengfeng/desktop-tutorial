@@ -392,6 +392,7 @@ app.use('/api/coach', require('./routes/coach'));
 app.use('/api/payment', require('./routes/payment'));
 app.use('/api/gdpr', require('./routes/gdpr'));
 app.use('/api/currency', require('./routes/currency'));
+app.use('/api/feedback', require('./routes/feedback'));
 
 function getStripeStartupStatus() {
   const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();

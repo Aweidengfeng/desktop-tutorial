@@ -678,6 +678,12 @@ function alpineLink() {
     showNotificationCenter: false,
     notifications: [],
     notificationCount: 0,
+    // 帮助与反馈
+    feedbackForm: { type: 'suggestion', content: '', contact: '' },
+    feedbackSubmitting: false,
+    // 消息通知面板（设置页内）
+    notifSettingsList: [],
+    notifSettingsLoading: false,
     summitWindow: [],
     summitWindowExpanded: -1,
     showCertModal: false,
@@ -2899,10 +2905,14 @@ function alpineLink() {
     openSidebar() { this.showToast('侧边菜单即将推出'); },
     getChatBadge(type) { const map = { 'rescue': '救援', 'guide': '向导', 'team': '组队', 'system': '系统' }; return map[type] || ''; },
     getChatIcon(type) { const map = { 'rescue': 'emergency', 'guide': 'person_pin', 'team': 'groups', 'system': 'notifications' }; return map[type] || 'chat'; },
-    openSettings(type) { this.settingsType = type; this.showSettings = true; },
+    openSettings(type) {
+      this.settingsType = type;
+      this.showSettings = true;
+      if (type === 'notifications') { this.loadNotifSettingsList(); }
+      if (type === 'help') { this.feedbackForm = { type: 'suggestion', content: '', contact: '' }; }
+    },
     handleMenuAction(action) {
-      if (action === 'gear') { this.currentPage = 'gear'; }
-      else if (action === 'track') { this.showToast('轨迹录制即将在 Phase 2 上线 🗺️', 'info'); }
+      if (action === 'track') { this.currentPage = 'profile'; this.meSection = 'tracks'; }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
       else if (action === 'achievements') { this.openAchievements(); }
       else if (action === 'membership') { this.openMembership(); }
@@ -3952,16 +3962,54 @@ function alpineLink() {
       if (n.is_read) return;
       n.is_read = 1;
       this.notificationCount = Math.max(0, this.notificationCount - 1);
+      this.notifUnreadCount = Math.max(0, this.notifUnreadCount - 1);
+      // also update in notifSettingsList
+      const item = this.notifSettingsList.find(x => x.id === n.id);
+      if (item) item.is_read = 1;
+      // also update in notifUnreadList
+      this.notifUnreadList = this.notifUnreadList.filter(x => x.id !== n.id);
       try {
         await fetch('/api/notifications/' + n.id + '/read', { method: 'PUT', headers: this.getAuthHeaders() });
       } catch(e) {}
     },
     async markAllNotificationsRead() {
       this.notifications.forEach(n => { n.is_read = 1; });
+      this.notifSettingsList.forEach(n => { n.is_read = 1; });
+      this.notifUnreadList = [];
       this.notificationCount = 0;
+      this.notifUnreadCount = 0;
       try {
         await fetch('/api/notifications/read-all', { method: 'PUT', headers: this.getAuthHeaders() });
       } catch(e) {}
+    },
+    async loadNotifSettingsList() {
+      if (!this.authToken) { this.notifSettingsList = []; return; }
+      this.notifSettingsLoading = true;
+      try {
+        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+        if (res.ok) this.notifSettingsList = await res.json();
+      } catch(e) { this.notifSettingsList = []; }
+      this.notifSettingsLoading = false;
+    },
+    async submitFeedback() {
+      if (!this.feedbackForm.content.trim()) { this.showToast('请填写反馈内容', 'error'); return; }
+      this.feedbackSubmitting = true;
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(this.authToken ? { 'Authorization': 'Bearer ' + this.authToken } : {}) },
+          body: JSON.stringify({ type: this.feedbackForm.type, content: this.feedbackForm.content, contact: this.feedbackForm.contact }),
+        });
+        if (res.ok) {
+          this.showToast('反馈已提交，感谢您的意见！✅');
+          this.feedbackForm = { type: 'suggestion', content: '', contact: '' };
+          this.showSettings = false;
+        } else {
+          const d = await res.json().catch(() => ({}));
+          this.showToast(d.error || '提交失败，请稍后重试', 'error');
+        }
+      } catch(e) { this.showToast('网络错误，请稍后重试', 'error'); }
+      this.feedbackSubmitting = false;
     },
     confirmBookingFromNotif(n) {
       this.confirmBookingById(n.related_id);
@@ -4372,8 +4420,9 @@ function alpineLink() {
     handleBannerClick(slide) {
       if (!slide.linkType || slide.linkType === 'none') return;
       if (slide.linkType === 'peak') {
-        const peak = [...this.eightThousanders, ...this.continentalPeaks].find(p => p.nameEn && p.nameEn.toLowerCase() === slide.linkTarget.toLowerCase());
-        if (peak) { this.openPeakDetail(peak); }
+        // 优先用 slide.name（中文山峰名）跳转到详情页
+        const peakName = slide.peak || slide.name || slide.linkTarget;
+        window.location.href = 'expedition-detail.html?peak=' + encodeURIComponent(peakName);
       } else if (slide.linkType === 'page') {
         if (slide.linkTarget === 'guides') { this.currentPage = 'explore'; this.activeCategory = 'guides'; }
         else { this.currentPage = slide.linkTarget || 'explore'; }
