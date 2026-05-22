@@ -18,3 +18,4 @@ fastlane/Fastfile.lock
 *.ipa
 *.aab
 logs/*.json
+dist-admin/

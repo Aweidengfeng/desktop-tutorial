@@ -58,6 +58,7 @@ const { defaultLimiter } = require('./middleware/rateLimits');
 const { cacheMiddleware, noCache } = require('./middleware/cache');
 const { detectRegion, getRegionConfig } = require('./lib/region');
 const { getPrismaClient } = require('./lib/db');
+const { registerAdminV2Page } = require('./routes/admin-v2-page');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
 const htmlPageLimiter = rateLimit({
@@ -466,6 +467,8 @@ app.get('/admin', htmlPageLimiter, (req, res) => {
     res.send(result);
   });
 });
+
+registerAdminV2Page(app, { rootPath, htmlPageLimiter });
 
 // 向导工作台
 const guidePortalFile = path.join(rootPath, 'guide-portal.html');
