@@ -1,6 +1,5 @@
 [build]
-builder = "RAILPACK"
-buildCommand = "npm install && DATABASE_URL=\"file:/tmp/build.db\" npx prisma generate --schema=prisma/schema.prisma"
+builder = "DOCKERFILE"
 
 [deploy]
 startCommand = "node scripts/generate-prisma-client.js --push && node db/seed.js && node app.js"
