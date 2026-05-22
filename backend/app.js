@@ -278,18 +278,9 @@ const uploadsPath = process.env.UPLOADS_DIR
 if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
 app.use('/uploads', express.static(uploadsPath));
 
-// PostgreSQL 模式：在路由挂载前检查 Prisma 连接
-if (process.env.DATABASE_PROVIDER === 'postgresql') {
-  const prisma = require('./db/prisma');
-  prisma.$connect()
-    .then(() => console.log('✅ Prisma 已连接到 PostgreSQL'))
-    .catch(e => {
-      console.error('❌ Prisma 连接 PostgreSQL 失败，退出:', e.message);
-      process.exit(1);
-    });
-} else {
-  // SQLite 模式：确保 better-sqlite3 建表语句在 Prisma 路由初始化之前执行
-  // （testApp.js 已采用相同策略：先 require database.js，再挂载路由）
+// SQLite 模式：确保 better-sqlite3 建表语句在 Prisma 路由初始化之前执行
+// （PostgreSQL 模式的 Prisma 连接在启动 IIFE 中 await，见文件底部）
+if (process.env.DATABASE_PROVIDER !== 'postgresql') {
   try {
     require('./db/database');
   } catch (e) {
@@ -632,6 +623,20 @@ const server = http.createServer(app);
 const { initChatGateway } = require('./routes/chat.gateway');
 initChatGateway(server);
 
-server.listen(PORT, '0.0.0.0', () => {
-  logger.info({ port: PORT, env: process.env.NODE_ENV }, 'SummitLink API started');
-});
+(async () => {
+  // PostgreSQL 模式：在启动 HTTP 服务器之前等待 Prisma 连接就绪
+  if (process.env.DATABASE_PROVIDER === 'postgresql') {
+    const prisma = require('./db/prisma');
+    try {
+      await prisma.$connect();
+      console.log('✅ Prisma 已连接到 PostgreSQL');
+    } catch (e) {
+      console.error('❌ Prisma 连接 PostgreSQL 失败，退出:', e.message);
+      process.exit(1);
+    }
+  }
+
+  server.listen(PORT, '0.0.0.0', () => {
+    logger.info({ port: PORT, env: process.env.NODE_ENV }, `SummitLink API started, listening on port ${PORT}`);
+  });
+})();
