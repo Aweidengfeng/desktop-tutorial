@@ -4380,12 +4380,12 @@ function alpineLink() {
       } catch(e) {}
     },
 
-    async loadFeaturedExpeditions() {
+    async loadExpeditions() {
       try {
         const res = await fetch('/api/expeditions?status=published&limit=6');
         if (res.ok) {
           const data = await res.json();
-          const list = Array.isArray(data) ? data : (data.expeditions || []);
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.expeditions) ? data.expeditions : []);
           if (list.length > 0) {
             this.expeditions = list.map(e => ({
               ...e,
@@ -4393,13 +4393,17 @@ function alpineLink() {
               peak: e.peak_name || e.peak || '',
               leader: e.guide_name || e.club_name || '',
               leaderAvatar: e.guide_avatar || e.club_cover || 'https://i.pravatar.cc/150?u=guide',
-              price: e.base_price || e.price || 0,
-              spots: e.available_spots || e.spots || 0,
-              totalSpots: e.max_members || e.total_spots || 0,
+              price: e.base_price ?? e.price ?? 0,
+              spots: e.available_spots ?? e.spots ?? 0,
+              totalSpots: e.max_members ?? e.total_spots ?? 0,
             }));
+          } else {
+            this.expeditions = [];
           }
+        } else {
+          this.expeditions = [];
         }
-      } catch(e) {}
+      } catch(e) { this.expeditions = []; }
     },
 
     // ─── Popular Peaks Weather ────────────────────────────────────────────────
@@ -4755,7 +4759,7 @@ function alpineLink() {
       this.loadWeather();
       this.loadClubs();
       this.loadFeaturedClubs();
-      this.loadFeaturedExpeditions();
+      this.loadExpeditions();
       this.loadBanners();
       this.loadPopularPeaksWeather();
       this.loadRescueContacts();
