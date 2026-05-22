@@ -28,8 +28,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      await apiClient.get('/api/admin/check');
-      setUser({ id: 0, username: 'Admin', isAdmin: true });
+      const res = await apiClient.get('/api/admin/check');
+      const data = res.data as Partial<AdminUser> & { username?: string };
+      setUser({
+        id: Number(data.id ?? 0),
+        username: data.username || localStorage.getItem('adminUsername') || 'Admin',
+        name: data.name,
+        isAdmin: true,
+      });
     } catch {
       localStorage.removeItem('adminToken');
       setUser(null);
@@ -62,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem('adminToken', token);
+    localStorage.setItem('adminUsername', username);
     setAdminCookie(token);
     setUser({ id: 0, username, isAdmin: true });
   }, []);
@@ -73,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore network errors on logout
     }
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
     document.cookie = 'adminToken=; path=/; max-age=0';
     setUser(null);
   }, []);

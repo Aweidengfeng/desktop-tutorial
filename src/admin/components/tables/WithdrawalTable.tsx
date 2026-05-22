@@ -66,23 +66,26 @@ export function WithdrawalTable({ data, compact = false }: WithdrawalTableProps)
           <tbody>
             {rows.length === 0 ? (
               <tr><td className="px-2 py-6 text-center text-slate-400" colSpan={9}>暂无数据</td></tr>
-            ) : rows.map((item) => (
-              <tr key={item.id} className="border-b border-slate-100">
-                <td className="px-2 py-2">{item.id}</td>
-                <td className="px-2 py-2">{item.owner_type}/{item.owner_id}</td>
-                <td className="px-2 py-2">{money(item.amount)}</td>
-                <td className="px-2 py-2">{money(item.fee)}</td>
-                <td className="px-2 py-2">{money(item.actual_amount)}</td>
-                <td className="px-2 py-2">{item.account_type}</td>
-                <td className="px-2 py-2">
-                  <span className={`rounded px-2 py-0.5 ${statusStyle[(item.status as Exclude<FilterValue, 'all'>) ?? 'pending']}`}>
-                    {statusLabel[(item.status as Exclude<FilterValue, 'all'>) ?? 'pending'] ?? item.status}
-                  </span>
-                </td>
-                <td className="px-2 py-2">{new Date(item.created_at).toLocaleString('zh-CN')}</td>
-                <td className="px-2 py-2">{item.note ?? '-'}</td>
-              </tr>
-            ))}
+            ) : rows.map((item) => {
+              const statusKey = (item.status as Exclude<FilterValue, 'all'>) ?? 'pending';
+              return (
+                <tr key={item.id} className="border-b border-slate-100">
+                  <td className="px-2 py-2">{item.id}</td>
+                  <td className="px-2 py-2">{item.owner_type}/{item.owner_id}</td>
+                  <td className="px-2 py-2">{money(item.amount)}</td>
+                  <td className="px-2 py-2">{money(item.fee)}</td>
+                  <td className="px-2 py-2">{money(item.actual_amount)}</td>
+                  <td className="px-2 py-2">{item.account_type}</td>
+                  <td className="px-2 py-2">
+                    <span className={`rounded px-2 py-0.5 ${statusStyle[statusKey]}`}>
+                      {statusLabel[statusKey] ?? item.status}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2">{new Date(item.created_at).toLocaleString('zh-CN')}</td>
+                  <td className="px-2 py-2">{item.note ?? '-'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

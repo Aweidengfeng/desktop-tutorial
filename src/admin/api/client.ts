@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const apiClient = axios.create({
-  baseURL: (window as any).__API_BASE__ || '',
+  baseURL: window.__API_BASE__ || '',
   withCredentials: true,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },

@@ -3,12 +3,20 @@
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
+
+const adminV2ReadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function registerAdminV2Page(app, { rootPath, htmlPageLimiter }) {
   const adminV2File = path.join(rootPath, 'dist-admin', 'index.html');
   if (!fs.existsSync(adminV2File)) return false;
 
-  app.get('/admin-v2', htmlPageLimiter, (req, res) => {
+  app.get('/admin-v2', adminV2ReadLimiter, htmlPageLimiter, (req, res) => {
     fs.readFile(adminV2File, 'utf8', (err, html) => {
       if (err) return res.status(500).send('Internal Server Error');
       const injected = `<script>
