@@ -525,7 +525,11 @@
               </div>
             </div>
           </template>
-          <div x-show="featuredClubs.length === 0" class="flex-shrink-0 w-full text-center py-4 text-slate-500 text-xs">加载中...</div>
+          <div x-show="featuredClubs.length === 0" class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+            <span class="text-5xl mb-4">🏛️</span>
+            <p class="text-white/60 text-base font-medium">暂无精选俱乐部</p>
+            <p class="text-white/30 text-sm mt-1">等待俱乐部入驻认证</p>
+          </div>
         </div>
       </div>
 
@@ -637,6 +641,12 @@
               </div>
             </button>
           </template>
+          <!-- 空状态提示，当 expeditionCards 为空时显示 -->
+          <div x-show="expeditionCards.length === 0" class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+            <span class="text-5xl mb-4">🏔️</span>
+            <p class="text-white/60 text-base font-medium">暂无精选远征</p>
+            <p class="text-white/30 text-sm mt-1">等待向导和俱乐部发布活动</p>
+          </div>
         </div>
       </div>
     </section>
