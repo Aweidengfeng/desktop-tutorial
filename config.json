@@ -1,6 +1,6 @@
 {
   "frontend": {
-    "url": "https://your-app-url.example.com",
+    "url": "https://desktop-tutorial-production-182a.up.railway.app",
     "headless": true,
     "timeoutMs": 30000,
     "viewport": {
@@ -11,6 +11,12 @@
       {
         "type": "waitForSelector",
         "selector": "body"
+      },
+      {
+        "type": "fill",
+        "selector": "input[name='phone']",
+        "value": "{{testUser.phone}}",
+        "optional": true
       },
       {
         "type": "fill",
@@ -43,7 +49,7 @@
         "optional": true
       },
       {
-        "urlIncludes": "/api/users",
+        "urlIncludes": "/api/auth/me",
         "status": 200,
         "schema": "userResponse",
         "optional": true
@@ -51,7 +57,7 @@
     ]
   },
   "api": {
-    "baseURL": "https://your-api-url.example.com",
+    "baseURL": "https://desktop-tutorial-production-182a.up.railway.app",
     "timeoutMs": 10000,
     "defaultHeaders": {
       "Content-Type": "application/json"
@@ -62,7 +68,7 @@
         "method": "POST",
         "url": "/api/auth/register",
         "body": {
-          "email": "{{testUser.email}}",
+          "phone": "{{testUser.phone}}",
           "password": "{{testUser.password}}",
           "name": "{{testUser.name}}"
         },
@@ -79,7 +85,7 @@
         "method": "POST",
         "url": "/api/auth/login",
         "body": {
-          "email": "{{testUser.email}}",
+          "phone": "{{testUser.phone}}",
           "password": "{{testUser.password}}"
         },
         "expectedStatus": [
@@ -92,7 +98,7 @@
       {
         "name": "get user profile",
         "method": "GET",
-        "url": "/api/users/me",
+        "url": "/api/auth/me",
         "headers": {
           "Authorization": "Bearer {{token}}"
         },
@@ -103,7 +109,7 @@
       {
         "name": "update user profile",
         "method": "PUT",
-        "url": "/api/users/me",
+        "url": "/api/auth/profile",
         "headers": {
           "Authorization": "Bearer {{token}}"
         },
@@ -122,7 +128,7 @@
         "method": "POST",
         "url": "/api/auth/login",
         "body": {
-          "email": "{{testUser.email}}",
+          "phone": "{{testUser.phone}}",
           "password": ""
         },
         "expectedStatus": [
@@ -137,7 +143,7 @@
         "method": "POST",
         "url": "/api/auth/login",
         "body": {
-          "email": 123,
+          "phone": 123,
           "password": true
         },
         "expectedStatus": [
@@ -517,9 +523,10 @@
     "token": ""
   },
   "testUser": {
+    "phone": "13800000001",
     "email": "railway-test@example.com",
-    "password": "ChangeMe123!",
-    "name": "Railway Tester"
+    "password": "test1234",
+    "name": "阿尔卑斯"
   },
   "expectedJsonSchemas": {
     "genericApiResponse": {
@@ -530,6 +537,9 @@
       "type": "object",
       "properties": {
         "token": {
+          "type": "string"
+        },
+        "refreshToken": {
           "type": "string"
         },
         "user": {
@@ -562,11 +572,20 @@
             "number"
           ]
         },
+        "phone": {
+          "type": "string"
+        },
         "email": {
           "type": "string",
           "format": "email"
         },
         "name": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "role": {
           "type": "string"
         },
         "user": {
@@ -576,12 +595,32 @@
       "anyOf": [
         {
           "required": [
-            "email"
+            "id"
           ]
         },
         {
           "required": [
             "user"
+          ]
+        },
+        {
+          "required": [
+            "phone"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "username"
+          ]
+        },
+        {
+          "required": [
+            "role"
           ]
         }
       ],
