@@ -5,12 +5,12 @@
     "prisma:generate": "DATABASE_URL=\"file:/tmp/dev.db\" prisma generate --schema=backend/prisma/schema.prisma",
     "build": "cd backend && npm install && cd .. && npm run prisma:generate",
     "start": "node backend/db/seed.js && node backend/app.js",
-    "test:api": "node tests/api.test.js && npx jest --forceExit --no-coverage --runInBand",
+    "test:api": "node api_test.js",
     "test:api:unit": "npx jest --forceExit --no-coverage --runInBand",
     "test:api:legacy": "node tests/api.test.js",
     "test:e2e": "playwright test",
     "audit:clickables": "node scripts/clickable-audit.js",
-    "test": "npm run test:api && npm run test:e2e",
+    "test": "node run_all_tests.js",
     "smoke": "node scripts/smoke.js",
     "db:seed": "node backend/db/seed.js",
     "build:vite": "vite build",
@@ -25,7 +25,11 @@
     "build:android": "npx cap sync android && cd android && ./gradlew bundleRelease",
     "build:ios": "npx cap sync ios && xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release -archivePath ios/App/App.xcarchive archive",
     "icons": "node scripts/generate-icons.js",
-    "icons:from-svg": "node scripts/convert-svg-to-png.js && node scripts/generate-icons.js"
+    "icons:from-svg": "node scripts/convert-svg-to-png.js && node scripts/generate-icons.js",
+    "test:project": "npm run test:api && npm run test:e2e",
+    "install:browsers": "npx playwright install chromium",
+    "test:frontend": "node frontend_test.js",
+    "test:db": "node db_test.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",
@@ -47,7 +51,14 @@
     "pdfkit": "^0.18.0",
     "prisma": "^6.6.0",
     "stripe": "^14.25.0",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "axios": "^1.8.4",
+    "mongodb": "^6.16.0",
+    "mysql2": "^3.14.1",
+    "pg": "^8.15.6",
+    "playwright": "^1.54.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -72,9 +83,9 @@
       "**/backend/tests/fix-duplicate-order-no.test.js",
       "**/backend/tests/payment-degraded.test.js",
       "**/backend/tests/payment-cn-framework.test.js",
-        "**/backend/tests/security.test.js",
-        "**/backend/tests/ownershipGuard.test.js",
-        "**/backend/tests/sentry-pii.test.js",
+      "**/backend/tests/security.test.js",
+      "**/backend/tests/ownershipGuard.test.js",
+      "**/backend/tests/sentry-pii.test.js",
       "**/backend/tests/concurrency.test.js",
       "**/backend/tests/jwt.test.js",
       "**/backend/tests/performance.test.js",
@@ -82,11 +93,11 @@
       "**/backend/tests/commission.test.js",
       "**/backend/tests/region.test.js",
       "**/backend/tests/storage.test.js",
-        "**/backend/tests/sms-sender.test.js",
-        "**/tests/unit/ownershipGuard.test.js",
-        "**/backend/tests/posts-resilience.test.js",
-        "**/backend/tests/teams-resilience.test.js",
-        "**/tests/api-feedback.test.js"
+      "**/backend/tests/sms-sender.test.js",
+      "**/tests/unit/ownershipGuard.test.js",
+      "**/backend/tests/posts-resilience.test.js",
+      "**/backend/tests/teams-resilience.test.js",
+      "**/tests/api-feedback.test.js"
     ],
     "testTimeout": 15000
   }
