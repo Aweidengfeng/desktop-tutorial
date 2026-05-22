@@ -4385,7 +4385,7 @@ function alpineLink() {
         const res = await fetch('/api/expeditions?status=published&limit=6');
         if (res.ok) {
           const data = await res.json();
-          const list = Array.isArray(data) ? data : (Array.isArray(data.expeditions) ? data.expeditions : []);
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.expeditions) ? data.expeditions : []);
           if (list.length > 0) {
             this.expeditions = list.map(e => ({
               ...e,
@@ -4403,7 +4403,7 @@ function alpineLink() {
         } else {
           this.expeditions = [];
         }
-      } catch(e) {}
+      } catch(e) { this.expeditions = []; }
     },
 
     // ─── Popular Peaks Weather ────────────────────────────────────────────────
