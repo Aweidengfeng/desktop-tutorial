@@ -58,6 +58,7 @@ const { defaultLimiter } = require('./middleware/rateLimits');
 const { cacheMiddleware, noCache } = require('./middleware/cache');
 const { detectRegion, getRegionConfig } = require('./lib/region');
 const { getPrismaClient } = require('./lib/db');
+const { registerAdminV2Page } = require('./routes/admin-v2-page');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
 const htmlPageLimiter = rateLimit({
@@ -467,26 +468,7 @@ app.get('/admin', htmlPageLimiter, (req, res) => {
   });
 });
 
-// Admin v2 (React Dashboard) - 新路由，不影响现有 /admin
-const adminV2File = path.join(rootPath, 'dist-admin', 'index.html');
-if (fs.existsSync(adminV2File)) {
-  app.get('/admin-v2', htmlPageLimiter, (req, res) => {
-    fs.readFile(adminV2File, 'utf8', (err, html) => {
-      if (err) return res.status(500).send('Internal Server Error');
-      const injected = `<script>
-        window.__API_BASE__ = ${JSON.stringify(process.env.API_BASE || '')};
-        window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};
-        window.__SENTRY_DSN = ${JSON.stringify(process.env.SENTRY_DSN || '')};
-      </script>`;
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store');
-      res.send(html.replace('</head>', injected + '\n</head>'));
-    });
-  });
-  // 静态资源服务（JS/CSS chunks）
-  app.use('/admin-v2-assets', express.static(path.join(rootPath, 'dist-admin')));
-  console.log('✅ Admin v2 (React) 已启用: /admin-v2');
-}
+registerAdminV2Page(app, { rootPath, htmlPageLimiter });
 
 // 向导工作台
 const guidePortalFile = path.join(rootPath, 'guide-portal.html');

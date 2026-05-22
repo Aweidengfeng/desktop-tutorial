@@ -108,7 +108,8 @@
       "**/tests/unit/ownershipGuard.test.js",
       "**/backend/tests/posts-resilience.test.js",
       "**/backend/tests/teams-resilience.test.js",
-      "**/tests/api-feedback.test.js"
+      "**/tests/api-feedback.test.js",
+      "**/backend/tests/admin-v2-page.test.js"
     ],
     "testTimeout": 15000
   }

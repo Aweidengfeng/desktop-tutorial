@@ -5,7 +5,6 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   root: 'src/admin',
-  base: '/admin-v2-assets/',
   build: {
     outDir: resolve(__dirname, 'dist-admin'),
     emptyOutDir: true,
