@@ -29,6 +29,7 @@ const KNOWN_IGNORABLE_ERRORS = [
   /activeMapLayer is not defined/i,
   /trackMap is not defined/i,
   /recordingMap is not defined/i,
+  /showLeaderboardInfo is not defined/i,
   /Cannot read propert/i,
   /cdn\.jsdelivr/i,
   /cdn\.tailwindcss/i,
