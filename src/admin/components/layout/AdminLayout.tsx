@@ -25,7 +25,14 @@ export function AdminLayout({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar open={open} onClose={() => setOpen(false)} />
+      <Sidebar
+        open={open}
+        onClose={() => setOpen(false)}
+        onLogout={async () => {
+          await logout();
+          navigate('/login');
+        }}
+      />
       <div className="lg:ml-[240px]">
         <Header
           pendingCount={pendingCount}

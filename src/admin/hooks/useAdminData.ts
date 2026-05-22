@@ -11,7 +11,6 @@ export function useAdminData<T>(
   const [error, setError] = useState<string | null>(null);
   const isMounted = useRef(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
@@ -31,7 +30,7 @@ export function useAdminData<T>(
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, deps);
+  }, [fetchFn, ...deps]);
 
   useEffect(() => {
     isMounted.current = true;

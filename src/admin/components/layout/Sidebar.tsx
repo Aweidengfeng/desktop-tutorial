@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
+  onLogout: () => void;
 }
 
 const items = [
@@ -15,7 +16,7 @@ const items = [
   ['club-licenses', '🏢', '俱乐部商业资质'], ['guide-licenses', '🪪', '向导业务资质'], ['sos', '🆘', 'SOS 数据记录'], ['base-applications', '📍', '据点申请管理'],
 ] as const;
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, onLogout }: SidebarProps) {
   return (
     <>
       {open && <button type="button" className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onClose} />}
@@ -33,7 +34,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             </NavLink>
           ))}
         </nav>
-        <NavLink to="/login" className="mt-3 block rounded-md px-2 py-2 text-sm text-rose-300 hover:bg-slate-700" onClick={onClose}>🚪 退出登录</NavLink>
+        <button
+          type="button"
+          className="mt-3 block w-full rounded-md px-2 py-2 text-left text-sm text-rose-300 hover:bg-slate-700"
+          onClick={() => { onLogout(); onClose(); }}
+        >
+          🚪 退出登录
+        </button>
       </aside>
     </>
   );

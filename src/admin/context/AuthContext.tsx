@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const endpoints = ['/api/auth/admin-login', '/api/admin/login', '/api/auth/login'];
     let token = '';
+    let lastErrorMessage = '';
     for (const endpoint of endpoints) {
       try {
         const payload = endpoint === '/api/auth/login'
@@ -59,12 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await apiClient.post(endpoint, payload);
         token = String(res.data?.token || '');
         if (token) break;
-      } catch {
-        // try next endpoint
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          lastErrorMessage = error.message;
+        }
       }
     }
     if (!token) {
-      throw new Error('登录失败，请检查账号密码');
+      throw new Error(lastErrorMessage || '登录失败，请检查账号密码');
     }
 
     localStorage.setItem('adminToken', token);
