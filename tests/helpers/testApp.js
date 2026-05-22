@@ -73,6 +73,7 @@ function createApp() {
     }
   }
 
+  app.use('/api/feedback',        loadRoute('../../backend/routes/feedback'));
   app.use('/api/auth',          loadRoute('../../backend/routes/auth'));
   app.use('/api/peaks',         loadRoute('../../backend/routes/peaks'));
   app.use('/api/guides',        loadRoute('../../backend/routes/guides'));

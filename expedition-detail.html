@@ -215,7 +215,8 @@
     function getId() {
       const m = location.pathname.match(/^\/expedition\/([^/?#]+)/);
       if (m) return m[1];
-      return new URLSearchParams(location.search).get('id');
+      const params = new URLSearchParams(location.search);
+      return params.get('id') || params.get('peak');
     }
 
     function setSeo(data) {

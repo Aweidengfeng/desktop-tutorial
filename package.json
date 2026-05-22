@@ -85,7 +85,8 @@
         "**/backend/tests/sms-sender.test.js",
         "**/tests/unit/ownershipGuard.test.js",
         "**/backend/tests/posts-resilience.test.js",
-        "**/backend/tests/teams-resilience.test.js"
+        "**/backend/tests/teams-resilience.test.js",
+        "**/tests/api-feedback.test.js"
     ],
     "testTimeout": 15000
   }
