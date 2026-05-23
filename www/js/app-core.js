@@ -1029,7 +1029,7 @@ function alpineLink() {
     },
     getCommercialGuideProducts() {
       const guides = this.guides.length ? this.guides : this.nearbyGuides;
-      return (guides || []).map(g => ({
+      const mapped = (guides || []).map(g => ({
         ...g,
         languages: Array.isArray(g.languages) && g.languages.length ? g.languages : ['中文'],
         servicePeaks: Array.isArray(g.peaks_led) && g.peaks_led.length
@@ -1037,9 +1037,16 @@ function alpineLink() {
           : (g.specialty || '多山峰定制服务'),
         priceLabel: (g.dayRate || g.price) ? `¥${Number(g.dayRate || g.price).toLocaleString()}/天` : '价格咨询',
       }));
+      if (mapped.length === 0) {
+        mapped.push(
+          { id: 'demo-guide-1', avatar: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200', name: '高山向导·李明', servicePeaks: '珠穆朗玛峰、马卡鲁', priceLabel: '¥3,800/天', languages: ['中文', '英文'], rating: '4.9', verified: true },
+          { id: 'demo-guide-2', avatar: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=200', name: '专业向导·王刚', servicePeaks: 'K2、乔戈里峰', priceLabel: '¥4,200/天', languages: ['中文'], rating: '4.8', verified: true }
+        );
+      }
+      return mapped;
     },
     getCommercialClubProducts() {
-      return (this.clubs || []).map(c => ({
+      const mapped = (this.clubs || []).map(c => ({
         ...c,
         logo: c.logo || c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=200',
         climbPeak: c.specialty || '多条官方山峰路线',
@@ -1047,6 +1054,13 @@ function alpineLink() {
         priceLabel: c.price ? `¥${Number(c.price).toLocaleString()}` : '价格咨询',
         quotaLabel: c.spots ? `${c.spots} 个名额` : '名额以活动页为准',
       }));
+      if (mapped.length === 0) {
+        mapped.push(
+          { id: 'demo-club-1', logo: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=200', name: '珠峰远征俱乐部', climbPeak: '珠穆朗玛峰南坡', departureTime: '2026-03-15', priceLabel: '¥128,000', quotaLabel: '8 个名额' },
+          { id: 'demo-club-2', logo: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=200', name: '喜马拉雅攀登队', climbPeak: 'K2 巴基斯坦路线', departureTime: '2026-06-01', priceLabel: '¥98,000', quotaLabel: '6 个名额' }
+        );
+      }
+      return mapped;
     },
     // OpenStreetMap Nominatim 地名查询（带缓存和节流）
     async geocodeByOSM(name) {

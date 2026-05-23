@@ -5,15 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
-const auth = require('../middleware/auth');
-
-// 管理员鉴权中间件
-const adminAuth = [auth, (req, res, next) => {
-  if (!req.user?.isAdmin && !req.user?.is_admin) {
-    return res.status(403).json({ error: '需要管理员权限' });
-  }
-  next();
-}];
+const adminAuth = require('../middleware/adminAuth');
 
 // GET /api/admin/stats/overview — 总览数据
 router.get('/overview', adminAuth, async (req, res) => {
