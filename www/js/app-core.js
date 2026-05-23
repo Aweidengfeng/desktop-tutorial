@@ -437,6 +437,9 @@ function alpineLink() {
     notifUnreadList: [],
     notifPanelOpen: false,
     userStats: { expeditionCount: null, totalKm: null, climbingDays: null },
+    _loadMyOrdersRequestId: 0,
+    _guideStatusRequestId: 0,
+    _clubStatusRequestId: 0,
     showLogin: false,
     showBiometricLogin: false,
     showRegister: false,
@@ -1782,6 +1785,19 @@ function alpineLink() {
         return;
       }
       this.switchPrimaryTab(tabId);
+      if (tabId === 'me' && this.currentUser) {
+        this.loadMyOrders();
+      }
+    },
+    isGuideApproved() {
+      const guideStatus = this.currentUser && this.currentUser.guide_status;
+      return !!(this.currentUser && (this.currentUser.is_guide || (typeof guideStatus === 'string' && guideStatus.startsWith('approved'))));
+    },
+    isClubAdminUser() {
+      return !!(this.currentUser && (this.currentUser.is_club_admin || this.currentUser.club_id));
+    },
+    shouldShowGuideApplyEntry() {
+      return !!(this.currentUser && this.currentUser.guide_status !== 'pending' && !this.isGuideApproved() && !this.isClubAdminUser());
     },
 
     openExpeditionDetail(item) {
@@ -2202,15 +2218,25 @@ function alpineLink() {
     openMyOrders() { this.showMyOrders = true; this.myOrdersFilter = '全部'; this.myOrdersSubTab = 'expedition'; this.loadMyOrders(); },
     async loadMyOrders() {
       if (!this.authToken) return;
+      const requestId = (this._loadMyOrdersRequestId || 0) + 1;
+      this._loadMyOrdersRequestId = requestId;
+      const tokenSnapshot = this.authToken;
+      const isLatestRequest = () => this._loadMyOrdersRequestId === requestId && this.authToken === tokenSnapshot;
+      this.expeditionOrdersLoading = true;
       try {
         const res = await fetch('/api/orders', { headers: this.getAuthHeaders() });
+        if (!isLatestRequest()) return;
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            this.expeditionOrders = data;
-          }
+          this.expeditionOrders = Array.isArray(data) ? data : [];
+        } else {
+          this.expeditionOrders = [];
         }
-      } catch(e) {}
+      } catch(e) {
+        if (isLatestRequest()) this.expeditionOrders = [];
+      } finally {
+        if (isLatestRequest()) this.expeditionOrdersLoading = false;
+      }
     },
     async payExpeditionOrder(orderId, orderNo, expeditionId) {
       try {
@@ -2920,6 +2946,9 @@ function alpineLink() {
       if (type === 'notifications') { this.loadNotifSettingsList(); }
       if (type === 'help') { this.feedbackForm = { type: 'suggestion', content: '', contact: '' }; }
     },
+    openEditProfile() {
+      this.openSettings('profile');
+    },
     handleMenuAction(action) {
       if (action === 'track') { this.currentPage = 'track'; }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
@@ -3114,7 +3143,11 @@ function alpineLink() {
         const SecureStorage = window.Capacitor?.Plugins?.SecureStorage || window.Capacitor?.Plugins?.SecureStoragePlugin;
         if (SecureStorage && SecureStorage.remove) SecureStorage.remove({ key: 'summitlink_token' }).catch(() => {});
       }
-      this.userProfile = { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 };
+      this.userProfile = { name: '', username: '', avatar: '', level: '', summits: 0, expeditions: 0, followers: 0, following: 0 };
+      this.userStats = { expeditionCount: null, totalKm: null, climbingDays: null };
+      this.expeditionOrders = [];
+      this.activityOrders = [];
+      this.guideServiceOrders = [];
       this.showToast('已退出登录');
     },
     // SMS login
@@ -3296,6 +3329,9 @@ function alpineLink() {
       this.showLogin = false;
       this.loginForm = { phone: '', password: '' };
       this.smsCode = '';
+      this.loadGuideStatus();
+      this.loadClubStatus();
+      this.loadUserStats();
       this.showToast('登录成功，欢迎 ' + data.user.name + '！');
     },
     requireAuth() {
@@ -3310,8 +3346,43 @@ function alpineLink() {
         const user = await res.json();
         this.currentUser = user;
         this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
-        // Load real user stats
+        this.loadGuideStatus();
+        this.loadClubStatus();
         this.loadUserStats();
+      } catch(e) {}
+    },
+    async loadGuideStatus() {
+      if (!this.authToken) return;
+      const requestId = (this._guideStatusRequestId || 0) + 1;
+      this._guideStatusRequestId = requestId;
+      const tokenSnapshot = this.authToken;
+      const isLatestRequest = () => this._guideStatusRequestId === requestId && this.authToken === tokenSnapshot;
+      try {
+        const res = await fetch('/api/guides/me', { headers: this.getAuthHeaders() });
+        if (!isLatestRequest()) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (this.currentUser) {
+            this.currentUser = { ...this.currentUser, guide_status: data.status || 'none', guide_id: data.id || null };
+          }
+        }
+      } catch(e) {}
+    },
+    async loadClubStatus() {
+      if (!this.authToken) return;
+      const requestId = (this._clubStatusRequestId || 0) + 1;
+      this._clubStatusRequestId = requestId;
+      const tokenSnapshot = this.authToken;
+      const isLatestRequest = () => this._clubStatusRequestId === requestId && this.authToken === tokenSnapshot;
+      try {
+        const res = await fetch('/api/clubs/me', { headers: this.getAuthHeaders() });
+        if (!isLatestRequest()) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (this.currentUser && data && data.id) {
+            this.currentUser = { ...this.currentUser, club_id: data.id, is_club_admin: true };
+          }
+        }
       } catch(e) {}
     },
 

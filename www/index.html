@@ -262,7 +262,7 @@
           <button @click="showLogin=true" class="px-3 py-1.5 rounded-full text-xs font-bold bg-primary text-white hover:bg-primary-light transition-colors">登录</button>
         </template>
         <template x-if="currentUser">
-          <button @click="currentPage='me'" class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary-light">
+          <button @click="handleTabClick('me')" class="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary-light">
             <img :src="userProfile.avatar" class="w-full h-full object-cover">
           </button>
         </template>
@@ -1668,17 +1668,11 @@
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
       <!-- NOT LOGGED IN STATE -->
-      <div x-show="!currentUser" class="px-4 pt-8">
-        <div class="glass rounded-3xl p-8 text-center">
-          <div class="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span class="material-symbols-outlined text-primary-light text-3xl">person</span>
-          </div>
-          <h3 class="text-white font-bold text-lg mb-2">登录后查看个人中心</h3>
-          <p class="text-slate-400 text-sm mb-6">记录攀登轨迹、管理订单、连接向导</p>
-          <button @click="showLogin=true" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors">
-            立即登录
-          </button>
-        </div>
+      <div x-show="!currentUser" class="px-4 pt-12 flex flex-col items-center text-center">
+        <span class="text-6xl mb-4">🏔️</span>
+        <h2 class="font-display font-bold text-white text-xl mb-2">登录后探索更多</h2>
+        <p class="text-slate-400 text-sm mb-6">记录攀登轨迹、预约向导、加入俱乐部</p>
+        <button @click="showLogin=true" class="bg-primary hover:bg-primary-light text-white font-bold px-8 py-3 rounded-2xl text-sm transition-colors">立即登录</button>
       </div>
       <!-- LOGGED IN STATE -->
       <div x-show="currentUser">
@@ -1710,7 +1704,7 @@
               <p class="text-xs text-slate-400">登顶</p>
             </div>
             <div>
-              <p class="text-xl font-bold text-white" x-text="userProfile.expeditions"></p>
+              <p class="text-xl font-bold text-white" x-text="userStats.expeditionCount !== null ? userStats.expeditionCount : userProfile.expeditions"></p>
               <p class="text-xs text-slate-400">远征</p>
             </div>
             <div>
@@ -1720,6 +1714,61 @@
             <div>
               <p class="text-xl font-bold text-white" x-text="userProfile.following"></p>
               <p class="text-xs text-slate-400">关注</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 我的订单 -->
+        <div class="glass rounded-2xl p-4 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-display font-bold text-white">我的订单</h3>
+            <span class="text-xs text-slate-400">查看订单进度</span>
+          </div>
+          <div class="flex bg-slate-800 rounded-xl p-1 mb-3">
+            <button @click="myOrdersSubTab='expedition';loadMyOrders()" :class="myOrdersSubTab==='expedition' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">攀峰订单</button>
+            <button @click="myOrdersSubTab='activity';loadActivityOrders()" :class="myOrdersSubTab==='activity' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">俱乐部活动</button>
+            <button @click="myOrdersSubTab='guide';loadGuideServiceOrders()" :class="myOrdersSubTab==='guide' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">向导服务</button>
+          </div>
+
+          <div x-show="myOrdersSubTab==='expedition'" class="space-y-2">
+            <div x-show="expeditionOrdersLoading" class="py-6 text-center text-slate-400 text-sm">加载中...</div>
+            <template x-for="(o, idx) in expeditionOrders" :key="'expedition-'+(o.id || o.order_no || idx)">
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-white text-sm font-semibold" x-text="o.expedition_title || o.title || ('订单 #' + (o.order_no || o.id || ''))"></p>
+                <p class="text-slate-400 text-xs mt-1" x-text="'状态：' + (o.status || '处理中')"></p>
+              </div>
+            </template>
+            <div x-show="!expeditionOrdersLoading && expeditionOrders.length===0" class="py-8 text-center text-slate-500 text-sm">
+              <div class="text-2xl mb-1">📦</div>
+              暂无攀峰订单
+            </div>
+          </div>
+
+          <div x-show="myOrdersSubTab==='activity'" class="space-y-2">
+            <div x-show="activityOrdersLoading" class="py-6 text-center text-slate-400 text-sm">加载中...</div>
+            <template x-for="(o, idx) in activityOrders" :key="'activity-'+(o.id || o.order_no || idx)">
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-white text-sm font-semibold" x-text="o.activity_title || o.title || ('订单 #' + (o.order_no || o.id || ''))"></p>
+                <p class="text-slate-400 text-xs mt-1" x-text="'状态：' + (o.status || '处理中')"></p>
+              </div>
+            </template>
+            <div x-show="!activityOrdersLoading && activityOrders.length===0" class="py-8 text-center text-slate-500 text-sm">
+              <div class="text-2xl mb-1">🎟️</div>
+              暂无俱乐部活动订单
+            </div>
+          </div>
+
+          <div x-show="myOrdersSubTab==='guide'" class="space-y-2">
+            <div x-show="guideServiceOrdersLoading" class="py-6 text-center text-slate-400 text-sm">加载中...</div>
+            <template x-for="(o, idx) in guideServiceOrders" :key="'guide-'+(o.id || o.order_no || idx)">
+              <div class="bg-slate-800 rounded-xl p-3">
+                <p class="text-white text-sm font-semibold" x-text="o.service_title || o.title || ('订单 #' + (o.order_no || o.id || ''))"></p>
+                <p class="text-slate-400 text-xs mt-1" x-text="'状态：' + (o.status || '处理中')"></p>
+              </div>
+            </template>
+            <div x-show="!guideServiceOrdersLoading && guideServiceOrders.length===0" class="py-8 text-center text-slate-500 text-sm">
+              <div class="text-2xl mb-1">🧭</div>
+              暂无向导服务订单
             </div>
           </div>
         </div>
@@ -1818,9 +1867,8 @@
         <!-- 专业入口区块 -->
         <div class="glass rounded-2xl overflow-hidden mb-4">
           <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-2">专业入口</p>
-          <!-- 向导工作台 — 仅已认证向导显示 -->
-          <template x-if="currentUser && currentUser.is_guide">
-            <a @click.prevent="window.open(API_BASE + '/guide-portal?token=' + encodeURIComponent(authToken || ''), '_blank')" href="#" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
+          <template x-if="isGuideApproved()">
+            <a href="/guide-portal" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
               <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
                 <span class="text-lg">🧭</span>
               </div>
@@ -1831,9 +1879,8 @@
               <span class="material-symbols-outlined text-orange-400">arrow_forward</span>
             </a>
           </template>
-          <!-- 俱乐部工作台 — 仅俱乐部管理员显示 -->
-          <template x-if="currentUser && currentUser.is_club_admin">
-            <a @click.prevent="window.open(API_BASE + '/club-portal?token=' + encodeURIComponent(authToken || ''), '_blank')" href="#" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
+          <template x-if="isClubAdminUser()">
+            <a href="/club-portal" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 block">
               <div class="w-9 h-9 bg-purple-500/20 rounded-xl flex items-center justify-center">
                 <span class="text-lg">🏛️</span>
               </div>
@@ -1844,43 +1891,29 @@
               <span class="material-symbols-outlined text-purple-400">arrow_forward</span>
             </a>
           </template>
-          <!-- 平台管理 — 仅管理员显示 -->
-          <template x-if="currentUser && currentUser.is_admin">
-            <a href="/admin" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors block">
-              <div class="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center">
-                <span class="text-lg">🛡️</span>
+          <template x-if="currentUser && currentUser.guide_status === 'pending'">
+            <div class="w-full flex items-center gap-3 px-4 py-3.5 border-b border-white/5">
+              <div class="w-9 h-9 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                <span class="text-lg">⏳</span>
               </div>
               <div class="flex-1 text-left">
-                <p class="text-white text-sm font-medium">平台管理后台</p>
-                <p class="text-slate-500 text-xs">用户/内容/审核管理</p>
+                <p class="text-white text-sm font-medium">向导审核中</p>
+                <p class="text-slate-500 text-xs">申请已提交，请等待审核结果</p>
               </div>
-              <span class="material-symbols-outlined text-red-400">arrow_forward</span>
-            </a>
+            </div>
           </template>
-          <!-- 申请向导认证 — 未认证用户显示 -->
-          <template x-if="!currentUser || !currentUser.is_guide">
-            <button @click="showGuideApply=true" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5">
+          <template x-if="shouldShowGuideApplyEntry()">
+            <a href="/guide-portal" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5">
               <div class="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
                 <span class="text-lg">🧗</span>
               </div>
               <div class="flex-1 text-left">
-                <p class="text-white text-sm font-medium">申请成为认证向导</p>
+                <p class="text-white text-sm font-medium">申请成为向导</p>
                 <p class="text-slate-500 text-xs">开始赚取收入 · 审核7天内完成</p>
               </div>
               <span class="material-symbols-outlined text-slate-600">chevron_right</span>
-            </button>
+            </a>
           </template>
-          <!-- 电子护照 -->
-          <button @click="downloadPassport()" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors">
-            <div class="w-9 h-9 bg-amber-500/20 rounded-xl flex items-center justify-center">
-              <span class="text-lg">🪪</span>
-            </div>
-            <div class="flex-1 text-left">
-              <p class="text-white text-sm font-medium">我的电子护照</p>
-              <p class="text-slate-500 text-xs">下载 PDF 护照 · 完成1次攀登后可用</p>
-            </div>
-            <span class="material-symbols-outlined text-amber-400">download</span>
-          </button>
         </div>
 
         <!-- Emergency SOS text button -->
@@ -2048,11 +2081,14 @@
           </div>
         </template>
 
-        <!-- Logout -->
-
-        <button @click="doLogout()" class="w-full glass rounded-2xl py-4 text-red-400 font-semibold text-sm hover:bg-red-500/10 transition-colors mb-4 flex items-center justify-center gap-2">
-          <span class="material-symbols-outlined text-base">logout</span>退出登录
-        </button>
+        <!-- Settings -->
+        <div class="glass rounded-2xl p-4 mb-4">
+          <h3 class="font-display font-bold text-white mb-3">设置</h3>
+          <div class="space-y-2">
+            <button @click="openEditProfile()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-colors">编辑资料</button>
+            <button @click="doLogout()" class="w-full bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold py-3 rounded-xl transition-colors">退出登录</button>
+          </div>
+        </div>
       </div>
       </div>
     </section>
