@@ -626,22 +626,50 @@ const server = http.createServer(app);
 const { initChatGateway } = require('./routes/chat.gateway');
 initChatGateway(server);
 
+// Startup migration: ensure columns exist (idempotent)
+async function runStartupMigrations(prisma) {
+  try {
+    if (process.env.DATABASE_PROVIDER === 'postgresql') {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "bio" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "images" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "video_url" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "tags" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "emojis" TEXT`);
+    } else {
+      // SQLite does not support IF NOT EXISTS on ALTER TABLE; use individual try/catch
+      for (const sql of [
+        'ALTER TABLE "users" ADD COLUMN "bio" TEXT',
+        'ALTER TABLE "posts" ADD COLUMN "images" TEXT',
+        'ALTER TABLE "posts" ADD COLUMN "video_url" TEXT',
+        'ALTER TABLE "posts" ADD COLUMN "tags" TEXT',
+        'ALTER TABLE "posts" ADD COLUMN "emojis" TEXT',
+      ]) {
+        try { await prisma.$executeRawUnsafe(sql); } catch (err) {
+          // Ignore "duplicate column" errors; warn on anything unexpected
+          if (!err.message || !err.message.toLowerCase().includes('already')) {
+            console.warn('[startup] migration warning:', err.message);
+          }
+        }
+      }
+    }
+    console.log('[startup] schema patch applied');
+  } catch (e) {
+    console.warn('[startup] schema patch warning:', e.message);
+  }
+}
+
 (async () => {
   // PostgreSQL 模式：在启动 HTTP 服务器之前等待 Prisma 连接就绪
   if (process.env.DATABASE_PROVIDER === 'postgresql') {
     const prisma = require('./db/prisma');
     try {
       await prisma.$connect();
-      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS images TEXT DEFAULT NULL');
-      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS video_url TEXT DEFAULT NULL');
-      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT NULL');
-      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS emojis TEXT DEFAULT NULL');
-      await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT NULL');
       console.log('✅ Prisma 已连接到 PostgreSQL');
     } catch (e) {
       console.error('❌ Prisma 连接 PostgreSQL 失败，退出:', e.message);
       process.exit(1);
     }
+    await runStartupMigrations(prisma);
   }
 
   server.listen(PORT, '0.0.0.0', () => {
