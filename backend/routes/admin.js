@@ -39,6 +39,14 @@ const SAFE_TABLES = new Set([
   'guides',
   'clubs',
   'sos_alerts',
+  'bookings',
+  'climbing_routes',
+  'expedition_orders',
+  'expeditions',
+  'moderation_logs',
+  'withdrawal_requests',
+  'disputes',
+  'merchant_kyc',
 ]);
 const INVITE_CODE_OPTIONAL_COLUMNS = {
   max_uses: true,
@@ -112,6 +120,11 @@ async function getTableColumns(tableName) {
   } catch (_) {
     return [];
   }
+}
+
+function isMissingTableError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('no such table') || message.includes("doesn't exist") || message.includes('does not exist');
 }
 
 async function ensureAdminOpsTables() {
@@ -670,8 +683,10 @@ router.post('/guides/:id/revoke-certification', adminWriteLimiter, adminAuth, as
 // GET /api/admin/bookings
 router.get('/bookings', adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 20, status = '' } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const status = String(req.query.status || '').trim();
+    const offset = (page - 1) * limit;
     let sql = `SELECT b.id, b.user_id, u.name as user_name, b.mountain,
                b.guide_name, b.club_name, b.type, b.date, b.members, b.amount, b.status,
                b.confirmed_at, b.rejected_reason, b.created_at
@@ -679,19 +694,24 @@ router.get('/bookings', adminAuth, async (req, res) => {
     const params = [];
     if (status) { sql += ' WHERE b.status = ?'; params.push(status); }
     sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    params.push(limit, offset);
     const bookings = await prisma.$queryRawUnsafe(sql, ...params);
     const countSql = status ? 'SELECT COUNT(*) as c FROM bookings WHERE status = ?' : 'SELECT COUNT(*) as c FROM bookings';
     const countParams = status ? [status] : [];
     const total = Number((await prisma.$queryRawUnsafe(countSql, ...countParams))[0].c);
-    res.json({ bookings, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({ bookings, total, page, limit });
   } catch (e) {
+    if (isMissingTableError(e)) {
+      const page = parsePositiveInt(req.query.page, 1);
+      const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+      return res.json({ bookings: [], total: 0, page, limit });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // PUT /api/admin/bookings/:id/status
-router.put('/bookings/:id/status', adminAuth, async (req, res) => {
+router.put('/bookings/:id/status', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
     const { status } = req.body;
     if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
@@ -851,19 +871,34 @@ router.get('/guide-applications', adminWriteLimiter, adminAuth, async (req, res)
 // GET /api/admin/club-applications?status=pending|approved|rejected
 router.get('/club-applications', adminAuth, async (req, res) => {
   try {
-    const { status = '', page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    let sql = 'SELECT * FROM club_applications';
+    const status = String(req.query.status || '').trim();
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    let sql = `
+      SELECT
+        id,
+        COALESCE(name, club_name) AS name,
+        region,
+        specialty,
+        contact,
+        status,
+        created_at
+      FROM club_applications
+    `;
     const params = [];
     if (status) { sql += ' WHERE status = ?'; params.push(status); }
     sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    params.push(limit, offset);
     const applications = await prisma.$queryRawUnsafe(sql, ...params);
     const countSql = status ? 'SELECT COUNT(*) as c FROM club_applications WHERE status = ?' : 'SELECT COUNT(*) as c FROM club_applications';
     const countParams = status ? [status] : [];
     const total = Number((await prisma.$queryRawUnsafe(countSql, ...countParams))[0].c);
-    res.json({ applications, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({ applications, total, page, limit });
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.json({ applications: [], total: 0, page: 1, limit: 20 });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1027,20 +1062,41 @@ router.get('/sms-codes', adminLoginLimiter, devOnly, adminAuth, async (req, res)
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 
 // GET /api/admin/expedition-orders - 全量订单查询
-router.get('/expedition-orders', adminWriteLimiter, adminAuth, async (req, res) => {
+router.get('/expedition-orders', adminAuth, async (req, res) => {
   try {
-    const { status, limit = 50, page = 1 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    let sql = 'SELECT * FROM expedition_orders';
+    const status = String(req.query.status || '').trim();
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    const expeditionColumns = await getTableColumns('expeditions');
+    const usersExist = (await getTableColumns('users')).length > 0;
+    const expeditionTitleExpr = expeditionColumns.includes('title')
+      ? (expeditionColumns.includes('peak_name') ? 'COALESCE(e.title, e.peak_name)' : expeditionColumns.includes('name') ? 'COALESCE(e.title, e.name)' : 'e.title')
+      : expeditionColumns.includes('name') ? 'e.name' : expeditionColumns.includes('peak_name') ? 'e.peak_name' : 'NULL';
+    let sql = `
+      SELECT o.id, o.user_id, o.expedition_id, o.status, o.total, o.created_at, o.contact_name, o.contact_phone, o.participants,
+             ${expeditionColumns.length > 0 ? `${expeditionTitleExpr} AS expedition_title` : 'NULL AS expedition_title'},
+             ${usersExist ? 'u.name AS user_name' : 'NULL AS user_name'}
+      FROM expedition_orders o
+      ${expeditionColumns.length > 0 ? 'LEFT JOIN expeditions e ON e.id = o.expedition_id' : ''}
+      ${usersExist ? 'LEFT JOIN users u ON u.id = o.user_id' : ''}
+    `;
     const params = [];
-    if (status) { sql += ' WHERE status = ?'; params.push(status); }
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    if (status) { sql += ' WHERE o.status = ?'; params.push(status); }
+    sql += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
     const orders = await prisma.$queryRawUnsafe(sql, ...params);
     const countSql = status ? 'SELECT COUNT(*) c FROM expedition_orders WHERE status=?' : 'SELECT COUNT(*) c FROM expedition_orders';
     const total = Number((await prisma.$queryRawUnsafe(countSql, ...(status ? [status] : [])))[0].c);
-    res.json({ orders, total });
-  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+    res.json({ orders, total, page, limit });
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      const page = parsePositiveInt(req.query.page, 1);
+      const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+      return res.json({ orders: [], total: 0, page, limit });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 // POST /api/admin/expedition-orders/:id/transition
@@ -1061,7 +1117,12 @@ router.post('/expedition-orders/:id/transition', adminWriteLimiter, adminAuth, a
       await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${order.user_id}, 'order', '订单状态更新', ${notifBody}, ${notifLink})`;
     } catch(e) {}
     res.json({ success: true, status: newStatus });
-  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(404).json({ error: '订单数据不存在' });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 // GET /api/admin/tracks?flagged=1
@@ -1130,14 +1191,43 @@ router.post('/tracks/:id/unflag', adminWriteLimiter, adminAuth, async (req, res)
 });
 
 // GET /api/admin/moderation-logs
-router.get('/moderation-logs', adminWriteLimiter, adminAuth, async (req, res) => {
+router.get('/moderation-logs', adminAuth, async (req, res) => {
   try {
-    const { limit = 50, page = 1 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const logs = await prisma.$queryRaw`SELECT * FROM moderation_logs ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${offset}`;
+    const columns = await getTableColumns('moderation_logs');
+    const hasAction = columns.includes('action');
+    const hasTargetType = columns.includes('target_type');
+    const hasTargetId = columns.includes('target_id');
+    const hasOperator = columns.includes('operator');
+    const hasNote = columns.includes('note');
+    const hasReason = columns.includes('reason');
+    const hasContentType = columns.includes('content_type');
+    const hasContent = columns.includes('content');
+    const hasAdminId = columns.includes('admin_id');
+    const hasUserId = columns.includes('user_id');
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    const logs = await prisma.$queryRawUnsafe(`
+      SELECT
+        id,
+        ${hasAction ? 'action' : hasContentType ? 'content_type' : "''"} AS action,
+        ${hasTargetType ? 'target_type' : hasContentType ? 'content_type' : 'NULL'} AS target_type,
+        ${hasTargetId ? 'target_id' : 'NULL'} AS target_id,
+        ${hasOperator ? 'operator' : hasAdminId ? 'admin_id' : hasUserId ? 'user_id' : 'NULL'} AS operator,
+        ${hasNote ? 'note' : hasReason ? 'reason' : hasContent ? 'content' : 'NULL'} AS note,
+        created_at
+      FROM moderation_logs
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `, limit, offset);
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) c FROM moderation_logs`)[0].c);
     res.json({ logs, total });
-  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.json({ logs: [], total: 0 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 // POST /api/admin/guide-applications/:id/review
@@ -1198,19 +1288,26 @@ router.post('/club-applications/:id/review', adminWriteLimiter, adminAuth, async
 // GET /api/admin/clubs/commercial — 俱乐部商业资质审核列表
 router.get('/clubs/commercial', adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
     const clubs = await prisma.$queryRaw`
       SELECT id, name, specialty, region, commercial_status, commercial_applied_at,
              commercial_reviewed_at, commercial_verified, commercial_reject_reason,
              business_license_url, business_license_no, insurance_cert_url,
              bank_account_name, bank_account_no, bank_name
       FROM clubs WHERE commercial_status != 'none'
-      ORDER BY commercial_applied_at DESC LIMIT ${parseInt(limit)} OFFSET ${offset}
+      ORDER BY commercial_applied_at DESC LIMIT ${limit} OFFSET ${offset}
     `;
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM clubs WHERE commercial_status != 'none'`)[0].c);
-    res.json({ clubs, total, page: parseInt(page), limit: parseInt(limit) });
-  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+    const normalized = clubs.map((club) => ({ ...club, cert_url: club.business_license_url || null }));
+    res.json({ clubs: normalized, total, page, limit });
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.json({ clubs: [], total: 0, page: 1, limit: 20 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 // POST /api/admin/clubs/:id/commercial-review — 审核俱乐部商业资质
@@ -1248,7 +1345,12 @@ router.post('/clubs/:id/commercial-review', adminWriteLimiter, adminAuth, async 
       return res.status(400).json({ error: '无效操作，action 应为 approve|reject|need_info' });
     }
     res.json({ success: true });
-  } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(404).json({ error: '俱乐部数据不存在' });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 // GET /api/admin/guides/commercial — 向导商业资质审核列表
@@ -1551,17 +1653,23 @@ router.put('/peaks/suggestions/:id/approve', adminWriteLimiter, adminAuth, async
 // ── 攀登线路管理 ─────────────────────────────────────────────────────────────
 
 // GET /api/admin/routes — 攀登线路列表
-router.get('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
+router.get('/routes', adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
     const routes = await prisma.$queryRaw`
-      SELECT id, name, peak, difficulty, region, altitude, duration_days, best_season, status, created_at
-      FROM climbing_routes ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${offset}
+      SELECT id, name, peak, difficulty, region, description, altitude, duration_days, best_season, status, created_at
+      FROM climbing_routes ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
     `;
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM climbing_routes`)[0].c);
-    res.json({ routes, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({ routes, total, page, limit });
   } catch (e) {
+    if (isMissingTableError(e)) {
+      const page = parsePositiveInt(req.query.page, 1);
+      const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+      return res.json({ routes: [], total: 0, page, limit });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1581,6 +1689,9 @@ router.post('/routes', adminWriteLimiter, adminAuth, async (req, res) => {
     const route = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${newRouteId}`)[0];
     res.json(route);
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(400).json({ error: '线路数据表不存在' });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1615,6 +1726,9 @@ router.put('/routes/:id', adminWriteLimiter, adminAuth, async (req, res) => {
     const updated = (await prisma.$queryRaw`SELECT * FROM climbing_routes WHERE id = ${req.params.id}`)[0];
     res.json(updated);
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(400).json({ error: '线路数据表不存在' });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1627,6 +1741,9 @@ router.delete('/routes/:id', adminWriteLimiter, adminAuth, async (req, res) => {
     await prisma.$executeRaw`DELETE FROM climbing_routes WHERE id = ${req.params.id}`;
     res.json({ success: true, deleted: route.name });
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(400).json({ error: '线路数据表不存在' });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1756,34 +1873,50 @@ router.put('/sos-records/:id/status', adminWriteLimiter, adminAuth, async (req, 
 });
 
 // GET /api/admin/withdrawals — 提现申请管理
-router.get('/withdrawals', adminWriteLimiter, adminAuth, async (req, res) => {
+router.get('/withdrawals', adminAuth, async (req, res) => {
   try {
-    const { status = '', page = 1, limit = 20 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    let sql = `
-      SELECT wr.*, g.name as guide_name, g.user_id as guide_user_id
+    const status = String(req.query.status || '').trim();
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    const withdrawalColumns = await getTableColumns('withdrawal_requests');
+    const hasUserId = withdrawalColumns.includes('user_id');
+    let sql = hasUserId ? `
+      SELECT wr.*, g.name as guide_name, g.user_id as guide_user_id, u.name as user_name
       FROM withdrawal_requests wr
       LEFT JOIN guides g ON g.id = wr.owner_id AND wr.owner_type = 'guide'
+      LEFT JOIN users u ON u.id = wr.user_id
+    ` : `
+      SELECT wr.*, g.name as guide_name, g.user_id as guide_user_id, u.name as user_name
+      FROM withdrawal_requests wr
+      LEFT JOIN guides g ON g.id = wr.owner_id AND wr.owner_type = 'guide'
+      LEFT JOIN users u ON u.id = wr.owner_id
     `;
     const params = [];
     if (status) { sql += ' WHERE wr.status = ?'; params.push(status); }
     sql += ' ORDER BY wr.created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    params.push(limit, offset);
     const rows = await prisma.$queryRawUnsafe(sql, ...params);
-    const requests = rows.map((r) => {
+    const withdrawals = rows.map((r) => {
       let accountInfo = {};
       try { accountInfo = r.account_info ? JSON.parse(r.account_info) : {}; } catch (_) {}
       return {
         ...r,
-        note: r.note || r.reject_reason || '',
-        bank_account: r.bank_account || accountInfo.bank_account || '',
-        bank_name: r.bank_name || accountInfo.bank_name || '',
+        user_id: r.user_id ?? r.owner_id,
+        method: r.method ?? r.account_type ?? '',
+        note: r.note ?? r.reject_reason ?? '',
+        bank_account: r.bank_account ?? accountInfo.bank_account ?? '',
+        bank_name: r.bank_name ?? accountInfo.bank_name ?? '',
       };
     });
     const countSql = status ? 'SELECT COUNT(*) as c FROM withdrawal_requests WHERE status = ?' : 'SELECT COUNT(*) as c FROM withdrawal_requests';
     const total = Number((await prisma.$queryRawUnsafe(countSql, ...(status ? [status] : [])))[0].c);
-    res.json({ requests, total, page: parseInt(page), limit: parseInt(limit) });
+    // requests 字段保留用于兼容现有 admin.html 读取逻辑。
+    res.json({ withdrawals, requests: withdrawals, total, page, limit });
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.json({ withdrawals: [], requests: [], total: 0, page: 1, limit: 20 });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1881,6 +2014,9 @@ router.patch('/withdrawals/:id', adminWriteLimiter, adminAuth, async (req, res) 
     const result = await processWithdrawalAction(req.params.id, action, note);
     res.status(result.statusCode).json(result.body);
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(404).json({ error: '提现数据不存在' });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1901,6 +2037,88 @@ router.put('/withdrawals/:id/reject', adminWriteLimiter, adminAuth, async (req, 
     const result = await processWithdrawalAction(req.params.id, 'reject', req.body?.reason || req.body?.note || '');
     res.status(result.statusCode).json(result.body);
   } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+async function buildGmvReportsPayload(req) {
+  const period = String(req.query.period || '7d');
+  const region = String(req.query.region || 'all').toLowerCase();
+  const days = periodToDays(period);
+  const endDate = new Date();
+  const startDate = new Date(endDate.getTime() - (days - 1) * DAY_MS);
+  const expeditionColumns = await getTableColumns('expeditions');
+  const expeditionOrderColumns = await getTableColumns('expedition_orders');
+  const hasExpeditions = expeditionColumns.length > 0;
+  const guidePayoutColumn = expeditionOrderColumns.includes('guide_commission') ? 'o.guide_commission' : 'o.publisher_income';
+  const regionExpr = hasExpeditions && expeditionColumns.includes('region')
+    ? 'COALESCE(e.region, "all")'
+    : '"all"';
+  const rows = await prisma.$queryRawUnsafe(
+    `SELECT
+       COALESCE(o.total, 0) AS total,
+       COALESCE(o.platform_fee, 0) AS platform_fee,
+       COALESCE(${guidePayoutColumn}, 0) AS guide_payout,
+       ${regionExpr} AS region
+     FROM expedition_orders o
+     ${hasExpeditions ? 'LEFT JOIN expeditions e ON e.id = o.expedition_id' : ''}
+     WHERE o.status = ?
+       AND datetime(o.created_at) >= datetime(?)`,
+    'paid',
+    startDate.toISOString()
+  );
+
+  let totalGmv = 0;
+  let platformFee = 0;
+  let guidePayout = 0;
+  for (const row of rows) {
+    const rowRegion = String(row.region || 'all').toLowerCase();
+    if (region !== 'all' && rowRegion !== region) continue;
+    totalGmv = roundAmount(totalGmv + Number(row.total || 0));
+    platformFee = roundAmount(platformFee + Number(row.platform_fee || 0));
+    guidePayout = roundAmount(guidePayout + Number(row.guide_payout || 0));
+  }
+  return {
+    // 同时返回 camelCase 与 snake_case，兼容不同前端版本。
+    total: totalGmv,
+    totalGmv,
+    total_gmv: totalGmv,
+    platformFee,
+    platform_fee: platformFee,
+    guidePayout,
+    guide_payout: guidePayout,
+    completedPayout: totalGmv,
+    completed_payout: totalGmv,
+    currency: region === 'us' ? '$' : '¥',
+    region,
+    period,
+  };
+}
+
+// GET /api/admin/gmv-reports — GMV 报表（远征订单）
+router.get('/gmv-reports', adminAuth, async (req, res) => {
+  try {
+    const payload = await buildGmvReportsPayload(req);
+    res.json(payload);
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      const region = String(req.query.region || 'all').toLowerCase();
+      const period = String(req.query.period || '7d');
+      return res.json({
+        total: 0,
+        totalGmv: 0,
+        total_gmv: 0,
+        platformFee: 0,
+        platform_fee: 0,
+        guidePayout: 0,
+        guide_payout: 0,
+        completedPayout: 0,
+        completed_payout: 0,
+        currency: region === 'us' ? '$' : '¥',
+        region,
+        period,
+      });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -1982,18 +2200,18 @@ router.get('/disputes', adminAuth, async (req, res) => {
     );
     res.json({ disputes, total: disputes.length });
   } catch (e) {
-    if (String(e.message || '').includes('no such table')) {
+    if (isMissingTableError(e)) {
       return res.json({ disputes: [], total: 0 });
     }
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
-// PUT /api/admin/disputes/:id/resolve — 处理争议
-router.put('/disputes/:id/resolve', adminWriteLimiter, adminAuth, async (req, res) => {
+async function resolveDispute(req, res) {
   try {
     await syncDisputesFromOrders();
-    const { resolution = '', refund_amount = 0 } = req.body || {};
+    const { resolution = '' } = req.body || {};
+    const refundAmount = req.body?.refundAmount ?? req.body?.refund_amount ?? 0;
     if (!String(resolution).trim()) {
       return res.status(400).json({ error: 'resolution 不能为空' });
     }
@@ -2007,7 +2225,7 @@ router.put('/disputes/:id/resolve', adminWriteLimiter, adminAuth, async (req, re
       UPDATE disputes
       SET status = 'resolved',
           resolution = ${String(resolution).trim()},
-          refund_amount = ${roundAmount(refund_amount)},
+          refund_amount = ${roundAmount(refundAmount)},
           resolved_at = CURRENT_TIMESTAMP
       WHERE id = ${dispute.id}
     `;
@@ -2016,9 +2234,18 @@ router.put('/disputes/:id/resolve', adminWriteLimiter, adminAuth, async (req, re
     } catch (_) {}
     res.json({ success: true });
   } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(404).json({ error: '争议数据不存在' });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
-});
+}
+
+// PUT /api/admin/disputes/:id/resolve — 处理争议
+router.put('/disputes/:id/resolve', adminWriteLimiter, adminAuth, resolveDispute);
+
+// POST /api/admin/disputes/:id/resolve — 处理争议（兼容前端）
+router.post('/disputes/:id/resolve', adminWriteLimiter, adminAuth, resolveDispute);
 
 // GET /api/admin/featured-slots — 推荐位配置
 router.get('/featured-slots', adminAuth, async (_req, res) => {
@@ -2161,41 +2388,65 @@ router.put('/merchants/:id/custom-rate', adminWriteLimiter, adminAuth, async (re
 
 // GET /api/admin/merchant-kyc — 商家 KYC 审核列表
 router.get('/merchant-kyc', adminAuth, async (req, res) => {
-  const status = String(req.query.status || 'pending');
+  const status = String(req.query.status || '').trim();
   try {
     const usersExist = (await getTableColumns('users')).length > 0;
-    const guideSql = `
-      SELECT ga.id, ga.user_id, ga.name, ga.region, ga.cert_level, ga.status, ga.created_at,
-             'guide' AS type,
-             ${usersExist ? 'u.name AS user_name, u.email AS email' : 'NULL AS user_name, NULL AS email'}
-      FROM guide_applications ga
-      ${usersExist ? 'LEFT JOIN users u ON u.id = ga.user_id' : ''}
-      ${status ? 'WHERE ga.status = ?' : ''}
+    const guidesExist = (await getTableColumns('guides')).length > 0;
+    const clubsExist = (await getTableColumns('clubs')).length > 0;
+    let sql = `
+      SELECT
+        mk.id,
+        mk.name,
+        mk.type,
+        mk.status,
+        mk.cert_url,
+        mk.business_license_url,
+        mk.insurance_cert_url,
+        mk.created_at,
+        mk.user_id,
+        mk.target_id,
+        mk.note,
+        ${usersExist ? 'u.name AS user_name, u.email AS email' : 'NULL AS user_name, NULL AS email'}
+      FROM merchant_kyc mk
+      ${usersExist ? 'LEFT JOIN users u ON u.id = mk.user_id' : ''}
+      ${guidesExist ? "LEFT JOIN guides g ON mk.type = 'guide' AND g.id = mk.target_id" : ''}
+      ${clubsExist ? "LEFT JOIN clubs c ON mk.type = 'club' AND c.id = mk.target_id" : ''}
     `;
-    const clubSql = `
-      SELECT ca.id, ca.user_id, ca.club_name AS name, ca.region, ca.cert_level, ca.status, ca.created_at,
-             'club' AS type,
-             ${usersExist ? 'u.name AS user_name, u.email AS email' : 'NULL AS user_name, NULL AS email'}
-      FROM club_applications ca
-      ${usersExist ? 'LEFT JOIN users u ON u.id = ca.user_id' : ''}
-      ${status ? 'WHERE ca.status = ?' : ''}
-    `;
-    const [guides, clubs] = await Promise.all([
-      prisma.$queryRawUnsafe(guideSql, ...(status ? [status] : [])),
-      prisma.$queryRawUnsafe(clubSql, ...(status ? [status] : [])),
-    ]);
-    const merchants = [...guides, ...clubs]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .map((item) => ({
-        ...item,
-        display_name: item.name || item.user_name || `${item.type}#${item.id}`,
-        displayName: item.name || item.user_name || `${item.type}#${item.id}`,
-        tier: item.cert_level || 'standard',
-      }));
+    const params = [];
+    if (status) {
+      sql += ' WHERE mk.status = ?';
+      params.push(status);
+    }
+    sql += ' ORDER BY mk.created_at DESC';
+    const merchants = await prisma.$queryRawUnsafe(sql, ...params);
     res.json({ merchants, total: merchants.length });
   } catch (e) {
-    if (String(e.message || '').includes('no such table')) {
+    if (isMissingTableError(e)) {
       return res.json({ merchants: [], total: 0 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/merchant-kyc/:id/review — 审核商家 KYC
+router.post('/merchant-kyc/:id/review', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const action = String(req.body?.action || '').trim();
+    const note = String(req.body?.note || '').trim();
+    const status = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : '';
+    if (!status) {
+      return res.status(400).json({ error: 'action 必须为 approve 或 reject' });
+    }
+    const affected = await prisma.$executeRaw`
+      UPDATE merchant_kyc
+      SET status = ${status}, note = ${note || null}
+      WHERE id = ${Number(req.params.id)}
+    `;
+    if (!affected) return res.status(404).json({ error: '审核记录不存在' });
+    res.json({ success: true, status });
+  } catch (e) {
+    if (isMissingTableError(e)) {
+      return res.status(404).json({ error: '商家KYC数据不存在' });
     }
     res.status(500).json({ error: '服务器错误' });
   }
