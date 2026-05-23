@@ -1786,6 +1786,15 @@ function alpineLink() {
         this.loadMyOrders();
       }
     },
+    isGuideApproved() {
+      return !!(this.currentUser && (this.currentUser.is_guide || this.currentUser.guide_status === 'approved'));
+    },
+    isClubAdminUser() {
+      return !!(this.currentUser && (this.currentUser.is_club_admin || this.currentUser.club_id));
+    },
+    shouldShowGuideApplyEntry() {
+      return !!(this.currentUser && this.currentUser.guide_status !== 'pending' && !this.isGuideApproved() && !this.isClubAdminUser());
+    },
 
     openExpeditionDetail(item) {
       if (!item || !item.id) {
