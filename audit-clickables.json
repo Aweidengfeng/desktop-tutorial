@@ -4,7 +4,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/\nCall log:\n  - navigating to \"http://localhost:8080/\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/"
     }
   },
   "/admin": {
@@ -12,7 +13,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/admin\nCall log:\n  - navigating to \"http://localhost:8080/admin\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/admin"
     }
   },
   "/guide-portal": {
@@ -20,7 +22,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/guide-portal\nCall log:\n  - navigating to \"http://localhost:8080/guide-portal\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/guide-portal"
     }
   },
   "/club-portal": {
@@ -28,7 +31,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/club-portal\nCall log:\n  - navigating to \"http://localhost:8080/club-portal\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/club-portal"
     }
   },
   "/investor": {
@@ -36,7 +40,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/investor\nCall log:\n  - navigating to \"http://localhost:8080/investor\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/investor"
     }
   },
   "/expedition/1": {
@@ -44,7 +49,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/expedition/1\nCall log:\n  - navigating to \"http://localhost:8080/expedition/1\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/expedition/1"
     }
   },
   "/legal/privacy": {
@@ -52,7 +58,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/legal/privacy\nCall log:\n  - navigating to \"http://localhost:8080/legal/privacy\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/legal/privacy"
     }
   },
   "/legal/terms": {
@@ -60,7 +67,8 @@
     "buttons": [],
     "pointers": [],
     "meta": {
-      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8080/legal/terms\nCall log:\n  - navigating to \"http://localhost:8080/legal/terms\", waiting until \"domcontentloaded\"\n"
+      "status": 200,
+      "url": "http://localhost:8080/legal/terms"
     }
   }
 }
