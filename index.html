@@ -1523,6 +1523,17 @@
              x-transition:enter-end="opacity-100">
       <div class="px-4 pt-2">
         <h2 class="font-display font-bold text-xl text-white mb-4">聊天</h2>
+
+        <!-- 未登录引导 -->
+        <div x-show="!authToken" class="flex flex-col items-center justify-center h-64 text-center px-6">
+          <span class="text-5xl mb-4">💬</span>
+          <p class="text-white/70 font-medium text-base">请先登录查看消息</p>
+          <p class="text-white/40 text-sm mt-1">与全球攀登者、向导和俱乐部实时沟通</p>
+          <button @click="openLogin()" class="mt-4 px-6 py-2 bg-cyan-500 text-white rounded-xl text-sm font-semibold">立即登录</button>
+        </div>
+
+        <!-- 已登录内容 -->
+        <div x-show="authToken">
         <!-- Sub Tabs -->
         <div class="flex gap-1 bg-slate-800 rounded-xl p-1 mb-4">
           <button @click="chatSubTab='all'" :class="chatSubTab==='all' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">全部</button>
@@ -1560,11 +1571,11 @@
               </div>
             </div>
           </template>
-          <!-- Empty state for chat sessions -->
-          <div x-show="chatSessions.filter(s => chatSubTab === 'all' || s.type === chatSubTab || (chatSubTab === 'club' && s.type === 'club')).length === 0" class="flex flex-col items-center justify-center py-16 text-center px-8">
-            <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">chat</span>
-            <p class="text-slate-300 font-semibold text-lg mb-2">还没有消息</p>
-            <p class="text-slate-500 text-sm">去探索页找到感兴趣的向导或队友，开始对话吧</p>
+          <!-- 空会话状态 -->
+          <div x-show="chatSessions.length === 0 && !chatLoading" class="flex flex-col items-center justify-center h-64 text-center px-6">
+            <span class="text-5xl mb-4">🏔️</span>
+            <p class="text-white/70 font-medium text-base">暂无消息</p>
+            <p class="text-white/40 text-sm mt-1">去认识全球攀登者、预约向导或加入队伍吧</p>
           </div>
         </div>
         <div x-show="chatSubTab === 'square'" class="space-y-3">
@@ -1599,6 +1610,7 @@
             </div>
           </div>
         </div>
+        </div><!-- end authToken block -->
       </div>
     </section>
 
