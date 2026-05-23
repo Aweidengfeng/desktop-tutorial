@@ -502,6 +502,7 @@ function alpineLink() {
     // 商业攀登数据
     commercialPeaks: COMMERCIAL_PEAKS,
     commercialFilter: { region: '', difficulty: '', sortBy: 'altitude' },
+    commercialView: 'all',
     // OSM 地名查询状态
     osmSuggestions: [],
     osmSuggestionsLoading: false,
