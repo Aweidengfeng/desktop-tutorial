@@ -529,53 +529,8 @@ function alpineLink() {
     meSubPage: 'profile',
     postsLoading: true,
     teamsLoading: true,
-    chatSessions: [
-      {
-        id: 1, name: '扎西次仁', nameEn: 'Zhaxi Ciren',
-        avatar: 'https://i.pravatar.cc/150?u=guide1',
-        flag: '🇨🇳', type: 'guide', online: true, unread: 2,
-        lastMsg: '好的，4月是最佳攀登窗口！', time: '10:26',
-        messages: [
-          { from: 'them', text: '您好！我是珠峰认证向导扎西次仁，请问您计划什么时候出发？', time: '10:23' },
-          { from: 'me', text: '你好！我计划明年4月，想攀登珠峰南坡路线', time: '10:25' },
-          { from: 'them', text: '好的，4月是最佳攀登窗口！我可以为您制定详细行程，我们来具体谈谈吧', time: '10:26' },
-        ]
-      },
-      {
-        id: 2, name: 'Tenzin Sherpa', nameEn: 'Tenzin Sherpa',
-        flag: '🇳🇵', type: 'guide', online: true, unread: 0,
-        avatar: 'https://i.pravatar.cc/150?u=guide2',
-        lastMsg: 'My rate is $320/day, including all equipment support.', time: '09:22',
-        messages: [
-          { from: 'them', text: 'Hi! I have availability in October for K2. Are you interested?', time: '09:15' },
-          { from: 'me', text: 'Yes! What is your rate per day?', time: '09:20' },
-          { from: 'them', text: 'My rate is $320/day, including all equipment support and safety briefings.', time: '09:22' },
-        ]
-      },
-      {
-        id: 3, name: '珠峰2026远征队', nameEn: 'Everest 2026 Expedition',
-        flag: '🏔️', type: 'club', online: false, unread: 5,
-        avatar: 'https://i.pravatar.cc/150?u=team1',
-        lastMsg: '明天出发的朋友注意，天气窗口确认开启！', time: '10:00',
-        members: ['🇨��','🇳🇵','🇩🇪','🇺🇸','🇰🇷'],
-        messages: [
-          { from: 'other', name: '李明远', text: '大家好，路线规划已上传到共享文件夹', time: '昨天' },
-          { from: 'other', name: 'Tenzin', text: 'I reviewed the route, looks good!', time: '昨天' },
-          { from: 'me', text: '收到！装备清单我已经更新', time: '昨天' },
-          { from: 'other', name: '队长', text: '明天出发的朋友注意，天气窗口确认开启！', time: '10:00' },
-        ]
-      },
-      {
-        id: 4, name: '西藏登山俱乐部群', nameEn: 'Tibet Mountaineering Club',
-        flag: '🏔️', type: 'club', online: false, unread: 0,
-        avatar: 'https://i.pravatar.cc/150?u=club1',
-        lastMsg: '扎西：明天出发的朋友注意...', time: '昨天',
-        members: ['🇨🇳','🇨🇳','🇳🇵','🇺🇸'],
-        messages: [
-          { from: 'other', name: '扎西', text: '明天出发的朋友注意，注意保暖和高反', time: '昨天' },
-        ]
-      },
-    ],
+    chatSessions: [],
+    chatLoading: false,
     sosStep: 0,
     sosImages: [],
     showSettings: false,
@@ -851,12 +806,7 @@ function alpineLink() {
     showMyOrders: false,
     myOrdersFilter: '全部',
     myOrdersSubTab: 'expedition',
-    myOrders: [
-      { id: 'o1', title: '珠峰BC徒步向导预约', type: '向导预约', date: '2025-04-10', amount: 35000, fee: 525, total: 35525, status: '已托管' },
-      { id: 'o2', title: '马特洪峰技术攀登营报名', type: '俱乐部活动', date: '2025-03-28', amount: 12000, fee: 180, total: 12180, status: '服务中' },
-      { id: 'o3', title: '哈巴雪山商业攀登预约', type: '商业攀登', date: '2025-04-05', amount: 28500, fee: 428, total: 28928, status: '待支付' },
-      { id: 'o4', title: 'K2大本营向导全程', type: '向导预约', date: '2025-02-20', amount: 85000, fee: 1275, total: 86275, status: '已完成', isProvider: false },
-    ],
+    myOrders: [],
     expeditionOrders: [],
     expeditionOrdersLoading: false,
     activityOrders: [],
@@ -897,12 +847,7 @@ function alpineLink() {
     teamDetailTab: 'info',
     teamChatInput: '',
     teamChatGroupId: null,
-    teamChatMembers: [
-      { name: '张磊 (领队)', avatar: 'https://i.pravatar.cc/150?u=zhang', online: true },
-      { name: 'Ang Dorji', avatar: 'https://i.pravatar.cc/150?u=guide2', online: true },
-      { name: '李明', avatar: 'https://i.pravatar.cc/150?u=li', online: false },
-      { name: '王芳', avatar: 'https://i.pravatar.cc/150?u=wang', online: true },
-    ],
+    teamChatMembers: [],
     teamChatMessages: [],
     navTabs: [
       { id: 'expedition', icon: 'explore', name: '精选路线' },
@@ -3457,27 +3402,32 @@ function alpineLink() {
     async loadConversations() {
       if (!this.authToken) return;
       this.initChatSocket();
+      this.chatLoading = true;
       try {
         const res = await fetch('/api/messages/conversations', { headers: this.getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
-          if (data.length > 0) {
-            this.chatSessions = data.map(c => ({
-              id: c.id,
-              conversationId: c.id,
-              name: c.otherName,
-              avatar: c.otherAvatar || ('https://i.pravatar.cc/150?u=' + c.otherId),
-              flag: '',
-              type: 'user',
-              online: false,
-              unread: c.unread || 0,
-              lastMsg: c.lastMsg || '',
-              time: c.updated_at ? new Date(c.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '',
-              messages: [],
-            }));
-          }
+          this.chatSessions = data.map(c => ({
+            id: c.id,
+            conversationId: c.id,
+            name: c.otherName,
+            avatar: c.otherAvatar || ('https://i.pravatar.cc/150?u=' + c.otherId),
+            flag: '',
+            type: 'user',
+            online: false,
+            unread: c.unread || 0,
+            lastMsg: c.lastMsg || '',
+            time: c.updated_at ? new Date(c.updated_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '',
+            messages: [],
+          }));
+        } else {
+          this.chatSessions = [];
         }
-      } catch(e) {}
+      } catch(e) {
+        this.chatSessions = [];
+      } finally {
+        this.chatLoading = false;
+      }
     },
     async openChatSession(session) {
       this.activeChatSession = session;
@@ -3550,6 +3500,10 @@ function alpineLink() {
     async sendChatMessage() {
       if (!this.chatInput.trim() && this.chatImagePreviews.length === 0) return;
       if (!this.activeChatSession) return;
+      if (!this.activeChatSession.conversationId) {
+        this.showToast('无法发送消息，请重新打开会话', 'error');
+        return;
+      }
       const text = this.chatInput.trim();
       const images = [...this.chatImagePreviews];
       const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
