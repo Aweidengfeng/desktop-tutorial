@@ -1045,6 +1045,14 @@ function alpineLink() {
         { id: 'demo-g2', name: 'IMG Expeditions', flag: '🇺🇸', verified: true, avatar: 'https://i.pravatar.cc/150?u=img_exp', peaks_led: ['珠穆朗玛峰', '洛子峰', '马纳斯卢峰'], specialty: '远征攀登专家', rating: 4.8, dayRate: 5500, languages: ['中文', '英文', '法语'] },
         { id: 'demo-g3', name: 'Furtenbach Adventures', flag: '🇦🇹', verified: true, avatar: 'https://i.pravatar.cc/150?u=furtenbach', peaks_led: ['珠穆朗玛峰', '马纳斯卢峰', '卓奥友峰'], specialty: '轻量化高山向导', rating: 4.9, dayRate: 7200, languages: ['中文', '英文', '德语'] },
       ].map(g => ({
+        ...g,
+        languages: Array.isArray(g.languages) && g.languages.length ? g.languages : ['中文'],
+        servicePeaks: Array.isArray(g.peaks_led) && g.peaks_led.length
+          ? g.peaks_led.join('、')
+          : (g.specialty || '多山峰定制服务'),
+        priceLabel: (g.dayRate || g.price) ? `¥${Number(g.dayRate || g.price).toLocaleString()}/天` : '价格咨询',
+      }));
+    },
     getCommercialClubProducts() {
       if (this.clubs && this.clubs.length) {
         return this.clubs.map(c => ({
@@ -1062,6 +1070,14 @@ function alpineLink() {
         { id: 'demo-c2', name: 'Adventure Consultants', logo: 'https://i.pravatar.cc/150?u=adv_consult', specialty: '珠穆朗玛峰、阿玛达布拉姆峰', next_departure: '2026年秋季', price: 320000, spots: 6 },
         { id: 'demo-c3', name: 'Himalayan Experience', logo: 'https://i.pravatar.cc/150?u=himex', specialty: '珠穆朗玛峰、K2、马卡鲁峰', next_departure: '2026年春季', price: 290000, spots: 10 },
       ].map(c => ({
+        ...c,
+        logo: c.logo || c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=200',
+        climbPeak: c.specialty || '多条官方山峰路线',
+        departureTime: c.next_departure || '近期出发',
+        priceLabel: c.price ? `¥${Number(c.price).toLocaleString()}` : '价格咨询',
+        quotaLabel: c.spots ? `${c.spots} 个名额` : '名额以活动页为准',
+      }));
+    },
     // OpenStreetMap Nominatim 地名查询（带缓存和节流）
     async geocodeByOSM(name) {
       if (!name || !name.trim()) return null;
