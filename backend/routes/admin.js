@@ -27,6 +27,8 @@ const adminWriteLimiter = rateLimit({
   message: { error: '操作过于频繁，请稍后再试' },
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function timingSafeEqual(a, b) {
   const bufA = Buffer.from(String(a));
   const bufB = Buffer.from(String(b));
@@ -36,6 +38,213 @@ function timingSafeEqual(a, b) {
     return false;
   }
   return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function parsePositiveInt(value, fallback) {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function roundAmount(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function periodToDays(period) {
+  return ({ '7d': 7, '30d': 30, '90d': 90 }[period] || 7);
+}
+
+function startOfUtcDay(value) {
+  const date = new Date(value);
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function startOfUtcWeek(value) {
+  const date = startOfUtcDay(value);
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  return date;
+}
+
+function formatBucketDate(value) {
+  return startOfUtcDay(value).toISOString().slice(0, 10);
+}
+
+function buildChartDates(period, endDate) {
+  const days = periodToDays(period);
+  const step = period === '90d' ? 7 : 1;
+  const dates = [];
+  const end = startOfUtcDay(endDate);
+  const start = new Date(end.getTime() - (days - 1) * DAY_MS);
+  const cursor = period === '90d' ? startOfUtcWeek(start) : startOfUtcDay(start);
+  while (cursor <= end) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + step);
+  }
+  return dates;
+}
+
+async function getTableColumns(tableName) {
+  try {
+    const rows = await prisma.$queryRawUnsafe(`PRAGMA table_info(${tableName})`);
+    return rows.map((row) => row.name);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function ensureAdminOpsTables() {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS disputes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER UNIQUE,
+      user_id INTEGER,
+      order_no TEXT,
+      type TEXT DEFAULT 'complaint',
+      status TEXT DEFAULT 'open',
+      resolution TEXT,
+      refund_amount REAL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TEXT
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS platform_config (
+      config_key TEXT PRIMARY KEY,
+      config_value TEXT NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS invite_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      max_uses INTEGER DEFAULT 1,
+      used_count INTEGER DEFAULT 0,
+      expires_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  const inviteColumns = await getTableColumns('invite_codes');
+  if (inviteColumns.length > 0) {
+    if (!inviteColumns.includes('max_uses')) {
+      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN max_uses INTEGER DEFAULT 1');
+    }
+    if (!inviteColumns.includes('used_count')) {
+      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN used_count INTEGER DEFAULT 0');
+    }
+    if (!inviteColumns.includes('expires_at')) {
+      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN expires_at TEXT');
+    }
+    if (!inviteColumns.includes('created_at')) {
+      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP');
+    }
+  }
+}
+
+async function getPlatformConfigValue(key, fallback) {
+  try {
+    await ensureAdminOpsTables();
+    const row = (await prisma.$queryRaw`SELECT config_value FROM platform_config WHERE config_key = ${key}`)[0];
+    if (row && row.config_value !== undefined && row.config_value !== null) {
+      const value = Number(row.config_value);
+      if (Number.isFinite(value)) return value;
+    }
+  } catch (_) {}
+  return fallback;
+}
+
+async function setPlatformConfigValue(key, value) {
+  await ensureAdminOpsTables();
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO platform_config (config_key, config_value, updated_at)
+     VALUES (?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(config_key) DO UPDATE SET
+       config_value = excluded.config_value,
+       updated_at = CURRENT_TIMESTAMP`,
+    key,
+    String(value)
+  );
+}
+
+async function syncDisputesFromOrders() {
+  await ensureAdminOpsTables();
+  const orderColumns = await getTableColumns('orders');
+  if (!orderColumns.length) return;
+  try {
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO disputes (order_id, user_id, order_no, type, status, created_at)
+      SELECT o.id,
+             o.user_id,
+             o.order_no,
+             'order_dispute',
+             'open',
+             o.created_at
+      FROM orders o
+      WHERE o.status = 'disputed'
+        AND NOT EXISTS (
+          SELECT 1 FROM disputes d WHERE d.order_id = o.id
+        )
+    `);
+  } catch (_) {}
+}
+
+async function createInviteCodes(req, res) {
+  await ensureAdminOpsTables();
+  const columns = await getTableColumns('invite_codes');
+  const count = Math.min(parsePositiveInt(req.body?.count, 1), 50);
+  const maxUses = parsePositiveInt(req.body?.max_uses, 1);
+  const expiresAt = req.body?.expires_at || req.body?.expiresAt || null;
+  const prefix = String(req.body?.prefix || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 12);
+  const generated = [];
+  let attempts = 0;
+
+  while (generated.length < count && attempts < count * 20) {
+    attempts += 1;
+    const code = `${prefix}${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const insertColumns = ['code'];
+    const values = [code];
+    if (columns.includes('max_uses')) {
+      insertColumns.push('max_uses');
+      values.push(maxUses);
+    }
+    if (columns.includes('used_count')) {
+      insertColumns.push('used_count');
+      values.push(0);
+    }
+    if (columns.includes('expires_at')) {
+      insertColumns.push('expires_at');
+      values.push(expiresAt);
+    }
+    if (columns.includes('region')) {
+      insertColumns.push('region');
+      values.push(req.body?.region || 'all');
+    }
+    if (columns.includes('tier')) {
+      insertColumns.push('tier');
+      values.push(req.body?.tier || 'normal');
+    }
+    if (columns.includes('notes')) {
+      insertColumns.push('notes');
+      values.push(req.body?.notes || null);
+    }
+    if (columns.includes('created_by')) {
+      insertColumns.push('created_by');
+      values.push(req.admin?.username || 'admin');
+    }
+    try {
+      const placeholders = insertColumns.map(() => '?').join(', ');
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO invite_codes (${insertColumns.join(', ')}) VALUES (${placeholders})`,
+        ...values
+      );
+      generated.push(code);
+    } catch (err) {
+      if (!String(err.message || '').toLowerCase().includes('unique')) throw err;
+    }
+  }
+
+  res.json({ success: true, codes: generated });
 }
 
 // POST /api/admin/login
@@ -1591,6 +1800,463 @@ router.put('/withdrawals/:id/reject', adminWriteLimiter, adminAuth, async (req, 
   try {
     const result = await processWithdrawalAction(req.params.id, 'reject', req.body?.reason || req.body?.note || '');
     res.status(result.statusCode).json(result.body);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/gmv — GMV 报表
+router.get('/gmv', adminAuth, async (req, res) => {
+  const period = String(req.query.period || '7d');
+  const region = String(req.query.region || 'all').toLowerCase();
+  const endDate = new Date();
+  const startDate = new Date(endDate.getTime() - (periodToDays(period) - 1) * DAY_MS);
+  const chartIndex = new Map(buildChartDates(period, endDate).map((date) => [date, 0]));
+
+  try {
+    const orderColumns = await getTableColumns('orders');
+    if (!orderColumns.length) {
+      return res.json({ total: 0, period, region, chart: [], byRegion: {} });
+    }
+
+    const regionExpr = orderColumns.includes('region') ? 'COALESCE(region, \'cn\') AS region' : `'cn' AS region`;
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT amount, created_at, ${regionExpr}
+       FROM orders
+       WHERE status = ?
+         AND datetime(created_at) >= datetime(?)
+       ORDER BY created_at ASC`,
+      'paid',
+      startDate.toISOString()
+    );
+
+    const byRegion = {};
+    let total = 0;
+    for (const row of rows) {
+      const rowRegion = String(row.region || 'cn').toLowerCase();
+      if (region !== 'all' && rowRegion !== region) continue;
+      const amount = roundAmount(row.amount);
+      const bucket = period === '90d'
+        ? startOfUtcWeek(row.created_at).toISOString().slice(0, 10)
+        : formatBucketDate(row.created_at);
+      if (chartIndex.has(bucket)) {
+        chartIndex.set(bucket, roundAmount(chartIndex.get(bucket) + amount));
+      }
+      byRegion[rowRegion] = roundAmount((byRegion[rowRegion] || 0) + amount);
+      total = roundAmount(total + amount);
+    }
+
+    res.json({
+      total,
+      totalGmv: total,
+      platformRevenue: total,
+      pendingPayout: 0,
+      completedPayout: total,
+      currency: '¥',
+      period,
+      region,
+      chart: Array.from(chartIndex.entries()).map(([date, amount]) => ({ date, amount })),
+      byRegion,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/disputes — 争议列表
+router.get('/disputes', adminAuth, async (req, res) => {
+  const status = String(req.query.status || 'open').toLowerCase();
+  try {
+    await syncDisputesFromOrders();
+    const usersExist = (await getTableColumns('users')).length > 0;
+    const where = status ? 'WHERE d.status = ?' : '';
+    const disputes = await prisma.$queryRawUnsafe(
+      `SELECT d.*, ${usersExist ? 'u.name AS user_name' : 'NULL AS user_name'}
+       FROM disputes d
+       ${usersExist ? 'LEFT JOIN users u ON u.id = d.user_id' : ''}
+       ${where}
+       ORDER BY d.created_at DESC`,
+      ...(status ? [status] : [])
+    );
+    res.json({ disputes, total: disputes.length });
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.json({ disputes: [], total: 0 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/disputes/:id/resolve — 处理争议
+router.put('/disputes/:id/resolve', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    await syncDisputesFromOrders();
+    const { resolution = '', refund_amount = 0 } = req.body || {};
+    if (!String(resolution).trim()) {
+      return res.status(400).json({ error: 'resolution 不能为空' });
+    }
+    let dispute = (await prisma.$queryRaw`SELECT * FROM disputes WHERE id = ${Number(req.params.id)}`)[0];
+    if (!dispute) {
+      dispute = (await prisma.$queryRaw`SELECT * FROM disputes WHERE order_id = ${Number(req.params.id)}`)[0];
+    }
+    if (!dispute) return res.status(404).json({ error: '争议不存在' });
+
+    await prisma.$executeRaw`
+      UPDATE disputes
+      SET status = 'resolved',
+          resolution = ${String(resolution).trim()},
+          refund_amount = ${roundAmount(refund_amount)},
+          resolved_at = CURRENT_TIMESTAMP
+      WHERE id = ${dispute.id}
+    `;
+    try {
+      await prisma.$executeRaw`UPDATE orders SET status = 'resolved' WHERE id = ${dispute.order_id}`;
+    } catch (_) {}
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/featured-slots — 推荐位配置
+router.get('/featured-slots', adminAuth, async (_req, res) => {
+  try {
+    const slots = { us: [], cn: [] };
+    const expeditionColumns = await getTableColumns('platform_expeditions');
+    if (expeditionColumns.length && expeditionColumns.includes('is_featured')) {
+      const titleExpr = expeditionColumns.includes('title') ? 'title' : 'name';
+      const merchantExpr = expeditionColumns.includes('merchant_id') ? 'merchant_id' : 'NULL';
+      const rows = await prisma.$queryRawUnsafe(
+        `SELECT id,
+                ${titleExpr} AS display_name,
+                COALESCE(region, 'cn') AS region,
+                ${merchantExpr} AS merchant_id
+         FROM platform_expeditions
+         WHERE is_featured = 1
+         ORDER BY updated_at DESC, created_at DESC
+         LIMIT 12`
+      );
+      rows.forEach((row) => {
+        const key = String(row.region || 'cn').toLowerCase() === 'us' ? 'us' : 'cn';
+        slots[key].push({
+          id: row.id,
+          displayName: row.display_name,
+          merchantId: row.merchant_id,
+          isSeed: false,
+        });
+      });
+    }
+    res.json({ slots });
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.json({ slots: { us: [], cn: [] } });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/banners — 后台 Banner 列表
+router.get('/banners', adminAuth, async (_req, res) => {
+  try {
+    const banners = await prisma.$queryRaw`SELECT * FROM banners ORDER BY sort_order ASC, id DESC`;
+    res.json({ banners });
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.json({ banners: [] });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/banners/:id — 更新 Banner 启用状态
+router.put('/banners/:id', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const banner = (await prisma.$queryRaw`SELECT * FROM banners WHERE id = ${Number(req.params.id)}`)[0];
+    if (!banner) return res.status(404).json({ error: 'Banner不存在' });
+    const nextActive = req.body?.is_active !== undefined ? (req.body.is_active ? 1 : 0) : banner.is_active;
+    await prisma.$executeRaw`UPDATE banners SET is_active = ${nextActive} WHERE id = ${Number(req.params.id)}`;
+    const updated = (await prisma.$queryRaw`SELECT * FROM banners WHERE id = ${Number(req.params.id)}`)[0];
+    res.json(updated);
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.status(404).json({ error: 'Banner不存在' });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/commission-rates — 全局佣金配置
+router.get('/commission-rates', adminAuth, async (_req, res) => {
+  try {
+    let guideRate = Number(process.env.DEFAULT_GUIDE_COMMISSION_RATE || 0.15);
+    let clubRate = Number(process.env.DEFAULT_CLUB_COMMISSION_RATE || 0.12);
+
+    try {
+      const guideRow = (await prisma.$queryRaw`SELECT AVG(commission_rate) AS avg_rate FROM guides WHERE commission_rate IS NOT NULL`)[0];
+      if (guideRow && Number.isFinite(Number(guideRow.avg_rate))) {
+        guideRate = Number(guideRow.avg_rate);
+      }
+    } catch (_) {}
+    try {
+      const clubRow = (await prisma.$queryRaw`SELECT AVG(commission_rate) AS avg_rate FROM clubs WHERE commission_rate IS NOT NULL`)[0];
+      if (clubRow && Number.isFinite(Number(clubRow.avg_rate))) {
+        clubRate = Number(clubRow.avg_rate);
+      }
+    } catch (_) {}
+
+    guideRate = await getPlatformConfigValue('guide_rate', guideRate);
+    clubRate = await getPlatformConfigValue('club_rate', clubRate);
+
+    res.json({
+      guide_rate: roundAmount(guideRate),
+      club_rate: roundAmount(clubRate),
+      us: { guide_standard: roundAmount(guideRate), guide_certified: roundAmount(guideRate), guide_new: 0, club: roundAmount(clubRate) },
+      cn: { guide_standard: roundAmount(guideRate), guide_certified: roundAmount(guideRate), guide_new: 0, club: roundAmount(clubRate) },
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/commission-rates — 更新全局佣金配置
+router.put('/commission-rates', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const guideRate = Number(req.body?.guide_rate);
+    const clubRate = Number(req.body?.club_rate);
+    if (!Number.isFinite(guideRate) || guideRate < 0 || guideRate > 1) {
+      return res.status(400).json({ error: 'guide_rate 必须在 0 到 1 之间' });
+    }
+    if (!Number.isFinite(clubRate) || clubRate < 0 || clubRate > 1) {
+      return res.status(400).json({ error: 'club_rate 必须在 0 到 1 之间' });
+    }
+
+    await setPlatformConfigValue('guide_rate', roundAmount(guideRate));
+    await setPlatformConfigValue('club_rate', roundAmount(clubRate));
+    res.json({ success: true, guide_rate: roundAmount(guideRate), club_rate: roundAmount(clubRate) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/merchants/:id/custom-rate — 商家自定义佣金
+router.put('/merchants/:id/custom-rate', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const customRate = req.body?.custom_rate ?? req.body?.commission_rate;
+    const parsedRate = Number(customRate);
+    if (!Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 1) {
+      return res.status(400).json({ error: 'custom_rate 必须在 0 到 1 之间' });
+    }
+
+    let updated = 0;
+    try { updated += await prisma.$executeRaw`UPDATE guides SET commission_rate = ${parsedRate} WHERE id = ${Number(req.params.id)}`; } catch (_) {}
+    try { updated += await prisma.$executeRaw`UPDATE clubs SET commission_rate = ${parsedRate} WHERE id = ${Number(req.params.id)}`; } catch (_) {}
+    if (!updated) return res.status(404).json({ error: '商家不存在' });
+    res.json({ success: true, custom_rate: roundAmount(parsedRate) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/merchant-kyc — 商家 KYC 审核列表
+router.get('/merchant-kyc', adminAuth, async (req, res) => {
+  const status = String(req.query.status || 'pending');
+  try {
+    const usersExist = (await getTableColumns('users')).length > 0;
+    const guideSql = `
+      SELECT ga.id, ga.user_id, ga.name, ga.region, ga.cert_level, ga.status, ga.created_at,
+             'guide' AS type,
+             ${usersExist ? 'u.name AS user_name, u.email AS email' : 'NULL AS user_name, NULL AS email'}
+      FROM guide_applications ga
+      ${usersExist ? 'LEFT JOIN users u ON u.id = ga.user_id' : ''}
+      ${status ? 'WHERE ga.status = ?' : ''}
+    `;
+    const clubSql = `
+      SELECT ca.id, ca.user_id, ca.club_name AS name, ca.region, ca.cert_level, ca.status, ca.created_at,
+             'club' AS type,
+             ${usersExist ? 'u.name AS user_name, u.email AS email' : 'NULL AS user_name, NULL AS email'}
+      FROM club_applications ca
+      ${usersExist ? 'LEFT JOIN users u ON u.id = ca.user_id' : ''}
+      ${status ? 'WHERE ca.status = ?' : ''}
+    `;
+    const [guides, clubs] = await Promise.all([
+      prisma.$queryRawUnsafe(guideSql, ...(status ? [status] : [])),
+      prisma.$queryRawUnsafe(clubSql, ...(status ? [status] : [])),
+    ]);
+    const merchants = [...guides, ...clubs]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map((item) => ({
+        ...item,
+        display_name: item.name || item.user_name || `${item.type}#${item.id}`,
+        displayName: item.name || item.user_name || `${item.type}#${item.id}`,
+        tier: item.cert_level || 'standard',
+      }));
+    res.json({ merchants, total: merchants.length });
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.json({ merchants: [], total: 0 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/merchant-kyc/:id/approve — 通过 KYC
+router.post('/merchant-kyc/:id/approve', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { type } = req.body || {};
+    if (type === 'guide') {
+      const app = (await prisma.$queryRaw`SELECT * FROM guide_applications WHERE id = ${Number(req.params.id)}`)[0];
+      if (!app) return res.status(404).json({ error: '申请不存在' });
+      await prisma.$executeRaw`UPDATE guide_applications SET status = 'approved_pending_payment' WHERE id = ${Number(req.params.id)}`;
+      const existing = (await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${app.user_id}`)[0];
+      if (existing) {
+        await prisma.$executeRaw`UPDATE guides SET status = 'approved_pending_payment' WHERE user_id = ${app.user_id}`;
+      } else {
+        await prisma.$executeRaw`
+          INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status)
+          VALUES (${app.user_id}, ${app.name}, ${app.cert}, ${app.specialty}, ${app.languages}, ${app.day_rate}, ${app.region}, 'approved_pending_payment')
+        `;
+      }
+      return res.json({ success: true });
+    }
+    if (type === 'club') {
+      const app = (await prisma.$queryRaw`SELECT * FROM club_applications WHERE id = ${Number(req.params.id)}`)[0];
+      if (!app) return res.status(404).json({ error: '申请不存在' });
+      await prisma.$executeRaw`UPDATE club_applications SET status = 'approved_pending_payment' WHERE id = ${Number(req.params.id)}`;
+      if (app.club_id) {
+        await prisma.$executeRaw`UPDATE clubs SET status = 'approved_pending_payment' WHERE id = ${app.club_id}`;
+      }
+      return res.json({ success: true });
+    }
+    return res.status(400).json({ error: 'type 必须为 guide 或 club' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/merchant-kyc/:id/reject — 拒绝 KYC
+router.post('/merchant-kyc/:id/reject', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { type, reason = '' } = req.body || {};
+    if (type === 'guide') {
+      const app = (await prisma.$queryRaw`SELECT * FROM guide_applications WHERE id = ${Number(req.params.id)}`)[0];
+      if (!app) return res.status(404).json({ error: '申请不存在' });
+      await prisma.$executeRaw`UPDATE guide_applications SET status = 'rejected', note = ${reason || null} WHERE id = ${Number(req.params.id)}`;
+      return res.json({ success: true });
+    }
+    if (type === 'club') {
+      const app = (await prisma.$queryRaw`SELECT * FROM club_applications WHERE id = ${Number(req.params.id)}`)[0];
+      if (!app) return res.status(404).json({ error: '申请不存在' });
+      await prisma.$executeRaw`UPDATE club_applications SET status = 'rejected', reject_reason = ${reason || null} WHERE id = ${Number(req.params.id)}`;
+      return res.json({ success: true });
+    }
+    return res.status(400).json({ error: 'type 必须为 guide 或 club' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/platform-routes — 平台路线审核列表
+router.get('/platform-routes', adminAuth, async (_req, res) => {
+  try {
+    const routes = await prisma.$queryRaw`
+      SELECT id, name, name AS title, peak, peak AS peakName, region, status, created_at
+      FROM climbing_routes
+      WHERE status = 'pending'
+      ORDER BY created_at DESC
+    `;
+    res.json({ routes, total: routes.length });
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.json({ routes: [], total: 0 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/platform-routes/:id/approve — 通过路线审核
+router.put('/platform-routes/:id/approve', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const affected = await prisma.$executeRaw`UPDATE climbing_routes SET status = 'active' WHERE id = ${Number(req.params.id)}`;
+    if (!affected) return res.status(404).json({ error: '路线不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/platform-routes/:id/reject — 拒绝路线审核
+router.put('/platform-routes/:id/reject', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const affected = await prisma.$executeRaw`UPDATE climbing_routes SET status = 'rejected' WHERE id = ${Number(req.params.id)}`;
+    if (!affected) return res.status(404).json({ error: '路线不存在' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/invite-codes — 邀请码列表
+router.get('/invite-codes', adminAuth, async (_req, res) => {
+  try {
+    await ensureAdminOpsTables();
+    const columns = await getTableColumns('invite_codes');
+    if (!columns.length) return res.json({ codes: [], total: 0 });
+    const rows = await prisma.$queryRawUnsafe(
+      `SELECT ${columns.includes('id') ? 'id' : 'rowid AS id'},
+              code,
+              ${columns.includes('max_uses') ? 'max_uses' : '1 AS max_uses'},
+              ${columns.includes('used_count') ? 'used_count' : '0 AS used_count'},
+              ${columns.includes('expires_at') ? 'expires_at' : 'NULL AS expires_at'},
+              ${columns.includes('created_at') ? 'created_at' : 'CURRENT_TIMESTAMP AS created_at'},
+              ${columns.includes('region') ? 'region' : `'all' AS region`},
+              ${columns.includes('tier') ? 'tier' : `'normal' AS tier`},
+              ${columns.includes('notes') ? 'notes' : 'NULL AS notes'},
+              ${columns.includes('used_by') ? 'used_by' : 'NULL AS used_by'}
+       FROM invite_codes
+       ORDER BY ${columns.includes('created_at') ? 'created_at' : 'rowid'} DESC`
+    );
+    res.json({ codes: rows, total: rows.length });
+  } catch (e) {
+    if (String(e.message || '').includes('no such table')) {
+      return res.json({ codes: [], total: 0 });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/invite-codes — 批量生成邀请码
+router.post('/invite-codes', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    await createInviteCodes(req, res);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/admin/invite-codes/generate — 兼容旧前端
+router.post('/invite-codes/generate', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    req.body = {
+      ...req.body,
+      max_uses: req.body?.max_uses ?? 1,
+      expires_at: req.body?.expires_at ?? req.body?.expiresAt ?? null,
+    };
+    await createInviteCodes(req, res);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// DELETE /api/admin/invite-codes/:id — 删除邀请码
+router.delete('/invite-codes/:id', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    await ensureAdminOpsTables();
+    const columns = await getTableColumns('invite_codes');
+    if (!columns.length) return res.status(404).json({ error: '邀请码不存在' });
+    const key = columns.includes('id') ? 'id' : 'rowid';
+    const affected = await prisma.$executeRawUnsafe(`DELETE FROM invite_codes WHERE ${key} = ?`, Number(req.params.id));
+    if (!affected) return res.status(404).json({ error: '邀请码不存在' });
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

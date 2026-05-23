@@ -123,6 +123,7 @@
             <span x-show="page === nav.id" class="absolute left-0 top-2 bottom-2 w-[3px] bg-blue-400 rounded-r-full"></span>
             <span x-text="nav.icon"></span>
             <span x-text="nav.label"></span>
+            <span x-show="nav.id === 'messages' && unreadCount > 0" class="ml-auto px-1.5 py-0.5 rounded-full bg-red-500 text-[10px]" x-text="unreadCount"></span>
           </button>
         </template>
       </nav>
@@ -1346,10 +1347,9 @@
           <h2 class="font-bold text-lg">🔍 商家 KYC 审核队列</h2>
           <div class="flex gap-2">
             <select x-model="merchantKycFilter" @change="loadMerchantKyc()" class="bg-slate-700 text-white rounded-xl px-3 py-1.5 text-sm outline-none">
-              <option value="kyc_review">待审核</option>
-              <option value="pending_kyc">已退回</option>
-              <option value="active">已通过</option>
-              <option value="suspended">已暂停</option>
+              <option value="pending">待审核</option>
+              <option value="approved_pending_payment">已通过</option>
+              <option value="rejected">已拒绝</option>
               <option value="">全部</option>
             </select>
             <button @click="loadMerchantKyc()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄 刷新</button>
@@ -1369,14 +1369,13 @@
                   <div x-text="m.email" class="text-xs text-slate-400"></div>
                 </td>
                 <td class="py-2 text-slate-300" x-text="m.type === 'guide' ? '向导' : '俱乐部'"></td>
-                <td class="py-2"><span :class="m.region==='cn'?'text-red-300':'text-blue-300'" x-text="m.region.toUpperCase()"></span></td>
+                <td class="py-2"><span :class="m.region==='cn'?'text-red-300':'text-blue-300'" x-text="(m.region || '—').toUpperCase()"></span></td>
                 <td class="py-2 text-slate-300" x-text="m.tier || 'standard'"></td>
                 <td class="py-2">
-                  <span :class="{'bg-yellow-500/20 text-yellow-300':m.status==='kyc_review','bg-emerald-500/20 text-emerald-300':m.status==='active','bg-red-500/20 text-red-300':m.status==='suspended'||m.status==='banned','bg-slate-500/20 text-slate-300':m.status==='pending_kyc'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'kyc_review':'待审核','pending_kyc':'已退回','active':'已激活','suspended':'已暂停','banned':'已封禁'}[m.status]||m.status"></span>
+                  <span :class="{'bg-yellow-500/20 text-yellow-300':m.status==='pending','bg-emerald-500/20 text-emerald-300':m.status==='approved_pending_payment','bg-red-500/20 text-red-300':m.status==='rejected'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved_pending_payment':'已通过','rejected':'已拒绝'}[m.status]||m.status"></span>
                 </td>
                 <td class="py-2">
                   <button @click="openMerchantKycDrawer(m)" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs">审核</button>
-                  <button @click="suspendMerchant(m)" x-show="m.status==='active'" class="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-xs ml-1">暂停</button>
                 </td>
               </tr>
             </template>
@@ -1693,13 +1692,140 @@
         </div>
       </div>
 
+      <!-- 用户消息/工单 -->
+      <div x-show="page === 'messages'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold">💬 用户消息/工单
+            <span x-show="unreadCount > 0" class="ml-2 px-2 py-0.5 rounded-full bg-red-500 text-xs" x-text="unreadCount + ' 未读'"></span>
+          </h2>
+          <select x-model="messagesFilter" @change="loadMessages(1)" class="bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none">
+            <option value="open">待处理</option>
+            <option value="replied">已回复</option>
+            <option value="closed">已关闭</option>
+            <option value="">全部</option>
+          </select>
+        </div>
+        <div class="glass rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="border-b border-white/10 text-white/50">
+              <tr>
+                <th class="text-left px-4 py-3">用户</th>
+                <th class="text-left px-4 py-3">主题</th>
+                <th class="text-left px-4 py-3">优先级</th>
+                <th class="text-left px-4 py-3">状态</th>
+                <th class="text-left px-4 py-3">时间</th>
+                <th class="text-left px-4 py-3">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="m in messages" :key="m.id">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="px-4 py-3 text-white/80" x-text="m.user_name || ('用户#' + m.user_id) || '匿名'"></td>
+                  <td class="px-4 py-3 text-white/70 max-w-xs truncate" x-text="m.subject || m.content?.slice(0,40) || '—'"></td>
+                  <td class="px-4 py-3">
+                    <span :class="m.priority==='urgent'?'bg-red-500/20 text-red-400':m.priority==='high'?'bg-orange-500/20 text-orange-400':'bg-slate-500/20 text-slate-400'"
+                      class="px-2 py-0.5 rounded-full text-xs" x-text="m.priority==='urgent'?'紧急':m.priority==='high'?'高':'普通'"></span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span :class="m.status==='open'?'bg-yellow-500/20 text-yellow-400':m.status==='replied'?'bg-blue-500/20 text-blue-400':'bg-green-500/20 text-green-400'"
+                      class="px-2 py-0.5 rounded-full text-xs" x-text="m.status==='open'?'待处理':m.status==='replied'?'已回复':'已关闭'"></span>
+                  </td>
+                  <td class="px-4 py-3 text-white/50" x-text="m.created_at?.slice(0,10)"></td>
+                  <td class="px-4 py-3">
+                    <button @click="openMessageDetail(m)" class="text-xs text-blue-400 hover:text-blue-300 transition">查看/回复</button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!messages.length && !messagesLoading">
+                <td colspan="6" class="text-center text-white/30 py-8">暂无工单</td>
+              </tr>
+              <tr x-show="messagesLoading">
+                <td colspan="6" class="text-center text-white/30 py-8">加载中…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex justify-between items-center mt-4 text-sm text-white/50">
+          <span>共 <span x-text="messagesTotal"></span> 条</span>
+          <div class="flex gap-2">
+            <button @click="messagesPage > 1 && loadMessages(messagesPage - 1)" :disabled="messagesPage <= 1"
+              class="px-3 py-1 glass rounded-lg disabled:opacity-30 hover:bg-white/10">上一页</button>
+            <span class="px-3 py-1" x-text="'第 ' + messagesPage + ' 页'"></span>
+            <button @click="messagesPage * 20 < messagesTotal && loadMessages(messagesPage + 1)" :disabled="messagesPage * 20 >= messagesTotal"
+              class="px-3 py-1 glass rounded-lg disabled:opacity-30 hover:bg-white/10">下一页</button>
+          </div>
+        </div>
+
+        <div x-show="messageDetailOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div class="glass rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-lg">💬 工单详情</h3>
+              <button @click="messageDetailOpen=false" class="text-white/50 hover:text-white">✕</button>
+            </div>
+            <template x-if="messageDetail">
+              <div class="flex flex-col gap-4 flex-1 overflow-hidden">
+                <div class="glass-dark rounded-xl p-4 text-sm">
+                  <p class="text-white/60 text-xs mb-1">用户 #<span x-text="messageDetail.user_id"></span> · <span x-text="messageDetail.created_at?.slice(0,16)"></span></p>
+                  <p class="font-semibold" x-text="messageDetail.subject || '无主题'"></p>
+                  <p class="text-white/70 mt-1" x-text="messageDetail.content"></p>
+                </div>
+                <div class="flex-1 overflow-y-auto space-y-2 max-h-60">
+                  <template x-for="r in (messageDetail.replies || [])" :key="r.id">
+                    <div :class="r.sender_type==='admin'?'ml-8 bg-blue-900/30':'mr-8 bg-slate-700/40'" class="rounded-xl p-3 text-sm">
+                      <p class="text-xs text-white/40 mb-1" x-text="(r.sender_type==='admin'?'管理员':'用户') + ' · ' + r.created_at?.slice(0,16)"></p>
+                      <p x-text="r.content"></p>
+                    </div>
+                  </template>
+                  <p x-show="!(messageDetail.replies?.length)" class="text-center text-white/30 text-sm py-4">暂无回复记录</p>
+                </div>
+                <div class="space-y-3" x-show="messageDetail.status !== 'closed'">
+                  <textarea x-model="replyContent" rows="3" placeholder="输入回复内容…"
+                    class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none resize-none focus:ring-2 focus:ring-blue-500"></textarea>
+                  <div class="flex gap-3">
+                    <button @click="closeTicket(messageDetail)" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-xl text-sm transition">关闭工单</button>
+                    <button @click="replyToMessage()" class="flex-1 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold py-2 transition">发送回复</button>
+                  </div>
+                </div>
+                <p x-show="messageDetail.status === 'closed'" class="text-center text-green-400 text-sm">✅ 工单已关闭</p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- 系统通知推送 -->
+      <div x-show="page === 'broadcast'">
+        <h2 class="text-xl font-bold mb-6">📣 系统通知推送</h2>
+        <div class="glass rounded-2xl p-6 max-w-2xl space-y-4">
+          <div>
+            <label class="text-white/60 text-xs mb-1 block">通知标题 *</label>
+            <input x-model="broadcastForm.title" type="text" placeholder="例：系统维护通知"
+              class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label class="text-white/60 text-xs mb-1 block">通知内容 *</label>
+            <textarea x-model="broadcastForm.content" rows="4" placeholder="通知内容…"
+              class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none resize-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+          <div>
+            <label class="text-white/60 text-xs mb-1 block">指定用户 ID（可选，逗号分隔，留空则推送全体）</label>
+            <input x-model="broadcastForm.user_ids" type="text" placeholder="例：1,2,3（留空=全体用户）"
+              class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <button @click="sendBroadcast()" :disabled="broadcastLoading"
+            class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl py-2.5 font-semibold text-sm transition">
+            <span x-text="broadcastLoading ? '推送中…' : '📣 立即推送'"></span>
+          </button>
+        </div>
+      </div>
+
     </main>
   <div x-show="merchantKycDrawer.open" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" @click.self="merchantKycDrawer.open=false">
     <div class="glass rounded-2xl p-6 w-full max-w-lg mx-4">
       <h3 class="font-bold text-lg mb-1">商家 KYC 审核</h3>
       <template x-if="merchantKycDrawer.item">
         <div>
-          <p class="text-slate-400 text-sm mb-4" x-text="merchantKycDrawer.item.displayName + ' (' + merchantKycDrawer.item.type + ' · ' + merchantKycDrawer.item.region.toUpperCase() + ')'"></p>
+          <p class="text-slate-400 text-sm mb-4" x-text="merchantKycDrawer.item.displayName + ' (' + merchantKycDrawer.item.type + ' · ' + (merchantKycDrawer.item.region || '—').toUpperCase() + ')'"></p>
           <div class="space-y-3">
             <div>
               <label class="text-xs text-slate-400 mb-1 block">拒绝原因（如需拒绝请选择）</label>
@@ -1839,6 +1965,8 @@
           { id: 'guide-commercial', icon: '🔑', label: '向导商业资质' },
           { id: 'sos-records', icon: '🆘', label: 'SOS救援记录' },
           { id: 'withdrawals', icon: '💸', label: '提现申请管理' },
+          { id: 'messages', icon: '💬', label: '用户消息/工单' },
+          { id: 'broadcast', icon: '📣', label: '系统通知推送' },
         ],
 
         // Stats
@@ -1936,10 +2064,20 @@
         // Withdrawal Requests
         withdrawals: [], withdrawalsTotal: 0, withdrawalsPage: 1, withdrawalsLoading: false, withdrawalsFilter: '',
 
+        // Messages
+        messages: [], messagesTotal: 0, messagesPage: 1, messagesLoading: false,
+        messagesFilter: 'open',
+        messageDetail: null, messageDetailOpen: false, replyContent: '',
+        unreadCount: 0,
+
+        // Broadcast
+        broadcastForm: { title: '', content: '', user_ids: '' },
+        broadcastLoading: false,
+
         // ── Platform Operations (P0) ─────────────────────────────────────────
 
         // Merchant KYC Queue
-        merchantKyc: [], merchantKycTotal: 0, merchantKycLoading: false, merchantKycFilter: 'kyc_review',
+        merchantKyc: [], merchantKycTotal: 0, merchantKycLoading: false, merchantKycFilter: 'pending',
         merchantKycDrawer: { open: false, item: null, rejectReason: '', customNote: '' },
 
         // Platform Route Review
@@ -1992,9 +2130,11 @@
             this.lastSeenSosId = Number(localStorage.getItem('admin_last_seen_sos_id') || 0);
             this.loadPage();
             this.loadSosRecords(1);
+            this.pollUnreadCount();
             // Start polling active SOS every 30 seconds
             this.pollActiveSos();
             setInterval(() => { if (this.isLoggedIn) this.pollActiveSos(); }, 30000);
+            setInterval(() => { if (this.isLoggedIn) this.pollUnreadCount(); }, 60000);
           } catch (e) {
             this.isLoggedIn = false;
           }
@@ -2035,6 +2175,7 @@
             if (!r.ok) throw new Error(d.error || '登录失败');
             this.isLoggedIn = true;
             this.loadPage();
+            this.pollUnreadCount();
           } catch (e) {
             this.showToast(e.message, 'error');
           } finally {
@@ -2073,6 +2214,8 @@
           else if (this.page === 'guide-commercial') this.loadGuideCommercial();
           else if (this.page === 'sos-records') { this.markLatestSosAsSeen(); this.loadSosRecords(1); }
           else if (this.page === 'withdrawals') this.loadWithdrawals(1);
+          else if (this.page === 'messages') this.loadMessages(1);
+          else if (this.page === 'broadcast') {}
           else if (this.page === 'merchant-kyc') this.loadMerchantKyc();
           else if (this.page === 'platform-routes') this.loadPlatformRoutes();
           else if (this.page === 'invite-codes') this.loadInviteCodes();
@@ -2634,7 +2777,7 @@
           this.merchantKycLoading = true;
           try {
             const qs = this.merchantKycFilter ? `?status=${this.merchantKycFilter}` : '';
-            const d = await this.api('GET', `/merchants${qs}`);
+            const d = await this.api('GET', `/merchant-kyc${qs}`);
             this.merchantKyc = d.merchants || d || [];
             this.merchantKycTotal = d.total || this.merchantKyc.length;
           } catch(e) { this.showToast(e.message, 'error'); } finally { this.merchantKycLoading = false; }
@@ -2644,20 +2787,20 @@
         },
         async approveMerchant(item) {
           try {
-            await this.api('PUT', `/merchants/${item.id}/status`, { status: 'active' });
-            item.status = 'active';
+            await this.api('POST', `/merchant-kyc/${item.id}/approve`, { type: item.type });
+            item.status = 'approved_pending_payment';
             this.merchantKycDrawer.open = false;
-            this.showToast('已通过 KYC 审核，商家已激活');
+            this.showToast('已通过 KYC 审核');
           } catch(e) { this.showToast(e.message, 'error'); }
         },
         async rejectMerchant(item) {
           const reason = this.merchantKycDrawer.rejectReason || this.merchantKycDrawer.customNote;
           if (!reason) { this.showToast('请选择或填写拒绝原因', 'error'); return; }
           try {
-            await this.api('PUT', `/merchants/${item.id}/status`, { status: 'pending_kyc', reject_reason: reason });
-            item.status = 'pending_kyc';
+            await this.api('POST', `/merchant-kyc/${item.id}/reject`, { type: item.type, reason });
+            item.status = 'rejected';
             this.merchantKycDrawer.open = false;
-            this.showToast('已拒绝，向导将收到邮件通知');
+            this.showToast('已拒绝审核');
           } catch(e) { this.showToast(e.message, 'error'); }
         },
         async suspendMerchant(item) {
@@ -2673,8 +2816,8 @@
         async loadPlatformRoutes() {
           this.platformRoutesLoading = true;
           try {
-            const d = await this.api('GET', '/platform-expeditions?status=pending_review');
-            this.platformRoutes = d.expeditions || d || [];
+            const d = await this.api('GET', '/platform-routes');
+            this.platformRoutes = d.routes || d || [];
             this.platformRoutesTotal = d.total || this.platformRoutes.length;
           } catch(e) { this.showToast(e.message, 'error'); } finally { this.platformRoutesLoading = false; }
         },
@@ -2683,8 +2826,8 @@
         },
         async approveRoute(item) {
           try {
-            await this.api('PUT', `/platform-expeditions/${item.id}/review`, { status: 'published' });
-            item.status = 'published';
+            await this.api('PUT', `/platform-routes/${item.id}/approve`, {});
+            item.status = 'active';
             this.platformRouteDrawer.open = false;
             this.showToast('路线已通过审核并发布');
             this.platformRoutes = this.platformRoutes.filter(r => r.id !== item.id);
@@ -2696,7 +2839,7 @@
           const rejectReason = note || (this.platformRouteRejectReasons.find(r => r.code === code) || {}).label || '';
           if (!rejectReason) { this.showToast('请选择拒绝原因', 'error'); return; }
           try {
-            await this.api('PUT', `/platform-expeditions/${item.id}/review`, { status: 'rejected', reject_reason: rejectReason });
+            await this.api('PUT', `/platform-routes/${item.id}/reject`, { reject_reason: rejectReason });
             item.status = 'rejected';
             this.platformRouteDrawer.open = false;
             this.showToast('路线已拒绝，向导将收到通知');
@@ -2715,7 +2858,15 @@
         },
         async generateInviteCodes() {
           try {
-            const d = await this.api('POST', '/invite-codes/generate', this.inviteCodeForm);
+            const d = await this.api('POST', '/invite-codes', {
+              count: this.inviteCodeForm.count,
+              max_uses: 1,
+              expires_at: this.inviteCodeForm.expiresAt || null,
+              prefix: this.inviteCodeForm.prefix || '',
+              region: this.inviteCodeForm.region,
+              tier: this.inviteCodeForm.tier,
+              notes: this.inviteCodeForm.notes || '',
+            });
             this.generatedCodes = d.codes || [];
             this.showToast(`已生成 ${this.generatedCodes.length} 个邀请码`);
             this.loadInviteCodes();
@@ -2759,10 +2910,17 @@
           this.gmvLoading = true;
           try {
             const d = await this.api('GET', `/gmv?region=${this.gmvRegion}&period=${this.gmvPeriod}`);
-            this.gmvData = d;
+            this.gmvData = {
+              ...d,
+              totalGmv: d.total || 0,
+              platformRevenue: d.total || 0,
+              pendingPayout: 0,
+              completedPayout: d.total || 0,
+              currency: this.gmvRegion === 'us' ? '$' : '¥',
+            };
           } catch(e) {
             this.gmvData = null;
-            this.showToast('GMV 数据加载失败（功能即将上线）', 'error');
+            this.showToast(e.message, 'error');
           } finally { this.gmvLoading = false; }
         },
 
@@ -2806,8 +2964,10 @@
         },
         async toggleBanner(b) {
           try {
-            await this.api('PUT', `/banners/${b.id}`, { is_active: !b.isActive });
-            b.isActive = !b.isActive;
+            const nextActive = !(b.isActive ?? b.is_active);
+            await this.api('PUT', `/banners/${b.id}`, { is_active: nextActive });
+            b.isActive = nextActive;
+            b.is_active = nextActive ? 1 : 0;
             this.showToast('Banner 状态已更新');
           } catch(e) { this.showToast(e.message, 'error'); }
         },
@@ -2825,9 +2985,76 @@
           try {
             const d = await this.api('GET', '/commission-rates');
             if (d && d.us && d.cn) this.commissionRates = d;
+            else if (d && d.guide_rate !== undefined && d.club_rate !== undefined) {
+              this.commissionRates = {
+                us: { guide_standard: d.guide_rate, guide_certified: d.guide_rate, guide_new: 0, club: d.club_rate },
+                cn: { guide_standard: d.guide_rate, guide_certified: d.guide_rate, guide_new: 0, club: d.club_rate },
+              };
+            }
           } catch(e) {
             // Fallback to hardcoded defaults if endpoint not yet deployed
           } finally { this.commissionRatesLoading = false; }
+        },
+        async pollUnreadCount() {
+          try {
+            const d = await this.api('GET', '/messages/unread-count');
+            this.unreadCount = d.count || 0;
+          } catch(e) {}
+        },
+        async loadMessages(page = 1) {
+          this.messagesLoading = true;
+          this.messagesPage = page;
+          try {
+            const d = await this.api('GET', `/messages?status=${this.messagesFilter}&page=${page}&limit=20`);
+            this.messages = d.tickets || d || [];
+            this.messagesTotal = d.total || this.messages.length;
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.messagesLoading = false; }
+        },
+        async openMessageDetail(ticket) {
+          try {
+            const d = await this.api('GET', `/messages/${ticket.id}`);
+            this.messageDetail = d;
+            this.messageDetailOpen = true;
+            this.replyContent = '';
+            this.pollUnreadCount();
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async replyToMessage() {
+          if (!this.replyContent.trim()) { this.showToast('请输入回复内容', 'error'); return; }
+          try {
+            await this.api('POST', `/messages/${this.messageDetail.id}/reply`, { content: this.replyContent });
+            this.showToast('回复已发送');
+            this.replyContent = '';
+            await this.openMessageDetail(this.messageDetail);
+            this.loadMessages(this.messagesPage);
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async closeTicket(ticket) {
+          try {
+            await this.api('PUT', `/messages/${ticket.id}/close`, {});
+            this.showToast('工单已关闭');
+            this.messageDetailOpen = false;
+            this.loadMessages(this.messagesPage);
+            this.pollUnreadCount();
+          } catch(e) { this.showToast(e.message, 'error'); }
+        },
+        async sendBroadcast() {
+          if (!this.broadcastForm.title || !this.broadcastForm.content) {
+            this.showToast('标题和内容不能为空', 'error'); return;
+          }
+          this.broadcastLoading = true;
+          try {
+            const userIds = this.broadcastForm.user_ids
+              ? this.broadcastForm.user_ids.split(',').map(s => s.trim()).filter(Boolean)
+              : [];
+            await this.api('POST', '/broadcast', {
+              title: this.broadcastForm.title,
+              content: this.broadcastForm.content,
+              user_ids: userIds,
+            });
+            this.showToast('通知已推送');
+            this.broadcastForm = { title: '', content: '', user_ids: '' };
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.broadcastLoading = false; }
         },
       };
     }
