@@ -1776,6 +1776,14 @@ function alpineLink() {
       this.currentPage = pageMap[tabId] || 'home';
     },
 
+    handleTabClick(tabId) {
+      if (tabId === 'me' && !this.currentUser) {
+        this.showLogin = true;
+        return;
+      }
+      this.switchPrimaryTab(tabId);
+    },
+
     openExpeditionDetail(item) {
       if (!item || !item.id) {
         this.showToast('探险详情暂不可用', 'warning');
