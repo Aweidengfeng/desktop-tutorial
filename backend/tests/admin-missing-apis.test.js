@@ -38,6 +38,14 @@ describe('admin missing backend APIs', () => {
       .run(2, `PAID-US-${suffix}`, 150, 'card', 'paid', new Date().toISOString(), 'us');
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(3, `DISPUTE-1-${suffix}`, 88, 'card', 'disputed', new Date().toISOString(), 'cn');
+    const expeditionId = db.prepare(`
+      INSERT INTO expeditions (publisher_type, publisher_id, title, status, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run('guide', 1, '测试远征', 'published', new Date().toISOString()).lastInsertRowid;
+    db.prepare(`
+      INSERT INTO expedition_orders (order_no, expedition_id, user_id, total, platform_fee, publisher_income, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(`EXP-PAID-${suffix}`, expeditionId, 1, 320, 32, 288, 'paid', new Date().toISOString());
     db.prepare(`
       INSERT INTO banners (title, subtitle, image_url, link_type, link_target, gradient_from, gradient_to, sort_order, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -58,6 +66,13 @@ describe('admin missing backend APIs', () => {
     expect(gmvRes.body.byRegion.us).toBe((baselinePaidUs || 0) + 150);
     expect(Array.isArray(gmvRes.body.chart)).toBe(true);
 
+    const gmvReportsRes = await request(app)
+      .get('/api/admin/gmv-reports?region=all&period=7d')
+      .set(authHeader(adminToken));
+    expect(gmvReportsRes.status).toBe(200);
+    expect(gmvReportsRes.body.totalGmv).toBeGreaterThanOrEqual(320);
+    expect(gmvReportsRes.body.platformFee).toBeGreaterThanOrEqual(32);
+
     const disputesRes = await request(app)
       .get('/api/admin/disputes?status=open')
       .set(authHeader(adminToken));
@@ -71,12 +86,24 @@ describe('admin missing backend APIs', () => {
       .send({ resolution: '同意退款', refund_amount: 20 });
     expect(resolveRes.status).toBe(200);
 
+    db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, `DISPUTE-POST-${suffix}`, 66, 'card', 'disputed', new Date().toISOString(), 'us');
+    const disputesForPost = await request(app)
+      .get('/api/admin/disputes?status=open')
+      .set(authHeader(adminToken));
+    const postTarget = disputesForPost.body.disputes.find((item) => item.order_no === `DISPUTE-POST-${suffix}`);
+    const resolvePostRes = await request(app)
+      .post(`/api/admin/disputes/${postTarget.id}/resolve`)
+      .set(authHeader(adminToken))
+      .send({ resolution: '平台仲裁完成', refundAmount: 12 });
+    expect(resolvePostRes.status).toBe(200);
+
     const resolvedDisputesRes = await request(app)
       .get('/api/admin/disputes?status=resolved')
       .set(authHeader(adminToken));
     expect(resolvedDisputesRes.status).toBe(200);
-    expect(resolvedDisputesRes.body.total).toBe(1);
-    expect(resolvedDisputesRes.body.disputes[0].resolution).toBe('同意退款');
+    expect(resolvedDisputesRes.body.total).toBeGreaterThanOrEqual(1);
+    expect(resolvedDisputesRes.body.disputes.some((item) => item.resolution === '同意退款')).toBe(true);
 
     const slotsRes = await request(app)
       .get('/api/admin/featured-slots')
@@ -115,6 +142,29 @@ describe('admin missing backend APIs', () => {
       .run('待审线路', '珠峰', 'cn', 'pending').lastInsertRowid;
     const rejectRouteId = db.prepare(`INSERT INTO climbing_routes (name, peak, region, status) VALUES (?, ?, ?, ?)`)
       .run('待拒绝线路', '梅里雪山', 'cn', 'pending').lastInsertRowid;
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS merchant_kyc (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        target_id INTEGER,
+        name TEXT,
+        type TEXT,
+        status TEXT DEFAULT 'pending',
+        cert_url TEXT,
+        business_license_url TEXT,
+        insurance_cert_url TEXT,
+        note TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    const merchantGuideKycId = db.prepare(`
+      INSERT INTO merchant_kyc (user_id, target_id, name, type, status, cert_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(guideUser.id, 1, '测试向导KYC', 'guide', 'pending', 'https://kyc/guide-cert').lastInsertRowid;
+    db.prepare(`
+      INSERT INTO merchant_kyc (user_id, target_id, name, type, status, cert_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(clubUser.id, 1, '测试俱乐部KYC', 'club', 'pending', 'https://kyc/club-cert');
 
     const commissionUpdateRes = await request(app)
       .put('/api/admin/commission-rates')
@@ -141,6 +191,15 @@ describe('admin missing backend APIs', () => {
       .set(authHeader(adminToken));
     expect(merchantKycRes.status).toBe(200);
     expect(merchantKycRes.body.merchants.filter((item) => item.user_id === guideUser.id || item.user_id === clubUser.id).length).toBe(2);
+    expect(merchantKycRes.body.merchants[0]).toEqual(expect.objectContaining({ cert_url: expect.any(String) }));
+
+    const merchantReviewRes = await request(app)
+      .post(`/api/admin/merchant-kyc/${merchantGuideKycId}/review`)
+      .set(authHeader(adminToken))
+      .send({ action: 'approve', note: '资料齐全' });
+    expect(merchantReviewRes.status).toBe(200);
+    expect(db.prepare('SELECT status, note FROM merchant_kyc WHERE id = ?').get(merchantGuideKycId))
+      .toEqual(expect.objectContaining({ status: 'approved', note: '资料齐全' }));
 
     const approveGuideRes = await request(app)
       .post(`/api/admin/merchant-kyc/${guideAppId}/approve`)
