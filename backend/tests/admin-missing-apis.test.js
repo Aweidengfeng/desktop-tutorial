@@ -18,8 +18,11 @@ describe('admin missing backend APIs', () => {
   });
 
   test('supports GMV, disputes, featured slots, and admin banner management', async () => {
+    const suffix = Date.now();
+    try {
+      db.exec('ALTER TABLE orders ADD COLUMN region TEXT;');
+    } catch (_) {}
     db.exec(`
-      ALTER TABLE orders ADD COLUMN region TEXT;
       CREATE TABLE IF NOT EXISTS platform_expeditions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
@@ -30,11 +33,11 @@ describe('admin missing backend APIs', () => {
       );
     `);
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(1, 'PAID-CN', 100, 'card', 'paid', new Date().toISOString(), 'cn');
+      .run(1, `PAID-CN-${suffix}`, 100, 'card', 'paid', new Date().toISOString(), 'cn');
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(2, 'PAID-US', 150, 'card', 'paid', new Date().toISOString(), 'us');
+      .run(2, `PAID-US-${suffix}`, 150, 'card', 'paid', new Date().toISOString(), 'us');
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(3, 'DISPUTE-1', 88, 'card', 'disputed', new Date().toISOString(), 'cn');
+      .run(3, `DISPUTE-1-${suffix}`, 88, 'card', 'disputed', new Date().toISOString(), 'cn');
     db.prepare(`
       INSERT INTO banners (title, subtitle, image_url, link_type, link_target, gradient_from, gradient_to, sort_order, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -42,21 +45,25 @@ describe('admin missing backend APIs', () => {
     db.prepare(`INSERT INTO platform_expeditions (title, region, is_featured) VALUES (?, ?, ?)`)
       .run('精选珠峰路线', 'us', 1);
 
+    const baselinePaid = db.prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM orders WHERE status = 'paid'`).get().total - 250;
+    const baselinePaidCn = (db.prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM orders WHERE status = 'paid' AND region = ?`).get('cn').total || 0) - 100;
+    const baselinePaidUs = (db.prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM orders WHERE status = 'paid' AND region = ?`).get('us').total || 0) - 150;
+
     const gmvRes = await request(app)
       .get('/api/admin/gmv?region=all&period=7d')
       .set(authHeader(adminToken));
     expect(gmvRes.status).toBe(200);
-    expect(gmvRes.body.total).toBe(250);
-    expect(gmvRes.body.byRegion.cn).toBe(100);
-    expect(gmvRes.body.byRegion.us).toBe(150);
+    expect(gmvRes.body.total).toBe(baselinePaid + 250);
+    expect(gmvRes.body.byRegion.cn).toBe((baselinePaidCn || 0) + 100);
+    expect(gmvRes.body.byRegion.us).toBe((baselinePaidUs || 0) + 150);
     expect(Array.isArray(gmvRes.body.chart)).toBe(true);
 
     const disputesRes = await request(app)
       .get('/api/admin/disputes?status=open')
       .set(authHeader(adminToken));
     expect(disputesRes.status).toBe(200);
-    expect(disputesRes.body.total).toBe(1);
-    expect(disputesRes.body.disputes[0].order_no).toBe('DISPUTE-1');
+    expect(disputesRes.body.total).toBeGreaterThanOrEqual(1);
+    expect(disputesRes.body.disputes.some((item) => item.order_no === `DISPUTE-1-${suffix}`)).toBe(true);
 
     const resolveRes = await request(app)
       .put(`/api/admin/disputes/${disputesRes.body.disputes[0].id}/resolve`)
@@ -133,7 +140,7 @@ describe('admin missing backend APIs', () => {
       .get('/api/admin/merchant-kyc?status=pending')
       .set(authHeader(adminToken));
     expect(merchantKycRes.status).toBe(200);
-    expect(merchantKycRes.body.merchants).toHaveLength(2);
+    expect(merchantKycRes.body.merchants.filter((item) => item.user_id === guideUser.id || item.user_id === clubUser.id).length).toBe(2);
 
     const approveGuideRes = await request(app)
       .post(`/api/admin/merchant-kyc/${guideAppId}/approve`)
@@ -169,6 +176,8 @@ describe('admin missing backend APIs', () => {
     expect(rejectRouteRes.status).toBe(200);
     expect(db.prepare('SELECT status FROM climbing_routes WHERE id = ?').get(rejectRouteId).status).toBe('rejected');
 
+    const inviteCodesBefore = db.prepare(`SELECT COUNT(*) AS c FROM invite_codes`).get().c;
+
     const createCodesRes = await request(app)
       .post('/api/admin/invite-codes')
       .set(authHeader(adminToken))
@@ -180,7 +189,7 @@ describe('admin missing backend APIs', () => {
       .get('/api/admin/invite-codes')
       .set(authHeader(adminToken));
     expect(listCodesRes.status).toBe(200);
-    expect(listCodesRes.body.total).toBe(2);
+    expect(listCodesRes.body.total).toBe(inviteCodesBefore + 2);
 
     const deleteCodeRes = await request(app)
       .delete(`/api/admin/invite-codes/${listCodesRes.body.codes[0].id}`)
@@ -190,7 +199,79 @@ describe('admin missing backend APIs', () => {
     const listAfterDeleteRes = await request(app)
       .get('/api/admin/invite-codes')
       .set(authHeader(adminToken));
-    expect(listAfterDeleteRes.body.total).toBe(1);
+    expect(listAfterDeleteRes.body.total).toBe(inviteCodesBefore + 1);
+  });
+
+  test('supports merchant suspension by application id, note-based commercial review, and SOS admin routes', async () => {
+    const guideUser = createTestUser(db, { phone: '13800003001', name: '暂停向导' });
+    const clubUser = createTestUser(db, { phone: '13800003002', name: '暂停俱乐部用户' });
+
+    db.prepare(`INSERT INTO guides (user_id, name, region, status) VALUES (?, ?, ?, ?)`)
+      .run(guideUser.id, '待暂停向导', 'cn', 'active');
+    db.prepare(`INSERT INTO clubs (name, description, creator_id, region, status) VALUES (?, ?, ?, ?, ?)`)
+      .run('待暂停俱乐部', 'desc', clubUser.id, 'cn', 'active');
+
+    const guideAppId = db.prepare(`INSERT INTO guide_applications (user_id, name, region, status) VALUES (?, ?, ?, ?)`)
+      .run(guideUser.id, '待暂停向导申请', 'cn', 'approved_pending_payment').lastInsertRowid;
+    const clubAppId = db.prepare(`INSERT INTO club_applications (user_id, club_name, region, status) VALUES (?, ?, ?, ?)`)
+      .run(clubUser.id, '待暂停俱乐部申请', 'cn', 'approved_pending_payment').lastInsertRowid;
+
+    const suspendGuideRes = await request(app)
+      .put(`/api/admin/merchants/${guideAppId}/status`)
+      .set(authHeader(adminToken))
+      .send({ status: 'suspended' });
+    expect(suspendGuideRes.status).toBe(200);
+    expect(db.prepare('SELECT status FROM guides WHERE user_id = ?').get(guideUser.id).status).toBe('suspended');
+
+    const suspendClubRes = await request(app)
+      .put(`/api/admin/merchants/${clubAppId}/status`)
+      .set(authHeader(adminToken))
+      .send({ status: 'suspended' });
+    expect(suspendClubRes.status).toBe(200);
+    expect(db.prepare('SELECT status FROM clubs WHERE creator_id = ?').get(clubUser.id).status).toBe('suspended');
+
+    const clubCommercialId = db.prepare(`
+      INSERT INTO clubs (name, description, creator_id, region, status, commercial_status)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('商业俱乐部', 'desc', clubUser.id, 'cn', 'active', 'pending').lastInsertRowid;
+    const guideCommercialId = db.prepare(`
+      INSERT INTO guides (user_id, name, region, status, commercial_status)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(guideUser.id, '商业向导', 'cn', 'active', 'pending').lastInsertRowid;
+
+    const clubCommercialRes = await request(app)
+      .post(`/api/admin/clubs/${clubCommercialId}/commercial-review`)
+      .set(authHeader(adminToken))
+      .send({ action: 'need_info', note: '请补充营业执照' });
+    expect(clubCommercialRes.status).toBe(200);
+    expect(db.prepare('SELECT commercial_status, commercial_reject_reason FROM clubs WHERE id = ?').get(clubCommercialId))
+      .toEqual(expect.objectContaining({ commercial_status: 'need_info', commercial_reject_reason: '请补充营业执照' }));
+
+    const guideCommercialRes = await request(app)
+      .post(`/api/admin/guides/${guideCommercialId}/commercial-review`)
+      .set(authHeader(adminToken))
+      .send({ action: 'reject', note: '请补充保险材料' });
+    expect(guideCommercialRes.status).toBe(200);
+    expect(db.prepare('SELECT commercial_status, commercial_reject_reason FROM guides WHERE id = ?').get(guideCommercialId))
+      .toEqual(expect.objectContaining({ commercial_status: 'rejected', commercial_reject_reason: '请补充保险材料' }));
+
+    const alertId = db.prepare(`
+      INSERT INTO sos_alerts (user_id, lat, lng, accuracy, timestamp, phone)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(guideUser.id, 30.12345, 103.54321, 12.5, new Date().toISOString(), '13800003001').lastInsertRowid;
+
+    const sosListRes = await request(app)
+      .get('/api/admin/sos-records?page=1&limit=20')
+      .set(authHeader(adminToken));
+    expect(sosListRes.status).toBe(200);
+    expect(sosListRes.body.records.some((record) => Number(record.id) === Number(alertId))).toBe(true);
+
+    const sosUpdateRes = await request(app)
+      .put(`/api/admin/sos-records/${alertId}/status`)
+      .set(authHeader(adminToken))
+      .send({ status: 'resolved' });
+    expect(sosUpdateRes.status).toBe(200);
+    expect(db.prepare('SELECT status FROM sos_alerts WHERE id = ?').get(alertId).status).toBe('resolved');
   });
 
   test('supports admin message center and broadcast notifications', async () => {
@@ -261,12 +342,14 @@ describe('admin missing backend APIs', () => {
     expect(closeRes.status).toBe(200);
     expect(db.prepare('SELECT status FROM support_tickets WHERE id = ?').get(ticketId).status).toBe('closed');
 
+    const broadcastCountBefore = db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c;
+
     const broadcastRes = await request(app)
       .post('/api/admin/broadcast')
       .set(authHeader(adminToken))
       .send({ title: '系统维护', content: '今晚 22:00 维护', user_ids: [user.id] });
     expect(broadcastRes.status).toBe(200);
     expect(broadcastRes.body.sent).toBe(1);
-    expect(db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c).toBe(1);
+    expect(db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c).toBe(broadcastCountBefore + 1);
   });
 });

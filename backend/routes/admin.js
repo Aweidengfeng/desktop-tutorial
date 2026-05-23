@@ -38,6 +38,7 @@ const SAFE_TABLES = new Set([
   'club_applications',
   'guides',
   'clubs',
+  'sos_alerts',
 ]);
 const INVITE_CODE_OPTIONAL_COLUMNS = {
   max_uses: true,
@@ -1215,7 +1216,8 @@ router.get('/clubs/commercial', adminAuth, async (req, res) => {
 // POST /api/admin/clubs/:id/commercial-review — 审核俱乐部商业资质
 router.post('/clubs/:id/commercial-review', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
-    const { action, reason } = req.body;
+    const { action } = req.body;
+    const reason = req.body?.reason ?? req.body?.note ?? '';
     const club = (await prisma.$queryRaw`SELECT * FROM clubs WHERE id = ${req.params.id}`)[0];
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
     if (action === 'approve') {
@@ -1269,7 +1271,8 @@ router.get('/guides/commercial', adminAuth, async (req, res) => {
 // POST /api/admin/guides/:id/commercial-review — 审核向导商业资质
 router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
-    const { action, reason } = req.body;
+    const { action } = req.body;
+    const reason = req.body?.reason ?? req.body?.note ?? '';
     const guide = (await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${req.params.id}`)[0];
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     if (action === 'approve') {
@@ -1300,6 +1303,68 @@ router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, async
     }
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: '服务器错误' }); }
+});
+
+// PUT /api/admin/merchants/:id/status — 暂停/恢复商家账户
+router.put('/merchants/:id/status', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const nextStatus = String(req.body?.status || '').trim();
+    if (!['active', 'suspended'].includes(nextStatus)) {
+      return res.status(400).json({ error: 'status 必须为 active 或 suspended' });
+    }
+
+    const merchantId = Number(req.params.id);
+    if (!Number.isFinite(merchantId) || merchantId <= 0) {
+      return res.status(400).json({ error: '无效商家ID' });
+    }
+
+    let updatedGuides = 0;
+    let updatedClubs = 0;
+
+    const guideApp = (await prisma.$queryRaw`SELECT user_id FROM guide_applications WHERE id = ${merchantId}`)[0];
+    if (guideApp?.user_id) {
+      try {
+        updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE user_id = ${guideApp.user_id}`;
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] guide application update failed:', error.message);
+      }
+    }
+
+    const clubApp = (await prisma.$queryRaw`SELECT user_id FROM club_applications WHERE id = ${merchantId}`)[0];
+    if (clubApp?.user_id) {
+      try {
+        updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE creator_id = ${clubApp.user_id}`;
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] club application update failed:', error.message);
+      }
+    }
+
+    if (!updatedGuides && !updatedClubs) {
+      try {
+        updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE id = ${merchantId}`;
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] guide direct update failed:', error.message);
+      }
+      try {
+        updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE id = ${merchantId}`;
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] club direct update failed:', error.message);
+      }
+    }
+
+    if (!updatedGuides && !updatedClubs) {
+      return res.status(404).json({ error: '商家不存在' });
+    }
+
+    res.json({
+      success: true,
+      status: nextStatus,
+      updated_guides: updatedGuides,
+      updated_clubs: updatedClubs,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
 });
 
 // ── 山峰管理 CRUD ────────────────────────────────────────────────────────────
@@ -1644,21 +1709,26 @@ router.get('/sos-records', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
     const { page = 1, limit = 20, status = '' } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
+    const sosAlertColumns = await prisma.$queryRawUnsafe('PRAGMA table_info(sos_alerts)');
+    const hasStatus = sosAlertColumns.some((column) => column.name === 'status');
     let sql = `
-      SELECT s.id, s.user_id, u.name as user_name, u.phone as user_phone,
-             s.location, s.peak_name, s.message, s.status, s.timestamp
-      FROM sos_records s
+      SELECT s.id, s.user_id, u.name as user_name,
+             COALESCE(s.phone, u.phone) as phone,
+             s.lat, s.lng, s.accuracy,
+             ${hasStatus ? "COALESCE(s.status, 'pending')" : "'pending'"} as status,
+             s.timestamp, s.created_at
+      FROM sos_alerts s
       LEFT JOIN users u ON u.id = s.user_id
     `;
     const params = [];
-    if (status) { sql += ' WHERE s.status = ?'; params.push(status); }
-    sql += ' ORDER BY s.timestamp DESC LIMIT ? OFFSET ?';
+    if (status && hasStatus) { sql += ' WHERE s.status = ?'; params.push(status); }
+    sql += ' ORDER BY COALESCE(s.timestamp, s.created_at) DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), offset);
     const records = await prisma.$queryRawUnsafe(sql, ...params);
     const countSql = status
-      ? 'SELECT COUNT(*) as c FROM sos_records WHERE status = ?'
-      : 'SELECT COUNT(*) as c FROM sos_records';
-    const total = Number((await prisma.$queryRawUnsafe(countSql, ...(status ? [status] : [])))[0].c);
+      ? `SELECT COUNT(*) as c FROM sos_alerts ${hasStatus ? 'WHERE status = ?' : ''}`
+      : 'SELECT COUNT(*) as c FROM sos_alerts';
+    const total = Number((await prisma.$queryRawUnsafe(countSql, ...(status && hasStatus ? [status] : [])))[0].c);
     res.json({ records, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -1672,7 +1742,12 @@ router.put('/sos-records/:id/status', adminWriteLimiter, adminAuth, async (req, 
     if (!['pending', 'processing', 'resolved'].includes(status)) {
       return res.status(400).json({ error: '无效状态，有效值: pending|processing|resolved' });
     }
-    const affected = await prisma.$executeRaw`UPDATE sos_records SET status = ${status} WHERE id = ${req.params.id}`;
+    const sosAlertColumns = await prisma.$queryRawUnsafe('PRAGMA table_info(sos_alerts)');
+    const hasStatus = sosAlertColumns.some((column) => column.name === 'status');
+    if (!hasStatus) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE sos_alerts ADD COLUMN status TEXT DEFAULT 'pending'`);
+    }
+    const affected = await prisma.$executeRaw`UPDATE sos_alerts SET status = ${status} WHERE id = ${req.params.id}`;
     if (affected === 0) return res.status(404).json({ error: 'SOS记录不存在' });
     res.json({ success: true });
   } catch (e) {
