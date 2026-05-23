@@ -1294,13 +1294,14 @@ router.get('/clubs/commercial', adminAuth, async (req, res) => {
     const clubs = await prisma.$queryRaw`
       SELECT id, name, specialty, region, commercial_status, commercial_applied_at,
              commercial_reviewed_at, commercial_verified, commercial_reject_reason,
-             business_license_url, business_license_url AS cert_url, business_license_no, insurance_cert_url,
+             business_license_url, business_license_no, insurance_cert_url,
              bank_account_name, bank_account_no, bank_name
       FROM clubs WHERE commercial_status != 'none'
       ORDER BY commercial_applied_at DESC LIMIT ${limit} OFFSET ${offset}
     `;
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM clubs WHERE commercial_status != 'none'`)[0].c);
-    res.json({ clubs, total, page, limit });
+    const normalized = clubs.map((club) => ({ ...club, cert_url: club.business_license_url || null }));
+    res.json({ clubs: normalized, total, page, limit });
   } catch (e) {
     if (isMissingTableError(e)) {
       return res.json({ clubs: [], total: 0, page: 1, limit: 20 });
@@ -1880,11 +1881,16 @@ router.get('/withdrawals', adminAuth, async (req, res) => {
     const offset = (page - 1) * limit;
     const withdrawalColumns = await getTableColumns('withdrawal_requests');
     const hasUserId = withdrawalColumns.includes('user_id');
-    let sql = `
+    let sql = hasUserId ? `
       SELECT wr.*, g.name as guide_name, g.user_id as guide_user_id, u.name as user_name
       FROM withdrawal_requests wr
       LEFT JOIN guides g ON g.id = wr.owner_id AND wr.owner_type = 'guide'
-      LEFT JOIN users u ON u.id = ${hasUserId ? 'wr.user_id' : 'wr.owner_id'}
+      LEFT JOIN users u ON u.id = wr.user_id
+    ` : `
+      SELECT wr.*, g.name as guide_name, g.user_id as guide_user_id, u.name as user_name
+      FROM withdrawal_requests wr
+      LEFT JOIN guides g ON g.id = wr.owner_id AND wr.owner_type = 'guide'
+      LEFT JOIN users u ON u.id = wr.owner_id
     `;
     const params = [];
     if (status) { sql += ' WHERE wr.status = ?'; params.push(status); }
@@ -1896,15 +1902,16 @@ router.get('/withdrawals', adminAuth, async (req, res) => {
       try { accountInfo = r.account_info ? JSON.parse(r.account_info) : {}; } catch (_) {}
       return {
         ...r,
-        user_id: r.user_id || r.owner_id,
-        method: r.method || r.account_type || '',
-        note: r.note || r.reject_reason || '',
-        bank_account: r.bank_account || accountInfo.bank_account || '',
-        bank_name: r.bank_name || accountInfo.bank_name || '',
+        user_id: r.user_id ?? r.owner_id,
+        method: r.method ?? r.account_type ?? '',
+        note: r.note ?? r.reject_reason ?? '',
+        bank_account: r.bank_account ?? accountInfo.bank_account ?? '',
+        bank_name: r.bank_name ?? accountInfo.bank_name ?? '',
       };
     });
     const countSql = status ? 'SELECT COUNT(*) as c FROM withdrawal_requests WHERE status = ?' : 'SELECT COUNT(*) as c FROM withdrawal_requests';
     const total = Number((await prisma.$queryRawUnsafe(countSql, ...(status ? [status] : [])))[0].c);
+    // requests 字段保留用于兼容现有 admin.html 读取逻辑。
     res.json({ withdrawals, requests: withdrawals, total, page, limit });
   } catch (e) {
     if (isMissingTableError(e)) {
@@ -2041,7 +2048,9 @@ async function buildGmvReportsPayload(req) {
   const endDate = new Date();
   const startDate = new Date(endDate.getTime() - (days - 1) * DAY_MS);
   const expeditionColumns = await getTableColumns('expeditions');
+  const expeditionOrderColumns = await getTableColumns('expedition_orders');
   const hasExpeditions = expeditionColumns.length > 0;
+  const guidePayoutColumn = expeditionOrderColumns.includes('guide_commission') ? 'o.guide_commission' : 'o.publisher_income';
   const regionExpr = hasExpeditions && expeditionColumns.includes('region')
     ? 'COALESCE(e.region, "all")'
     : '"all"';
@@ -2049,7 +2058,7 @@ async function buildGmvReportsPayload(req) {
     `SELECT
        COALESCE(o.total, 0) AS total,
        COALESCE(o.platform_fee, 0) AS platform_fee,
-       COALESCE(${(await getTableColumns('expedition_orders')).includes('guide_commission') ? 'o.guide_commission' : 'o.publisher_income'}, 0) AS guide_payout,
+       COALESCE(${guidePayoutColumn}, 0) AS guide_payout,
        ${regionExpr} AS region
      FROM expedition_orders o
      ${hasExpeditions ? 'LEFT JOIN expeditions e ON e.id = o.expedition_id' : ''}
@@ -2070,6 +2079,7 @@ async function buildGmvReportsPayload(req) {
     guidePayout = roundAmount(guidePayout + Number(row.guide_payout || 0));
   }
   return {
+    // 同时返回 camelCase 与 snake_case，兼容不同前端版本。
     total: totalGmv,
     totalGmv,
     total_gmv: totalGmv,
@@ -2175,7 +2185,7 @@ router.get('/gmv', adminAuth, async (req, res) => {
 
 // GET /api/admin/disputes — 争议列表
 router.get('/disputes', adminAuth, async (req, res) => {
-  const status = String(req.query.status || '').toLowerCase();
+  const status = String(req.query.status || 'open').toLowerCase();
   try {
     await syncDisputesFromOrders();
     const usersExist = (await getTableColumns('users')).length > 0;

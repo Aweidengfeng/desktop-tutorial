@@ -165,6 +165,10 @@ describe('admin missing backend APIs', () => {
       INSERT INTO merchant_kyc (user_id, target_id, name, type, status, cert_url)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(clubUser.id, 1, '测试俱乐部KYC', 'club', 'pending', 'https://kyc/club-cert');
+    const merchantRejectKycId = db.prepare(`
+      INSERT INTO merchant_kyc (user_id, target_id, name, type, status, cert_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(guideUser.id, 2, '测试向导KYC-待拒绝', 'guide', 'pending', 'https://kyc/guide-cert-2').lastInsertRowid;
 
     const commissionUpdateRes = await request(app)
       .put('/api/admin/commission-rates')
@@ -190,7 +194,7 @@ describe('admin missing backend APIs', () => {
       .get('/api/admin/merchant-kyc?status=pending')
       .set(authHeader(adminToken));
     expect(merchantKycRes.status).toBe(200);
-    expect(merchantKycRes.body.merchants.filter((item) => item.user_id === guideUser.id || item.user_id === clubUser.id).length).toBe(2);
+    expect(merchantKycRes.body.merchants.filter((item) => item.user_id === guideUser.id || item.user_id === clubUser.id).length).toBeGreaterThanOrEqual(2);
     expect(merchantKycRes.body.merchants[0]).toEqual(expect.objectContaining({ cert_url: expect.any(String) }));
 
     const merchantReviewRes = await request(app)
@@ -200,6 +204,13 @@ describe('admin missing backend APIs', () => {
     expect(merchantReviewRes.status).toBe(200);
     expect(db.prepare('SELECT status, note FROM merchant_kyc WHERE id = ?').get(merchantGuideKycId))
       .toEqual(expect.objectContaining({ status: 'approved', note: '资料齐全' }));
+    const merchantRejectRes = await request(app)
+      .post(`/api/admin/merchant-kyc/${merchantRejectKycId}/review`)
+      .set(authHeader(adminToken))
+      .send({ action: 'reject', note: '资料需补充' });
+    expect(merchantRejectRes.status).toBe(200);
+    expect(db.prepare('SELECT status, note FROM merchant_kyc WHERE id = ?').get(merchantRejectKycId))
+      .toEqual(expect.objectContaining({ status: 'rejected', note: '资料需补充' }));
 
     const approveGuideRes = await request(app)
       .post(`/api/admin/merchant-kyc/${guideAppId}/approve`)
