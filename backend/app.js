@@ -355,6 +355,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/location', require('./routes/location'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
+app.use('/api/admin', require('./routes/admin-messages'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/articles', require('./routes/articles'));
 app.use('/api/profile', require('./routes/profile'));
