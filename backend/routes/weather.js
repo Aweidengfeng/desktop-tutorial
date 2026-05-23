@@ -585,12 +585,14 @@ router.get('/summit-window/:peakId', summitWindowLimiter, async (req, res) => {
   let lon = 86.92;
   try {
     const rows = await prisma.$queryRaw`SELECT latitude, longitude FROM peaks WHERE id = ${peakId}`;
-    const peak = rows && rows[0];
+    const peak = rows[0];
     if (peak) {
       lat = peak.latitude || lat;
       lon = peak.longitude || lon;
     }
-  } catch (_) {}
+  } catch (error) {
+    console.warn('[weather:summit-window] fallback to default coordinates:', error.message);
+  }
 
   const apiKey = process.env.OPENWEATHER_API_KEY;
   const cacheKey = `summit-window:${req.params.peakId}`;
