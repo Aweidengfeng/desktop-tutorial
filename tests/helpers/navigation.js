@@ -53,6 +53,8 @@ async function gotoTab(page, tabName) {
     `div[x-show="currentPage === '${tabKey}'"]`,
     `section[x-show="currentPage === '${tabName}'"]`,
     `div[x-show="currentPage === '${tabName}'"]`,
+    `section[x-show*="currentPage === '${xShowKey}'"]`,
+    `div[x-show*="currentPage === '${xShowKey}'"]`,
   ];
 
   for (const sel of candidates) {
@@ -98,7 +100,7 @@ async function gotoExploreCategory(page, category) {
     // Wait for the category content section to become visible.
     // Use exact x-show attribute value to avoid strict mode violations
     // (e.g. 'commercial' appears in many other x-show expressions in the booking modal)
-    await page.locator(`[x-show="activeCategory === '${category}'"]`).waitFor({ state: 'visible', timeout: 5000 });
+    await exploreSection.locator(`[x-show="activeCategory === '${category}'"]`).first().waitFor({ state: 'visible', timeout: 5000 });
   }
 }
 
