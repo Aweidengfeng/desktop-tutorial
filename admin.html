@@ -1369,7 +1369,7 @@
                   <div x-text="m.email" class="text-xs text-slate-400"></div>
                 </td>
                 <td class="py-2 text-slate-300" x-text="m.type === 'guide' ? '向导' : '俱乐部'"></td>
-                <td class="py-2"><span :class="m.region==='cn'?'text-red-300':'text-blue-300'" x-text="(m.region || '—').toUpperCase()"></span></td>
+                <td class="py-2"><span :class="m.region==='cn' ? 'text-red-300' : m.region==='us' ? 'text-blue-300' : 'text-slate-400'" x-text="(m.region || '—').toUpperCase()"></span></td>
                 <td class="py-2 text-slate-300" x-text="m.tier || 'standard'"></td>
                 <td class="py-2">
                   <span :class="{'bg-yellow-500/20 text-yellow-300':m.status==='pending','bg-emerald-500/20 text-emerald-300':m.status==='approved_pending_payment','bg-red-500/20 text-red-300':m.status==='rejected'}" class="px-2 py-0.5 rounded-full text-xs" x-text="{'pending':'待审核','approved_pending_payment':'已通过','rejected':'已拒绝'}[m.status]||m.status"></span>

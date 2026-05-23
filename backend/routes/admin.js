@@ -28,6 +28,26 @@ const adminWriteLimiter = rateLimit({
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_REGION = 'cn';
+const SAFE_TABLES = new Set([
+  'orders',
+  'users',
+  'invite_codes',
+  'platform_expeditions',
+  'guide_applications',
+  'club_applications',
+  'guides',
+  'clubs',
+]);
+const INVITE_CODE_OPTIONAL_COLUMNS = {
+  max_uses: true,
+  used_count: true,
+  expires_at: true,
+  region: true,
+  tier: true,
+  notes: true,
+  created_by: true,
+};
 
 function timingSafeEqual(a, b) {
   const bufA = Buffer.from(String(a));
@@ -84,6 +104,7 @@ function buildChartDates(period, endDate) {
 }
 
 async function getTableColumns(tableName) {
+  if (!SAFE_TABLES.has(tableName)) return [];
   try {
     const rows = await prisma.$queryRawUnsafe(`PRAGMA table_info(${tableName})`);
     return rows.map((row) => row.name);
@@ -201,7 +222,7 @@ async function createInviteCodes(req, res) {
 
   while (generated.length < count && attempts < count * 20) {
     attempts += 1;
-    const code = `${prefix}${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const code = `${prefix}${crypto.randomBytes(16).toString('hex').toUpperCase()}`;
     const insertColumns = ['code'];
     const values = [code];
     if (columns.includes('max_uses')) {
@@ -231,6 +252,10 @@ async function createInviteCodes(req, res) {
     if (columns.includes('created_by')) {
       insertColumns.push('created_by');
       values.push(req.admin?.username || 'admin');
+    }
+    const invalidColumn = insertColumns.find((column) => column !== 'code' && !INVITE_CODE_OPTIONAL_COLUMNS[column]);
+    if (invalidColumn) {
+      throw new Error(`邀请码表结构异常: 未知列 ${invalidColumn}`);
     }
     try {
       const placeholders = insertColumns.map(() => '?').join(', ');
@@ -1819,7 +1844,9 @@ router.get('/gmv', adminAuth, async (req, res) => {
       return res.json({ total: 0, period, region, chart: [], byRegion: {} });
     }
 
-    const regionExpr = orderColumns.includes('region') ? 'COALESCE(region, \'cn\') AS region' : `'cn' AS region`;
+    const regionExpr = orderColumns.includes('region')
+      ? `COALESCE(region, '${DEFAULT_REGION}') AS region`
+      : `'${DEFAULT_REGION}' AS region`;
     const rows = await prisma.$queryRawUnsafe(
       `SELECT amount, created_at, ${regionExpr}
        FROM orders
@@ -1833,7 +1860,7 @@ router.get('/gmv', adminAuth, async (req, res) => {
     const byRegion = {};
     let total = 0;
     for (const row of rows) {
-      const rowRegion = String(row.region || 'cn').toLowerCase();
+      const rowRegion = String(row.region || DEFAULT_REGION).toLowerCase();
       if (region !== 'all' && rowRegion !== region) continue;
       const amount = roundAmount(row.amount);
       const bucket = period === '90d'
@@ -1929,7 +1956,7 @@ router.get('/featured-slots', adminAuth, async (_req, res) => {
       const rows = await prisma.$queryRawUnsafe(
         `SELECT id,
                 ${titleExpr} AS display_name,
-                COALESCE(region, 'cn') AS region,
+                COALESCE(region, '${DEFAULT_REGION}') AS region,
                 ${merchantExpr} AS merchant_id
          FROM platform_expeditions
          WHERE is_featured = 1
@@ -1937,7 +1964,7 @@ router.get('/featured-slots', adminAuth, async (_req, res) => {
          LIMIT 12`
       );
       rows.forEach((row) => {
-        const key = String(row.region || 'cn').toLowerCase() === 'us' ? 'us' : 'cn';
+        const key = String(row.region || DEFAULT_REGION).toLowerCase() === 'us' ? 'us' : DEFAULT_REGION;
         slots[key].push({
           id: row.id,
           displayName: row.display_name,
