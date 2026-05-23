@@ -100,6 +100,7 @@ async function gotoExploreCategory(page, category) {
     // Wait for the category content section to become visible.
     // Use exact x-show attribute value to avoid strict mode violations
     // (e.g. 'commercial' appears in many other x-show expressions in the booking modal)
+    // `activeCategory` blocks can be repeated in the same section, so intentionally wait on the first visible match.
     await exploreSection.locator(`[x-show="activeCategory === '${category}'"]`).first().waitFor({ state: 'visible', timeout: 5000 });
   }
 }
