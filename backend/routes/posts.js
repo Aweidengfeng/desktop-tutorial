@@ -25,6 +25,10 @@ function isMissingColumnError(error, column) {
   return new RegExp(`column\\s+"?${column}"?\\s+does not exist`, 'i').test(String(error?.message || ''));
 }
 
+function isMissingPostOptionalColumnError(error) {
+  return ['images', 'video_url', 'tags', 'emojis'].some((col) => isMissingColumnError(error, col));
+}
+
 // GET /api/posts?type=all
 /**
  * @swagger
@@ -260,14 +264,15 @@ router.get('/:id', async (req, res) => {
         FROM posts WHERE id = ${id}
       `;
     } catch (rawErr) {
-      if (!isMissingColumnError(rawErr, 'images')) throw rawErr;
+      if (!isMissingPostOptionalColumnError(rawErr)) throw rawErr;
       [post] = await prisma.$queryRaw`
         SELECT id, author_name as authorName, author_avatar as authorAvatar,
-               content, image, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
+               content, image, location, likes, comments, created_at as createdAt
         FROM posts WHERE id = ${id}
       `;
     }
     if (!post) return res.status(404).json({ error: '动态不存在' });
+    post.videoUrl = post.videoUrl ?? null;
     post.tags = parseJsonArray(post.tags);
     post.emojis = parseJsonArray(post.emojis);
     post.images = parseJsonArray(post.images);
@@ -306,11 +311,11 @@ router.post('/', postWriteLimiter, auth, async (req, res) => {
                 ${video_url || null}, ${location || ''}, ${tagsStr}, ${emojisStr})
       `;
     } catch (rawErr) {
-      if (!isMissingColumnError(rawErr, 'images')) throw rawErr;
+      if (!isMissingPostOptionalColumnError(rawErr)) throw rawErr;
       await prisma.$executeRaw`
-        INSERT INTO posts (user_id, author_name, author_avatar, content, image, video_url, location, tags, emojis)
+        INSERT INTO posts (user_id, author_name, author_avatar, content, image, location)
         VALUES (${req.user.id}, ${user.name}, ${user.avatar}, ${content}, ${firstImage},
-                ${video_url || null}, ${location || ''}, ${tagsStr}, ${emojisStr})
+                ${location || ''})
       `;
     }
     let post;
@@ -321,13 +326,14 @@ router.post('/', postWriteLimiter, auth, async (req, res) => {
         FROM posts WHERE user_id = ${req.user.id} ORDER BY id DESC LIMIT 1
       `;
     } catch (rawErr) {
-      if (!isMissingColumnError(rawErr, 'images')) throw rawErr;
+      if (!isMissingPostOptionalColumnError(rawErr)) throw rawErr;
       [post] = await prisma.$queryRaw`
         SELECT id, author_name as authorName, author_avatar as authorAvatar,
-               content, image, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
+               content, image, location, likes, comments, created_at as createdAt
         FROM posts WHERE user_id = ${req.user.id} ORDER BY id DESC LIMIT 1
       `;
     }
+    post.videoUrl = post.videoUrl ?? null;
     post.tags = parseJsonArray(post.tags);
     post.emojis = parseJsonArray(post.emojis);
     post.images = parseJsonArray(post.images);
