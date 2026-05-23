@@ -730,6 +730,7 @@ function alpineLink() {
       { id: 'commercial', name: '商业攀登', icon: 'groups' },
     ],
     commercialSourceTab: 'all',
+    commercialSubFilter: 'all',
     communityPosts: [
       { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
       { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
@@ -4483,6 +4484,7 @@ function alpineLink() {
           this.currentPage = 'explore';
           this.activeCategory = 'commercial';
           this.commercialSourceTab = 'guides';
+          this.commercialSubFilter = 'guide';
         } else {
           this.currentPage = slide.linkTarget || 'explore';
         }
