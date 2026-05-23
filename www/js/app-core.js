@@ -437,6 +437,9 @@ function alpineLink() {
     notifUnreadList: [],
     notifPanelOpen: false,
     userStats: { expeditionCount: null, totalKm: null, climbingDays: null },
+    _loadMyOrdersRequestId: 0,
+    _guideStatusRequestId: 0,
+    _clubStatusRequestId: 0,
     showLogin: false,
     showBiometricLogin: false,
     showRegister: false,
@@ -1787,7 +1790,8 @@ function alpineLink() {
       }
     },
     isGuideApproved() {
-      return !!(this.currentUser && (this.currentUser.is_guide || this.currentUser.guide_status === 'approved'));
+      const guideStatus = this.currentUser && this.currentUser.guide_status;
+      return !!(this.currentUser && (this.currentUser.is_guide || (typeof guideStatus === 'string' && guideStatus.startsWith('approved'))));
     },
     isClubAdminUser() {
       return !!(this.currentUser && (this.currentUser.is_club_admin || this.currentUser.club_id));
@@ -2214,14 +2218,25 @@ function alpineLink() {
     openMyOrders() { this.showMyOrders = true; this.myOrdersFilter = '全部'; this.myOrdersSubTab = 'expedition'; this.loadMyOrders(); },
     async loadMyOrders() {
       if (!this.authToken) return;
+      const requestId = (this._loadMyOrdersRequestId || 0) + 1;
+      this._loadMyOrdersRequestId = requestId;
+      const tokenSnapshot = this.authToken;
+      const isLatestRequest = () => this._loadMyOrdersRequestId === requestId && this.authToken === tokenSnapshot;
       this.expeditionOrdersLoading = true;
       try {
         const res = await fetch('/api/orders', { headers: this.getAuthHeaders() });
+        if (!isLatestRequest()) return;
         if (res.ok) {
           const data = await res.json();
           this.expeditionOrders = Array.isArray(data) ? data : [];
+        } else {
+          this.expeditionOrders = [];
         }
-      } catch(e) {} finally { this.expeditionOrdersLoading = false; }
+      } catch(e) {
+        if (isLatestRequest()) this.expeditionOrders = [];
+      } finally {
+        if (isLatestRequest()) this.expeditionOrdersLoading = false;
+      }
     },
     async payExpeditionOrder(orderId, orderNo, expeditionId) {
       try {
@@ -3338,8 +3353,13 @@ function alpineLink() {
     },
     async loadGuideStatus() {
       if (!this.authToken) return;
+      const requestId = (this._guideStatusRequestId || 0) + 1;
+      this._guideStatusRequestId = requestId;
+      const tokenSnapshot = this.authToken;
+      const isLatestRequest = () => this._guideStatusRequestId === requestId && this.authToken === tokenSnapshot;
       try {
         const res = await fetch('/api/guides/me', { headers: this.getAuthHeaders() });
+        if (!isLatestRequest()) return;
         if (res.ok) {
           const data = await res.json();
           if (this.currentUser) {
@@ -3350,8 +3370,13 @@ function alpineLink() {
     },
     async loadClubStatus() {
       if (!this.authToken) return;
+      const requestId = (this._clubStatusRequestId || 0) + 1;
+      this._clubStatusRequestId = requestId;
+      const tokenSnapshot = this.authToken;
+      const isLatestRequest = () => this._clubStatusRequestId === requestId && this.authToken === tokenSnapshot;
       try {
         const res = await fetch('/api/clubs/me', { headers: this.getAuthHeaders() });
+        if (!isLatestRequest()) return;
         if (res.ok) {
           const data = await res.json();
           if (this.currentUser && data && data.id) {
