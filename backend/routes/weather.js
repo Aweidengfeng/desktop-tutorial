@@ -580,11 +580,18 @@ router.get('/summit-window/:peakId', summitWindowLimiter, async (req, res) => {
   if (!Number.isInteger(peakId) || peakId <= 0) {
     return res.status(400).json({ error: '无效山峰 ID' });
   }
-  const [peak] = await prisma.$queryRaw`SELECT latitude, longitude FROM peaks WHERE id = ${peakId}`;
-  if (!peak) return res.status(404).json({ error: '山峰不存在' });
 
-  const lat = peak.latitude || 27.98;
-  const lon = peak.longitude || 86.92;
+  let lat = 27.98;
+  let lon = 86.92;
+  try {
+    const rows = await prisma.$queryRaw`SELECT latitude, longitude FROM peaks WHERE id = ${peakId}`;
+    const peak = rows && rows[0];
+    if (peak) {
+      lat = peak.latitude || lat;
+      lon = peak.longitude || lon;
+    }
+  } catch (_) {}
+
   const apiKey = process.env.OPENWEATHER_API_KEY;
   const cacheKey = `summit-window:${req.params.peakId}`;
   const cached = weatherCache.get(cacheKey);

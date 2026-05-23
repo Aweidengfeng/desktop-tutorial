@@ -500,7 +500,7 @@
               <span class="text-2xl">🏔️</span>
               <span class="text-xs text-slate-300 font-medium text-center leading-tight">探索山峰</span>
             </button>
-            <button @click="currentPage='explore';activeCategory='commercial';commercialSubFilter='guide';commercialSourceTab='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+            <button @click="currentPage='explore';activeCategory='commercial';commercialView='guide';commercialSourceTab='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
               <span class="text-2xl">🧗</span>
               <span class="text-xs text-slate-300 font-medium text-center leading-tight">找向导</span>
             </button>
@@ -571,7 +571,7 @@
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-1">
           <h3 class="font-display font-bold text-white">向导推荐</h3>
-          <template x-if="currentPage === 'home'"><button @click="currentPage='explore';activeCategory='commercial';commercialSubFilter='guide';commercialSourceTab='guides'" class="text-xs text-primary-light">查看全部</button></template>
+          <template x-if="currentPage === 'home'"><button @click="currentPage='explore';activeCategory='commercial';commercialView='guide';commercialSourceTab='guides'" class="text-xs text-primary-light">查看全部</button></template>
         </div>
         <p class="px-4 text-slate-400 text-xs mb-3">根据您的目标山峰为您精选专业向导</p>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
@@ -959,27 +959,27 @@
           <!-- 子筛选按钮 -->
           <div class="flex gap-2 px-4 mb-4">
             <button
-              @click="commercialSubFilter = 'all'"
-              :class="commercialSubFilter === 'all' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'"
+              @click="commercialView = 'all'"
+              :class="commercialView === 'all' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'"
               class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
               全部
             </button>
             <button
-              @click="commercialSubFilter = 'guide'"
-              :class="commercialSubFilter === 'guide' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'"
+              @click="commercialView = 'guide'"
+              :class="commercialView === 'guide' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'"
               class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
               向导
             </button>
             <button
-              @click="commercialSubFilter = 'club'"
-              :class="commercialSubFilter === 'club' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'"
+              @click="commercialView = 'club'"
+              :class="commercialView === 'club' ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'"
               class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors">
               俱乐部
             </button>
           </div>
 
           <!-- 向导列表 -->
-          <div x-show="commercialSubFilter === 'all' || commercialSubFilter === 'guide'" class="px-4 space-y-3 mb-6">
+          <div x-show="commercialView === 'all' || commercialView === 'guide'" class="px-4 space-y-3 mb-6">
             <h3 class="text-slate-300 text-sm font-semibold mb-2">🧗 专业向导</h3>
             <template x-for="guide in getCommercialGuideProducts()" :key="guide.id">
               <div class="bg-slate-800 rounded-xl p-4 flex items-start gap-3">
@@ -1004,7 +1004,7 @@
           </div>
 
           <!-- 俱乐部列表 -->
-          <div x-show="commercialSubFilter === 'all' || commercialSubFilter === 'club'" class="px-4 space-y-3">
+          <div x-show="commercialView === 'all' || commercialView === 'club'" class="px-4 space-y-3">
             <h3 class="text-slate-300 text-sm font-semibold mb-2">🏔️ 俱乐部</h3>
             <template x-for="club in getCommercialClubProducts()" :key="club.id">
               <div class="bg-slate-800 rounded-xl p-4 flex items-start gap-3">
