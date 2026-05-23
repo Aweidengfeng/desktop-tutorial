@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT UNIQUE,
   password TEXT,
   avatar TEXT,
+  bio TEXT,
   level TEXT DEFAULT '初级攀登者',
   summits INTEGER DEFAULT 0,
   expeditions INTEGER DEFAULT 0,
@@ -253,6 +254,9 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 // 迁移：新增字段（如果不存在）
 const existingUserCols = db.pragma('table_info(users)').map(c => c.name);
+if (!existingUserCols.includes('bio')) {
+  db.exec('ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL');
+}
 if (!existingUserCols.includes('is_admin')) {
   db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
 }

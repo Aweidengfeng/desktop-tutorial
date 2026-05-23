@@ -21,6 +21,14 @@ function parseJsonArray(value) {
   }
 }
 
+function isMissingColumnError(error, column) {
+  return new RegExp(`column\\s+"?${column}"?\\s+does not exist`, 'i').test(String(error?.message || ''));
+}
+
+function isMissingPostOptionalColumnError(error) {
+  return ['images', 'video_url', 'tags', 'emojis'].some((col) => isMissingColumnError(error, col));
+}
+
 // GET /api/posts?type=all
 /**
  * @swagger
@@ -248,12 +256,23 @@ router.delete('/:id/save', saveLimiter, auth, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [post] = await prisma.$queryRaw`
-      SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
-      FROM posts WHERE id = ${id}
-    `;
+    let post;
+    try {
+      [post] = await prisma.$queryRaw`
+        SELECT id, author_name as authorName, author_avatar as authorAvatar,
+               content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
+        FROM posts WHERE id = ${id}
+      `;
+    } catch (rawErr) {
+      if (!isMissingPostOptionalColumnError(rawErr)) throw rawErr;
+      [post] = await prisma.$queryRaw`
+        SELECT id, author_name as authorName, author_avatar as authorAvatar,
+               content, image, location, likes, comments, created_at as createdAt
+        FROM posts WHERE id = ${id}
+      `;
+    }
     if (!post) return res.status(404).json({ error: '动态不存在' });
+    post.videoUrl = post.videoUrl ?? null;
     post.tags = parseJsonArray(post.tags);
     post.emojis = parseJsonArray(post.emojis);
     post.images = parseJsonArray(post.images);
@@ -285,16 +304,36 @@ router.post('/', postWriteLimiter, auth, async (req, res) => {
     const imagesArr = Array.isArray(images) ? images : [];
     const imagesStr = imagesArr.length > 0 ? JSON.stringify(imagesArr) : null;
     const firstImage = image || imagesArr[0] || '';
-    await prisma.$executeRaw`
-      INSERT INTO posts (user_id, author_name, author_avatar, content, image, images, video_url, location, tags, emojis)
-      VALUES (${req.user.id}, ${user.name}, ${user.avatar}, ${content}, ${firstImage}, ${imagesStr},
-              ${video_url || null}, ${location || ''}, ${tagsStr}, ${emojisStr})
-    `;
-    const [post] = await prisma.$queryRaw`
-      SELECT id, author_name as authorName, author_avatar as authorAvatar,
-             content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
-      FROM posts WHERE user_id = ${req.user.id} ORDER BY id DESC LIMIT 1
-    `;
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO posts (user_id, author_name, author_avatar, content, image, images, video_url, location, tags, emojis)
+        VALUES (${req.user.id}, ${user.name}, ${user.avatar}, ${content}, ${firstImage}, ${imagesStr},
+                ${video_url || null}, ${location || ''}, ${tagsStr}, ${emojisStr})
+      `;
+    } catch (rawErr) {
+      if (!isMissingPostOptionalColumnError(rawErr)) throw rawErr;
+      await prisma.$executeRaw`
+        INSERT INTO posts (user_id, author_name, author_avatar, content, image, location)
+        VALUES (${req.user.id}, ${user.name}, ${user.avatar}, ${content}, ${firstImage},
+                ${location || ''})
+      `;
+    }
+    let post;
+    try {
+      [post] = await prisma.$queryRaw`
+        SELECT id, author_name as authorName, author_avatar as authorAvatar,
+               content, image, images, video_url as videoUrl, location, likes, comments, tags, emojis, created_at as createdAt
+        FROM posts WHERE user_id = ${req.user.id} ORDER BY id DESC LIMIT 1
+      `;
+    } catch (rawErr) {
+      if (!isMissingPostOptionalColumnError(rawErr)) throw rawErr;
+      [post] = await prisma.$queryRaw`
+        SELECT id, author_name as authorName, author_avatar as authorAvatar,
+               content, image, location, likes, comments, created_at as createdAt
+        FROM posts WHERE user_id = ${req.user.id} ORDER BY id DESC LIMIT 1
+      `;
+    }
+    post.videoUrl = post.videoUrl ?? null;
     post.tags = parseJsonArray(post.tags);
     post.emojis = parseJsonArray(post.emojis);
     post.images = parseJsonArray(post.images);

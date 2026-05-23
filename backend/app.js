@@ -632,6 +632,11 @@ initChatGateway(server);
     const prisma = require('./db/prisma');
     try {
       await prisma.$connect();
+      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS images TEXT DEFAULT NULL');
+      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS video_url TEXT DEFAULT NULL');
+      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT NULL');
+      await prisma.$executeRawUnsafe('ALTER TABLE posts ADD COLUMN IF NOT EXISTS emojis TEXT DEFAULT NULL');
+      await prisma.$executeRawUnsafe('ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT NULL');
       console.log('✅ Prisma 已连接到 PostgreSQL');
     } catch (e) {
       console.error('❌ Prisma 连接 PostgreSQL 失败，退出:', e.message);

@@ -43,7 +43,7 @@ describe('GET /api/posts — raw SQL fallback', () => {
 
   test('falls back to Prisma ORM and returns 200 when $queryRaw throws', async () => {
     // Spy on prisma.$queryRaw to simulate a schema-mismatch error on the first call
-    const prisma = require('../../backend/db/prisma');
+    const prisma = require('../db/prisma');
     const spy = jest.spyOn(prisma, '$queryRaw').mockRejectedValueOnce(
       new Error('no such column: images')
     );
@@ -57,7 +57,7 @@ describe('GET /api/posts — raw SQL fallback', () => {
 });
 
 describe('GET /api/posts — malformed JSON fields do not crash', () => {
-  let app, db, user;
+  let app, db, user, malformedPostId;
 
   beforeAll(() => {
     clearDbCache();
@@ -69,6 +69,8 @@ describe('GET /api/posts — malformed JSON fields do not crash', () => {
       `INSERT INTO posts (user_id, author_name, content, tags, emojis, images)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).run(user.id, 'Bob', 'Malformed JSON post', 'not-json', '{bad}', '123');
+    malformedPostId = db.prepare('SELECT id FROM posts WHERE content = ? ORDER BY id DESC LIMIT 1')
+      .get('Malformed JSON post')?.id;
   });
 
   test('GET /api/posts returns 200 and normalises malformed JSON fields to []', async () => {
@@ -94,5 +96,64 @@ describe('GET /api/posts — malformed JSON fields do not crash', () => {
     expect(res.body.tags).toEqual([]);
     expect(res.body.emojis).toEqual([]);
     expect(res.body.images).toEqual([]);
+  });
+
+  test('GET /api/posts/:id falls back when images column is missing', async () => {
+    const prisma = require('../db/prisma');
+    const spy = jest.spyOn(prisma, '$queryRaw')
+      .mockRejectedValueOnce(new Error('column "images" does not exist'))
+      .mockResolvedValueOnce([{
+        id: malformedPostId,
+        authorName: 'Bob',
+        authorAvatar: null,
+        content: 'Malformed JSON post',
+        image: null,
+        location: null,
+        likes: 0,
+        comments: 0,
+        createdAt: new Date().toISOString(),
+      }]);
+
+    const res = await request(app).get(`/api/posts/${malformedPostId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.images).toEqual([]);
+
+    spy.mockRestore();
+  });
+});
+
+describe('GET /api/users/:id — bio column fallback', () => {
+  let app, db, user;
+
+  beforeAll(() => {
+    clearDbCache();
+    app = createApp();
+    db = createTestDb();
+    user = createTestUser(db, { phone: '13700000013', name: 'User Bio Fallback' });
+  });
+
+  test('returns 200 with default bio when raw query fails on missing bio column', async () => {
+    const prisma = require('../db/prisma');
+    const spy = jest.spyOn(prisma, '$queryRaw')
+      .mockRejectedValueOnce(new Error('column "bio" does not exist'))
+      .mockResolvedValueOnce([{
+        id: user.id,
+        name: 'User Bio Fallback',
+        username: null,
+        avatar: null,
+        level: '初级攀登者',
+        summits: 0,
+        expeditions: 0,
+        followers: 0,
+        following: 0,
+        created_at: new Date().toISOString(),
+      }]);
+
+    const res = await request(app).get(`/api/users/${user.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(user.id);
+    expect(res.body.bio).toBe('');
+
+    spy.mockRestore();
   });
 });
