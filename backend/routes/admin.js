@@ -112,11 +112,14 @@ function buildChartDates(period, endDate) {
   return dates;
 }
 
+function isPostgresDatabase() {
+  return (process.env.DATABASE_PROVIDER || '').toLowerCase() === 'postgresql';
+}
+
 async function getTableColumns(tableName) {
   if (!SAFE_TABLES.has(tableName)) return [];
   try {
-    const isPostgres = (process.env.DATABASE_PROVIDER || '').toLowerCase() === 'postgresql';
-    if (isPostgres) {
+    if (isPostgresDatabase()) {
       const rows = await prisma.$queryRaw`
         SELECT column_name
         FROM information_schema.columns
@@ -137,8 +140,7 @@ function isMissingTableError(error) {
 }
 
 async function ensureAdminOpsTables() {
-  const isPostgres = (process.env.DATABASE_PROVIDER || '').toLowerCase() === 'postgresql';
-  if (isPostgres) {
+  if (isPostgresDatabase()) {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS disputes (
         id SERIAL PRIMARY KEY,
