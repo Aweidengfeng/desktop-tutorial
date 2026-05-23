@@ -57,7 +57,7 @@ const searchLimiter = rateLimit({
 // 天气/地图等外部 API 代理（防止 Key 被刷爆）
 const externalApiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: process.env.NODE_ENV === 'production' ? 30 : 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: '请求过于频繁，请稍后再试' },
