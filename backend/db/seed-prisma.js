@@ -58,6 +58,21 @@ async function main() {
     },
   });
 
+  const ciTestUserHash = await bcrypt.hash('test1234', 10);
+  await prisma.user.upsert({
+    where: { phone: encryptPII('13800000001') },
+    update: {
+      password: ciTestUserHash,
+    },
+    create: {
+      name: '阿尔卑斯',
+      username: '@api_test_user',
+      phone: encryptPII('13800000001'),
+      password: ciTestUserHash,
+      avatar: 'https://i.pravatar.cc/150?u=api-test-user',
+    },
+  });
+
   const demoUser = await prisma.user.findFirst({
     where: { phone: encryptPII('13800138000') },
     select: { id: true, name: true, avatar: true },
