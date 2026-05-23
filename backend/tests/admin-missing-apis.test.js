@@ -193,6 +193,78 @@ describe('admin missing backend APIs', () => {
     expect(listAfterDeleteRes.body.total).toBe(1);
   });
 
+  test('supports merchant suspension by application id, note-based commercial review, and SOS admin routes', async () => {
+    const guideUser = createTestUser(db, { phone: '13800003001', name: '暂停向导' });
+    const clubUser = createTestUser(db, { phone: '13800003002', name: '暂停俱乐部用户' });
+
+    db.prepare(`INSERT INTO guides (user_id, name, region, status) VALUES (?, ?, ?, ?)`)
+      .run(guideUser.id, '待暂停向导', 'cn', 'active');
+    db.prepare(`INSERT INTO clubs (name, description, creator_id, region, status) VALUES (?, ?, ?, ?, ?)`)
+      .run('待暂停俱乐部', 'desc', clubUser.id, 'cn', 'active');
+
+    const guideAppId = db.prepare(`INSERT INTO guide_applications (user_id, name, region, status) VALUES (?, ?, ?, ?)`)
+      .run(guideUser.id, '待暂停向导申请', 'cn', 'approved_pending_payment').lastInsertRowid;
+    const clubAppId = db.prepare(`INSERT INTO club_applications (user_id, club_name, region, status) VALUES (?, ?, ?, ?)`)
+      .run(clubUser.id, '待暂停俱乐部申请', 'cn', 'approved_pending_payment').lastInsertRowid;
+
+    const suspendGuideRes = await request(app)
+      .put(`/api/admin/merchants/${guideAppId}/status`)
+      .set(authHeader(adminToken))
+      .send({ status: 'suspended' });
+    expect(suspendGuideRes.status).toBe(200);
+    expect(db.prepare('SELECT status FROM guides WHERE user_id = ?').get(guideUser.id).status).toBe('suspended');
+
+    const suspendClubRes = await request(app)
+      .put(`/api/admin/merchants/${clubAppId}/status`)
+      .set(authHeader(adminToken))
+      .send({ status: 'suspended' });
+    expect(suspendClubRes.status).toBe(200);
+    expect(db.prepare('SELECT status FROM clubs WHERE creator_id = ?').get(clubUser.id).status).toBe('suspended');
+
+    const clubCommercialId = db.prepare(`
+      INSERT INTO clubs (name, description, creator_id, region, status, commercial_status)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('商业俱乐部', 'desc', clubUser.id, 'cn', 'active', 'pending').lastInsertRowid;
+    const guideCommercialId = db.prepare(`
+      INSERT INTO guides (user_id, name, region, status, commercial_status)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(guideUser.id, '商业向导', 'cn', 'active', 'pending').lastInsertRowid;
+
+    const clubCommercialRes = await request(app)
+      .post(`/api/admin/clubs/${clubCommercialId}/commercial-review`)
+      .set(authHeader(adminToken))
+      .send({ action: 'need_info', note: '请补充营业执照' });
+    expect(clubCommercialRes.status).toBe(200);
+    expect(db.prepare('SELECT commercial_status, commercial_reject_reason FROM clubs WHERE id = ?').get(clubCommercialId))
+      .toEqual(expect.objectContaining({ commercial_status: 'need_info', commercial_reject_reason: '请补充营业执照' }));
+
+    const guideCommercialRes = await request(app)
+      .post(`/api/admin/guides/${guideCommercialId}/commercial-review`)
+      .set(authHeader(adminToken))
+      .send({ action: 'reject', note: '请补充保险材料' });
+    expect(guideCommercialRes.status).toBe(200);
+    expect(db.prepare('SELECT commercial_status, commercial_reject_reason FROM guides WHERE id = ?').get(guideCommercialId))
+      .toEqual(expect.objectContaining({ commercial_status: 'rejected', commercial_reject_reason: '请补充保险材料' }));
+
+    const alertId = db.prepare(`
+      INSERT INTO sos_alerts (user_id, lat, lng, accuracy, timestamp, phone)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(guideUser.id, 30.12345, 103.54321, 12.5, new Date().toISOString(), '13800003001').lastInsertRowid;
+
+    const sosListRes = await request(app)
+      .get('/api/admin/sos-records?page=1&limit=20')
+      .set(authHeader(adminToken));
+    expect(sosListRes.status).toBe(200);
+    expect(sosListRes.body.records.some((record) => Number(record.id) === Number(alertId))).toBe(true);
+
+    const sosUpdateRes = await request(app)
+      .put(`/api/admin/sos-records/${alertId}/status`)
+      .set(authHeader(adminToken))
+      .send({ status: 'resolved' });
+    expect(sosUpdateRes.status).toBe(200);
+    expect(db.prepare('SELECT status FROM sos_alerts WHERE id = ?').get(alertId).status).toBe('resolved');
+  });
+
   test('supports admin message center and broadcast notifications', async () => {
     const user = createTestUser(db, { phone: '13800002001', name: '工单用户' });
 
