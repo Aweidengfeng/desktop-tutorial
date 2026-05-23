@@ -492,51 +492,53 @@
         </div>
       </div>
 
-      <!-- Quick Links Grid -->
-      <div class="px-4 mb-4">
-        <div class="grid grid-cols-4 gap-2">
-          <button @click="currentPage='explore';activeCategory='8000ers'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🏔️</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">探索山峰</span>
-          </button>
-          <button @click="currentPage='explore';activeCategory='commercial';commercialSourceTab='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🧗</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">找向导</span>
-          </button>
-          <button @click="openWeatherQuery()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">☁️</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">天气查询</span>
-          </button>
-          <button @click="openInsurance()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🛡️</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">攀登保险</span>
-          </button>
+      <!-- Quick Links Grid (x-if removes from DOM when not on home, preventing Playwright locator conflicts) -->
+      <template x-if="currentPage === 'home'">
+        <div class="px-4 mb-4">
+          <div class="grid grid-cols-4 gap-2">
+            <button @click="currentPage='explore';activeCategory='8000ers'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">🏔️</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">探索山峰</span>
+            </button>
+            <button @click="currentPage='explore';activeCategory='commercial';commercialSourceTab='guides'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">🧗</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">找向导</span>
+            </button>
+            <button @click="openWeatherQuery()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">☁️</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">天气查询</span>
+            </button>
+            <button @click="openInsurance()" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">🛡️</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">攀登保险</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-4 gap-2 mt-2">
+            <button @click="currentPage='community'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">💬</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">社区</span>
+            </button>
+            <button @click="currentPage='community';activeChatType='clubs'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">🏛️</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">俱乐部</span>
+            </button>
+            <button @click="currentPage='community';activeChatType='teams'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">👥</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">找队友</span>
+            </button>
+            <button @click="currentPage='explore';activeCategory='commercial'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
+              <span class="text-2xl">🏔️</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight">商业攀登</span>
+            </button>
+          </div>
         </div>
-        <div class="grid grid-cols-4 gap-2 mt-2">
-          <button @click="currentPage='community'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">💬</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">社区</span>
-          </button>
-          <button @click="currentPage='community';activeChatType='clubs'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🏛️</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">俱乐部</span>
-          </button>
-          <button @click="currentPage='community';activeChatType='teams'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">👥</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">找队友</span>
-          </button>
-          <button @click="currentPage='explore';activeCategory='commercial'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
-            <span class="text-2xl">🏔️</span>
-            <span class="text-xs text-slate-300 font-medium text-center leading-tight">商业攀登</span>
-          </button>
-        </div>
-      </div>
+      </template>
 
       <!-- Featured Clubs — 精选俱乐部 -->
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-3">
           <h3 class="font-display font-bold text-white">精选俱乐部</h3>
-          <button @click="currentPage='community';activeChatType='clubs'" class="text-xs text-primary-light">查看全部</button>
+          <template x-if="currentPage === 'home'"><button @click="currentPage='community';activeChatType='clubs'" class="text-xs text-primary-light">查看全部</button></template>
         </div>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
           <template x-for="club in featuredClubs" :key="club.id">
@@ -569,7 +571,7 @@
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-1">
           <h3 class="font-display font-bold text-white">向导推荐</h3>
-          <button @click="currentPage='explore';activeCategory='commercial';commercialSourceTab='guides'" class="text-xs text-primary-light">查看全部</button>
+          <template x-if="currentPage === 'home'"><button @click="currentPage='explore';activeCategory='commercial';commercialSourceTab='guides'" class="text-xs text-primary-light">查看全部</button></template>
         </div>
         <p class="px-4 text-slate-400 text-xs mb-3">根据您的目标山峰为您精选专业向导</p>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
@@ -602,7 +604,7 @@
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-3">
           <h3 class="font-display font-bold text-white">八千米巨峰</h3>
-          <button @click="currentPage='explore';activeCategory='8000ers'" class="text-xs text-primary-light">查看全部</button>
+          <template x-if="currentPage === 'home'"><button @click="currentPage='explore';activeCategory='8000ers'" class="text-xs text-primary-light">查看全部</button></template>
         </div>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
           <template x-for="peak in eightThousanders" :key="peak.id">
