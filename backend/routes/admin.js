@@ -38,6 +38,7 @@ const SAFE_TABLES = new Set([
   'club_applications',
   'guides',
   'clubs',
+  'sos_alerts',
 ]);
 const INVITE_CODE_OPTIONAL_COLUMNS = {
   max_uses: true,
@@ -1324,25 +1325,31 @@ router.put('/merchants/:id/status', adminWriteLimiter, adminAuth, async (req, re
     if (guideApp?.user_id) {
       try {
         updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE user_id = ${guideApp.user_id}`;
-      } catch (_) {}
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] guide application update failed:', error.message);
+      }
     }
 
     const clubApp = (await prisma.$queryRaw`SELECT user_id FROM club_applications WHERE id = ${merchantId}`)[0];
-    if (clubApp) {
-      if (clubApp.user_id) {
-        try {
-          updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE creator_id = ${clubApp.user_id}`;
-        } catch (_) {}
+    if (clubApp?.user_id) {
+      try {
+        updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE creator_id = ${clubApp.user_id}`;
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] club application update failed:', error.message);
       }
     }
 
     if (!updatedGuides && !updatedClubs) {
       try {
         updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE id = ${merchantId}`;
-      } catch (_) {}
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] guide direct update failed:', error.message);
+      }
       try {
         updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE id = ${merchantId}`;
-      } catch (_) {}
+      } catch (error) {
+        console.error('[admin/merchants/:id/status] club direct update failed:', error.message);
+      }
     }
 
     if (!updatedGuides && !updatedClubs) {
@@ -1735,13 +1742,12 @@ router.put('/sos-records/:id/status', adminWriteLimiter, adminAuth, async (req, 
     if (!['pending', 'processing', 'resolved'].includes(status)) {
       return res.status(400).json({ error: '无效状态，有效值: pending|processing|resolved' });
     }
-    let affected = 0;
-    try {
-      affected = await prisma.$executeRaw`UPDATE sos_alerts SET status = ${status} WHERE id = ${req.params.id}`;
-    } catch (_) {
+    const sosAlertColumns = await prisma.$queryRawUnsafe('PRAGMA table_info(sos_alerts)');
+    const hasStatus = sosAlertColumns.some((column) => column.name === 'status');
+    if (!hasStatus) {
       await prisma.$executeRawUnsafe(`ALTER TABLE sos_alerts ADD COLUMN status TEXT DEFAULT 'pending'`);
-      affected = await prisma.$executeRaw`UPDATE sos_alerts SET status = ${status} WHERE id = ${req.params.id}`;
     }
+    const affected = await prisma.$executeRaw`UPDATE sos_alerts SET status = ${status} WHERE id = ${req.params.id}`;
     if (affected === 0) return res.status(404).json({ error: 'SOS记录不存在' });
     res.json({ success: true });
   } catch (e) {

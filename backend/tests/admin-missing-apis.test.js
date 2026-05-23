@@ -45,13 +45,17 @@ describe('admin missing backend APIs', () => {
     db.prepare(`INSERT INTO platform_expeditions (title, region, is_featured) VALUES (?, ?, ?)`)
       .run('精选珠峰路线', 'us', 1);
 
+    const baselinePaid = db.prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM orders WHERE status = 'paid'`).get().total - 250;
+    const baselinePaidCn = (db.prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM orders WHERE status = 'paid' AND region = ?`).get('cn').total || 0) - 100;
+    const baselinePaidUs = (db.prepare(`SELECT COALESCE(SUM(amount), 0) AS total FROM orders WHERE status = 'paid' AND region = ?`).get('us').total || 0) - 150;
+
     const gmvRes = await request(app)
       .get('/api/admin/gmv?region=all&period=7d')
       .set(authHeader(adminToken));
     expect(gmvRes.status).toBe(200);
-    expect(gmvRes.body.total).toBe(250);
-    expect(gmvRes.body.byRegion.cn).toBe(100);
-    expect(gmvRes.body.byRegion.us).toBe(150);
+    expect(gmvRes.body.total).toBe(baselinePaid + 250);
+    expect(gmvRes.body.byRegion.cn).toBe((baselinePaidCn || 0) + 100);
+    expect(gmvRes.body.byRegion.us).toBe((baselinePaidUs || 0) + 150);
     expect(Array.isArray(gmvRes.body.chart)).toBe(true);
 
     const disputesRes = await request(app)
@@ -172,6 +176,8 @@ describe('admin missing backend APIs', () => {
     expect(rejectRouteRes.status).toBe(200);
     expect(db.prepare('SELECT status FROM climbing_routes WHERE id = ?').get(rejectRouteId).status).toBe('rejected');
 
+    const inviteCodesBefore = db.prepare(`SELECT COUNT(*) AS c FROM invite_codes`).get().c;
+
     const createCodesRes = await request(app)
       .post('/api/admin/invite-codes')
       .set(authHeader(adminToken))
@@ -183,7 +189,7 @@ describe('admin missing backend APIs', () => {
       .get('/api/admin/invite-codes')
       .set(authHeader(adminToken));
     expect(listCodesRes.status).toBe(200);
-    expect(listCodesRes.body.total).toBe(2);
+    expect(listCodesRes.body.total).toBe(inviteCodesBefore + 2);
 
     const deleteCodeRes = await request(app)
       .delete(`/api/admin/invite-codes/${listCodesRes.body.codes[0].id}`)
@@ -193,7 +199,7 @@ describe('admin missing backend APIs', () => {
     const listAfterDeleteRes = await request(app)
       .get('/api/admin/invite-codes')
       .set(authHeader(adminToken));
-    expect(listAfterDeleteRes.body.total).toBe(1);
+    expect(listAfterDeleteRes.body.total).toBe(inviteCodesBefore + 1);
   });
 
   test('supports merchant suspension by application id, note-based commercial review, and SOS admin routes', async () => {
@@ -336,12 +342,14 @@ describe('admin missing backend APIs', () => {
     expect(closeRes.status).toBe(200);
     expect(db.prepare('SELECT status FROM support_tickets WHERE id = ?').get(ticketId).status).toBe('closed');
 
+    const broadcastCountBefore = db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c;
+
     const broadcastRes = await request(app)
       .post('/api/admin/broadcast')
       .set(authHeader(adminToken))
       .send({ title: '系统维护', content: '今晚 22:00 维护', user_ids: [user.id] });
     expect(broadcastRes.status).toBe(200);
     expect(broadcastRes.body.sent).toBe(1);
-    expect(db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c).toBe(1);
+    expect(db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c).toBe(broadcastCountBefore + 1);
   });
 });
