@@ -31,6 +31,7 @@ model User {
   phone        String?  @unique
   password     String?
   avatar       String?
+  bio          String?
   level        String   @default("初级攀登者")
   summits      Int      @default(0)
   expeditions  Int      @default(0)
@@ -215,7 +216,11 @@ model Post {
   authorAvatar String?  @map("author_avatar")
   content      String?
   image        String?
+  images       String?  // JSON array of image URLs
+  videoUrl     String?  @map("video_url")
   location     String?
+  tags         String?  // JSON array
+  emojis       String?  // JSON array
   likes        Int      @default(0)
   comments     Int      @default(0)
   createdAt    DateTime @default(now()) @map("created_at")

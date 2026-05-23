@@ -442,9 +442,17 @@ router.delete('/follow', usersWriteLimiter, auth, async (req, res) => {
 router.get('/:id', usersReadLimiter, async (req, res) => {
   try {
     const userId = parseInt(req.params.id, 10);
-    const [user] = await prisma.$queryRaw`
-      SELECT id, name, username, avatar, bio, level, summits, expeditions, followers, following, created_at FROM users WHERE id = ${userId}
-    `;
+    let user;
+    try {
+      [user] = await prisma.$queryRaw`
+        SELECT id, name, username, avatar, bio, level, summits, expeditions, followers, following, created_at FROM users WHERE id = ${userId}
+      `;
+    } catch (rawErr) {
+      if (!/column\s+"?bio"?\s+does not exist/i.test(String(rawErr?.message || ''))) throw rawErr;
+      [user] = await prisma.$queryRaw`
+        SELECT id, name, username, avatar, level, summits, expeditions, followers, following, created_at FROM users WHERE id = ${userId}
+      `;
+    }
     if (!user) return res.status(404).json({ error: '用户不存在' });
     let is_following = false;
     const authHeader = req.headers['authorization'];
@@ -457,7 +465,7 @@ router.get('/:id', usersReadLimiter, async (req, res) => {
         is_following = !!followRow;
       } catch(e) {}
     }
-    res.json({ ...user, is_following });
+    res.json({ ...user, bio: user.bio || '', is_following });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
