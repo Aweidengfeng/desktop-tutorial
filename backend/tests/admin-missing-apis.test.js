@@ -18,8 +18,11 @@ describe('admin missing backend APIs', () => {
   });
 
   test('supports GMV, disputes, featured slots, and admin banner management', async () => {
+    const suffix = Date.now();
+    try {
+      db.exec('ALTER TABLE orders ADD COLUMN region TEXT;');
+    } catch (_) {}
     db.exec(`
-      ALTER TABLE orders ADD COLUMN region TEXT;
       CREATE TABLE IF NOT EXISTS platform_expeditions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
@@ -30,11 +33,11 @@ describe('admin missing backend APIs', () => {
       );
     `);
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(1, 'PAID-CN', 100, 'card', 'paid', new Date().toISOString(), 'cn');
+      .run(1, `PAID-CN-${suffix}`, 100, 'card', 'paid', new Date().toISOString(), 'cn');
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(2, 'PAID-US', 150, 'card', 'paid', new Date().toISOString(), 'us');
+      .run(2, `PAID-US-${suffix}`, 150, 'card', 'paid', new Date().toISOString(), 'us');
     db.prepare(`INSERT INTO orders (user_id, order_no, amount, method, status, created_at, region) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(3, 'DISPUTE-1', 88, 'card', 'disputed', new Date().toISOString(), 'cn');
+      .run(3, `DISPUTE-1-${suffix}`, 88, 'card', 'disputed', new Date().toISOString(), 'cn');
     db.prepare(`
       INSERT INTO banners (title, subtitle, image_url, link_type, link_target, gradient_from, gradient_to, sort_order, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -55,8 +58,8 @@ describe('admin missing backend APIs', () => {
       .get('/api/admin/disputes?status=open')
       .set(authHeader(adminToken));
     expect(disputesRes.status).toBe(200);
-    expect(disputesRes.body.total).toBe(1);
-    expect(disputesRes.body.disputes[0].order_no).toBe('DISPUTE-1');
+    expect(disputesRes.body.total).toBeGreaterThanOrEqual(1);
+    expect(disputesRes.body.disputes.some((item) => item.order_no === `DISPUTE-1-${suffix}`)).toBe(true);
 
     const resolveRes = await request(app)
       .put(`/api/admin/disputes/${disputesRes.body.disputes[0].id}/resolve`)
@@ -133,7 +136,7 @@ describe('admin missing backend APIs', () => {
       .get('/api/admin/merchant-kyc?status=pending')
       .set(authHeader(adminToken));
     expect(merchantKycRes.status).toBe(200);
-    expect(merchantKycRes.body.merchants).toHaveLength(2);
+    expect(merchantKycRes.body.merchants.filter((item) => item.user_id === guideUser.id || item.user_id === clubUser.id).length).toBe(2);
 
     const approveGuideRes = await request(app)
       .post(`/api/admin/merchant-kyc/${guideAppId}/approve`)

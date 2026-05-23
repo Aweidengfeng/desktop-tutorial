@@ -1320,34 +1320,29 @@ router.put('/merchants/:id/status', adminWriteLimiter, adminAuth, async (req, re
     let updatedGuides = 0;
     let updatedClubs = 0;
 
-    try {
-      updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE id = ${merchantId}`;
-    } catch (_) {}
-    try {
-      updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE id = ${merchantId}`;
-    } catch (_) {}
+    const guideApp = (await prisma.$queryRaw`SELECT user_id FROM guide_applications WHERE id = ${merchantId}`)[0];
+    if (guideApp?.user_id) {
+      try {
+        updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE user_id = ${guideApp.user_id}`;
+      } catch (_) {}
+    }
 
-    if (!updatedGuides && !updatedClubs) {
-      const guideApp = (await prisma.$queryRaw`SELECT user_id FROM guide_applications WHERE id = ${merchantId}`)[0];
-      if (guideApp?.user_id) {
+    const clubApp = (await prisma.$queryRaw`SELECT user_id FROM club_applications WHERE id = ${merchantId}`)[0];
+    if (clubApp) {
+      if (clubApp.user_id) {
         try {
-          updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE user_id = ${guideApp.user_id}`;
+          updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE creator_id = ${clubApp.user_id}`;
         } catch (_) {}
       }
+    }
 
-      const clubApp = (await prisma.$queryRaw`SELECT club_id, user_id FROM club_applications WHERE id = ${merchantId}`)[0];
-      if (clubApp) {
-        if (clubApp.club_id) {
-          try {
-            updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE id = ${clubApp.club_id}`;
-          } catch (_) {}
-        }
-        if (!updatedClubs && clubApp.user_id) {
-          try {
-            updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE creator_id = ${clubApp.user_id}`;
-          } catch (_) {}
-        }
-      }
+    if (!updatedGuides && !updatedClubs) {
+      try {
+        updatedGuides += await prisma.$executeRaw`UPDATE guides SET status = ${nextStatus} WHERE id = ${merchantId}`;
+      } catch (_) {}
+      try {
+        updatedClubs += await prisma.$executeRaw`UPDATE clubs SET status = ${nextStatus} WHERE id = ${merchantId}`;
+      } catch (_) {}
     }
 
     if (!updatedGuides && !updatedClubs) {
