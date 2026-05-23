@@ -24,7 +24,9 @@ function createTestUser(db, opts = {}) {
   const uniqueSuffix = String(userSeq).padStart(8, '0');
   const phone = opts.phone || `138${uniqueSuffix}`;
   const name  = opts.name  || '测试用户_' + phone.slice(-4);
-  const username = opts.username || `@testuser_${phone.slice(-4)}_${uniqueSuffix}`;
+  // Include timestamp to avoid username conflicts across test runs on a shared DB file
+  const tsComponent = String(Date.now()).slice(-6);
+  const username = opts.username || `@testuser_${phone.slice(-4)}_${uniqueSuffix}_${tsComponent}`;
   const password = opts.password || 'test123456';
   const hash = bcrypt.hashSync(password, 1); // 低 cost，加快测试
   const policyVersion = '2026-04-20';
@@ -40,6 +42,7 @@ function createTestUser(db, opts = {}) {
   } catch (e) {
     // 可能重复插入，返回现有记录
     const user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
+    if (!user) throw e; // re-throw if user was never actually created
     const id = user.id;
     const token = jwt.sign({ id }, JWT_SECRET, { expiresIn: '1d' });
     return { id, token, phone, password };

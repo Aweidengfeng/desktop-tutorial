@@ -731,6 +731,7 @@ function alpineLink() {
       { id: 'commercial', name: '商业攀登', icon: 'groups' },
     ],
     commercialSourceTab: 'all',
+    commercialSubFilter: 'all',
     communityPosts: [
       { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
       { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
@@ -1047,9 +1048,11 @@ function alpineLink() {
         { id: 'demo-g3', name: 'Furtenbach Adventures', flag: '🇦🇹', verified: true, avatar: 'https://i.pravatar.cc/150?u=furtenbach', peaks_led: ['珠穆朗玛峰', '马纳斯卢峰', '卓奥友峰'], specialty: '轻量化高山向导', rating: 4.9, dayRate: 7200, languages: ['中文', '英文', '德语'] },
       ].map(g => ({
         ...g,
-        languages: g.languages,
-        servicePeaks: g.peaks_led.join('、'),
-        priceLabel: `¥${g.dayRate.toLocaleString()}/天`,
+        languages: Array.isArray(g.languages) && g.languages.length ? g.languages : ['中文'],
+        servicePeaks: Array.isArray(g.peaks_led) && g.peaks_led.length
+          ? g.peaks_led.join('、')
+          : (g.specialty || '多山峰定制服务'),
+        priceLabel: (g.dayRate || g.price) ? `¥${Number(g.dayRate || g.price).toLocaleString()}/天` : '价格咨询',
       }));
     },
     getCommercialClubProducts() {
@@ -1070,11 +1073,11 @@ function alpineLink() {
         { id: 'demo-c3', name: 'Himalayan Experience', logo: 'https://i.pravatar.cc/150?u=himex', specialty: '珠穆朗玛峰、K2、马卡鲁峰', next_departure: '2026年春季', price: 290000, spots: 10 },
       ].map(c => ({
         ...c,
-        logo: c.logo,
-        climbPeak: c.specialty,
-        departureTime: c.next_departure,
-        priceLabel: `¥${c.price.toLocaleString()}`,
-        quotaLabel: `${c.spots} 个名额`,
+        logo: c.logo || c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=200',
+        climbPeak: c.specialty || '多条官方山峰路线',
+        departureTime: c.next_departure || '近期出发',
+        priceLabel: c.price ? `¥${Number(c.price).toLocaleString()}` : '价格咨询',
+        quotaLabel: c.spots ? `${c.spots} 个名额` : '名额以活动页为准',
       }));
     },
     // OpenStreetMap Nominatim 地名查询（带缓存和节流）
@@ -4482,6 +4485,7 @@ function alpineLink() {
           this.currentPage = 'explore';
           this.activeCategory = 'commercial';
           this.commercialSourceTab = 'guides';
+          this.commercialSubFilter = 'guide';
         } else {
           this.currentPage = slide.linkTarget || 'explore';
         }

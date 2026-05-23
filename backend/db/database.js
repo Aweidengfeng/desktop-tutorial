@@ -2558,9 +2558,8 @@ if (badgeCount.cnt === 0) {
   const testHash = (pwd) => bcryptSync(pwd, 10);
 
   const ensureUser = (phone, name, username, avatar, level, summits, expeditions, followers, following) => {
-    const existing = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
-    if (!existing) {
-      db.prepare(`INSERT INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following)
+    try {
+      db.prepare(`INSERT OR IGNORE INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
         name, username, phone, testHash('test1234'),
         avatar, level, summits, expeditions, followers, following
@@ -2570,8 +2569,10 @@ if (badgeCount.cnt === 0) {
         ? String(phone).slice(0, 3) + '****' + String(phone).slice(-2)
         : '****';
       console.log('✅ 测试账号已创建:', maskedPhone, name);
+    } catch (e) {
+      // User may already exist from a previous test run; ignore and return existing id
     }
-    return db.prepare('SELECT id FROM users WHERE phone = ?').get(phone).id;
+    return db.prepare('SELECT id FROM users WHERE phone = ?').get(phone)?.id;
   };
 
   // 普通用户 A
@@ -2583,14 +2584,15 @@ if (badgeCount.cnt === 0) {
   // 俱乐部管理员
   const uidClub = ensureUser('13800000004', '川藏俱乐部', '@chuanzang_club', 'https://i.pravatar.cc/150?u=13800000004', '俱乐部管理员', 8, 6, 210, 180);
   // 平台管理员 (admin hash uses different password)
-  const adminExisting = db.prepare('SELECT id FROM users WHERE phone = ?').get('13800000099');
-  if (!adminExisting) {
-    db.prepare(`INSERT INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following, is_admin)
+  try {
+    db.prepare(`INSERT OR IGNORE INTO users (name, username, phone, password, avatar, level, summits, expeditions, followers, following, is_admin)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`).run(
       '平台管理员', '@admin', '13800000099', testHash('admin1234'),
       'https://i.pravatar.cc/150?u=admin', '管理员', 0, 0, 0, 0
     );
     console.log('✅ 管理员账号已创建: 138****99');
+  } catch (e) {
+    // Admin user already exists, ignore
   }
 
   // Make guide user an approved guide if not already
