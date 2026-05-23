@@ -855,7 +855,7 @@ function alpineLink() {
     teamChatMembers: [],
     teamChatMessages: [],
     navTabs: [
-      { id: 'expedition', icon: 'explore', name: '精选路线' },
+      { id: 'expedition', icon: 'explore', name: '首页' },
       { id: 'discover', icon: 'groups', name: '社区' },
       { id: 'chat', icon: 'chat_bubble', name: '消息' },
       { id: 'me', icon: 'person', name: '我的' },
@@ -1765,6 +1765,55 @@ function alpineLink() {
       return 'expedition';
     },
 
+    isGuideUser() {
+      const user = this.currentUser;
+      return !!(user && (
+        user.role === 'guide' ||
+        user.is_guide ||
+        user.guide ||
+        user.guide_profile ||
+        user.guide_id ||
+        user.guideId
+      ));
+    },
+
+    isClubUser() {
+      const user = this.currentUser;
+      return !!(user && (
+        user.role === 'club_admin' ||
+        user.role === 'club' ||
+        user.is_club_admin ||
+        user.club ||
+        user.club_profile ||
+        user.club_id ||
+        user.clubId
+      ));
+    },
+
+    isPersonalUser() {
+      return !!this.currentUser && !this.isGuideUser() && !this.isClubUser();
+    },
+
+    getCurrentGuideId() {
+      return this.currentUser?.guide?.id
+        || this.currentUser?.guide_id
+        || this.currentUser?.guideId
+        || this.currentUser?.guide_profile?.id
+        || this.currentUser?.guide_profile_id
+        || this.currentGuideProfile?.id
+        || null;
+    },
+
+    getCurrentClubId() {
+      return this.currentUser?.club?.id
+        || this.currentUser?.club_id
+        || this.currentUser?.clubId
+        || this.currentUser?.club_profile?.id
+        || this.currentUser?.club_profile_id
+        || this.currentClubProfile?.id
+        || null;
+    },
+
     isPrimaryTabActive(tabId) {
       return this.resolvePrimaryTab(this.currentPage) === tabId;
     },
@@ -2438,11 +2487,16 @@ function alpineLink() {
       } catch(e) {} finally { this.myGuideServicesLoading = false; }
     },
     async submitGuideService() {
-      if (!this.currentGuideProfile) return;
+      if (!this.requireAuth()) return;
+      const guideId = this.getCurrentGuideId();
+      if (!guideId) {
+        this.showToast('未找到当前向导身份，请先完成向导认证', 'error');
+        return;
+      }
       const g = this.newGuideService;
       if (!g.title) { this.showToast('请填写服务标题', 'error'); return; }
       try {
-        const res = await fetch(`/api/guides/${this.currentGuideProfile.id}/services`, {
+        const res = await fetch(`/api/guides/${guideId}/services`, {
           method: 'POST', headers: { ...this.getAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...g, price: Number(g.price)||0, max_clients: Number(g.max_clients)||8, duration_days: Number(g.duration_days)||1 })
         });
@@ -2450,7 +2504,7 @@ function alpineLink() {
         if (res.ok) {
           this.showAddGuideService = false;
           this.showToast('服务已发布 ✅');
-          await this.loadGuideServices(this.currentGuideProfile.id);
+          await this.loadGuideServices(guideId);
         } else {
           if (data.error === 'commercial_not_verified') {
             this.showToast('收费服务需先完成商业资质认证', 'error');
@@ -2500,7 +2554,7 @@ function alpineLink() {
     },
     openClubCommercialApply(clubId) {
       if (!this.requireAuth()) return;
-      this.clubCommercialApplyId = clubId;
+      this.clubCommercialApplyId = clubId || this.getCurrentClubId();
       this.clubCommercialForm = { business_license_url: '', business_license_no: '', insurance_cert_url: '', bank_account_name: '', bank_account_no: '', bank_name: '' };
       this.showClubCommercialApply = true;
     },
@@ -2526,10 +2580,14 @@ function alpineLink() {
       event.target.value = '';
     },
     async submitClubCommercialApply() {
-      if (!this.clubCommercialApplyId) return;
+      const clubId = this.clubCommercialApplyId || this.getCurrentClubId();
+      if (!clubId) {
+        this.showToast('请先创建或选择俱乐部，再提交商业资质认证', 'error');
+        return;
+      }
       this.clubCommercialLoading = true;
       try {
-        const res = await fetch(`/api/clubs/${this.clubCommercialApplyId}/commercial-apply`, {
+        const res = await fetch(`/api/clubs/${clubId}/commercial-apply`, {
           method: 'POST',
           headers: this.getAuthHeaders(),
           body: JSON.stringify(this.clubCommercialForm),
@@ -2546,15 +2604,19 @@ function alpineLink() {
     },
     openGuideCommercialApply(guideId) {
       if (!this.requireAuth()) return;
-      this.guideCommercialApplyId = guideId;
+      this.guideCommercialApplyId = guideId || this.getCurrentGuideId();
       this.guideCommercialForm = { id_card_url: '', climbing_cert_url: '', insurance_cert_url: '', health_cert_url: '' };
       this.showGuideCommercialApply = true;
     },
     async submitGuideCommercialApply() {
-      if (!this.guideCommercialApplyId) return;
+      const guideId = this.guideCommercialApplyId || this.getCurrentGuideId();
+      if (!guideId) {
+        this.showToast('请先完成向导入驻申请，再提交商业资质认证', 'error');
+        return;
+      }
       this.guideCommercialLoading = true;
       try {
-        const res = await fetch(`/api/guides/${this.guideCommercialApplyId}/commercial-apply`, {
+        const res = await fetch(`/api/guides/${guideId}/commercial-apply`, {
           method: 'POST',
           headers: this.getAuthHeaders(),
           body: JSON.stringify(this.guideCommercialForm),
@@ -2907,7 +2969,7 @@ function alpineLink() {
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showGuideApply = false;
-        this.showToast('向导/俱乐部上架费支付功能即将上线，请联系客服', 'warning');
+        this.showToast('向导入驻申请已提交，平台将在 1-3 个工作日内审核');
         this.guideApplyForm = { name: '', cert: '', specialty: '', languages: '', dayRate: '', region: '' };
         // TODO: 引导用户到支付页面 /api/guides/payment
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
@@ -2922,7 +2984,7 @@ function alpineLink() {
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '申请失败', 'error'); return; }
         this.showClubApplyModal = false;
-        this.showToast('向导/俱乐部上架费支付功能即将上线，请联系客服', 'warning');
+        this.showToast('俱乐部入驻申请已提交，平台将在 1-3 个工作日内审核');
         this.clubApplyForm = { club_name: '', cert_url: '', contact: '', wechat: '', specialty: '', region: '', description: '', website: '' };
         // TODO: 跳转支付页面 POST /api/clubs/payment
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
@@ -2950,7 +3012,7 @@ function alpineLink() {
       this.openSettings('profile');
     },
     handleMenuAction(action) {
-      if (action === 'track') { this.currentPage = 'track'; }
+      if (action === 'track') { this.goToPage('track'); }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
       else if (action === 'achievements') { this.openAchievements(); }
       else if (action === 'membership') { this.openMembership(); }
@@ -3981,18 +4043,24 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async submitActivity() {
-      if (!this.currentClubProfile) return;
       if (!this.requireAuth()) return;
+      const clubId = this.getCurrentClubId();
+      if (!clubId) {
+        this.showToast('未找到可管理的俱乐部，请先完成俱乐部入驻', 'error');
+        return;
+      }
       if (!this.newActivity.title) { this.showToast('请填写活动标题', 'error'); return; }
       try {
-        const res = await fetch('/api/clubs/' + this.currentClubProfile.id + '/activity', {
+        const res = await fetch('/api/clubs/' + clubId + '/activity', {
           method: 'POST', headers: this.getAuthHeaders(),
           body: JSON.stringify({ ...this.newActivity, price: Number(this.newActivity.price) || 0, max_members: Number(this.newActivity.max_members) || 10 })
         });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }
-        if (!this.currentClubProfile.activities) this.currentClubProfile.activities = [];
-        this.currentClubProfile.activities.unshift(data);
+        if (this.currentClubProfile && String(this.currentClubProfile.id) === String(clubId)) {
+          if (!this.currentClubProfile.activities) this.currentClubProfile.activities = [];
+          this.currentClubProfile.activities.unshift(data);
+        }
         this.showToast('活动已发布 ✅');
         this.showPublishActivity = false;
         this.newActivity = { title: '', type: 'activity', mountain: '', region: '', price: '', max_members: 10, start_date: '', end_date: '', difficulty: '', description: '' };
