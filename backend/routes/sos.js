@@ -98,7 +98,7 @@ async function listSosAlerts(req, res) {
   } catch (e) {
     console.error('[SOS] Alerts fetch failed:', e);
     if (String(e.message || '').match(/no such table|relation .* does not exist/i)) {
-      return res.json({ alerts: [], total: 0, page: 1, limit: 20 });
+      return res.json({ alerts: [], total: 0, page, limit });
     }
     res.status(500).json({ error: '服务器错误' });
   }
