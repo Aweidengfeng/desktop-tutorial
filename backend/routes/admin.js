@@ -353,15 +353,15 @@ router.get('/stats', adminWriteLimiter, adminAuth, async (req, res) => {
     const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     let totalUsers = 0, totalPosts = 0, totalOrders = 0, totalClubs = 0, totalBookings = 0;
     let newUsersToday = 0, pendingPosts = 0, pendingGuides = 0, pendingBookings = 0;
-    try { totalUsers = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM users`)[0].c); } catch(e) { console.warn('admin/stats users query failed:', e.message); }
-    try { totalPosts = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM posts`)[0].c); } catch(e) { console.warn('admin/stats posts query failed:', e.message); }
-    try { totalOrders = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM orders`)[0].c); } catch(e) { console.warn('admin/stats orders query failed:', e.message); }
-    try { totalClubs = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM clubs`)[0].c); } catch(e) { console.warn('admin/stats clubs query failed:', e.message); }
-    try { totalBookings = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM bookings`)[0].c); } catch(e) { console.warn('admin/stats bookings query failed:', e.message); }
-    try { newUsersToday = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM users WHERE date(created_at) = ${today}`)[0].c); } catch(e) { console.warn('admin/stats newUsersToday query failed:', e.message); }
-    try { pendingPosts = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM posts WHERE status = 'pending'`)[0].c); } catch(e) { console.warn('admin/stats pendingPosts query failed:', e.message); }
-    try { pendingGuides = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM guide_applications WHERE status = 'pending'`)[0].c); } catch(e) { console.warn('admin/stats pendingGuides query failed:', e.message); }
-    try { pendingBookings = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM bookings WHERE status = 'pending'`)[0].c); } catch(e) { console.warn('admin/stats pendingBookings query failed:', e.message); }
+    try { totalUsers = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM users`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats users query failed:', e.message); } else { throw e; } }
+    try { totalPosts = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM posts`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats posts query failed:', e.message); } else { throw e; } }
+    try { totalOrders = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM orders`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats orders query failed:', e.message); } else { throw e; } }
+    try { totalClubs = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM clubs`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats clubs query failed:', e.message); } else { throw e; } }
+    try { totalBookings = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM bookings`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats bookings query failed:', e.message); } else { throw e; } }
+    try { newUsersToday = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM users WHERE date(created_at) = ${today}`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats newUsersToday query failed:', e.message); } else { throw e; } }
+    try { pendingPosts = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM posts WHERE status = 'pending'`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats pendingPosts query failed:', e.message); } else { throw e; } }
+    try { pendingGuides = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM guide_applications WHERE status = 'pending'`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats pendingGuides query failed:', e.message); } else { throw e; } }
+    try { pendingBookings = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM bookings WHERE status = 'pending'`)[0].c); } catch(e) { if (isMissingTableError(e)) { console.warn('admin/stats pendingBookings query failed:', e.message); } else { throw e; } }
     let pendingSos = 0;
     let pendingWithdrawals = 0;
     let stripeRevenue = 0;
