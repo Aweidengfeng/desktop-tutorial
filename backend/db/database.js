@@ -2119,61 +2119,63 @@ if (!existingBookingColsPool.includes('pool')) {
   }
   if (zhangwei) {
     const userId = zhangwei.id;
+    const avatarRow = db.prepare('SELECT avatar FROM users WHERE id = ?').get(userId);
+    const avatarUrl = avatarRow?.avatar || null;
     const postCount = db.prepare('SELECT COUNT(*) as cnt FROM posts').get();
     if (postCount.cnt === 0) {
     const insertBuiltinPost = db.prepare(`
       INSERT OR IGNORE INTO posts (user_id, author_name, author_avatar, content, location, likes, comments)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '刚刚完成了珠峰大本营徒步，海拔5364米，风景壮丽！明年计划挑战洛子峰 💪', '尼泊尔·珠峰大本营', 128, 24);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '分享一组马卡鲁峰照片，这次远征历时45天，成功登顶！感谢队友们的配合 🏔️', '尼泊尔·马卡鲁峰', 86, 17);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '推荐一条适合初学者的高海拔路线：四姑娘山二峰（5276m），难度适中，风景极佳', '四川·四姑娘山', 214, 42);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '高海拔攀登小技巧：每天海拔上升不超过300m，到营地后先喝热饮再休息。今天在5500m营地感觉状态不错 💪', '西藏·希夏邦马', 93, 11);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '装备测评：La Sportiva G2 SM高山靴实测报告。在-30°C环境下穿了18小时，双脚保暖性优秀，就是重量偏重。', '北京·测评室', 176, 38);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '2025年K2攀登回顾：我们团队7月22日从Abruzzi山脊出发，历经21小时成功登顶，视野无与伦比！', '巴基斯坦·K2', 312, 67);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '推荐《攀登者》训练计划：12周备战慕士塔格方案，每周3次力量训练+2次有氧，感兴趣的朋友评论区见', '成都·健身房', 145, 29);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '俱乐部公告：2026年乞力马扎罗Machame路线队伍招募中，7天行程，名额5人，6月出发，价格含接送', '非洲·乞力马扎罗', 88, 15);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '今日训练：背负20kg爬34层楼梯4组，腿已经不是自己的了。高海拔远征的基础功课还是要做扎实 🏋️', '成都', 67, 8);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '感谢向导Pemba Sherpa！这次洛子峰远征全程专业支持，安全绳架设一流，强烈推荐！⭐⭐⭐⭐⭐', '尼泊尔·洛子峰', 224, 41);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '技术分享：冰壁自我制动要领。当滑坠发生的瞬间，冰镐头向外、向下，全身重量压住镐柄——练一千遍才能成肌肉记忆', '新西兰·冰雪训练', 201, 55);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '首次独攀！完成马特洪峰霍恩利山脊，从山下到峰顶9小时，下山6小时。孤独而自由的感觉无以言表。', '瑞士·泽马特', 389, 84);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '好物推荐：Petzl SARKEN冰爪实测。轻量化设计没有牺牲稳定性，与B型靴的兼容非常好，山脊线上超级省力', '装备测评', 156, 23);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '雪山天气规律总结：喜马拉雅春季窗口平均宽度仅72小时，要把精力放在等待上，不要放在赶行程上。', '攀登经验分享', 278, 62);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '慕士塔格7546m登顶成功！中国高海拔的入门之山，坡度平缓但海拔感明显。从大本营到顶峰用时14小时', '中国·帕米尔高原', 267, 49);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '新手问答：高原反应的症状识别与处理。①头痛+乏力=正常适应，②恶心呕吐=下撤信号，③意识模糊=立即下撤+吸氧', '科普', 334, 78);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '菲茨罗伊峰尝试：4次出发4次被逼回，这就是巴塔哥尼亚的日常。第5次终于看到了窗口期，向上！', '阿根廷·巴塔哥尼亚', 445, 97);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '商业远征vs阿尔派风格：各有利弊。商业路线安全有保障，阿尔派风格更纯粹。没有高下之分，适合自己最重要', '攀登哲学', 189, 44);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '俱乐部周末活动：四川峨眉山雪线徒步，适合家庭亲子，难度较低，报名截止本周五，名额仅剩3个', '四川·峨眉山', 72, 9);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '阿玛达布拉姆西南山脊：每一个技术段都是享受，这座山绝对是喜马拉雅区域最美技术峰，没有之一！', '尼泊尔·阿玛达布拉姆', 298, 53);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '绳队管理经验：4人以上队伍如何分配绳距、调配节奏、处理跟不上的队员。详细攻略见主页链接', '经验分享', 167, 37);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '卓奥友八月登顶！作为第一次8000米峰，选择卓奥友是正确决定。技术难度相对低，积累高海拔经验最佳选择', '中国·卓奥友', 356, 79);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '个人装备清单：珠峰南坡完整装备列表（含重量/价格），总重47.3kg，其中高山靴4.8kg是最重单件', '装备资讯', 412, 91);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '下周开始2026年珠峰远征准备！飞机票已订，装备检查完毕，感谢SummitLink平台帮我找到了完美的向导团队', '出发前准备', 523, 118);
-    insertBuiltinPost.run(userId, '张伟', 'https://i.pravatar.cc/150?u=zhangwei',
+    insertBuiltinPost.run(userId, '张伟', avatarUrl,
       '夜间攀登技巧：头灯选择、黑暗中辨别路线、疲劳管理。大多数珠峰登顶都在凌晨1-3点出发，必须学会', '技术分享', 234, 47);
     console.log('✅ 内置帖子数据填充完成');
     }
