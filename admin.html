@@ -2740,7 +2740,7 @@
             this.sosRecords = d.alerts || []; this.sosRecordsTotal = d.total || 0;
             const latestId = Number(this.sosRecords?.[0]?.id || 0);
             this.sosBannerVisible = latestId > this.lastSeenSosId;
-          } catch(e) { this.showToast(e.message,'error'); } finally { this.sosRecordsLoading = false; }
+          } catch(e) { console.warn('loadSosRecords failed:', e.message); } finally { this.sosRecordsLoading = false; }
         },
 
         async loadWithdrawals(p) {

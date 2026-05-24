@@ -81,9 +81,9 @@ async function createSosAlert(req, res) {
 }
 
 async function listSosAlerts(req, res) {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
   try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const offset = (page - 1) * limit;
     const alerts = await prisma.$queryRawUnsafe(
       `SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, created_at as createdAt
@@ -97,6 +97,9 @@ async function listSosAlerts(req, res) {
     res.json({ alerts, total, page, limit });
   } catch (e) {
     console.error('[SOS] Alerts fetch failed:', e);
+    if (String(e.message || '').match(/no such table|relation .* does not exist/i)) {
+      return res.json({ alerts: [], total: 0, page, limit });
+    }
     res.status(500).json({ error: '服务器错误' });
   }
 }
