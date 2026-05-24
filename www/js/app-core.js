@@ -804,6 +804,12 @@ function alpineLink() {
     commercialClubsLoading: false,
     commercialClubGuides: [],
     commercialGuidesLoading: false,
+    // Real commercial data from API
+    commercialGuides: [],
+    commercialClubs: [],
+    commercialGuideExpeditions: [],
+    commercialClubExpeditions: [],
+    commercialDataLoaded: false,
     commercialPackages: [
       { id: 'basic', name: '基础套餐', desc: '向导费 + 营地支援', price: 25000 },
       { id: 'standard', name: '标准套餐', desc: '向导费 + 营地 + 高山厨师 + 氧气', price: 45000 },
@@ -1044,6 +1050,10 @@ function alpineLink() {
       return peaks;
     },
     getCommercialGuideProducts() {
+      // Prefer real guides loaded from API with expedition data
+      if (this.commercialGuides && this.commercialGuides.length) {
+        return this.commercialGuides;
+      }
       const guides = this.guides.length ? this.guides : this.nearbyGuides;
       if (guides && guides.length) {
         return guides.map(g => ({
@@ -1070,6 +1080,10 @@ function alpineLink() {
       }));
     },
     getCommercialClubProducts() {
+      // Prefer real clubs loaded from API with expedition data
+      if (this.commercialClubs && this.commercialClubs.length) {
+        return this.commercialClubs;
+      }
       if (this.clubs && this.clubs.length) {
         return this.clubs.map(c => ({
           ...c,
@@ -4546,6 +4560,109 @@ function alpineLink() {
       } catch(e) { this.expeditions = []; }
     },
 
+    // ─── Commercial Data: Load real guides, clubs, and expedition associations ──
+    async loadCommercialData() {
+      if (this.commercialDataLoaded) return;
+      try {
+        // Load approved guides
+        const [guidesRes, clubsRes, expRes] = await Promise.allSettled([
+          fetch('/api/guides?status=approved&limit=20'),
+          fetch('/api/clubs?verified=true&limit=20'),
+          fetch('/api/expeditions?status=published&limit=50'),
+        ]);
+
+        // Process guides
+        if (guidesRes.status === 'fulfilled' && guidesRes.value.ok) {
+          const data = await guidesRes.value.json();
+          const list = Array.isArray(data) ? data : (data.guides || []);
+          this.commercialGuides = list.map(g => {
+            const tryParse = v => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch(_) { return []; } };
+            return {
+              ...g,
+              avatar: g.avatar || ('https://i.pravatar.cc/150?u=guide_' + g.id),
+              flag: g.flag || '🇨🇳',
+              verified: g.status === 'approved',
+              peaks_led: tryParse(g.peaks_led) || [],
+              specialty: g.specialty || '',
+              rating: g.rating || 5.0,
+              reviews: g.reviews || 0,
+              dayRate: g.day_rate || 0,
+              languages: tryParse(g.languages) || ['中文'],
+              servicePeaks: (tryParse(g.peaks_led) || []).join('、') || (g.specialty || '多山峰定制服务'),
+              priceLabel: (g.day_rate || g.price) ? `¥${Number(g.day_rate || g.price).toLocaleString()}/天` : '价格咨询',
+              expeditions: [],
+              nextDeparture: null,
+              priceFrom: null,
+              availableSpots: null,
+            };
+          });
+        }
+
+        // Process clubs
+        if (clubsRes.status === 'fulfilled' && clubsRes.value.ok) {
+          const data = await clubsRes.value.json();
+          const list = Array.isArray(data) ? data : (data.clubs || []);
+          this.commercialClubs = list.map(c => ({
+            ...c,
+            logo: c.logo || c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=200',
+            specialty: c.specialty || '',
+            region: c.region || '',
+            verified: !!c.verified,
+            membersCount: c.members_count || 0,
+            expeditions: [],
+            nextDeparture: null,
+            priceFrom: null,
+            availableSpots: null,
+            climbPeak: c.specialty || '多条官方山峰路线',
+            departureTime: '近期出发',
+            priceLabel: '价格咨询',
+            quotaLabel: '名额以活动页为准',
+          }));
+        }
+
+        // Process expeditions and associate with guides/clubs
+        if (expRes.status === 'fulfilled' && expRes.value.ok) {
+          const data = await expRes.value.json();
+          const list = Array.isArray(data) ? data : (data.expeditions || []);
+          this.commercialGuideExpeditions = list.filter(e => e.publisher_type === 'guide');
+          this.commercialClubExpeditions = list.filter(e => e.publisher_type === 'club');
+
+          // Attach expedition data to each guide
+          this.commercialGuides = this.commercialGuides.map(g => {
+            const exps = this.commercialGuideExpeditions.filter(e => Number(e.publisher_id) === Number(g.id));
+            const sorted = exps.sort((a, b) => new Date(a.start_date || 0) - new Date(b.start_date || 0));
+            return {
+              ...g,
+              expeditions: exps,
+              nextDeparture: sorted[0] ? sorted[0].start_date : null,
+              priceFrom: exps.length ? Math.min(...exps.map(e => Number(e.base_price || e.price || 0))) : null,
+              availableSpots: sorted[0] ? (sorted[0].available_spots ?? sorted[0].spots ?? null) : null,
+              priceLabel: exps.length ? `起 ¥${Math.min(...exps.map(e => Number(e.base_price || e.price || 0))).toLocaleString()}` : (g.dayRate ? `¥${Number(g.dayRate).toLocaleString()}/天` : '价格咨询'),
+            };
+          });
+
+          // Attach expedition data to each club
+          this.commercialClubs = this.commercialClubs.map(c => {
+            const exps = this.commercialClubExpeditions.filter(e => Number(e.publisher_id) === Number(c.id));
+            const sorted = exps.sort((a, b) => new Date(a.start_date || 0) - new Date(b.start_date || 0));
+            const minPrice = exps.length ? Math.min(...exps.map(e => Number(e.base_price || e.price || 0))) : null;
+            return {
+              ...c,
+              expeditions: exps,
+              nextDeparture: sorted[0] ? sorted[0].start_date : null,
+              priceFrom: minPrice,
+              availableSpots: sorted[0] ? (sorted[0].available_spots ?? sorted[0].spots ?? null) : null,
+              departureTime: sorted[0] ? sorted[0].start_date : '近期出发',
+              priceLabel: minPrice ? `起 ¥${minPrice.toLocaleString()}` : '价格咨询',
+              quotaLabel: exps.length ? `${exps.length} 条线路` : '名额以活动页为准',
+            };
+          });
+        }
+
+        this.commercialDataLoaded = true;
+      } catch(e) {}
+    },
+
     // ─── Popular Peaks Weather ────────────────────────────────────────────────
     async loadPopularPeaksWeather() {
       try {
@@ -4943,6 +5060,7 @@ function alpineLink() {
         if (val === 'commercial') {
           this.loadGuides();
           this.loadClubs();
+          this.loadCommercialData();
         }
       });
       // 初始化时主动加载默认分类数据
