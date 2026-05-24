@@ -112,9 +112,21 @@ function buildChartDates(period, endDate) {
   return dates;
 }
 
+function isPostgresDatabase() {
+  return (process.env.DATABASE_PROVIDER || '').toLowerCase() === 'postgresql';
+}
+
 async function getTableColumns(tableName) {
   if (!SAFE_TABLES.has(tableName)) return [];
   try {
+    if (isPostgresDatabase()) {
+      const rows = await prisma.$queryRaw`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ${tableName}
+      `;
+      return rows.map((row) => row.column_name);
+    }
     const rows = await prisma.$queryRawUnsafe(`PRAGMA table_info(${tableName})`);
     return rows.map((row) => row.name);
   } catch (_) {
@@ -128,51 +140,89 @@ function isMissingTableError(error) {
 }
 
 async function ensureAdminOpsTables() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS disputes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      order_id INTEGER UNIQUE,
-      user_id INTEGER,
-      order_no TEXT,
-      type TEXT DEFAULT 'complaint',
-      status TEXT DEFAULT 'open',
-      resolution TEXT,
-      refund_amount REAL DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      resolved_at TEXT
-    )
-  `);
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS platform_config (
-      config_key TEXT PRIMARY KEY,
-      config_value TEXT NOT NULL,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS invite_codes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      code TEXT UNIQUE NOT NULL,
-      max_uses INTEGER DEFAULT 1,
-      used_count INTEGER DEFAULT 0,
-      expires_at TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  if (isPostgresDatabase()) {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS disputes (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER UNIQUE,
+        user_id INTEGER,
+        order_no TEXT,
+        type TEXT DEFAULT 'complaint',
+        status TEXT DEFAULT 'open',
+        resolution TEXT,
+        refund_amount REAL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS platform_config (
+        config_key TEXT PRIMARY KEY,
+        config_value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS invite_codes (
+        id SERIAL PRIMARY KEY,
+        code TEXT UNIQUE NOT NULL,
+        max_uses INTEGER DEFAULT 1,
+        used_count INTEGER DEFAULT 0,
+        expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1');
+    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0');
+    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
+    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+  } else {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS disputes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER UNIQUE,
+        user_id INTEGER,
+        order_no TEXT,
+        type TEXT DEFAULT 'complaint',
+        status TEXT DEFAULT 'open',
+        resolution TEXT,
+        refund_amount REAL DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        resolved_at TEXT
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS platform_config (
+        config_key TEXT PRIMARY KEY,
+        config_value TEXT NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS invite_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT UNIQUE NOT NULL,
+        max_uses INTEGER DEFAULT 1,
+        used_count INTEGER DEFAULT 0,
+        expires_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-  const inviteColumns = await getTableColumns('invite_codes');
-  if (inviteColumns.length > 0) {
-    if (!inviteColumns.includes('max_uses')) {
-      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN max_uses INTEGER DEFAULT 1');
-    }
-    if (!inviteColumns.includes('used_count')) {
-      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN used_count INTEGER DEFAULT 0');
-    }
-    if (!inviteColumns.includes('expires_at')) {
-      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN expires_at TEXT');
-    }
-    if (!inviteColumns.includes('created_at')) {
-      await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP');
+    const inviteColumns = await getTableColumns('invite_codes');
+    if (inviteColumns.length > 0) {
+      if (!inviteColumns.includes('max_uses')) {
+        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN max_uses INTEGER DEFAULT 1');
+      }
+      if (!inviteColumns.includes('used_count')) {
+        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN used_count INTEGER DEFAULT 0');
+      }
+      if (!inviteColumns.includes('expires_at')) {
+        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN expires_at TEXT');
+      }
+      if (!inviteColumns.includes('created_at')) {
+        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP');
+      }
     }
   }
 }

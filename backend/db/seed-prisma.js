@@ -78,6 +78,33 @@ async function main() {
     select: { id: true, name: true, avatar: true },
   });
 
+  if (demoUser?.id) {
+    const sampleOrders = [
+      { orderNo: 'SEED-ORDER-PAID-001', amount: 12800, method: 'wechat', status: 'paid' },
+      { orderNo: 'SEED-ORDER-PENDING-001', amount: 6999, method: 'alipay', status: 'pending' },
+    ];
+    for (const order of sampleOrders) {
+      await prisma.order.upsert({
+        where: { orderNo: order.orderNo },
+        update: {
+          userId: demoUser.id,
+          amount: order.amount,
+          method: order.method,
+          status: order.status,
+        },
+        create: {
+          userId: demoUser.id,
+          orderNo: order.orderNo,
+          amount: order.amount,
+          method: order.method,
+          status: order.status,
+        },
+      }).catch((error) => {
+        logSeedWriteError(`示例订单 ${order.orderNo}`, '写入', error);
+      });
+    }
+  }
+
   // ── 山峰：8000米巨峰 ──────────────────────────────────────
   const peaks8000 = [
     { name: '珠穆朗玛峰', nameEn: 'Mount Everest', altitude: 8849, country: '中国/尼泊尔', continent: '亚洲', difficulty: '极难', image: 'https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?w=800', type: '8000ers', category: 'eight_thousanders', description: '世界最高峰，位于中尼边境，是无数攀登者毕生的梦想。', bestSeason: '5月、10月', successRate: '29%', firstAscent: '1953年5月29日', deaths: 310, latitude: 27.9881, longitude: 86.9250, annualClimbers: 800, commercialTeams: 35, seasonDetail: '春季窗口期4月下旬至5月中旬，秋季窗口10月', supplementalOxygen: true, mainRoute: '东南山脊(南坡)/东北山脊(北坡)' },
