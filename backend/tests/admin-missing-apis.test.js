@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+const express = require('express');
 const request = require('supertest');
 const { createApp } = require('../../tests/helpers/testApp');
 const { createAdminToken, authHeader, createTestUser } = require('../../tests/helpers/auth');
@@ -421,5 +423,89 @@ describe('admin missing backend APIs', () => {
     expect(broadcastRes.status).toBe(200);
     expect(broadcastRes.body.sent).toBe(1);
     expect(db.prepare(`SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND type = 'system_broadcast'`).get(user.id).c).toBe(broadcastCountBefore + 1);
+  });
+});
+
+describe('admin postgres bootstrap coverage', () => {
+  const adminModulePath = path.resolve(__dirname, '../routes/admin.js');
+  const originalEnv = { ...process.env };
+  const expectedBootstrapStatements = 3;
+  const expectedInfoSchemaCalls = 3;
+
+  function restoreProcessEnv() {
+    for (const key of Object.keys(process.env)) {
+      delete process.env[key];
+    }
+    Object.assign(process.env, originalEnv);
+  }
+
+  function loadAdminRouterWithMocks(prismaMock) {
+    let router;
+    jest.isolateModules(() => {
+      jest.doMock('../db/prisma', () => prismaMock);
+      jest.doMock('../middleware/adminAuth', () => (_req, _res, next) => next());
+      jest.doMock('../middleware/devOnly', () => (_req, _res, next) => next());
+      router = require(adminModulePath);
+    });
+    return router;
+  }
+
+  beforeEach(() => {
+    jest.resetModules();
+    restoreProcessEnv();
+    process.env.DATABASE_PROVIDER = 'postgresql';
+  });
+
+  afterAll(() => {
+    jest.resetModules();
+    restoreProcessEnv();
+  });
+
+  test('bootstraps postgres admin ops once and supports invite-code introspection', async () => {
+    const executeRawUnsafeMock = jest.fn().mockResolvedValue(0);
+    const queryRawUnsafeMock = jest.fn().mockResolvedValue([]);
+    const queryRawMock = jest.fn(async (parts, ...values) => {
+      const sql = Array.isArray(parts) ? parts.join('') : String(parts || '');
+      if (sql.includes('information_schema.columns')) {
+        const tableName = values[0];
+        if (tableName === 'invite_codes') {
+          return [
+            { column_name: 'id' },
+            { column_name: 'code' },
+            { column_name: 'max_uses' },
+            { column_name: 'used_count' },
+            { column_name: 'expires_at' },
+            { column_name: 'created_at' },
+          ];
+        }
+      }
+      return [];
+    });
+
+    const prismaMock = {
+      $executeRawUnsafe: executeRawUnsafeMock,
+      $queryRawUnsafe: queryRawUnsafeMock,
+      $queryRaw: queryRawMock,
+      $executeRaw: jest.fn().mockResolvedValue(0),
+    };
+
+    const app = express();
+    app.use(express.json());
+    app.use('/api/admin', loadAdminRouterWithMocks(prismaMock));
+
+    const firstRes = await request(app).get('/api/admin/invite-codes');
+    expect(firstRes.status).toBe(200);
+    expect(firstRes.body).toEqual({ codes: [], total: 0 });
+
+    const secondRes = await request(app).get('/api/admin/invite-codes');
+    expect(secondRes.status).toBe(200);
+    expect(secondRes.body).toEqual({ codes: [], total: 0 });
+
+    expect(executeRawUnsafeMock).toHaveBeenCalledTimes(expectedBootstrapStatements);
+    const infoSchemaCalls = queryRawMock.mock.calls.filter(([parts]) => {
+      const sql = Array.isArray(parts) ? parts.join('') : String(parts || '');
+      return sql.includes('information_schema.columns');
+    });
+    expect(infoSchemaCalls.length).toBe(expectedInfoSchemaCalls);
   });
 });

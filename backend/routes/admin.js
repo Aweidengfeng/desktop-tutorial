@@ -57,6 +57,7 @@ const INVITE_CODE_OPTIONAL_COLUMNS = {
   notes: true,
   created_by: true,
 };
+let postgresAdminOpsBootstrapPromise = null;
 
 function timingSafeEqual(a, b) {
   const bufA = Buffer.from(String(a));
@@ -141,41 +142,62 @@ function isMissingTableError(error) {
 
 async function ensureAdminOpsTables() {
   if (isPostgresDatabase()) {
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS disputes (
-        id SERIAL PRIMARY KEY,
-        order_id INTEGER UNIQUE,
-        user_id INTEGER,
-        order_no TEXT,
-        type TEXT DEFAULT 'complaint',
-        status TEXT DEFAULT 'open',
-        resolution TEXT,
-        refund_amount REAL DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        resolved_at TIMESTAMPTZ
-      )
-    `);
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS platform_config (
-        config_key TEXT PRIMARY KEY,
-        config_value TEXT NOT NULL,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS invite_codes (
-        id SERIAL PRIMARY KEY,
-        code TEXT UNIQUE NOT NULL,
-        max_uses INTEGER DEFAULT 1,
-        used_count INTEGER DEFAULT 0,
-        expires_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1');
-    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0');
-    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
-    await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+    if (!postgresAdminOpsBootstrapPromise) {
+      postgresAdminOpsBootstrapPromise = (async () => {
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS disputes (
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER UNIQUE,
+            user_id INTEGER,
+            order_no TEXT,
+            type TEXT DEFAULT 'complaint',
+            status TEXT DEFAULT 'open',
+            resolution TEXT,
+            refund_amount REAL DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            resolved_at TIMESTAMPTZ
+          )
+        `);
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS platform_config (
+            config_key TEXT PRIMARY KEY,
+            config_value TEXT NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          )
+        `);
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS invite_codes (
+            id SERIAL PRIMARY KEY,
+            code TEXT UNIQUE NOT NULL,
+            max_uses INTEGER DEFAULT 1,
+            used_count INTEGER DEFAULT 0,
+            expires_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          )
+        `);
+        const inviteColumns = await getTableColumns('invite_codes');
+        if (inviteColumns.length > 0) {
+          if (!inviteColumns.includes('max_uses')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1');
+          }
+          if (!inviteColumns.includes('used_count')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0');
+          }
+          if (!inviteColumns.includes('expires_at')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
+          }
+          if (!inviteColumns.includes('created_at')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+          }
+        }
+      })();
+    }
+    try {
+      await postgresAdminOpsBootstrapPromise;
+    } catch (error) {
+      postgresAdminOpsBootstrapPromise = null;
+      throw error;
+    }
   } else {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS disputes (
