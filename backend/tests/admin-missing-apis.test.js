@@ -463,7 +463,7 @@ describe('admin postgres bootstrap coverage', () => {
     const executeRawUnsafeMock = jest.fn().mockResolvedValue(0);
     const queryRawUnsafeMock = jest.fn().mockResolvedValue([]);
     const queryRawMock = jest.fn(async (parts, ...values) => {
-      const sql = Array.isArray(parts) ? parts.join('?') : String(parts || '');
+      const sql = Array.isArray(parts) ? parts.join('') : String(parts || '');
       if (sql.includes('information_schema.columns')) {
         const tableName = values[0];
         if (tableName === 'invite_codes') {
@@ -499,11 +499,11 @@ describe('admin postgres bootstrap coverage', () => {
     expect(secondRes.status).toBe(200);
     expect(secondRes.body).toEqual({ codes: [], total: 0 });
 
-    expect(executeRawUnsafeMock).toHaveBeenCalledTimes(7);
+    expect(executeRawUnsafeMock).toHaveBeenCalledTimes(3);
     const infoSchemaCalls = queryRawMock.mock.calls.filter(([parts]) => {
-      const sql = Array.isArray(parts) ? parts.join('?') : String(parts || '');
+      const sql = Array.isArray(parts) ? parts.join('') : String(parts || '');
       return sql.includes('information_schema.columns');
     });
-    expect(infoSchemaCalls.length).toBe(2);
+    expect(infoSchemaCalls.length).toBe(3);
   });
 });

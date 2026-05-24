@@ -175,10 +175,21 @@ async function ensureAdminOpsTables() {
             created_at TIMESTAMPTZ DEFAULT NOW()
           )
         `);
-        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1');
-        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0');
-        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
-        await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+        const inviteColumns = await getTableColumns('invite_codes');
+        if (inviteColumns.length > 0) {
+          if (!inviteColumns.includes('max_uses')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1');
+          }
+          if (!inviteColumns.includes('used_count')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0');
+          }
+          if (!inviteColumns.includes('expires_at')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
+          }
+          if (!inviteColumns.includes('created_at')) {
+            await prisma.$executeRawUnsafe('ALTER TABLE invite_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()');
+          }
+        }
       })();
     }
     try {
