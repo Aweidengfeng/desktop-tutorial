@@ -48,6 +48,7 @@ const SAFE_TABLES = new Set([
   'disputes',
   'merchant_kyc',
 ]);
+const INSURANCE_INQUIRY_STATUS_VALUES = new Set(['pending', 'issued', 'cancelled', 'claimed', 'claim_settled']);
 const INVITE_CODE_OPTIONAL_COLUMNS = {
   max_uses: true,
   used_count: true,
@@ -640,6 +641,9 @@ router.get('/insurance-inquiries', adminAuth, async (req, res) => {
     const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
     const offset = (page - 1) * limit;
     const status = String(req.query.status || '').trim();
+    if (status && !INSURANCE_INQUIRY_STATUS_VALUES.has(status)) {
+      return res.status(400).json({ error: '无效 status' });
+    }
 
     const whereClause = status ? 'WHERE status = ?' : '';
     const params = status ? [status, limit, offset] : [limit, offset];

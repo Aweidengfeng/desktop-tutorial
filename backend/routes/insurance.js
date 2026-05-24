@@ -61,7 +61,9 @@ async function tryCreateInsuranceNotification(userId, content, relatedId) {
       INSERT INTO notifications (user_id, type, content, related_id)
       VALUES (${userId}, 'insurance', ${content}, ${relatedId})
     `;
-  } catch (_) {}
+  } catch (error) {
+    console.warn('[insurance] 写入通知失败:', error?.message || error);
+  }
 }
 
 // GET /api/insurance/plans
@@ -143,7 +145,7 @@ router.post('/webhook/policy-issued', insuranceWriteLimiter, async (req, res) =>
 
     const inquiry = (await prisma.$queryRaw`
       SELECT id, user_id FROM insurance_inquiries WHERE id = ${Number(inquiry_id)}
-    `)[0];
+    `)?.[0];
     if (!inquiry) return res.status(404).json({ error: '询价记录不存在' });
 
     await prisma.$executeRaw`
@@ -181,7 +183,7 @@ router.post('/webhook/claim-update', insuranceWriteLimiter, async (req, res) => 
 
     const inquiry = (await prisma.$queryRaw`
       SELECT id, user_id, status FROM insurance_inquiries WHERE policy_no = ${String(policy_no)}
-    `)[0];
+    `)?.[0];
     if (!inquiry) return res.status(404).json({ error: '保单不存在' });
 
     await prisma.$executeRaw`
@@ -211,7 +213,7 @@ router.get('/policy/:policyNo', insuranceReadLimiter, auth, async (req, res) => 
       FROM insurance_inquiries
       WHERE policy_no = ${String(req.params.policyNo)} AND user_id = ${req.user.id}
       LIMIT 1
-    `)[0];
+    `)?.[0];
     if (!policy) return res.status(404).json({ error: '保单不存在' });
     res.json(policy);
   } catch (e) {
