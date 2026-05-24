@@ -736,20 +736,12 @@ function alpineLink() {
     ],
     commercialSourceTab: 'all',
     commercialSubFilter: 'all',
-    communityPosts: [
-      { id: 1, author: '张磊', authorAvatar: 'https://i.pravatar.cc/150?u=zhang', timeAgo: '2小时前', content: '珠峰大本营的日落太震撼了！5364米的高度，空气稀薄但内心充盈。明年计划冲顶，谁同行？', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', location: '珠穆朗玛峰大本营', likes: 128, comments: 24, isLiked: false, isFavorited: false, commentPreview: [{ author: '李明', text: '太美了！我也想去！' }, { author: '王芳', text: '明年一起！' }] },
-      { id: 2, author: '李明', authorAvatar: 'https://i.pravatar.cc/150?u=li', timeAgo: '5小时前', content: 'K2 南壁登顶成功！这条路线真的太刺激了，感谢我的绳伴和向导团队。#K2 #8000m', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400', location: 'K2, 巴基斯坦', likes: 356, comments: 67, isLiked: false, isFavorited: false, commentPreview: [{ author: '张磊', text: '恭喜！太厉害了！' }] },
-      { id: 3, author: '王芳', authorAvatar: 'https://i.pravatar.cc/150?u=wang', timeAgo: '1天前', content: '马特洪峰北壁首次尝试，虽然未能登顶，但收获了宝贵的经验。山在那里，我还会回来的。', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', location: '马特洪峰, 瑞士', likes: 89, comments: 15, isLiked: false, isFavorited: false, commentPreview: [{ author: '陈强', text: '勇敢！下次一定能成功！' }] },
-    ],
+    communityPosts: [],
     climbDiaries: [],
     clubs: [],
     expeditions: [],
     guides: [],
-    gearItems: [
-      { id: 1, name: '黑钻Momentum高山靴', brand: 'Black Diamond', price: 2800, condition: '九成新', image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', description: '用过两次，无明显磨损，尺码43', seller: '张磊', sellerAvatar: 'https://i.pravatar.cc/150?u=zhang' },
-      { id: 2, name: 'Petzl高山头盔', brand: 'Petzl', price: 680, condition: '全新', image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400', description: '全新未使用，原价980元，尺寸M/L可调', seller: '李明', sellerAvatar: 'https://i.pravatar.cc/150?u=li' },
-      { id: 3, name: 'Mammut 8.0干绳', brand: 'Mammut', price: 1200, condition: '八成新', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400', description: '60米干绳，使用约10次，无严重磨损，经检验可继续使用', seller: '王芳', sellerAvatar: 'https://i.pravatar.cc/150?u=wang' },
-    ],
+    gearItems: [],
     guideArticles: [
       { id: 1, title: '8000米峰攀登基础知识', cover: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400', author: '张磊', readTime: '15分钟', category: '高海拔' },
       { id: 2, title: '冰雪技术入门指南', cover: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400', author: '李明', readTime: '10分钟', category: '技术' },
