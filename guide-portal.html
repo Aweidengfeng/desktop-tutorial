@@ -282,10 +282,21 @@
     <div x-show="page === 'publish' && certStatus.certified">
       <div class="glass rounded-2xl p-6">
         <h2 class="text-lg font-bold mb-5">发布向导服务</h2>
+
+        <!-- 发布类型切换 -->
+        <div class="flex gap-2 mb-5">
+          <button @click="newActivity.publishType='service'"
+                  :class="newActivity.publishType!=='expedition' ? 'bg-blue-600 text-white' : 'glass text-slate-300'"
+                  class="flex-1 py-2 rounded-xl text-sm font-medium transition">🧭 短期向导服务</button>
+          <button @click="newActivity.publishType='expedition'"
+                  :class="newActivity.publishType==='expedition' ? 'bg-sky-600 text-white' : 'glass text-slate-300'"
+                  class="flex-1 py-2 rounded-xl text-sm font-medium transition">🏔 商业远征</button>
+        </div>
+
         <form @submit.prevent="publishActivity()" class="space-y-4">
           <div>
             <label class="text-sm text-slate-400 mb-1 block">服务标题 *</label>
-            <input x-model="newActivity.title" type="text" placeholder="如：珠峰大本营向导服务" required
+            <input x-model="newActivity.title" type="text" :placeholder="newActivity.publishType==='expedition' ? '如：2026年春季珠峰商业攀登' : '如：珠峰大本营向导服务'" required
                    class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
           </div>
           <div class="grid grid-cols-2 gap-4">
@@ -314,6 +325,26 @@
                      class="w-full bg-slate-800 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-400">
             </div>
           </div>
+          <!-- 商业远征额外字段 -->
+          <template x-if="newActivity.publishType === 'expedition'">
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm text-slate-400 mb-1 block">结束日期</label>
+                <input x-model="newActivity.endDate" type="date"
+                       class="w-full bg-slate-800 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-400">
+              </div>
+              <div>
+                <label class="text-sm text-slate-400 mb-1 block">封面图 URL</label>
+                <input x-model="newActivity.coverImage" type="url" placeholder="https://..."
+                       class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400">
+              </div>
+              <div>
+                <label class="text-sm text-slate-400 mb-1 block">行程描述</label>
+                <textarea x-model="newActivity.itinerary" rows="3" placeholder="详细行程安排、营地计划等"
+                          class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:border-blue-400 resize-none"></textarea>
+              </div>
+            </div>
+          </template>
           <div>
             <label class="text-sm text-slate-400 mb-1 block">价格（元/人）</label>
             <input x-model.number="newActivity.price" type="number" min="0" placeholder="0"
@@ -326,7 +357,7 @@
           </div>
           <button type="submit" :disabled="publishLoading"
                   class="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl py-3 font-semibold transition">
-            <span x-text="publishLoading ? '发布中…' : '发布服务'"></span>
+            <span x-text="publishLoading ? '发布中…' : (newActivity.publishType==='expedition' ? '发布商业远征' : '发布服务')"></span>
           </button>
         </form>
       </div>
@@ -339,28 +370,78 @@
           <h2 class="text-lg font-bold">已发布服务</h2>
           <button @click="page='publish'" class="text-sm text-blue-400 hover:text-blue-300 font-semibold transition-colors">+ 发布新服务</button>
         </div>
-        <div x-show="activitiesLoading" class="text-center py-8 text-slate-400 text-sm">加载中…</div>
-        <div x-show="!activitiesLoading && activities.length === 0" class="text-center py-8 text-slate-400 text-sm">
-          暂无发布的服务，<button @click="page='publish'" class="text-blue-400 hover:text-blue-300">立即发布</button>
-        </div>
-        <div class="space-y-3">
-          <template x-for="act in activities" :key="act.id">
-            <div class="glass-dark rounded-xl p-4">
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <p class="font-semibold text-white" x-text="act.title"></p>
-                  <p class="text-slate-400 text-xs mt-1" x-text="[act.mountain, act.difficulty].filter(Boolean).join(' · ')"></p>
-                  <p class="text-slate-400 text-xs" x-text="act.start_date ? '出发：' + act.start_date : ''"></p>
-                </div>
-                <div class="text-right ml-4">
-                  <p class="text-green-400 font-bold" x-text="act.price ? '¥' + act.price : '免费'"></p>
-                  <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block"
-                        :class="act.status==='active'?'bg-green-500/20 text-green-400':act.status==='pending'?'bg-yellow-500/20 text-yellow-400':'bg-slate-500/20 text-slate-400'"
-                        x-text="act.status==='active'?'上架中':act.status==='pending'?'审核中':'已结束'"></span>
+
+        <!-- 商业远征子区块 -->
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-semibold text-white text-sm">🏔 商业远征（在探索频道展示）</h3>
+            <button @click="page='publish'; newActivity.publishType='expedition'" class="text-xs text-sky-400 hover:text-sky-300">+ 发布新远征</button>
+          </div>
+          <div x-show="myExpeditionsLoading" class="text-center py-4 text-slate-400 text-sm">加载中…</div>
+          <div x-show="!myExpeditionsLoading && myExpeditions.length === 0" class="text-center py-4 text-slate-400 text-sm">
+            还没有发布商业远征，<button @click="page='publish'; newActivity.publishType='expedition'" class="text-sky-400 hover:text-sky-300">点击发布</button>
+          </div>
+          <div class="space-y-3">
+            <template x-for="exp in myExpeditions" :key="exp.id">
+              <div class="glass-dark rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                  <template x-if="exp.cover_image">
+                    <img :src="exp.cover_image" class="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                  </template>
+                  <template x-if="!exp.cover_image">
+                    <div class="w-16 h-16 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 text-2xl">🏔</div>
+                  </template>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="font-semibold text-white text-sm truncate" x-text="exp.title || exp.peak_name || '未命名远征'"></p>
+                      <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                            :class="exp.status==='published'?'bg-green-500/20 text-green-400':exp.status==='pending'?'bg-yellow-500/20 text-yellow-400':'bg-slate-500/20 text-slate-400'"
+                            x-text="exp.status==='published'?'已上架':exp.status==='pending'?'审核中':'已下架'"></span>
+                    </div>
+                    <p class="text-slate-400 text-xs mt-1" x-text="(exp.peak_name ? exp.peak_name + ' · ' : '') + (exp.start_date ? '出发：' + exp.start_date : '')"></p>
+                    <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                      <span x-show="exp.base_price" class="text-green-400 font-medium" x-text="'¥' + Number(exp.base_price).toLocaleString()"></span>
+                      <span x-text="exp.current_participants + '/' + (exp.max_participants||'∞') + ' 人'"></span>
+                      <span x-show="exp.order_count > 0" x-text="exp.order_count + ' 订单'"></span>
+                      <span x-show="exp.total_revenue > 0" class="text-yellow-400" x-text="'收入 ¥' + Number(exp.total_revenue).toLocaleString()"></span>
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                      <a :href="'/api/expeditions/' + exp.id" target="_blank" class="text-xs text-sky-400 hover:text-sky-300">预览</a>
+                      <button x-show="exp.status !== 'closed'" @click="takeDownExpedition(exp)" class="text-xs text-red-400 hover:text-red-300">下架</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </template>
+            </template>
+          </div>
+        </div>
+
+        <!-- 向导服务列表 -->
+        <div>
+          <h3 class="font-semibold text-white text-sm mb-3">🧭 向导服务</h3>
+          <div x-show="activitiesLoading" class="text-center py-8 text-slate-400 text-sm">加载中…</div>
+          <div x-show="!activitiesLoading && activities.length === 0" class="text-center py-8 text-slate-400 text-sm">
+            暂无发布的服务，<button @click="page='publish'" class="text-blue-400 hover:text-blue-300">立即发布</button>
+          </div>
+          <div class="space-y-3">
+            <template x-for="act in activities" :key="act.id">
+              <div class="glass-dark rounded-xl p-4">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <p class="font-semibold text-white" x-text="act.title"></p>
+                    <p class="text-slate-400 text-xs mt-1" x-text="[act.mountain, act.difficulty].filter(Boolean).join(' · ')"></p>
+                    <p class="text-slate-400 text-xs" x-text="act.start_date ? '出发：' + act.start_date : ''"></p>
+                  </div>
+                  <div class="text-right ml-4">
+                    <p class="text-green-400 font-bold" x-text="act.price ? '¥' + act.price : '免费'"></p>
+                    <span class="text-xs px-2 py-0.5 rounded-full mt-1 inline-block"
+                          :class="act.status==='active'?'bg-green-500/20 text-green-400':act.status==='pending'?'bg-yellow-500/20 text-yellow-400':'bg-slate-500/20 text-slate-400'"
+                          x-text="act.status==='active'?'上架中':act.status==='pending'?'审核中':'已结束'"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -860,7 +941,9 @@
       activitiesLoading: false,
       orders: [],
       ordersLoading: false,
-      newActivity: { title: '', mountain: '', difficulty: '', maxMembers: 8, startDate: '', price: 0, description: '' },
+      myExpeditions: [],
+      myExpeditionsLoading: false,
+      newActivity: { title: '', mountain: '', difficulty: '', maxMembers: 8, startDate: '', endDate: '', price: 0, description: '', coverImage: '', itinerary: '', publishType: 'service' },
       publishLoading: false,
       applyForm: { certLevel: 'basic', name: '', cert: '', specialty: '', region: '', dayRate: 0, is_international: false, nationality: '', id_card_url: '', climbing_cert_url: '', passport_url: '' },
       applyFileFields: { id_card: null, climbing_cert: null, passport: null },
@@ -1257,6 +1340,7 @@
             await this.loadCertStatus(token);
             if (this.certStatus.certified) {
               this.loadActivities(token);
+              this.loadMyExpeditions(token);
               this.loadOrders(token);
             } else if (this.certStatus.guide && this.certStatus.guide.status === 'approved_pending_payment') {
               this.page = 'pay';
@@ -1289,15 +1373,52 @@
       async loadActivities(token) {
         this.activitiesLoading = true;
         try {
-          const guide = this.certStatus.guide;
-          if (!guide) return;
-          const r = await fetch(`/api/club-activities?guide_id=${guide.id}`, { headers: { Authorization: 'Bearer ' + token } });
+          const r = await fetch('/api/guide-console/activities', { headers: { Authorization: 'Bearer ' + token } });
           if (r.ok) {
             const data = await r.json();
-            this.activities = Array.isArray(data) ? data : (data.activities || []);
+            // New endpoint returns { services, expeditions }
+            if (data.services !== undefined) {
+              this.activities = data.services || [];
+            } else {
+              // Fallback: old flat array response
+              this.activities = Array.isArray(data) ? data : (data.activities || []);
+            }
           }
         } catch(e) {}
         this.activitiesLoading = false;
+      },
+
+      async loadMyExpeditions(token) {
+        const t = token || this.getAuthToken();
+        if (!t) return;
+        this.myExpeditionsLoading = true;
+        try {
+          const r = await fetch('/api/guide-console/my-expeditions', { headers: { Authorization: 'Bearer ' + t } });
+          if (r.ok) {
+            const data = await r.json();
+            this.myExpeditions = data.expeditions || [];
+          }
+        } catch(e) {}
+        this.myExpeditionsLoading = false;
+      },
+
+      async takeDownExpedition(exp) {
+        if (!confirm(`确认下架远征"${exp.title || exp.peak_name || '该远征'}"？`)) return;
+        const token = this.getAuthToken();
+        try {
+          const r = await fetch(`/api/guide-console/expeditions/${exp.id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ status: 'closed' }),
+          });
+          if (r.ok) {
+            exp.status = 'closed';
+            this.toast('远征已下架');
+          } else {
+            const d = await r.json();
+            this.toast(d.error || '操作失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); }
       },
 
       async loadOrders(token) {
@@ -1320,28 +1441,54 @@
         this.publishLoading = true;
         try {
           const guide = this.certStatus.guide;
-          const body = {
-            club_id: null,
-            guide_id: guide?.id,
-            title: this.newActivity.title,
-            mountain: this.newActivity.mountain,
-            difficulty: this.newActivity.difficulty,
-            max_members: this.newActivity.maxMembers,
-            start_date: this.newActivity.startDate,
-            price: this.newActivity.price,
-            description: this.newActivity.description,
-            type: 'guide_service',
-          };
-          const r = await fetch('/api/club-activities', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify(body),
-          });
+          const isExpedition = this.newActivity.publishType === 'expedition';
+          let r;
+          if (isExpedition) {
+            // Publish as commercial expedition
+            const body = {
+              title: this.newActivity.title,
+              peak_name: this.newActivity.mountain,
+              difficulty: this.newActivity.difficulty,
+              max_participants: this.newActivity.maxMembers,
+              start_date: this.newActivity.startDate,
+              end_date: this.newActivity.endDate,
+              base_price: this.newActivity.price,
+              description: this.newActivity.description,
+              cover_image: this.newActivity.coverImage,
+              itinerary: this.newActivity.itinerary,
+              publisher_type: 'guide',
+            };
+            r = await fetch('/api/expeditions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify(body),
+            });
+          } else {
+            // Publish as guide service
+            const body = {
+              club_id: null,
+              guide_id: guide?.id,
+              title: this.newActivity.title,
+              mountain: this.newActivity.mountain,
+              difficulty: this.newActivity.difficulty,
+              max_members: this.newActivity.maxMembers,
+              start_date: this.newActivity.startDate,
+              price: this.newActivity.price,
+              description: this.newActivity.description,
+              type: 'guide_service',
+            };
+            r = await fetch('/api/club-activities', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify(body),
+            });
+          }
           if (r.ok) {
-            this.toast('服务发布成功！');
-            this.newActivity = { title: '', mountain: '', difficulty: '', maxMembers: 8, startDate: '', price: 0, description: '' };
+            this.toast(isExpedition ? '商业远征发布成功！' : '服务发布成功！');
+            this.newActivity = { title: '', mountain: '', difficulty: '', maxMembers: 8, startDate: '', endDate: '', price: 0, description: '', coverImage: '', itinerary: '', publishType: 'service' };
             this.page = 'activities';
             this.loadActivities(token);
+            if (isExpedition) this.loadMyExpeditions(token);
           } else {
             const d = await r.json();
             this.toast(d.error || '发布失败', 'error');

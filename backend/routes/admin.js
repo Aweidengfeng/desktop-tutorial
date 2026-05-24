@@ -1149,6 +1149,19 @@ router.post('/expeditions/:id/reject', adminWriteLimiter, adminAuth, async (req,
   }
 });
 
+// PUT /api/admin/expeditions/:id/status — 管理员更新远征状态（如下架 closed）
+router.put('/expeditions/:id/status', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['published', 'pending', 'closed', 'rejected'].includes(status)) return res.status(400).json({ error: '无效状态值' });
+    const affected = await prisma.$executeRaw`UPDATE expeditions SET status = ${status}, updated_at = ${new Date().toISOString()} WHERE id = ${Number(req.params.id)}`;
+    if (affected === 0) return res.status(404).json({ error: '远征不存在' });
+    res.json({ success: true, status });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // ── A9: 验证码查看器（内测用）────────────────────────────────────
 
 // GET /api/admin/sms-codes — 查看最近50条验证码（仅管理员，内测用）

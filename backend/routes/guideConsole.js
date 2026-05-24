@@ -149,4 +149,96 @@ router.post('/withdraw', writeLimiter, auth, async (req, res) => {
   }
 });
 
+// GET /api/guide-console/activities — 合并返回：向导服务 + 商业远征
+router.get('/activities', auth, async (req, res) => {
+  try {
+    const guide = await getGuide(req.user.id);
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+
+    // 从 club_activities 获取向导服务
+    let services = [];
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT * FROM club_activities
+        WHERE guide_id = ${guide.id} AND type = 'guide_service'
+        ORDER BY created_at DESC
+      `;
+      services = rows.map(r => ({ ...r, source: 'service' }));
+    } catch (_) {}
+
+    // 从 expeditions 获取向导发布的商业远征（含统计数据）
+    let expeditions = [];
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT e.*,
+               (SELECT COUNT(*) FROM expedition_orders eo WHERE eo.expedition_id = e.id) as order_count,
+               (SELECT COALESCE(SUM(eo.publisher_income),0) FROM expedition_orders eo WHERE eo.expedition_id = e.id AND eo.status='paid') as total_revenue,
+               (SELECT COUNT(*) FROM expedition_orders eo WHERE eo.expedition_id = e.id AND eo.status IN ('paid','confirmed')) as current_participants
+        FROM expeditions e
+        WHERE e.publisher_type = 'guide' AND e.publisher_id = ${guide.id}
+        ORDER BY e.created_at DESC
+      `;
+      expeditions = rows.map(r => ({
+        ...r,
+        source: 'expedition',
+        order_count: Number(r.order_count || 0),
+        total_revenue: Number(r.total_revenue || 0),
+        current_participants: Number(r.current_participants || 0),
+        available_spots: Math.max(0, Number(r.max_participants || 0) - Number(r.current_participants || 0)),
+      }));
+    } catch (_) {}
+
+    res.json({ services, expeditions });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guide-console/my-expeditions — 向导发布的商业远征列表（含统计）
+router.get('/my-expeditions', auth, async (req, res) => {
+  try {
+    const guide = await getGuide(req.user.id);
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+    let expeditions = [];
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT e.id, e.title, e.peak_name, e.start_date, e.end_date, e.base_price, e.currency,
+               e.status, e.max_participants, e.cover_image, e.created_at,
+               (SELECT COUNT(*) FROM expedition_orders eo WHERE eo.expedition_id = e.id) as order_count,
+               (SELECT COALESCE(SUM(eo.publisher_income),0) FROM expedition_orders eo WHERE eo.expedition_id = e.id AND eo.status='paid') as total_revenue,
+               (SELECT COUNT(*) FROM expedition_orders eo WHERE eo.expedition_id = e.id AND eo.status IN ('paid','confirmed')) as current_participants
+        FROM expeditions e
+        WHERE e.publisher_type = 'guide' AND e.publisher_id = ${guide.id}
+        ORDER BY e.created_at DESC
+      `;
+      expeditions = rows.map(r => ({
+        ...r,
+        order_count: Number(r.order_count || 0),
+        total_revenue: Number(r.total_revenue || 0),
+        current_participants: Number(r.current_participants || 0),
+        available_spots: Math.max(0, Number(r.max_participants || 0) - Number(r.current_participants || 0)),
+      }));
+    } catch (_) {}
+    res.json({ expeditions, total: expeditions.length });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/guide-console/expeditions/:id/status — 向导下架/更新远征状态
+router.put('/expeditions/:id/status', writeLimiter, auth, async (req, res) => {
+  try {
+    const guide = await getGuide(req.user.id);
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+    const { status } = req.body;
+    if (!['closed', 'published', 'pending'].includes(status)) return res.status(400).json({ error: '无效状态' });
+    const rows = await prisma.$queryRaw`SELECT id FROM expeditions WHERE id=${Number(req.params.id)} AND publisher_type='guide' AND publisher_id=${guide.id}`;
+    if (!rows || rows.length === 0) return res.status(404).json({ error: '远征不存在或无权限' });
+    await prisma.$executeRaw`UPDATE expeditions SET status=${status}, updated_at=${new Date().toISOString()} WHERE id=${Number(req.params.id)}`;
+    res.json({ success: true, status });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;
