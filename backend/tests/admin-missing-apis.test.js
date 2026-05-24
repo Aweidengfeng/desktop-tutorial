@@ -429,6 +429,8 @@ describe('admin missing backend APIs', () => {
 describe('admin postgres bootstrap coverage', () => {
   const adminModulePath = path.resolve(__dirname, '../routes/admin.js');
   const originalEnv = { ...process.env };
+  const expectedBootstrapStatements = 3;
+  const expectedInfoSchemaCalls = 3;
 
   function restoreProcessEnv() {
     for (const key of Object.keys(process.env)) {
@@ -499,11 +501,11 @@ describe('admin postgres bootstrap coverage', () => {
     expect(secondRes.status).toBe(200);
     expect(secondRes.body).toEqual({ codes: [], total: 0 });
 
-    expect(executeRawUnsafeMock).toHaveBeenCalledTimes(3);
+    expect(executeRawUnsafeMock).toHaveBeenCalledTimes(expectedBootstrapStatements);
     const infoSchemaCalls = queryRawMock.mock.calls.filter(([parts]) => {
       const sql = Array.isArray(parts) ? parts.join('') : String(parts || '');
       return sql.includes('information_schema.columns');
     });
-    expect(infoSchemaCalls.length).toBe(3);
+    expect(infoSchemaCalls.length).toBe(expectedInfoSchemaCalls);
   });
 });

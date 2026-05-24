@@ -198,7 +198,6 @@ async function ensureAdminOpsTables() {
       postgresAdminOpsBootstrapPromise = null;
       throw error;
     }
-    return;
   } else {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS disputes (
