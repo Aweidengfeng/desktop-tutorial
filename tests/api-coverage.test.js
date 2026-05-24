@@ -17,6 +17,7 @@ process.env.NODE_ENV       = 'test';
 process.env.INVESTOR_TOKEN = 'test-investor-token';
 
 const request = require('supertest');
+const crypto = require('crypto');
 const { createApp }       = require('./helpers/testApp');
 const { createTestUser, createAdminToken } = require('./helpers/auth');
 const { clearDbCache, createTestDb } = require('./helpers/db');
@@ -473,13 +474,14 @@ describe('七、救援模块 /api/rescue', () => {
 
 // ── 8. /api/insurance ────────────────────────────────────────────────────────
 describe('八、保险模块 /api/insurance', () => {
-  let app, db, user;
+  let app, db, user, otherUser;
 
   beforeAll(() => {
     clearDbCache();
     app = createApp();
     db  = createTestDb();
     user = createTestUser(db, { phone: '13800001800' });
+    otherUser = createTestUser(db, { phone: '13800001801' });
   });
 
   test('GET /api/insurance/plans — 公开', async () => {
@@ -506,6 +508,109 @@ describe('八、保险模块 /api/insurance', () => {
       .set('Authorization', `Bearer ${user.token}`)
       .send({ name: '张三' }); // 缺少 phone 和 plan_id
     expect(res.status).toBe(400);
+  });
+
+  test('GET /api/insurance/my-policies — 已登录返回当前用户保单列表', async () => {
+    const createRes = await request(app)
+      .post('/api/insurance/inquire')
+      .set('Authorization', `Bearer ${user.token}`)
+      .send({ name: '张三', phone: '13900000001', plan_id: 1, peak_name: '珠峰' });
+    expect(createRes.status).toBe(200);
+
+    const res = await request(app)
+      .get('/api/insurance/my-policies')
+      .set('Authorization', `Bearer ${user.token}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body[0]).toEqual(expect.objectContaining({
+      id: expect.any(Number),
+      plan_name: expect.any(String),
+      name: '张三',
+      phone: '13900000001',
+      peak_name: '珠峰',
+      status: expect.any(String),
+      created_at: expect.any(String),
+    }));
+  });
+
+  test('POST /api/insurance/webhook/policy-issued — 验签失败 → 401', async () => {
+    process.env.INSURANCE_WEBHOOK_SECRET = 'insurance-secret-test';
+    const payload = { inquiry_id: 999999, policy_no: 'PICC-FAIL' };
+    const res = await request(app)
+      .post('/api/insurance/webhook/policy-issued')
+      .set('X-Insurance-Signature', 'bad-signature')
+      .send(payload);
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /api/insurance/webhook/policy-issued + claim-update + GET /policy/:policyNo', async () => {
+    process.env.INSURANCE_WEBHOOK_SECRET = 'insurance-secret-test';
+    const insert = db.prepare(`
+      INSERT INTO insurance_inquiries (user_id, plan_id, plan_name, name, phone, peak_name, departure_date, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(user.id, 1, '西藏高原综合险', '李雷', '13900001111', '洛子峰', '2026-06-01', 'pending');
+    const inquiryId = Number(insert.lastInsertRowid);
+
+    const issuePayload = {
+      inquiry_id: inquiryId,
+      policy_no: 'PICC-2026-UNIT-001',
+      provider_ref: 'PROVIDER-001',
+      policy_pdf_url: 'https://cdn.insurer.com/policy.pdf',
+      issued_at: '2026-05-24T10:00:00Z',
+      provider: '平安保险',
+    };
+    const issueSignature = crypto.createHmac('sha256', process.env.INSURANCE_WEBHOOK_SECRET)
+      .update(JSON.stringify(issuePayload))
+      .digest('hex');
+    const issueRes = await request(app)
+      .post('/api/insurance/webhook/policy-issued')
+      .set('X-Insurance-Signature', issueSignature)
+      .send(issuePayload);
+    expect(issueRes.status).toBe(200);
+    expect(issueRes.body.success).toBe(true);
+
+    const afterIssue = db.prepare('SELECT status, policy_no, provider_ref FROM insurance_inquiries WHERE id = ?').get(inquiryId);
+    expect(afterIssue).toEqual(expect.objectContaining({
+      status: 'issued',
+      policy_no: 'PICC-2026-UNIT-001',
+      provider_ref: 'PROVIDER-001',
+    }));
+
+    const claimPayload = {
+      policy_no: 'PICC-2026-UNIT-001',
+      claim_status: 'processing',
+      claim_note: '材料审核中',
+      claim_updated_at: '2026-05-24T15:00:00Z',
+    };
+    const claimSignature = crypto.createHmac('sha256', process.env.INSURANCE_WEBHOOK_SECRET)
+      .update(JSON.stringify(claimPayload))
+      .digest('hex');
+    const claimRes = await request(app)
+      .post('/api/insurance/webhook/claim-update')
+      .set('X-Insurance-Signature', claimSignature)
+      .send(claimPayload);
+    expect(claimRes.status).toBe(200);
+    expect(claimRes.body.success).toBe(true);
+
+    const afterClaim = db.prepare('SELECT status, claim_status, claim_note FROM insurance_inquiries WHERE id = ?').get(inquiryId);
+    expect(afterClaim).toEqual(expect.objectContaining({
+      status: 'claimed',
+      claim_status: 'processing',
+      claim_note: '材料审核中',
+    }));
+
+    const ownPolicyRes = await request(app)
+      .get('/api/insurance/policy/PICC-2026-UNIT-001')
+      .set('Authorization', `Bearer ${user.token}`);
+    expect(ownPolicyRes.status).toBe(200);
+    expect(ownPolicyRes.body.phone).toBeUndefined();
+    expect(ownPolicyRes.body.policy_no).toBe('PICC-2026-UNIT-001');
+    expect(ownPolicyRes.body.user_id).toBe(user.id);
+
+    const otherUserRes = await request(app)
+      .get('/api/insurance/policy/PICC-2026-UNIT-001')
+      .set('Authorization', `Bearer ${otherUser.token}`);
+    expect(otherUserRes.status).toBe(404);
   });
 });
 

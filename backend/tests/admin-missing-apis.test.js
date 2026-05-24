@@ -346,6 +346,41 @@ describe('admin missing backend APIs', () => {
     expect(db.prepare('SELECT status FROM sos_alerts WHERE id = ?').get(alertId).status).toBe('resolved');
   });
 
+  test('supports insurance inquiry list with pagination and status filter', async () => {
+    const user = createTestUser(db, { phone: '13800002011', name: '保险用户' });
+    db.prepare(`
+      INSERT INTO insurance_inquiries (
+        user_id, plan_id, plan_name, name, phone, peak_name, departure_date,
+        status, policy_no, issued_at, provider_ref, claim_status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(user.id, 1, '西藏高原综合险', '保险用户', '13800002011', '珠峰', '2026-06-01', 'issued', 'POLICY-001', new Date().toISOString(), 'REF-001', null, new Date().toISOString());
+    db.prepare(`
+      INSERT INTO insurance_inquiries (
+        user_id, plan_id, plan_name, name, phone, peak_name, departure_date,
+        status, policy_no, issued_at, provider_ref, claim_status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(user.id, 1, '国际高山险', '保险用户', '13800002011', '安纳普尔纳', '2026-07-01', 'pending', null, null, null, null, new Date().toISOString());
+
+    const allRes = await request(app)
+      .get('/api/admin/insurance-inquiries?page=1&limit=20')
+      .set(authHeader(adminToken));
+    expect(allRes.status).toBe(200);
+    expect(allRes.body.total).toBeGreaterThanOrEqual(2);
+    expect(allRes.body.inquiries[0]).toEqual(expect.objectContaining({
+      id: expect.any(Number),
+      user_id: user.id,
+      plan_name: expect.any(String),
+      status: expect.any(String),
+      created_at: expect.any(String),
+    }));
+
+    const issuedRes = await request(app)
+      .get('/api/admin/insurance-inquiries?page=1&limit=20&status=issued')
+      .set(authHeader(adminToken));
+    expect(issuedRes.status).toBe(200);
+    expect(issuedRes.body.inquiries.every((item) => item.status === 'issued')).toBe(true);
+  });
+
   test('supports admin message center and broadcast notifications', async () => {
     const user = createTestUser(db, { phone: '13800002001', name: '工单用户' });
 

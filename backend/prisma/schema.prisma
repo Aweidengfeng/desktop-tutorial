@@ -1147,12 +1147,21 @@ model InsuranceInquiry {
   phone         String
   peakName      String?  @map("peak_name")
   departureDate String?  @map("departure_date")
+  policyNo      String?  @map("policy_no")
   status        String   @default("pending")
+  issuedAt      DateTime? @map("issued_at")
+  policyPdfUrl  String?  @map("policy_pdf_url")
+  providerRef   String?  @map("provider_ref")
+  claimStatus   String?  @map("claim_status")
+  claimUpdatedAt DateTime? @map("claim_updated_at")
+  claimNote     String?  @map("claim_note")
   createdAt     DateTime @default(now()) @map("created_at")
 
   user User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   plan InsurancePlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
+  @@index([policyNo])
   @@map("insurance_inquiries")
 }
 

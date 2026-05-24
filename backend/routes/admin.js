@@ -48,6 +48,7 @@ const SAFE_TABLES = new Set([
   'disputes',
   'merchant_kyc',
 ]);
+const INSURANCE_INQUIRY_STATUS_VALUES = new Set(['pending', 'issued', 'cancelled', 'claimed', 'claim_settled']);
 const INVITE_CODE_OPTIONAL_COLUMNS = {
   max_uses: true,
   used_count: true,
@@ -628,6 +629,41 @@ router.get('/orders', adminAuth, async (req, res) => {
     const orders = await prisma.$queryRaw`SELECT id, user_id, order_no, amount, method, status, created_at FROM orders ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${offset}`;
     const total = Number((await prisma.$queryRaw`SELECT COUNT(*) as c FROM orders`)[0].c);
     res.json({ orders, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/admin/insurance-inquiries
+router.get('/insurance-inquiries', adminAuth, async (req, res) => {
+  try {
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    const status = String(req.query.status || '').trim();
+    if (status && !INSURANCE_INQUIRY_STATUS_VALUES.has(status)) {
+      return res.status(400).json({ error: '无效 status' });
+    }
+
+    const whereClause = status ? 'WHERE status = ?' : '';
+    const params = status ? [status, limit, offset] : [limit, offset];
+    const inquiries = await prisma.$queryRawUnsafe(`
+      SELECT
+        id, user_id, plan_name, name, phone, peak_name, departure_date,
+        status, policy_no, issued_at, provider_ref, claim_status, created_at
+      FROM insurance_inquiries
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `, ...params);
+
+    const totalSql = status
+      ? 'SELECT COUNT(*) as c FROM insurance_inquiries WHERE status = ?'
+      : 'SELECT COUNT(*) as c FROM insurance_inquiries';
+    const totalRow = (await prisma.$queryRawUnsafe(totalSql, ...(status ? [status] : [])))[0];
+    const total = Number(totalRow?.c || 0);
+
+    res.json({ inquiries, total, page, limit });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }

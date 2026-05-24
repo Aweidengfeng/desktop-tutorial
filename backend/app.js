@@ -185,7 +185,11 @@ app.use((req, res, next) => {
 });
 // Stripe webhook 需要 raw body（必须在 express.json() 之前注册）
 app.use('/api/payment/stripe-webhook', express.raw({ type: 'application/json' }));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  },
+}));
 
 app.use(pinoHttp({
   logger,
@@ -636,6 +640,14 @@ async function runStartupMigrations(prisma) {
       await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "video_url" TEXT`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "tags" TEXT`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "emojis" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "policy_no" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'pending'`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "issued_at" TIMESTAMPTZ`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "policy_pdf_url" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "provider_ref" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "claim_status" TEXT`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "claim_updated_at" TIMESTAMPTZ`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "claim_note" TEXT`);
     } else {
       // SQLite does not support IF NOT EXISTS on ALTER TABLE; use individual try/catch
       for (const sql of [
@@ -644,6 +656,14 @@ async function runStartupMigrations(prisma) {
         'ALTER TABLE "posts" ADD COLUMN "video_url" TEXT',
         'ALTER TABLE "posts" ADD COLUMN "tags" TEXT',
         'ALTER TABLE "posts" ADD COLUMN "emojis" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "policy_no" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "status" TEXT DEFAULT \'pending\'',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "issued_at" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "policy_pdf_url" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "provider_ref" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "claim_status" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "claim_updated_at" TEXT',
+        'ALTER TABLE "insurance_inquiries" ADD COLUMN "claim_note" TEXT',
       ]) {
         try { await prisma.$executeRawUnsafe(sql); } catch (err) {
           // Ignore "duplicate column" errors; warn on anything unexpected
@@ -660,9 +680,9 @@ async function runStartupMigrations(prisma) {
 }
 
 (async () => {
+  const prisma = require('./db/prisma');
   // PostgreSQL 模式：在启动 HTTP 服务器之前等待 Prisma 连接就绪
   if (process.env.DATABASE_PROVIDER === 'postgresql') {
-    const prisma = require('./db/prisma');
     try {
       await prisma.$connect();
       console.log('✅ Prisma 已连接到 PostgreSQL');
@@ -670,8 +690,8 @@ async function runStartupMigrations(prisma) {
       console.error('❌ Prisma 连接 PostgreSQL 失败，退出:', e.message);
       process.exit(1);
     }
-    await runStartupMigrations(prisma);
   }
+  await runStartupMigrations(prisma);
 
   server.listen(PORT, '0.0.0.0', () => {
     logger.info({ port: PORT, env: process.env.NODE_ENV }, `SummitLink API started, listening on port ${PORT}`);

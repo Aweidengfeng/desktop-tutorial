@@ -610,7 +610,14 @@ CREATE TABLE IF NOT EXISTS insurance_inquiries (
   phone TEXT NOT NULL,
   peak_name TEXT,
   departure_date TEXT,
+  policy_no TEXT,
   status TEXT DEFAULT 'pending',
+  issued_at TEXT,
+  policy_pdf_url TEXT,
+  provider_ref TEXT,
+  claim_status TEXT,
+  claim_updated_at TEXT,
+  claim_note TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -628,6 +635,34 @@ CREATE TABLE IF NOT EXISTS banners (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `);
+
+const existingInsuranceCols = db.pragma('table_info(insurance_inquiries)').map(c => c.name);
+if (!existingInsuranceCols.includes('policy_no')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN policy_no TEXT');
+}
+if (!existingInsuranceCols.includes('status')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN status TEXT DEFAULT \'pending\'');
+}
+if (!existingInsuranceCols.includes('issued_at')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN issued_at TEXT');
+}
+if (!existingInsuranceCols.includes('policy_pdf_url')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN policy_pdf_url TEXT');
+}
+if (!existingInsuranceCols.includes('provider_ref')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN provider_ref TEXT');
+}
+if (!existingInsuranceCols.includes('claim_status')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN claim_status TEXT');
+}
+if (!existingInsuranceCols.includes('claim_updated_at')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN claim_updated_at TEXT');
+}
+if (!existingInsuranceCols.includes('claim_note')) {
+  db.exec('ALTER TABLE insurance_inquiries ADD COLUMN claim_note TEXT');
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_inquiries_user_id ON insurance_inquiries(user_id)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_insurance_inquiries_policy_no ON insurance_inquiries(policy_no)');
 
 // 迁移：tracks 表补充字段（新架构需要）
 const existingTrackCols = db.pragma('table_info(tracks)').map(c => c.name);
