@@ -81,9 +81,9 @@ async function createSosAlert(req, res) {
 }
 
 async function listSosAlerts(req, res) {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
   try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const offset = (page - 1) * limit;
     const alerts = await prisma.$queryRawUnsafe(
       `SELECT id, user_id as userId, lat, lng, accuracy, timestamp, phone, created_at as createdAt
