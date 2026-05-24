@@ -486,6 +486,7 @@ function alpineLink() {
     showSearch: false,
     searchQuery: '',
     searchResults: [],
+    searchLoading: false,
     searchHistory: ['珠穆朗玛峰', 'K2', '马特洪峰'],
     useMetric: true,
     currentCurrency: 'CNY',
@@ -872,8 +873,13 @@ function alpineLink() {
     },
 
     // Search
+    async globalSearch(query) {
+      this.searchQuery = query;
+      await this.performSearch();
+    },
     async performSearch() {
       if (!this.searchQuery.trim()) { this.searchResults = []; return; }
+      this.searchLoading = true;
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(this.searchQuery)}&type=all&limit=20`, { headers: this.getAuthHeaders() });
         if (res.ok) {
@@ -882,6 +888,8 @@ function alpineLink() {
         }
       } catch(e) {
         this.searchResults = [];
+      } finally {
+        this.searchLoading = false;
       }
     },
     selectSearchResult(result) {
@@ -890,7 +898,10 @@ function alpineLink() {
       else if (result.type === 'guide') this.viewGuideProfile(result);
       else if (result.type === 'club') this.openClubDetail(result);
       else if (result.type === 'gear') this.openGearDetail(result);
+      else if (result.type === 'post') { this.currentPage = 'discover'; }
       this.showSearch = false;
+      this.searchQuery = '';
+      this.searchResults = [];
     },
     searchByKeyword(keyword) { this.searchQuery = keyword; this.performSearch(); },
     removeHistory(index) { this.searchHistory.splice(index, 1); },
