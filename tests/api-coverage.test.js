@@ -24,6 +24,7 @@ const { createRequire } = require('module');
 const { createApp }       = require('./helpers/testApp');
 const { createTestUser, createAdminToken } = require('./helpers/auth');
 const { clearDbCache, createTestDb } = require('./helpers/db');
+const { BLOCKED_STATIC_FILES, normalizeStaticRequestPath, getInvestorPageToken } = require('../backend/lib/investorPageSecurity');
 
 const requireFromBackend = createRequire(path.resolve(__dirname, '../backend/package.json'));
 const express = requireFromBackend('express');
@@ -32,31 +33,15 @@ function createSecurityApp() {
   const app = express();
   const rootPath = path.resolve(__dirname, '..');
   const investorHtmlFile = path.join(rootPath, 'investor.html');
-  const blockedStaticFiles = new Set([
-    '/config.json',
-    '/api_test.js',
-    '/db_test.js',
-    '/frontend_test.js',
-    '/run_all_tests.js',
-    '/audit-clickables.json',
-    '/playwright.config.js',
-    '/vite.config.js',
-    '/vite.admin.config.js',
-    '/tsconfig.admin.json',
-    '/railpack.toml',
-    '/railway.toml',
-    '/docker-compose.prod.yml',
-    '/docker-compose.cn.yml',
-  ]);
 
   app.use((req, res, next) => {
     let normalizedPath;
     try {
-      normalizedPath = path.posix.normalize(decodeURIComponent(req.path));
+      normalizedPath = normalizeStaticRequestPath(req.path);
     } catch {
-      return res.status(400).json({ error: 'Bad Request' });
+      return res.status(400).json({ error: 'Invalid URL encoding' });
     }
-    if (blockedStaticFiles.has(normalizedPath)) {
+    if (BLOCKED_STATIC_FILES.has(normalizedPath)) {
       return res.status(404).json({ error: 'Not Found' });
     }
     next();
@@ -70,13 +55,7 @@ function createSecurityApp() {
 
     const investorToken = process.env.INVESTOR_TOKEN;
     if (investorToken) {
-      const authorization = req.headers.authorization;
-      let bearerToken = '';
-      if (authorization) {
-        const bearerMatch = authorization.match(/^Bearer\s+(.+)$/i);
-        if (bearerMatch && bearerMatch[1]) bearerToken = bearerMatch[1].trim();
-      }
-      const providedToken = req.query.token || bearerToken;
+      const providedToken = getInvestorPageToken(req);
       if (!providedToken || providedToken !== investorToken) {
         return res.status(401).send(`
           <!DOCTYPE html>
@@ -215,7 +194,7 @@ describe('零、安全入口与静态资源保护', () => {
     expect(res.status).toBe(200);
     expect(res.headers['referrer-policy']).toBe('no-referrer');
     expect(res.headers['cache-control']).toBe('no-store');
-    expect(res.text).toContain('INVESTOR_TOKEN');
+    expect(res.text).toContain('SummitLink 投资者看板');
   });
 });
 

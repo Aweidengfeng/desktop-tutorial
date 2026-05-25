@@ -58,6 +58,7 @@ const { defaultLimiter } = require('./middleware/rateLimits');
 const { cacheMiddleware, noCache } = require('./middleware/cache');
 const { detectRegion, getRegionConfig } = require('./lib/region');
 const { getPrismaClient } = require('./lib/db');
+const { BLOCKED_STATIC_FILES, normalizeStaticRequestPath, getInvestorPageToken } = require('./lib/investorPageSecurity');
 const { registerAdminV2Page } = require('./routes/admin-v2-page');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
@@ -271,28 +272,12 @@ const renderMainPage = (req, res) => {
 app.get(['/', '/index.html', '/summitlink', '/summitlink.html'], htmlPageLimiter, renderMainPage);
 
 // 敏感文件保护：阻止测试脚本、配置文件被直接下载
-const BLOCKED_STATIC_FILES = new Set([
-  '/config.json',
-  '/api_test.js',
-  '/db_test.js',
-  '/frontend_test.js',
-  '/run_all_tests.js',
-  '/audit-clickables.json',
-  '/playwright.config.js',
-  '/vite.config.js',
-  '/vite.admin.config.js',
-  '/tsconfig.admin.json',
-  '/railpack.toml',
-  '/railway.toml',
-  '/docker-compose.prod.yml',
-  '/docker-compose.cn.yml',
-]);
 app.use((req, res, next) => {
   let normalizedPath;
   try {
-    normalizedPath = path.posix.normalize(decodeURIComponent(req.path));
+    normalizedPath = normalizeStaticRequestPath(req.path);
   } catch {
-    return res.status(400).json({ error: 'Bad Request' });
+    return res.status(400).json({ error: 'Invalid URL encoding' });
   }
   if (BLOCKED_STATIC_FILES.has(normalizedPath)) {
     return res.status(404).json({ error: 'Not Found' });
@@ -569,14 +554,7 @@ app.get('/investor', htmlPageLimiter, (req, res) => {
   // 服务端鉴权：验证 investor token（query param 或 Authorization header）
   const investorToken = process.env.INVESTOR_TOKEN;
   if (investorToken) {
-    const authorization = req.headers.authorization;
-    let bearerToken = '';
-    if (authorization) {
-      const bearerMatch = authorization.match(/^Bearer\s+(.+)$/i);
-      if (bearerMatch && bearerMatch[1]) bearerToken = bearerMatch[1].trim();
-    }
-    const providedToken = req.query.token
-      || bearerToken;
+    const providedToken = getInvestorPageToken(req);
     if (!providedToken || providedToken !== investorToken) {
       return res.status(401).send(`
         <!DOCTYPE html>
