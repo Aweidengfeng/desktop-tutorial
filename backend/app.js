@@ -288,7 +288,13 @@ const BLOCKED_STATIC_FILES = new Set([
   '/docker-compose.cn.yml',
 ]);
 app.use((req, res, next) => {
-  if (BLOCKED_STATIC_FILES.has(req.path)) {
+  let normalizedPath;
+  try {
+    normalizedPath = path.posix.normalize(decodeURIComponent(req.path));
+  } catch {
+    return res.status(400).json({ error: 'Bad Request' });
+  }
+  if (BLOCKED_STATIC_FILES.has(normalizedPath)) {
     return res.status(404).json({ error: 'Not Found' });
   }
   next();
@@ -559,6 +565,7 @@ app.use('/api/altitude', require('./routes/altitude'));
 const investorHtmlFile = path.join(rootPath, 'investor.html');
 app.get('/investor', htmlPageLimiter, (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Referrer-Policy', 'no-referrer');
   // 服务端鉴权：验证 investor token（query param 或 Authorization header）
   const investorToken = process.env.INVESTOR_TOKEN;
   if (investorToken) {

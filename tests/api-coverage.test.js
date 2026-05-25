@@ -16,11 +16,91 @@ process.env.ADMIN_USERNAME = 'admin';
 process.env.NODE_ENV       = 'test';
 process.env.INVESTOR_TOKEN = 'test-investor-token';
 
+const fs = require('fs');
+const path = require('path');
 const request = require('supertest');
 const crypto = require('crypto');
+const { createRequire } = require('module');
 const { createApp }       = require('./helpers/testApp');
 const { createTestUser, createAdminToken } = require('./helpers/auth');
 const { clearDbCache, createTestDb } = require('./helpers/db');
+
+const requireFromBackend = createRequire(path.resolve(__dirname, '../backend/package.json'));
+const express = requireFromBackend('express');
+
+function createSecurityApp() {
+  const app = express();
+  const rootPath = path.resolve(__dirname, '..');
+  const investorHtmlFile = path.join(rootPath, 'investor.html');
+  const blockedStaticFiles = new Set([
+    '/config.json',
+    '/api_test.js',
+    '/db_test.js',
+    '/frontend_test.js',
+    '/run_all_tests.js',
+    '/audit-clickables.json',
+    '/playwright.config.js',
+    '/vite.config.js',
+    '/vite.admin.config.js',
+    '/tsconfig.admin.json',
+    '/railpack.toml',
+    '/railway.toml',
+    '/docker-compose.prod.yml',
+    '/docker-compose.cn.yml',
+  ]);
+
+  app.use((req, res, next) => {
+    let normalizedPath;
+    try {
+      normalizedPath = path.posix.normalize(decodeURIComponent(req.path));
+    } catch {
+      return res.status(400).json({ error: 'Bad Request' });
+    }
+    if (blockedStaticFiles.has(normalizedPath)) {
+      return res.status(404).json({ error: 'Not Found' });
+    }
+    next();
+  });
+
+  app.use(express.static(rootPath));
+
+  app.get('/investor', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+
+    const investorToken = process.env.INVESTOR_TOKEN;
+    if (investorToken) {
+      const authorization = req.headers.authorization;
+      let bearerToken = '';
+      if (authorization) {
+        const bearerMatch = authorization.match(/^Bearer\s+(.+)$/i);
+        if (bearerMatch && bearerMatch[1]) bearerToken = bearerMatch[1].trim();
+      }
+      const providedToken = req.query.token || bearerToken;
+      if (!providedToken || providedToken !== investorToken) {
+        return res.status(401).send(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Access Denied</title></head>
+          <body><div class="box"><h2>🔒 Access Denied</h2><p>Investor dashboard requires authentication.</p></div></body>
+          </html>
+        `);
+      }
+    }
+
+    if (!fs.existsSync(investorHtmlFile)) {
+      return res.status(404).send('Investor dashboard not found');
+    }
+
+    fs.readFile(investorHtmlFile, 'utf8', (err, html) => {
+      if (err) return res.status(500).send('Internal Server Error');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
+    });
+  });
+
+  return app;
+}
 
 // ── 1. /api/follows ──────────────────────────────────────────────────────────
 describe('一、关注模块 /api/follows', () => {
@@ -101,6 +181,41 @@ describe('一、关注模块 /api/follows', () => {
       .delete(`/api/follows/${userB.id}`)
       .set('Authorization', `Bearer ${userA.token}`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe('零、安全入口与静态资源保护', () => {
+  let securityApp;
+
+  beforeAll(() => {
+    securityApp = createSecurityApp();
+  });
+
+  test('GET /%63onfig.json — percent-encoded blocked file → 404', async () => {
+    const res = await request(securityApp).get('/%63onfig.json');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Not Found' });
+  });
+
+  test('GET /./config.json — normalized blocked file → 404', async () => {
+    const res = await request(securityApp).get('/./config.json');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Not Found' });
+  });
+
+  test('GET /investor — missing token → 401 and no-referrer', async () => {
+    const res = await request(securityApp).get('/investor');
+    expect(res.status).toBe(401);
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.text).toContain('Access Denied');
+  });
+
+  test('GET /investor?token=test-investor-token — valid token → 200 and no-referrer', async () => {
+    const res = await request(securityApp).get('/investor?token=test-investor-token');
+    expect(res.status).toBe(200);
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.headers['cache-control']).toBe('no-store');
+    expect(res.text).toContain('INVESTOR_TOKEN');
   });
 });
 
