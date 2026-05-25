@@ -39,7 +39,7 @@ const imageFilter = (req, file, cb) => {
 
 const documentFilter = (req, file, cb) => {
   if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) cb(null, true);
-  else cb(new Error('只允许上传 JPG/PNG/WEBP 图片或 PDF 文件'));
+  else cb(new Error('只允许上传 JPEG/JPG/PNG/WEBP 图片或 PDF 文件'));
 };
 
 const videoFilter = (req, file, cb) => {
