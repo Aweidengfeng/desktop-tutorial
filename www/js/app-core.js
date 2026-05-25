@@ -3082,7 +3082,7 @@ function alpineLink() {
         const res = await fetch(`/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
         if (res.ok) {
           const data = await res.json();
-          this.membershipData = data && typeof data === 'object'
+          this.membershipData = data && typeof data === 'object' && !Array.isArray(data)
             ? { ...data, _cachedAt: Date.now() }
             : data;
         }
