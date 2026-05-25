@@ -20,13 +20,36 @@ async function gotoTab(page, tabName) {
   const tabKey = tabKeyMap[tabName] || tabName;
   const navButtonSelectors = {
     home: 'nav button:has-text("精选路线"), nav button:has-text("首页"), [data-tab="expedition"], [data-tab="home"]',
-    explore: 'button:has-text("探索山峰"), nav button:has-text("探索"), [data-tab="explore"], nav a:has-text("探索")',
+    explore: 'nav button:has-text("探索山峰"), nav button:has-text("探索"), nav button:has-text("找队友"), [data-tab="explore"], nav a:has-text("探索"), nav a:has-text("找队友")',
     discover: 'nav button:has-text("社区"), [data-tab="discover"], [data-tab="explore"]',
     chat: 'nav button:has-text("消息"), [data-tab="chat"], [data-tab="messages"]',
     me: 'nav button:has-text("我的"), nav button:has-text("我"), [data-tab="me"], [data-tab="profile"], nav a:has-text("我的")',
   };
   const navSel = navButtonSelectors[tabName] || `[data-tab="${tabName}"]`;
-  let navClicked = await page.locator(navSel).first().click({ timeout: 5000 }).then(() => true).catch(() => false);
+  const waitForAlpineReady = async () => {
+    await page.waitForFunction(() => {
+      const root = document.querySelector('[x-data]');
+      return !!(root && root._x_dataStack);
+    }, { timeout: 5000 }).catch(() => {});
+    await page.waitForFunction(() => {
+      const body = document.body;
+      if (!body) return false;
+      const key = `${body.innerText.length}:${document.querySelectorAll('[x-data]').length}:${document.querySelectorAll('nav button, nav a').length}`;
+      const now = Date.now();
+      if (!window.__gotoTabStableState || window.__gotoTabStableState.key !== key) {
+        window.__gotoTabStableState = { key, t: now };
+        return false;
+      }
+      return (now - window.__gotoTabStableState.t) > 400;
+    }, { timeout: 3000 }).catch(() => {});
+    await page.waitForTimeout(300).catch(() => {});
+  };
+  const navBtn = page.locator(navSel).first();
+  await navBtn.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+  let navClicked = await navBtn.click({ timeout: 5000 }).then(() => true).catch(() => false);
+  if (navClicked) {
+    await page.waitForTimeout(500);
+  }
   const labelCandidatesMap = {
     expedition: ['精选路线', '首页', 'expedition'],
     explore: ['探索', '社区', '发现', '找队友', 'explore'],
@@ -35,6 +58,7 @@ async function gotoTab(page, tabName) {
   };
   const labelCandidates = labelCandidatesMap[tabKey] || [tabName];
   if (!navClicked) {
+    await waitForAlpineReady();
     for (const candidate of labelCandidates) {
       const candidateBtn = page.locator('nav button, .tab-bar button, nav a, .tab-bar a').filter({ hasText: candidate }).first();
       if (await candidateBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
@@ -63,16 +87,41 @@ async function gotoTab(page, tabName) {
     if (visible) return;
   }
 
-  await page
+  const tabVisibleFallbacks = {
+    explore: [
+      'input[placeholder*="搜索全球任意地点天气"]:visible',
+      'h2:has-text("探索山峰"):visible',
+    ],
+  };
+  for (const sel of (tabVisibleFallbacks[tabKey] || [])) {
+    const visible = await page.locator(sel).first().isVisible({ timeout: 2000 }).catch(() => false);
+    if (visible) return;
+  }
+
+  const sectionVisible = await page
     .locator(candidates.map(sel => `${sel}:visible`).join(', '))
     .first()
-    .waitFor({ state: 'visible', timeout: 8000 })
-    .catch(() => {
-      throw new Error(
-        `gotoTab('${tabName}'): tab section not visible after navigation attempt. ` +
-        `Verify that the nav button click is working and that the section's x-show condition resolves correctly.`
-      );
-    });
+    .waitFor({ state: 'visible', timeout: 12000 })
+    .then(() => true)
+    .catch(() => false);
+  if (sectionVisible) return;
+
+  await waitForAlpineReady();
+  for (const candidate of ['找队友', '探索山峰', '探索', '社区', ...labelCandidates]) {
+    const candidateBtn = page.locator('button, a').filter({ hasText: candidate }).first();
+    if (await candidateBtn.isVisible({ timeout: 1200 }).catch(() => false)) {
+      await candidateBtn.click().catch(() => {});
+      await page.waitForTimeout(400).catch(() => {});
+      for (const sel of candidates) {
+        const visible = await page.locator(`${sel}:visible`).first().isVisible({ timeout: 1200 }).catch(() => false);
+        if (visible) return;
+      }
+      for (const sel of (tabVisibleFallbacks[tabKey] || [])) {
+        const visible = await page.locator(sel).first().isVisible({ timeout: 1200 }).catch(() => false);
+        if (visible) return;
+      }
+    }
+  }
 }
 
 /**

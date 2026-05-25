@@ -123,6 +123,9 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
+        // Alpine.js 3.x 通过 new Function() 编译 x-data/x-on 等指令，需要 unsafe-eval；
+        // 待 Phase 4 迁移到 Alpine CSP 兼容模式（移除内联表达式、改用 x-bind 等）后方可去除。
+        "'unsafe-eval'",
         'https://cdn.tailwindcss.com',
         'https://unpkg.com',
         'https://cdn.jsdelivr.net',
@@ -156,13 +159,21 @@ app.use(helmet({
         'https://api.mapbox.com',
         'https://*.mapbox.com',
         'https://events.mapbox.com',
+        'https://accounts.google.com',
+        'https://appleid.apple.com',
         'https://api.stripe.com',
         'https://*.sentry.io',
         'https://*.ingest.sentry.io',
         'wss:',
         'ws:',
       ],
-      frameSrc: ["'self'", 'https://js.stripe.com', 'https://hooks.stripe.com'],
+      frameSrc: [
+        "'self'",
+        'https://js.stripe.com',
+        'https://hooks.stripe.com',
+        'https://accounts.google.com', // Google Identity Services popup/iframe
+        'https://appleid.apple.com', // Sign in with Apple iframe
+      ],
       workerSrc: ["'self'", 'blob:'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],

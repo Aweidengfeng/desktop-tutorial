@@ -4160,7 +4160,7 @@ function alpineLink() {
           const unreadPayload = await res.json();
           const list = Array.isArray(unreadPayload)
             ? unreadPayload
-            : (Array.isArray(unreadPayload && unreadPayload.data) ? unreadPayload.data : []);
+            : (unreadPayload && Array.isArray(unreadPayload.data) ? unreadPayload.data : []);
           if (Array.isArray(list)) {
             this.notifUnreadList = list;
             this.notifUnreadCount = list.length;

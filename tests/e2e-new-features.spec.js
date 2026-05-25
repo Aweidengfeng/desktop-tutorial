@@ -30,14 +30,16 @@ async function doLogin(page) {
   await loginBtn.click();
 
   const loginBox = page.locator('[x-show="showLogin"]');
-  await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
+  // 先等弹窗可见，再操作内部元素（避免默认在短信登录 Tab 时密码框不可见导致超时）
+  await loginBox.waitFor({ state: 'visible', timeout: 10000 });
 
   // 切到密码登录 Tab（如果有）
   const passwordTab = loginBox.locator('button:has-text("密码登录")');
-  if (await passwordTab.isVisible().catch(() => false)) {
+  if (await passwordTab.isVisible({ timeout: 3000 }).catch(() => false)) {
     await passwordTab.click();
-    await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
   }
+
+  await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
 
   await loginBox.locator('input[type="tel"]').first().fill(TEST_PHONE);
   await loginBox.locator('input[type="password"]').first().fill(TEST_PASSWORD);
