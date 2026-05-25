@@ -1,3 +1,10 @@
+/**
+ * @route /api/pay
+ * @desc  旧版支付路由（向后兼容层）
+ *        ⚠️  新功能请使用 /api/payment（payment.js）
+ *        本文件仅保留用于兼容旧版前端调用，请勿在此添加新的支付逻辑
+ *        职责：Stripe 旧版 checkout session 创建、简单支付状态查询
+ */
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');

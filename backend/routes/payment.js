@@ -1,3 +1,10 @@
+/**
+ * @route /api/payment
+ * @desc  主支付路由（新版，推荐使用）
+ *        职责：Stripe Webhook、支付意图创建/确认、支付宝/微信支付（CN）、
+ *              订单支付状态管理、退款处理
+ *        ⚠️  /api/pay 是旧版兼容层，新功能不要加到那里
+ */
 const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');

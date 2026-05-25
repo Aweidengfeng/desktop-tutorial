@@ -58,6 +58,7 @@ const { defaultLimiter } = require('./middleware/rateLimits');
 const { cacheMiddleware, noCache } = require('./middleware/cache');
 const { detectRegion, getRegionConfig } = require('./lib/region');
 const { getPrismaClient } = require('./lib/db');
+const { BLOCKED_STATIC_FILES, normalizeStaticRequestPath, getInvestorPageToken } = require('./lib/investorPageSecurity');
 const { registerAdminV2Page } = require('./routes/admin-v2-page');
 
 // 页面路由限流（防止爬虫对文件系统操作造成压力）
@@ -270,6 +271,19 @@ const renderMainPage = (req, res) => {
 // 根路径和 SummitLink 入口都走动态注入逻辑，避免 express.static 直接返回未替换占位符
 app.get(['/', '/index.html', '/summitlink', '/summitlink.html'], htmlPageLimiter, renderMainPage);
 
+// 敏感文件保护：阻止测试脚本、配置文件被直接下载
+app.use((req, res, next) => {
+  let normalizedPath;
+  try {
+    normalizedPath = normalizeStaticRequestPath(req.path);
+  } catch {
+    return res.status(400).json({ error: 'Invalid URL encoding' });
+  }
+  if (BLOCKED_STATIC_FILES.has(normalizedPath)) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+  next();
+});
 // 静态文件服务 - 根目录（必须放在根路径 HTML 注入路由之后）
 app.use(express.static(rootPath));
 // 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
@@ -535,6 +549,25 @@ app.use('/api/altitude', require('./routes/altitude'));
 // 投资者看板
 const investorHtmlFile = path.join(rootPath, 'investor.html');
 app.get('/investor', htmlPageLimiter, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  // 服务端鉴权：验证 investor token（query param 或 Authorization header）
+  const investorToken = process.env.INVESTOR_TOKEN;
+  if (investorToken) {
+    const providedToken = getInvestorPageToken(req);
+    if (!providedToken || providedToken !== investorToken) {
+      return res.status(401).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Access Denied</title>
+        <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb;}
+        .box{text-align:center;padding:40px;border:1px solid #e5e7eb;border-radius:12px;background:white;}
+        h2{color:#374151;} p{color:#6b7280;} </style></head>
+        <body><div class="box"><h2>🔒 Access Denied</h2><p>Investor dashboard requires authentication.</p></div></body>
+        </html>
+      `);
+    }
+  }
   if (!fs.existsSync(investorHtmlFile)) {
     return res.status(404).send('Investor dashboard not found');
   }
@@ -627,57 +660,10 @@ if (process.env.NODE_ENV === 'production') {
 
 const http = require('http');
 const server = http.createServer(app);
+const { runStartupMigrations } = require('./db/migrations');
 
 const { initChatGateway } = require('./routes/chat.gateway');
 initChatGateway(server);
-
-// Startup migration: ensure columns exist (idempotent)
-async function runStartupMigrations(prisma) {
-  try {
-    if (process.env.DATABASE_PROVIDER === 'postgresql') {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "bio" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "images" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "video_url" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "tags" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "posts" ADD COLUMN IF NOT EXISTS "emojis" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "policy_no" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'pending'`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "issued_at" TIMESTAMPTZ`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "policy_pdf_url" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "provider_ref" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "claim_status" TEXT`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "claim_updated_at" TIMESTAMPTZ`);
-      await prisma.$executeRawUnsafe(`ALTER TABLE "insurance_inquiries" ADD COLUMN IF NOT EXISTS "claim_note" TEXT`);
-    } else {
-      // SQLite does not support IF NOT EXISTS on ALTER TABLE; use individual try/catch
-      for (const sql of [
-        'ALTER TABLE "users" ADD COLUMN "bio" TEXT',
-        'ALTER TABLE "posts" ADD COLUMN "images" TEXT',
-        'ALTER TABLE "posts" ADD COLUMN "video_url" TEXT',
-        'ALTER TABLE "posts" ADD COLUMN "tags" TEXT',
-        'ALTER TABLE "posts" ADD COLUMN "emojis" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "policy_no" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "status" TEXT DEFAULT \'pending\'',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "issued_at" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "policy_pdf_url" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "provider_ref" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "claim_status" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "claim_updated_at" TEXT',
-        'ALTER TABLE "insurance_inquiries" ADD COLUMN "claim_note" TEXT',
-      ]) {
-        try { await prisma.$executeRawUnsafe(sql); } catch (err) {
-          // Ignore "duplicate column" errors; warn on anything unexpected
-          if (!err.message || !err.message.toLowerCase().includes('already')) {
-            console.warn('[startup] migration warning:', err.message);
-          }
-        }
-      }
-    }
-    console.log('[startup] schema patch applied');
-  } catch (e) {
-    console.warn('[startup] schema patch warning:', e.message);
-  }
-}
 
 (async () => {
   const prisma = require('./db/prisma');
