@@ -22,7 +22,7 @@ async function gotoTab(page, tabName) {
   const tabKey = tabKeyMap[tabName] || tabName;
   const navButtonSelectors = {
     home: 'nav button:has-text("精选路线"), nav button:has-text("首页"), [data-tab="expedition"], [data-tab="home"]',
-    explore: 'nav button:has-text("探索"), nav button:has-text("找队友"), [data-tab="explore"], nav a:has-text("探索"), nav a:has-text("找队友")',
+    explore: 'nav button:has-text("探索"), nav button:has-text("探索山峰"), nav button:has-text("找队友"), [data-tab="explore"], nav a:has-text("探索"), nav a:has-text("探索山峰"), nav a:has-text("找队友")',
     discover: 'nav button:has-text("社区"), [data-tab="discover"], [data-tab="explore"]',
     chat: 'nav button:has-text("消息"), [data-tab="chat"], [data-tab="messages"]',
     me: 'nav button:has-text("我的"), nav button:has-text("我"), [data-tab="me"], [data-tab="profile"], nav a:has-text("我的")',
@@ -80,21 +80,6 @@ async function gotoTab(page, tabName) {
       const visibleElement = page.locator(`${sel}:visible`).first();
       const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
       if (visible) return;
-    }
-
-    const forceSwitched = await page.evaluate(() => {
-      const root = document.querySelector('[x-data]');
-      const store = root && (root._x_dataStack && root._x_dataStack[0] ? root._x_dataStack[0] : (root.__x && root.__x.$data));
-      if (!store || typeof store !== 'object' || !('currentPage' in store)) return false;
-      store.currentPage = 'explore';
-      return true;
-    }).catch(() => false);
-    if (forceSwitched) {
-      for (const sel of candidates) {
-        const visibleElement = page.locator(`${sel}:visible`).first();
-        const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
-        if (visible) return;
-      }
     }
   }
 
