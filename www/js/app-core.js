@@ -666,6 +666,7 @@ function alpineLink() {
     myBookingsLoading: false,
     showIncomingBookings: false,
     incomingBookings: [],
+    incomingBookingsLoading: false,
     showExpeditionDetail: false,
     selectedExpedition: null,
     showClubDetail: false,
@@ -2300,11 +2301,16 @@ function alpineLink() {
         if (res.ok) {
           const data = await res.json();
           this.expeditionOrders = Array.isArray(data) ? data : [];
+          this.myOrders = this.expeditionOrders;
         } else {
           this.expeditionOrders = [];
+          this.myOrders = [];
         }
       } catch(e) {
-        if (isLatestRequest()) this.expeditionOrders = [];
+        if (isLatestRequest()) {
+          this.expeditionOrders = [];
+          this.myOrders = [];
+        }
       } finally {
         if (isLatestRequest()) this.expeditionOrdersLoading = false;
       }
@@ -2854,9 +2860,7 @@ function alpineLink() {
           this.showToast('积分领取失败，请稍后重试', 'error');
         }
       } catch(e) {
-        track._pointsClaimed = true;
-        try { localStorage.setItem(claimedKey, '1'); } catch(e2) {}
-        this.showToast(`🎉 已获得 ${pts} 积分奖励！`);
+        this.showToast('积分领取失败，请检查网络后重试', 'error');
       }
     },
 
@@ -3032,6 +3036,9 @@ function alpineLink() {
         this.loadNotifSettingsList();
         this.loadNotifPreferences();
       }
+      if (type === 'privacy') {
+        this.loadPrivacySettings();
+      }
       if (type === 'help') { this.feedbackForm = { type: 'suggestion', content: '', contact: '' }; }
     },
     openEditProfile() {
@@ -3047,9 +3054,9 @@ function alpineLink() {
       else { this.showToast('即将推出'); }
     },
     async openAchievements() {
-      if (!this.requireAuth()) return;
+      if (!this.requireAuth() || !this.currentUser) return;
+      this.achievementsList = [];
       this.showAchievementsModal = true;
-      if (this.achievementsList.length > 0) return;
       this.achievementsLoading = true;
       try {
         const res = await fetch(`/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
@@ -3058,9 +3065,9 @@ function alpineLink() {
       this.achievementsLoading = false;
     },
     async openMembership() {
-      if (!this.requireAuth()) return;
+      if (!this.requireAuth() || !this.currentUser) return;
+      this.membershipData = null;
       this.showMembershipModal = true;
-      if (this.membershipData) return;
       this.membershipLoading = true;
       try {
         const res = await fetch(`/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
@@ -4240,8 +4247,14 @@ function alpineLink() {
       if (!this.authToken) { this.notifSettingsList = []; return; }
       this.notifSettingsLoading = true;
       try {
-        const res = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
-        if (res.ok) this.notifSettingsList = await res.json();
+        const res = await fetch('/api/notifications/settings', { headers: this.getAuthHeaders() });
+        if (res.ok) {
+          this.notifSettingsList = await res.json();
+        } else {
+          const res2 = await fetch('/api/notifications', { headers: this.getAuthHeaders() });
+          if (res2.ok) this.notifSettingsList = await res2.json();
+          else this.notifSettingsList = [];
+        }
       } catch(e) { this.notifSettingsList = []; }
       this.notifSettingsLoading = false;
     },
@@ -4316,16 +4329,15 @@ function alpineLink() {
           // Update in incomingBookings list
           const idx = this.incomingBookings.findIndex(b => b.id === bookingId);
           if (idx !== -1) this.incomingBookings[idx].status = 'confirmed';
+          this.loadUnreadCount();
         } else { this.showToast(data.error || '操作失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async submitRejectBooking() {
       if (!this.rejectingNotif) return;
-      const bookingId = typeof this.rejectingNotif === 'object'
-        ? (this.rejectingNotif.related_id || this.rejectingNotif.id)
-        : this.rejectingNotif;
+      const bookingId = (this.rejectingNotif && (this.rejectingNotif.related_id || this.rejectingNotif.id)) || null;
       if (!bookingId) {
-        this.showToast('预约编号无效', 'error');
+        this.showToast('操作失败：无效预约ID', 'error');
         this.showRejectReason = false;
         this.rejectingNotif = null;
         return;
@@ -4340,6 +4352,7 @@ function alpineLink() {
           this.showToast('预约已拒绝');
           const idx = this.incomingBookings.findIndex(b => b.id === bookingId);
           if (idx !== -1) this.incomingBookings[idx].status = 'rejected';
+          this.loadUnreadCount();
         } else { this.showToast(data.error || '操作失败', 'error'); }
       } catch(e) { this.showToast('网络错误', 'error'); }
       this.showRejectReason = false;
@@ -4353,8 +4366,8 @@ function alpineLink() {
       try {
         const res = await fetch('/api/bookings/my', { headers: this.getAuthHeaders() });
         if (res.ok) this.myBookings = await res.json();
-        else this.showToast('加载我的预约失败，请稍后重试', 'error');
-      } catch(e) { this.showToast('网络错误，请稍后重试', 'error'); }
+        else this.showToast('加载失败，请重试', 'error');
+      } catch(e) { this.showToast('加载失败，请重试', 'error'); }
       finally { this.myBookingsLoading = false; }
       this.showMyBookings = true;
     },
@@ -4383,10 +4396,13 @@ function alpineLink() {
         this.showToast('仅向导或俱乐部管理员可查看收到的预约', 'warning');
         return;
       }
+      this.incomingBookingsLoading = true;
       try {
         const res = await fetch('/api/bookings/incoming', { headers: this.getAuthHeaders() });
         if (res.ok) this.incomingBookings = await res.json();
-      } catch(e) {}
+        else this.showToast('加载失败，请重试', 'error');
+      } catch(e) { this.showToast('加载失败，请重试', 'error'); }
+      finally { this.incomingBookingsLoading = false; }
       this.showIncomingBookings = true;
     },
 
