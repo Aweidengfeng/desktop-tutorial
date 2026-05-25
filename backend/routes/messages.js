@@ -12,6 +12,7 @@ router.get('/conversations', auth, async (req, res) => {
     const uid = req.user.id;
     const convs = await prisma.$queryRaw`
       SELECT c.id,
+        c.type,
         CASE WHEN c.user1_id = ${uid} THEN u2.id    ELSE u1.id    END as otherId,
         CASE WHEN c.user1_id = ${uid} THEN u2.name   ELSE u1.name   END as otherName,
         CASE WHEN c.user1_id = ${uid} THEN u2.avatar ELSE u1.avatar END as otherAvatar,

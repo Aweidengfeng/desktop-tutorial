@@ -67,6 +67,16 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
+      # ── 将生成的 Prisma Client 同步到根 node_modules ───────────────────────
+      # 根因：root package.json 中安装了 @prisma/client，npm 将其 hoist 到根
+      # node_modules/@prisma/client。backend/lib/db.js 中的 require('@prisma/client')
+      # 因此解析到根目录的包，该包查找根 node_modules/.prisma/client（引擎二进制）。
+      # generate-prisma-client.js 只生成到 backend/node_modules/.prisma/client，
+      # 故根目录缺少引擎，导致 "did not initialize yet"。
+      # 使用 rsync（带尾部斜线）同步目录内容，无论目标目录是否存在都能正确处理。
+      - name: Sync Prisma Client to root node_modules
+        run: rsync -a --delete backend/node_modules/.prisma/client/ node_modules/.prisma/client/
+
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -127,6 +137,14 @@ jobs:
         run: npm run test:api
         env:
           BASE_URL: http://localhost:8080
+          NODE_ENV: test
+          DATABASE_PROVIDER: sqlite
+          DATABASE_URL: "file:/tmp/ci.db"
+          DATABASE_PATH: "/tmp/ci.db"
+          JWT_SECRET: ci_test_secret_not_for_production
+          ADMIN_PASSWORD: ci_test_admin_password
+          CHECKPOINT_DISABLE: "1"
+          PRISMA_TELEMETRY_INFORMATION: ""
 
       # ── 运行 Playwright E2E 测试 ─────────────────────────────────────────────
       - name: Run Playwright E2E tests
