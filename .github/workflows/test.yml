@@ -30,6 +30,18 @@ jobs:
       - name: Install root dependencies
         run: npm install
 
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=backend/prisma/schema.prisma
+        env:
+          CHECKPOINT_DISABLE: "1"
+          DATABASE_URL: "file:/tmp/ci.db"
+
+      - name: Push Prisma schema to database
+        run: npx prisma db push --schema=backend/prisma/schema.prisma --skip-generate
+        env:
+          CHECKPOINT_DISABLE: "1"
+          DATABASE_URL: "file:/tmp/ci.db"
+
       - name: Run region unit tests
         run: npx jest --forceExit --no-coverage --runInBand --testMatch '**/backend/tests/{region,multi-region-db}.test.js'
 
