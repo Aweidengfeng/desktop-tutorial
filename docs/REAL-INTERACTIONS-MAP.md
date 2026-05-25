@@ -88,7 +88,10 @@
 | 设置 → 账号 | PUT /api/auth/profile | users | 本人 |
 | 设置 → 隐私 | PUT /api/auth/privacy | users | 本人 |
 | 设置 → 通知 | PUT /api/auth/settings | user_settings | 本人 |
-| 设置 → 注销 | POST /api/auth/request-deletion | users.deleted_at | 24h 后生效 |
+| 设置 → 注销（冷静期） | POST /api/auth/request-deletion | users.deleted_at | 24h 后生效，可取消 |
+| 设置 → 取消注销 | POST /api/auth/cancel-deletion | users.deleted_at = NULL | 仅冷静期内有效 |
+| GDPR 数据导出 | GET /api/gdpr/export | — | 返回 JSON 附件 |
+| GDPR 立即注销 | DELETE /api/gdpr/delete-account | users + 关联 PII 表 | 不可撤销 |
 | 我的订单 | GET /api/expedition-orders?user_id=me | — | 本人 |
 | 我的轨迹 | GET /api/tracks/my | — | 本人 |
 | 轨迹详情 | GET /api/tracks/:id | — | 本人（非公开）/ 所有人（公开） |

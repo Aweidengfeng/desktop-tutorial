@@ -165,8 +165,8 @@ ${PAGE_STYLE}
 </ul>
 <div class="callout">
   <strong>Exercise your rights via our in-app API:</strong><br>
-  Export: <code>GET /api/users/me/data-export</code><br>
-  Delete account: <code>DELETE /api/users/me</code>
+  Export: <code>GET /api/gdpr/export</code><br>
+  Delete account: <code>POST /api/auth/request-deletion</code>（24小时冷静期）或 <code>DELETE /api/gdpr/delete-account</code>（立即注销）
 </div>
 
 <h2>7. 儿童隐私 | Children's Privacy</h2>
