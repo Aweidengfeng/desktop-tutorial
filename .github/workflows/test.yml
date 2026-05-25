@@ -67,23 +67,15 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 为根目录生成 Prisma Client（供 Jest globalSetup 使用）───────────────
-      # generate-prisma-client.js 将 client 生成到 backend/node_modules/.prisma/client
-      # Jest 从根目录运行，require('@prisma/client') 解析到根 node_modules/@prisma/client，
-      # 该包会查找根 node_modules/.prisma/client，若不存在则报 "did not initialize yet"。
-      # 解决方案：临时将 schema output 指向根目录，再单独跑一次 prisma generate，
-      # 完成后还原 schema，确保引擎二进制直接生成到正确位置（不依赖 cp）。
-      - name: Generate Prisma Client for root node_modules
-        working-directory: backend
-        run: |
-          cp prisma/schema.prisma prisma/schema.prisma.bak
-          sed -i 's|"../node_modules/.prisma/client"|"../../node_modules/.prisma/client"|' prisma/schema.prisma
-          npx prisma generate --schema=prisma/schema.prisma
-          mv prisma/schema.prisma.bak prisma/schema.prisma
-        env:
-          DATABASE_URL: "file:/tmp/ci.db"
-          CHECKPOINT_DISABLE: "1"
-          PRISMA_TELEMETRY_INFORMATION: ""
+      # ── 将生成的 Prisma Client 同步到根 node_modules ───────────────────────
+      # 根因：root package.json 中安装了 @prisma/client，npm 将其 hoist 到根
+      # node_modules/@prisma/client。backend/lib/db.js 中的 require('@prisma/client')
+      # 因此解析到根目录的包，该包查找根 node_modules/.prisma/client（引擎二进制）。
+      # generate-prisma-client.js 只生成到 backend/node_modules/.prisma/client，
+      # 故根目录缺少引擎，导致 "did not initialize yet"。
+      # 使用 rsync（带尾部斜线）同步目录内容，无论目标目录是否存在都能正确处理。
+      - name: Sync Prisma Client to root node_modules
+        run: rsync -a --delete backend/node_modules/.prisma/client/ node_modules/.prisma/client/
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
