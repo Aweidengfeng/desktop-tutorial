@@ -357,11 +357,135 @@ describe('三、向导商业服务全链路', () => {
     expect(res.body.title).toBe('珠峰向导服务');
   });
 
+  test('GET /api/guides/:guideId/commercial-status — 仅本人可查看', async () => {
+    const ownerRes = await request(app)
+      .get(`/api/guides/${guideId}/commercial-status`)
+      .set(authHeader(guideUser.token));
+    expect(ownerRes.status).toBe(200);
+    expect(ownerRes.body).toEqual(expect.objectContaining({
+      status: expect.any(String),
+      verified: expect.any(Boolean),
+    }));
+
+    const otherRes = await request(app)
+      .get(`/api/guides/${guideId}/commercial-status`)
+      .set(authHeader(clientUser.token));
+    expect(otherRes.status).toBe(403);
+  });
+
+  test('发布服务 30 秒内重复提交返回 409', async () => {
+    const payload = {
+      title: '重复提交测试服务',
+      price: 1000,
+      max_clients: 4,
+      type: 'guided_climb',
+      start_date: '2026-09-01',
+    };
+    const first = await request(app)
+      .post(`/api/guides/${guideId}/services`)
+      .set(authHeader(guideUser.token))
+      .send(payload);
+    expect([200, 201]).toContain(first.status);
+
+    const second = await request(app)
+      .post(`/api/guides/${guideId}/services`)
+      .set(authHeader(guideUser.token))
+      .send(payload);
+    expect(second.status).toBe(409);
+  });
+
+  test('GET /api/guides/:guideId/services — 本人可见 pending/inactive，公开仅 active', async () => {
+    db.prepare(`
+      INSERT INTO guide_services (guide_id, title, status, type, start_date)
+      VALUES (?, ?, ?, 'guided_climb', ''),
+             (?, ?, ?, 'guided_climb', ''),
+             (?, ?, ?, 'guided_climb', '')
+    `).run(
+      guideId, '待审核服务', 'pending',
+      guideId, '下线服务', 'inactive',
+      guideId, '已删除服务', 'deleted',
+    );
+
+    const ownerRes = await request(app)
+      .get(`/api/guides/${guideId}/services`)
+      .set(authHeader(guideUser.token));
+    expect(ownerRes.status).toBe(200);
+    const ownerStatuses = ownerRes.body.map(x => x.status);
+    expect(ownerStatuses).toContain('pending');
+    expect(ownerStatuses).toContain('inactive');
+    expect(ownerStatuses).not.toContain('deleted');
+
+    const publicRes = await request(app).get(`/api/guides/${guideId}/services`);
+    expect(publicRes.status).toBe(200);
+    expect(publicRes.body.every(x => x.status === 'active')).toBe(true);
+  });
+
   test('GET /api/guides/:guideId/services → 服务列表', async () => {
     const res = await request(app).get(`/api/guides/${guideId}/services`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
+  });
+
+  test('路线管理与资金/看板接口可用', async () => {
+    const createRes = await request(app)
+      .post('/api/guides/my/routes')
+      .set(authHeader(guideUser.token))
+      .send({ title: '南坡标准路线', durationDays: 8 });
+    expect(createRes.status).toBe(200);
+    expect(createRes.body.title).toBe('南坡标准路线');
+
+    const routeId = createRes.body.id;
+    const listRes = await request(app)
+      .get('/api/guides/my/routes')
+      .set(authHeader(guideUser.token));
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body)).toBe(true);
+    expect(listRes.body.some(x => x.id === routeId)).toBe(true);
+
+    const updateRes = await request(app)
+      .put(`/api/guides/my/routes/${routeId}`)
+      .set(authHeader(guideUser.token))
+      .send({ title: '南坡标准路线（更新）' });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.title).toBe('南坡标准路线（更新）');
+
+    const submitRes = await request(app)
+      .post(`/api/guides/routes/${routeId}/submit`)
+      .set(authHeader(guideUser.token));
+    expect(submitRes.status).toBe(200);
+    expect(submitRes.body.success).toBe(true);
+
+    db.prepare('UPDATE guides SET balance = ? WHERE id = ?').run(1234, guideId);
+    db.prepare(`
+      INSERT INTO withdrawal_requests (owner_type, owner_id, guide_id, amount, actual_amount, status)
+      VALUES ('guide', ?, ?, ?, ?, 'approved')
+    `).run(guideId, guideId, 300, 300);
+    db.prepare(`
+      INSERT INTO guide_service_orders (order_no, service_id, guide_id, user_id, amount, status)
+      VALUES (?, ?, ?, ?, ?, 'paid')
+    `).run(`GSO_FI_${Date.now()}`, serviceId, guideId, 999999, 500);
+
+    const financeRes = await request(app)
+      .get('/api/guides/my/finance')
+      .set(authHeader(guideUser.token));
+    expect(financeRes.status).toBe(200);
+    expect(financeRes.body).toEqual(expect.objectContaining({
+      availableBalance: 1234,
+      pendingBalance: expect.any(Number),
+      totalPaid: expect.any(Number),
+    }));
+
+    const dashboardRes = await request(app)
+      .get('/api/guides/my/dashboard')
+      .set(authHeader(guideUser.token));
+    expect(dashboardRes.status).toBe(200);
+    expect(dashboardRes.body).toEqual(expect.objectContaining({
+      monthlyGmv: expect.any(Number),
+      totalViews: expect.any(Number),
+      avgRating: expect.any(Number),
+      repeatRate: expect.any(Number),
+    }));
   });
 
   test('预约服务缺紧急联系人 → 400', async () => {

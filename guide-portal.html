@@ -1295,15 +1295,17 @@
         const token = this.getAuthToken();
         if (!token) return;
         try {
-          const r = await fetch('/api/guides/my-qualification', { headers: { Authorization: 'Bearer ' + token } });
+          const guide = this.certStatus.guide;
+          if (!guide || !guide.id) return;
+          const r = await fetch(`/api/guides/${guide.id}/commercial-status`, { headers: { Authorization: 'Bearer ' + token } });
           if (r.ok) {
             this.commercialStatus = await r.json();
           } else {
             // 降级到 certStatus.guide 字段
-            if (this.certStatus.guide) {
+            if (guide) {
               this.commercialStatus = {
-                status: this.certStatus.guide.commercial_status || null,
-                reject_reason: this.certStatus.guide.commercial_reject_reason || null,
+                status: guide.commercial_status || null,
+                reject_reason: guide.commercial_reject_reason || null,
               };
             }
           }
@@ -1492,7 +1494,12 @@
             if (isExpedition) this.loadMyExpeditions(token);
           } else {
             const d = await r.json();
-            this.toast(d.error || '发布失败', 'error');
+            if (d.error === 'commercial_not_verified') {
+              this.toast('收费服务需先完成商业资质认证，即将跳转…', 'error');
+              setTimeout(() => { this.page = 'commercial'; }, 1500);
+            } else {
+              this.toast(d.error || d.reason || '发布失败', 'error');
+            }
           }
         } catch(e) {
           console.error('[guidePortal.publishActivity]', e);
