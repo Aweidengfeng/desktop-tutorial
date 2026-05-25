@@ -3009,12 +3009,11 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
     goToPage(id) {
-      let targetPage = id;
       if (id === 'track') {
-        this.showToast('地图录制功能 Phase 2 即将上线', 'info');
-        targetPage = 'home';
+        this.showToast('🗺️ 轨迹录制功能 Phase 2 即将上线，敬请期待', 'info');
+        return;
       }
-      this.currentPage = targetPage;
+      this.currentPage = id;
     },
     viewImage(url) { window.open(url, '_blank'); },
     viewProfile(name) { this.showToast('查看 ' + name + ' 的资料'); },
@@ -3032,6 +3031,8 @@ function alpineLink() {
     },
     handleMenuAction(action) {
       if (action === 'track') { this.goToPage('track'); }
+      else if (action === 'bookings') { this.openMyBookings(); }
+      else if (action === 'incoming') { this.openIncomingBookings(); }
       else if (action === 'teams') { this.currentPage = 'community'; this.activeChatType = 'teams'; }
       else if (action === 'achievements') { this.openAchievements(); }
       else if (action === 'membership') { this.openMembership(); }
