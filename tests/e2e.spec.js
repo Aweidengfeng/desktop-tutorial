@@ -179,12 +179,13 @@ test.describe('帖子功能', () => {
     const moreBtn = page.locator('button:has-text("更多")').first();
     if (await moreBtn.isVisible().catch(() => false)) {
       await moreBtn.click();
-      await page.waitForLoadState('networkidle');
+      // SPA Tab 切换不触发网络请求，使用短暂等待代替 networkidle
+      await page.waitForTimeout(800);
       // 切换到"动态"（帖子）标签以显示点赞按钮
       const postsTab = page.locator('button:has-text("动态")').first();
-      if (await postsTab.isVisible().catch(() => false)) {
+      if (await postsTab.isVisible({ timeout: 5000 }).catch(() => false)) {
         await postsTab.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
       }
     }
 
@@ -238,12 +239,13 @@ test.describe('帖子功能', () => {
     const moreBtn = page.locator('button:has-text("更多")').first();
     if (await moreBtn.isVisible().catch(() => false)) {
       await moreBtn.click();
-      await page.waitForLoadState('networkidle');
+      // SPA Tab 切换不触发网络请求，使用短暂等待代替 networkidle
+      await page.waitForTimeout(800);
       // 切换到"动态"（帖子）标签
       const postsTab = page.locator('button:has-text("动态")').first();
-      if (await postsTab.isVisible().catch(() => false)) {
+      if (await postsTab.isVisible({ timeout: 5000 }).catch(() => false)) {
         await postsTab.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
       }
     }
 
@@ -330,7 +332,7 @@ test.describe('队伍功能', () => {
     const moreBtn = page.locator('button:has-text("更多")').first();
     if (await moreBtn.isVisible().catch(() => false)) {
       await moreBtn.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(800);
     }
 
     // 社区/队伍页面的队伍卡片（包含"名额"文字以区分其他 glass 元素）
