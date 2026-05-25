@@ -10,8 +10,9 @@
  * @param {'home'|'explore'|'discover'|'chat'|'me'} tabName
  */
 async function gotoTab(page, tabName) {
-  const STABLE_STATE_THRESHOLD_MS = 400;
-  const ALPINE_READY_BUFFER_MS = 300;
+  const STABLE_STATE_THRESHOLD_MILLISECONDS = 400;
+  const ALPINE_READY_BUFFER_MILLISECONDS = 300;
+  const EXPLORE_LABEL_CANDIDATES = ['找队友', '探索山峰', '探索', '社区', '发现', 'explore'];
   // Ensure we are on the app page before trying to click nav
   if (!page.url().includes('/summitlink')) {
     await page.goto('/summitlink');
@@ -33,18 +34,20 @@ async function gotoTab(page, tabName) {
       const root = document.querySelector('[x-data]');
       return !!(root && root._x_dataStack);
     }, { timeout: 5000 }).catch(() => {});
-    await page.waitForFunction(() => {
+    await page.waitForFunction((stableThresholdMilliseconds) => {
       const body = document.body;
-      if (!body) return false;
-      const key = `${body.innerText.length}:${document.querySelectorAll('[x-data]').length}:${document.querySelectorAll('nav button, nav a').length}`;
+      const key = body
+        ? `${body.innerText.length}:${document.querySelectorAll('[x-data]').length}:${document.querySelectorAll('nav button, nav a').length}`
+        : '';
+      if (!key) return false;
       const now = Date.now();
       if (!window.__gotoTabStableState || window.__gotoTabStableState.key !== key) {
-        window.__gotoTabStableState = { key, t: now };
+        window.__gotoTabStableState = { key, lastChangeTime: now };
         return false;
       }
-      return (now - window.__gotoTabStableState.t) > STABLE_STATE_THRESHOLD_MS;
-    }, { timeout: 3000 }).catch(() => {});
-    await page.waitForTimeout(ALPINE_READY_BUFFER_MS).catch(() => {});
+      return (now - window.__gotoTabStableState.lastChangeTime) > stableThresholdMilliseconds;
+    }, STABLE_STATE_THRESHOLD_MILLISECONDS, { timeout: 3000 }).catch(() => {});
+    await page.waitForTimeout(ALPINE_READY_BUFFER_MILLISECONDS).catch(() => {});
   };
   const navBtn = page.locator(navSel).first();
   await navBtn.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
@@ -54,7 +57,7 @@ async function gotoTab(page, tabName) {
   }
   const labelCandidatesMap = {
     expedition: ['精选路线', '首页', 'expedition'],
-    explore: ['探索', '社区', '发现', '找队友', 'explore'],
+    explore: EXPLORE_LABEL_CANDIDATES,
     chat: ['消息', 'chat'],
     me: ['我的', '我', 'profile', 'me'],
   };
@@ -109,7 +112,8 @@ async function gotoTab(page, tabName) {
   if (sectionVisible) return;
 
   await waitForAlpineReady();
-  for (const candidate of ['找队友', '探索山峰', '探索', '社区', ...labelCandidates]) {
+  const finalCandidates = Array.from(new Set([...EXPLORE_LABEL_CANDIDATES, ...labelCandidates]));
+  for (const candidate of finalCandidates) {
     const candidateBtn = page.locator('button, a').filter({ hasText: candidate }).first();
     if (await candidateBtn.isVisible({ timeout: 1200 }).catch(() => false)) {
       await candidateBtn.click().catch(() => {});
