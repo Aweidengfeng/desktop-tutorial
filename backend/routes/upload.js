@@ -28,6 +28,7 @@ const storage = multer.diskStorage({
 });
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_DOCUMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-m4v', 'video/mpeg'];
 const ALLOWED_GPX_TYPES = ['application/gpx+xml', 'application/xml', 'text/xml', 'application/octet-stream'];
 
@@ -37,9 +38,8 @@ const imageFilter = (req, file, cb) => {
 };
 
 const documentFilter = (req, file, cb) => {
-  const allowedDocumentTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-  if (allowedDocumentTypes.includes(file.mimetype)) cb(null, true);
-  else cb(new Error('只允许上传证件文件（jpg/png/webp/pdf）'));
+  if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('只允许上传图片或 PDF 文件'));
 };
 
 const videoFilter = (req, file, cb) => {
@@ -166,7 +166,7 @@ router.post('/document', uploadLimiter, auth, (req, res, next) => {
       const storedFilename = req.file.filename || req.file.originalname || '';
       prisma.$executeRaw`
         INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
-        VALUES (${url}, ${storedFilename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+        VALUES (${url}, ${storedFilename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${'document'})
       `.catch((e) => console.error('[upload/document] images 记录写入失败:', e.message));
       res.json({ url, filename: storedFilename });
     } catch (e) {
