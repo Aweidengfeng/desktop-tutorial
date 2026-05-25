@@ -2680,4 +2680,34 @@ if (badgeCount.cnt === 0) {
   }
 }
 
+// guide_routes 表
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS guide_routes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guide_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      peak_name TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      difficulty_rating TEXT DEFAULT '',
+      duration_days INTEGER DEFAULT 7,
+      best_season TEXT DEFAULT '',
+      max_participants INTEGER DEFAULT 10,
+      country TEXT DEFAULT '',
+      cancellation_policy TEXT DEFAULT '',
+      price_tiers TEXT DEFAULT '[]',
+      itinerary TEXT DEFAULT '',
+      equipment_list TEXT DEFAULT '',
+      included_services TEXT DEFAULT '',
+      excluded_services TEXT DEFAULT '',
+      status TEXT DEFAULT 'draft',
+      reject_reason TEXT DEFAULT NULL,
+      submitted_at DATETIME DEFAULT NULL,
+      reviewed_at DATETIME DEFAULT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+} catch (e) {}
+
 module.exports = db;

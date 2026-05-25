@@ -234,6 +234,193 @@ router.put('/me', guideWriteLimiter, auth, async (req, res) => {
   }
 });
 
+// GET /api/guides/my/routes — 当前向导的路线列表
+router.get('/my/routes', guideReadLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+    const routes = await prisma.$queryRaw`
+      SELECT * FROM guide_routes WHERE guide_id = ${guide.id} ORDER BY created_at DESC
+    `.catch(() => []);
+    res.json(routes || []);
+  } catch (e) {
+    if (e.message && e.message.includes('no such table')) return res.json([]);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/my/routes — 创建路线草稿
+router.post('/my/routes', guideWriteLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可创建路线' });
+    const { title, peakName, description, difficultyRating, durationDays,
+            bestSeason, maxParticipants, country, cancellationPolicy,
+            priceTiers, itinerary, equipmentList, includedServices, excludedServices } = req.body;
+    if (!title) return res.status(400).json({ error: '路线标题不能为空' });
+    const titleCheck = moderation.checkText(title);
+    if (!titleCheck.ok) return res.status(422).json({ error: 'content_blocked', reason: titleCheck.reason });
+    await prisma.$executeRaw`
+      INSERT INTO guide_routes
+        (guide_id, title, peak_name, description, difficulty_rating, duration_days,
+         best_season, max_participants, country, cancellation_policy,
+         price_tiers, itinerary, equipment_list, included_services, excluded_services, status)
+      VALUES
+        (${guide.id}, ${title}, ${peakName || ''}, ${description || ''}, ${difficultyRating || ''},
+         ${durationDays || 7}, ${bestSeason || ''}, ${maxParticipants || 10}, ${country || ''},
+         ${cancellationPolicy || ''}, ${priceTiers || '[]'}, ${itinerary || ''},
+         ${equipmentList || ''}, ${includedServices || ''}, ${excludedServices || ''}, 'draft')
+    `.catch(() => {});
+    const [route] = await prisma.$queryRaw`
+      SELECT * FROM guide_routes WHERE guide_id = ${guide.id} ORDER BY id DESC LIMIT 1
+    `.catch(() => [null]);
+    res.json(route || { success: true });
+  } catch (e) {
+    if (e.message && e.message.includes('no such table')) {
+      return res.status(503).json({ error: '路线功能数据库尚未初始化，请联系管理员' });
+    }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/guides/my/routes/:routeId — 更新路线草稿
+router.put('/my/routes/:routeId', guideWriteLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可操作' });
+    const routeId = parseInt(req.params.routeId);
+    const [route] = await prisma.$queryRaw`
+      SELECT * FROM guide_routes WHERE id = ${routeId} AND guide_id = ${guide.id}
+    `.catch(() => [null]);
+    if (!route) return res.status(404).json({ error: '路线不存在' });
+    if (!['draft', 'rejected'].includes(route.status)) {
+      return res.status(400).json({ error: '只有草稿或被拒绝的路线可以修改' });
+    }
+    const { title, peakName, description, difficultyRating, durationDays,
+            bestSeason, maxParticipants, country, cancellationPolicy,
+            priceTiers, itinerary, equipmentList, includedServices, excludedServices } = req.body;
+    await prisma.$executeRaw`
+      UPDATE guide_routes SET
+        title = COALESCE(${title || null}, title),
+        peak_name = COALESCE(${peakName || null}, peak_name),
+        description = COALESCE(${description || null}, description),
+        difficulty_rating = COALESCE(${difficultyRating || null}, difficulty_rating),
+        duration_days = COALESCE(${durationDays || null}, duration_days),
+        best_season = COALESCE(${bestSeason || null}, best_season),
+        max_participants = COALESCE(${maxParticipants || null}, max_participants),
+        country = COALESCE(${country || null}, country),
+        cancellation_policy = COALESCE(${cancellationPolicy || null}, cancellation_policy),
+        price_tiers = COALESCE(${priceTiers || null}, price_tiers),
+        itinerary = COALESCE(${itinerary || null}, itinerary),
+        equipment_list = COALESCE(${equipmentList || null}, equipment_list),
+        included_services = COALESCE(${includedServices || null}, included_services),
+        excluded_services = COALESCE(${excludedServices || null}, excluded_services),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${routeId} AND guide_id = ${guide.id}
+    `.catch(() => {});
+    const [updated] = await prisma.$queryRaw`SELECT * FROM guide_routes WHERE id = ${routeId}`.catch(() => [route]);
+    res.json(updated || route);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/guides/routes/:routeId/submit — 提交路线审核
+router.post('/routes/:routeId/submit', guideWriteLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可提交路线' });
+    const routeId = parseInt(req.params.routeId);
+    const [route] = await prisma.$queryRaw`
+      SELECT * FROM guide_routes WHERE id = ${routeId} AND guide_id = ${guide.id}
+    `.catch(() => [null]);
+    if (!route) return res.status(404).json({ error: '路线不存在' });
+    if (!['draft', 'rejected'].includes(route.status)) {
+      return res.status(400).json({ error: '只有草稿或被拒绝的路线可以提交审核' });
+    }
+    await prisma.$executeRaw`
+      UPDATE guide_routes SET status = 'pending', submitted_at = CURRENT_TIMESTAMP
+      WHERE id = ${routeId} AND guide_id = ${guide.id}
+    `.catch(() => {});
+    res.json({ success: true, message: '路线已提交审核，预计3个工作日内完成' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guides/my/finance — 向导资金数据
+router.get('/my/finance', guideReadLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+
+    const paidRows = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(amount), 0) as total FROM withdrawal_requests
+      WHERE owner_type = 'guide' AND owner_id = ${guide.id} AND status = 'approved'
+    `.catch(() => [{ total: 0 }]);
+    const totalPaid = Number(paidRows[0]?.total || 0);
+
+    const pendingRows = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(amount), 0) as total FROM guide_service_orders
+      WHERE guide_id = ${guide.id} AND status = 'paid'
+    `.catch(() => [{ total: 0 }]);
+    const pendingBalance = Number(pendingRows[0]?.total || 0);
+
+    res.json({
+      currency: 'CNY',
+      availableBalance: Number(guide.balance || 0),
+      pendingBalance,
+      totalPaid,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guides/my/dashboard — 向导数据看板
+router.get('/my/dashboard', guideReadLimiter, auth, async (req, res) => {
+  try {
+    const [guide] = await prisma.$queryRaw`SELECT id, rating, reviews FROM guides WHERE user_id = ${req.user.id}`;
+    if (!guide) return res.status(403).json({ error: '仅向导可访问' });
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const gmvRows = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(amount), 0) as gmv FROM guide_service_orders
+      WHERE guide_id = ${guide.id} AND status = 'paid' AND paid_at >= ${monthStart}
+    `.catch(() => [{ gmv: 0 }]);
+    const monthlyGmv = Number(gmvRows[0]?.gmv || 0);
+
+    const viewRows = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(view_count), 0) as total FROM guide_services
+      WHERE guide_id = ${guide.id} AND status != 'deleted'
+    `.catch(() => [{ total: 0 }]);
+    const totalViews = Number(viewRows[0]?.total || 0);
+
+    const repeatRows = await prisma.$queryRaw`
+      SELECT COUNT(*) as total_users,
+             SUM(CASE WHEN order_count >= 2 THEN 1 ELSE 0 END) as repeat_users
+      FROM (
+        SELECT user_id, COUNT(*) as order_count FROM guide_service_orders
+        WHERE guide_id = ${guide.id} AND status = 'paid' GROUP BY user_id
+      )
+    `.catch(() => [{ total_users: 0, repeat_users: 0 }]);
+    const totalUsers = Number(repeatRows[0]?.total_users || 0);
+    const repeatUsers = Number(repeatRows[0]?.repeat_users || 0);
+    const repeatRate = totalUsers > 0 ? repeatUsers / totalUsers : 0;
+
+    res.json({
+      currency: 'CNY',
+      monthlyGmv,
+      totalViews,
+      avgRating: Number(guide.rating || 0),
+      repeatRate,
+    });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/guides/:id — 向导详情
 router.get('/:id', async (req, res) => {
   try {
@@ -241,6 +428,26 @@ router.get('/:id', async (req, res) => {
     const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${id} AND status = 'approved'`;
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     res.json(parseGuide(guide));
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/guides/:id/commercial-status — 查询向导商业资质状态（需为本人）
+router.get('/:id/commercial-status', guideReadLimiter, auth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [guide] = await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${id}`;
+    if (!guide) return res.status(404).json({ error: '向导不存在' });
+    if (guide.user_id !== req.user.id) return res.status(403).json({ error: '无权查看' });
+    res.json({
+      status: guide.commercial_status || 'none',
+      verified: !!guide.commercial_verified,
+      applied_at: guide.commercial_applied_at || null,
+      reviewed_at: guide.commercial_reviewed_at || null,
+      reject_reason: guide.commercial_reject_reason || null,
+      need_info_reason: guide.commercial_need_info_reason || null,
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -564,17 +771,47 @@ router.get('/:guideId/services', async (req, res) => {
   try {
     const guideId = parseInt(req.params.guideId);
     const { type } = req.query;
+
+    let isOwner = false;
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'summitlink_jwt_secret_2024');
+        const [g] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${decoded.id}`;
+        if (g && g.id === guideId) isOwner = true;
+      } catch (_) {}
+    }
+
     let services;
     if (type) {
-      services = await prisma.$queryRaw`
-        SELECT * FROM guide_services WHERE guide_id = ${guideId} AND status != 'deleted' AND type = ${type}
-        ORDER BY created_at DESC
-      `;
+      if (isOwner) {
+        services = await prisma.$queryRaw`
+          SELECT * FROM guide_services
+          WHERE guide_id = ${guideId} AND status != 'deleted' AND type = ${type}
+          ORDER BY created_at DESC
+        `;
+      } else {
+        services = await prisma.$queryRaw`
+          SELECT * FROM guide_services
+          WHERE guide_id = ${guideId} AND status = 'active' AND type = ${type}
+          ORDER BY created_at DESC
+        `;
+      }
     } else {
-      services = await prisma.$queryRaw`
-        SELECT * FROM guide_services WHERE guide_id = ${guideId} AND status != 'deleted'
-        ORDER BY created_at DESC
-      `;
+      if (isOwner) {
+        services = await prisma.$queryRaw`
+          SELECT * FROM guide_services
+          WHERE guide_id = ${guideId} AND status != 'deleted'
+          ORDER BY created_at DESC
+        `;
+      } else {
+        services = await prisma.$queryRaw`
+          SELECT * FROM guide_services
+          WHERE guide_id = ${guideId} AND status = 'active'
+          ORDER BY created_at DESC
+        `;
+      }
     }
     res.json(services);
   } catch (e) {
@@ -601,6 +838,15 @@ router.post('/:guideId/services', guideWriteLimiter, auth, async (req, res) => {
     if (price > 0 && !guide.commercial_verified) {
       return res.status(422).json({ error: 'commercial_not_verified' });
     }
+    // 幂等检测：30秒内相同向导+标题+开始日期视为重复提交
+    const recentDup = (await prisma.$queryRaw`
+      SELECT id FROM guide_services
+      WHERE guide_id = ${guide.id}
+        AND title = ${title}
+        AND start_date = ${start_date || ''}
+        AND created_at >= datetime('now', '-30 seconds')
+    `.catch(() => []))[0];
+    if (recentDup) return res.status(409).json({ error: '请勿重复提交，服务已创建' });
     const includesStr = includes ? JSON.stringify(includes) : null;
     await prisma.$executeRaw`
       INSERT INTO guide_services
