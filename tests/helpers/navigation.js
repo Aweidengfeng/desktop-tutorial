@@ -15,12 +15,14 @@ async function gotoTab(page, tabName) {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
   }
+  await page.waitForFunction(() => !!window.Alpine, { timeout: 5000 }).catch(() => {});
+  await page.locator('nav button, nav a, [data-tab]').first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
 
   const tabKeyMap = { home: 'expedition', discover: 'explore' };
   const tabKey = tabKeyMap[tabName] || tabName;
   const navButtonSelectors = {
     home: 'nav button:has-text("精选路线"), nav button:has-text("首页"), [data-tab="expedition"], [data-tab="home"]',
-    explore: 'button:has-text("探索山峰"), nav button:has-text("探索"), [data-tab="explore"], nav a:has-text("探索")',
+    explore: 'nav button:has-text("探索"), nav button:has-text("找队友"), [data-tab="explore"], nav a:has-text("探索"), nav a:has-text("找队友")',
     discover: 'nav button:has-text("社区"), [data-tab="discover"], [data-tab="explore"]',
     chat: 'nav button:has-text("消息"), [data-tab="chat"], [data-tab="messages"]',
     me: 'nav button:has-text("我的"), nav button:has-text("我"), [data-tab="me"], [data-tab="profile"], nav a:has-text("我的")',
@@ -61,6 +63,39 @@ async function gotoTab(page, tabName) {
     const visibleElement = page.locator(`${sel}:visible`).first();
     const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
     if (visible) return;
+  }
+
+  if (tabName === 'explore') {
+    const homeButton = page.locator(navButtonSelectors.home).first();
+    if (await homeButton.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await homeButton.click().catch(() => {});
+    }
+    const exploreShortcut = page
+      .locator('button:visible:has-text("探索山峰"), button:visible:has-text("商业攀登"), button:visible:has-text("找向导")')
+      .first();
+    if (await exploreShortcut.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await exploreShortcut.click().catch(() => {});
+    }
+    for (const sel of candidates) {
+      const visibleElement = page.locator(`${sel}:visible`).first();
+      const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
+      if (visible) return;
+    }
+
+    const forceSwitched = await page.evaluate(() => {
+      const root = document.querySelector('[x-data]');
+      const store = root && (root._x_dataStack && root._x_dataStack[0] ? root._x_dataStack[0] : (root.__x && root.__x.$data));
+      if (!store || typeof store !== 'object' || !('currentPage' in store)) return false;
+      store.currentPage = 'explore';
+      return true;
+    }).catch(() => false);
+    if (forceSwitched) {
+      for (const sel of candidates) {
+        const visibleElement = page.locator(`${sel}:visible`).first();
+        const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
+        if (visible) return;
+      }
+    }
   }
 
   await page
