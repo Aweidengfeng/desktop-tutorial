@@ -3157,7 +3157,7 @@
                 x-text="accountDeletionLoading ? '处理中...' : '🗑️ 注销账号'"
               >
               </button>
-              <p class="mt-2 text-xs text-slate-500 text-center">注销后账号数据将被清除，此操作不可撤销</p>
+              <p class="mt-2 text-xs text-slate-500 text-center">注销后您的手机号、邮箱等个人信息将被清空，且无法继续使用该账号</p>
             </div>
           </div>
           <div x-show="!['language','units','profile','privacy'].includes(settingsType)" class="space-y-4">
@@ -3264,7 +3264,7 @@
             <template x-if="settingsType === 'danger'">
               <div class="space-y-3">
                 <h4 class="text-red-400 text-sm font-semibold uppercase tracking-wider">危险区</h4>
-                <p class="text-slate-400 text-xs">注销账号后，您的所有数据将在24小时后永久删除，且无法恢复。</p>
+                <p class="text-slate-400 text-xs">注销后将立即停用账号，并清空手机号、邮箱等个人信息，操作后无法恢复。</p>
                 <button @click="deleteMyAccount()" :disabled="accountDeletionLoading" class="w-full bg-red-600/20 border border-red-500/30 text-red-400 py-3 rounded-xl font-semibold text-sm hover:bg-red-600/30 disabled:hover:bg-red-600/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" aria-live="polite" x-text="accountDeletionLoading ? '处理中...' : '🗑️ 注销账号'"></button>
               </div>
             </template>
@@ -4257,7 +4257,7 @@
           </div>
           <span class="text-xl" x-text="activeChatSession.flag"></span>
         </div>
-        <div x-show="['assistant','ai'].includes(activeChatSession.type)" class="px-4 pt-3 flex-shrink-0">
+        <div x-show="activeChatSession.isAI || ['assistant','ai'].includes(activeChatSession.type)" class="px-4 pt-3 flex-shrink-0">
           <div class="flex items-start gap-2 px-3 py-2 bg-amber-950/30 border border-amber-800/20 rounded-xl mb-3 text-xs text-amber-400/80">
             <span class="shrink-0 mt-0.5">⚠️</span>
             <span>AI 内容仅供参考，不构成专业登山建议。高风险活动请咨询认证向导。</span>
@@ -7121,8 +7121,8 @@ function alpineLink() {
       this.chatInput = '';
     },
     openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
-    async openChatWithUser(name, avatar) {
-      this.activeChatSession = { id: Date.now(), name, avatar, flag: '', type: 'guide', online: false, unread: 0, lastMsg: '', messages: [] };
+    async openChatWithUser(name, avatar, type = 'guide') {
+      this.activeChatSession = { id: Date.now(), name, avatar, flag: '', type, isAI: ['assistant', 'ai'].includes(type), online: false, unread: 0, lastMsg: '', messages: [] };
       this.showChatWindow = true;
       this.currentPage = 'chat';
     },
@@ -7137,10 +7137,11 @@ function alpineLink() {
         });
         if (res.ok) {
           const conv = await res.json();
+          const sessionType = conv.type || user.type || 'dm';
           this.activeChatSession = {
             id: conv.id || Date.now(), conversationId: conv.id,
             name: user.name || '用户', avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + (user.id || 1)),
-            flag: '', type: 'dm', online: false, unread: 0, lastMsg: '', messages: []
+            flag: '', type: sessionType, isAI: ['assistant', 'ai'].includes(sessionType), online: false, unread: 0, lastMsg: '', messages: []
           };
           this.showChatWindow = true;
           this.currentPage = 'chat';
@@ -9240,7 +9241,8 @@ function alpineLink() {
               name: c.otherName,
               avatar: c.otherAvatar || ('https://i.pravatar.cc/150?u=' + c.otherId),
               flag: '',
-              type: 'user',
+              type: c.type || 'user',
+              isAI: ['assistant', 'ai'].includes(c.type),
               online: false,
               unread: c.unread || 0,
               lastMsg: c.lastMsg || '',
