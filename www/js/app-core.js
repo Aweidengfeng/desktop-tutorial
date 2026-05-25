@@ -533,6 +533,7 @@ function alpineLink() {
     chatSubTab: 'all',
     meSubPage: 'profile',
     postsLoading: true,
+    peaksLoading: false,
     teamsLoading: true,
     chatSessions: [],
     chatLoading: false,
@@ -692,6 +693,7 @@ function alpineLink() {
     // Rescue contacts
     rescueContacts: [],
     toasts: [],
+    toast: { show: false, message: '', type: '' },
     newComment: '',
     selectedPostComments: [],
     commentsLoading: false,
@@ -864,10 +866,10 @@ function alpineLink() {
     userProfile: { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 },
 
     // Toast notifications
-    showToast(message, type = 'success') {
-      const id = Date.now();
-      this.toasts.push({ id, message, type });
-      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
+    showToast(message, type = 'info', duration = 3000) {
+      this.toast = { show: true, message, type };
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => { this.toast.show = false; }, duration);
     },
 
     // Search
@@ -3467,6 +3469,7 @@ function alpineLink() {
 
     // Data loading methods
     async loadPeaks(type) {
+      this.peaksLoading = true;
       try {
         const t = type || this.activeCategory;
         const categoryMap = {
@@ -3485,7 +3488,7 @@ function alpineLink() {
         else if (t === 'continental') this.continentalPeaks = mapped;
         else if (t === 'world') this.worldPeaks = mapped;
         else if (t === 'alpine') this.climbingSpots = mapped;
-      } catch(e) {}
+      } catch(e) {} finally { this.peaksLoading = false; }
     },
     async loadGuides() {
       try {

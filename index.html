@@ -104,9 +104,23 @@
     button { transition: transform 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.18s, box-shadow 0.18s; }
     button:hover { transform: scale(1.02); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2); }
     button:active { transform: scale(0.95); opacity: 0.8; }
-    /* Skeleton pulse */
-    @keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-    .skeleton { animation: shimmer 1.5s ease-in-out infinite; background: #334155; border-radius: 8px; }
+    /* Skeleton Loading */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes skeleton-shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .skeleton-text { height: 14px; margin-bottom: 8px; }
+    .skeleton-text.w-3\/4 { width: 75%; }
+    .skeleton-text.w-1\/2 { width: 50%; }
+    .skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+    .skeleton-card { height: 120px; border-radius: 16px; }
+    .skeleton-banner { height: 200px; border-radius: 20px; }
     /* Text shadow for readability on images */
     .text-shadow { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
     /* Track page: full-screen map + bottom drawer (all viewport widths) */
@@ -274,22 +288,34 @@
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
 <div class="app-container relative min-h-screen overflow-hidden" style="background: var(--bg-primary);">
 
-  <!-- Toast Notifications -->
-  <div class="fixed top-4 right-4 z-[200] flex flex-col gap-2" style="max-width: 300px;">
-    <template x-for="toast in toasts" :key="toast.id">
-      <div class="px-4 py-3 rounded-xl text-white text-sm shadow-lg"
-           :class="toast.type === 'error' ? 'bg-red-500' : toast.type === 'warning' ? 'bg-amber-500' : 'bg-emerald-600'"
-           x-text="toast.message"
-           x-transition:enter="transition ease-out duration-300"
-           x-transition:enter-start="opacity-0 translate-x-8"
-           x-transition:enter-end="opacity-100 translate-x-0"
-           x-transition:leave="transition ease-in duration-200"
-           x-transition:leave-start="opacity-100"
-           x-transition:leave-end="opacity-0"></div>
-    </template>
+  <!-- Toast 通知 - 升级版 -->
+  <div x-show="toast.show"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 translate-y-4 scale-95"
+       x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+       x-transition:leave-end="opacity-0 translate-y-4 scale-95"
+       :class="{
+         'bg-slate-800/95 border-white/10': toast.type === 'info' || !toast.type,
+         'bg-green-900/95 border-green-600/30': toast.type === 'success',
+         'bg-red-900/95 border-red-600/30': toast.type === 'error',
+         'bg-amber-900/95 border-amber-600/30': toast.type === 'warning'
+       }"
+       class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl text-sm text-white max-w-[85vw] min-w-[200px]">
+    <span x-text="toast.type === 'error' ? '❌' : toast.type === 'success' ? '✅' : toast.type === 'warning' ? '⚠️' : 'ℹ️'" class="text-base shrink-0"></span>
+    <span x-text="toast.message" class="leading-snug"></span>
   </div>
-  <div x-show="isOffline" class="fixed top-0 left-0 right-0 z-[260] bg-amber-500 text-slate-900 text-center text-xs font-semibold py-2">
-    <span x-text="t('offline_banner')"></span>
+  <!-- 网络离线提示 -->
+  <div x-show="isOffline"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 -translate-y-full"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0 -translate-y-full"
+       class="fixed top-0 left-0 right-0 z-[9999] bg-orange-600 text-white text-xs text-center py-2 px-4 safe-area-top">
+    📶 网络连接已断开，部分功能可能不可用
   </div>
 
   <!-- 图片大图预览 Lightbox -->
@@ -368,6 +394,12 @@
             </div>
           </button>
         </template>
+      </div>
+      <!-- 搜索无结果空状态 -->
+      <div x-show="searchQuery && searchResults.length === 0 && !searchLoading" class="flex flex-col items-center justify-center py-12 text-center">
+        <div class="text-4xl mb-3">🔍</div>
+        <p class="text-white/60 text-sm">没有找到 "<span x-text="searchQuery" class="text-white/80"></span>"</p>
+        <p class="text-white/30 text-xs mt-1">试试其他关键词</p>
       </div>
     </div>
   </header>
@@ -855,6 +887,14 @@
 
         <!-- 8000ers Grid -->
         <div x-show="activeCategory === '8000ers'">
+          <!-- Peaks Skeleton -->
+          <template x-if="peaksLoading && eightThousanders.length === 0">
+            <div class="grid grid-cols-2 gap-3 px-4">
+              <template x-for="i in [1,2,3,4]" :key="i">
+                <div class="skeleton skeleton-banner"></div>
+              </template>
+            </div>
+          </template>
           <div class="grid grid-cols-2 gap-3">
             <template x-for="peak in eightThousanders" :key="peak.id">
               <div @click="openPeakDetail(peak)" class="rounded-2xl overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform">
@@ -1151,36 +1191,25 @@
         </div>
         <div x-show="activeChatType==='posts' || activeChatType==='all'" class="mb-5">
           <h3 class="font-semibold text-white mb-3" x-show="activeChatType==='all'">最新动态</h3>
-          <!-- Skeleton loading -->
-          <div x-show="postsLoading" class="space-y-3">
-            <div class="glass rounded-2xl p-4">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="skeleton w-9 h-9 rounded-full"></div>
-                <div class="flex-1 space-y-2">
-                  <div class="skeleton h-3 rounded w-1/3"></div>
-                  <div class="skeleton h-2 rounded w-1/4"></div>
+          <!-- Posts Skeleton Loading -->
+          <template x-if="postsLoading && communityPosts.length === 0">
+            <div class="space-y-3 px-4 py-2">
+              <template x-for="i in [1,2,3]" :key="i">
+                <div class="rounded-2xl bg-white/5 p-4">
+                  <div class="flex items-center gap-3 mb-3">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="flex-1">
+                      <div class="skeleton skeleton-text w-1/2"></div>
+                      <div class="skeleton skeleton-text w-3/4" style="height:10px;margin-top:4px"></div>
+                    </div>
+                  </div>
+                  <div class="skeleton skeleton-text"></div>
+                  <div class="skeleton skeleton-text w-3/4"></div>
+                  <div class="skeleton skeleton-card mt-3" style="height:80px"></div>
                 </div>
-              </div>
-              <div class="skeleton h-48 rounded-xl mb-3"></div>
-              <div class="space-y-2">
-                <div class="skeleton h-3 rounded w-3/4"></div>
-                <div class="skeleton h-3 rounded w-1/2"></div>
-              </div>
+              </template>
             </div>
-            <div class="glass rounded-2xl p-4">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="skeleton w-9 h-9 rounded-full"></div>
-                <div class="flex-1 space-y-2">
-                  <div class="skeleton h-3 rounded w-2/5"></div>
-                  <div class="skeleton h-2 rounded w-1/3"></div>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div class="skeleton h-3 rounded w-full"></div>
-                <div class="skeleton h-3 rounded w-4/5"></div>
-              </div>
-            </div>
-          </div>
+          </template>
           <template x-for="post in (communitySearchQuery ? filteredCommunityPosts : communityPosts)" :key="post.id">
             <div class="glass rounded-2xl p-4 mb-3">
               <div class="flex items-center gap-3 mb-3">
@@ -1235,13 +1264,11 @@
               </div>
             </div>
           </template>
-          <div x-show="communityPosts.length === 0" class="flex flex-col items-center justify-center py-16 text-center px-8">
-            <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">landscape</span>
-            <p class="text-slate-300 font-semibold text-lg mb-2">还没有动态</p>
-            <p class="text-slate-500 text-sm mb-6">成为第一个分享攀登故事的人吧</p>
-            <button @click="showPostEditor=true" class="bg-primary text-white px-6 py-2 rounded-full text-sm font-semibold active:scale-95 transition-all">
-              发布第一条动态
-            </button>
+          <!-- 帖子空状态 -->
+          <div x-show="!postsLoading && communityPosts.length === 0" class="flex flex-col items-center justify-center py-16 px-8 text-center">
+            <div class="text-5xl mb-4">🏔️</div>
+            <p class="text-white/60 text-sm font-medium mb-1">暂无内容</p>
+            <p class="text-white/30 text-xs">成为第一个分享攀登故事的人</p>
           </div>
         </div>
 
