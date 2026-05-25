@@ -156,7 +156,7 @@
       <!-- 审核中展示 -->
       <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'pending'">
         <div class="text-slate-300 text-sm py-2">
-          <p>您的认证申请（<span class="text-yellow-400" x-text="certStatus.club?.cert_level || certStatus.application?.cert_level"></span> 等级）正在审核中，预计7天内完成。</p>
+          <p>您的认证申请（<span class="text-yellow-400" x-text="certStatus.club?.cert_level || certStatus.application?.cert_level || '未知'"></span> 等级）正在审核中，预计7天内完成。</p>
         </div>
       </template>
 
@@ -164,10 +164,10 @@
       <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'rejected'">
         <div class="text-slate-300 text-sm py-2">
           <p class="text-red-400 font-semibold mb-2">❌ 申请已被拒绝</p>
-          <p x-show="certStatus.club.reject_reason" class="text-slate-400 text-xs mb-3 bg-red-500/10 rounded-xl px-3 py-2">
+          <p x-show="certStatus.club?.reject_reason" class="text-slate-400 text-xs mb-3 bg-red-500/10 rounded-xl px-3 py-2">
             拒绝原因：<span x-text="certStatus.club.reject_reason"></span>
           </p>
-          <p class="text-slate-400 text-xs mb-3" x-show="!certStatus.club.reject_reason">您的俱乐部认证申请已被拒绝，请修改申请材料后重新提交。</p>
+          <p class="text-slate-400 text-xs mb-3" x-show="!certStatus.club?.reject_reason">您的俱乐部认证申请已被拒绝，请修改申请材料后重新提交。</p>
           <button @click="page='apply'" class="mt-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl font-semibold text-sm transition hover:opacity-90">🔄 重新申请</button>
         </div>
       </template>

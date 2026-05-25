@@ -37,11 +37,12 @@ describe('GET /api/club-console/orders', () => {
       VALUES (?, ?, ?)
     `).run(clubId, '测试活动', 'active');
     const activityId = Number(activityResult.lastInsertRowid);
+    const orderNo = `ACT-CLUB-ORDER-${Date.now()}`;
 
     db.prepare(`
       INSERT INTO activity_orders (order_no, activity_id, club_id, user_id, amount, status)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run('ACT-CLUB-ORDER-1', activityId, clubId, customer.id, 1299, 'paid');
+    `).run(orderNo, activityId, clubId, customer.id, 1299, 'paid');
   });
 
   test('returns club activity orders with joined user/activity fields', async () => {

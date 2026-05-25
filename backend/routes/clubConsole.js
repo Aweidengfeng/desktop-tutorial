@@ -11,6 +11,7 @@ const writeLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: '操作过于频繁，请稍后再试' },
 });
+const MIN_PAYOUT_AMOUNT = 100;
 
 async function getClub(userId) {
   return (await prisma.$queryRaw`SELECT * FROM clubs WHERE creator_id = ${userId} AND status = 'active'`)[0];
@@ -45,27 +46,62 @@ router.get('/dashboard', auth, async (req, res) => {
       activityRevenue = { total: Number(row.total) };
     } catch (_) {}
     try {
-      const row = (await prisma.$queryRaw`SELECT COUNT(*) as c FROM activity_orders WHERE club_id=${club.id}`)[0];
-      totalViews = { c: Number(row.c) * 12 };
+      const row = (await prisma.$queryRaw`SELECT COALESCE(SUM(view_count),0) as c FROM expeditions WHERE publisher_type='club' AND publisher_id=${club.id}`)[0];
+      totalViews = { c: Number(row.c || 0) };
     } catch (_) {}
     try {
       const row = (await prisma.$queryRaw`SELECT COALESCE(AVG(rating),0) as v FROM reviews WHERE target_type='club' AND target_id=${club.id}`)[0];
       avgRating = { v: Number(row.v || 0) };
     } catch (_) {}
     try {
-      const totalRow = (await prisma.$queryRaw`SELECT COUNT(*) as c FROM activity_orders WHERE club_id=${club.id} AND status='paid'`)[0];
-      const repeatRow = (await prisma.$queryRaw`SELECT COUNT(*) as c FROM (SELECT user_id FROM activity_orders WHERE club_id=${club.id} AND status='paid' GROUP BY user_id HAVING COUNT(*) > 1)`)[0];
-      const paidOrders = Number(totalRow?.c || 0);
-      const repeatUsers = Number(repeatRow?.c || 0);
-      repeatRate = paidOrders > 0 ? Math.min(1, repeatUsers / paidOrders) : 0;
+      const row = (await prisma.$queryRaw`
+        SELECT COUNT(*) as total_users,
+               COALESCE(SUM(CASE WHEN order_count > 1 THEN 1 ELSE 0 END),0) as repeat_users
+        FROM (
+          SELECT user_id, COUNT(*) as order_count
+          FROM activity_orders
+          WHERE club_id=${club.id} AND status='paid'
+          GROUP BY user_id
+        )
+      `)[0];
+      const paidUsers = Number(row?.total_users || 0);
+      const repeatUsers = Number(row?.repeat_users || 0);
+      repeatRate = paidUsers > 0 ? Math.min(1, repeatUsers / paidUsers) : 0;
     } catch (_) {}
-    const monthlyGmv = Number(paidRevenue.total || 0) + Number(activityRevenue.total || 0);
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    let monthExpedition = 0;
+    let monthActivity = 0;
+    try {
+      const row = (await prisma.$queryRaw`
+        SELECT COALESCE(SUM(eo.publisher_income),0) as total
+        FROM expedition_orders eo
+        JOIN expeditions e ON e.id=eo.expedition_id
+        WHERE e.publisher_type='club'
+          AND e.publisher_id=${club.id}
+          AND eo.status='paid'
+          AND strftime('%Y-%m', eo.created_at)=${currentMonth}
+      `)[0];
+      monthExpedition = Number(row?.total || 0);
+    } catch (_) {}
+    try {
+      const row = (await prisma.$queryRaw`
+        SELECT COALESCE(SUM(amount),0) as total
+        FROM activity_orders
+        WHERE club_id=${club.id}
+          AND status='paid'
+          AND strftime('%Y-%m', created_at)=${currentMonth}
+      `)[0];
+      monthActivity = Number(row?.total || 0);
+    } catch (_) {}
+    const monthlyGmv = monthExpedition + monthActivity;
+    const totalGmv = Number(paidRevenue.total || 0) + Number(activityRevenue.total || 0);
     res.json({
       club_id: club.id,
       club_name: club.name,
       members_count: membersCount.c,
       total_expeditions: expeditionsCount.c,
-      total_revenue: monthlyGmv,
+      total_revenue: totalGmv,
+      monthly_revenue: monthlyGmv,
       totalViews: totalViews.c,
       avgRating: avgRating.v,
       monthlyGmv,
@@ -291,7 +327,7 @@ router.post('/finance/payout', writeLimiter, auth, async (req, res) => {
     const bankAccount = String(req.body?.bank_account || '').trim();
     const bankName = String(req.body?.bank_name || '').trim();
     if (!Number.isFinite(amountNum) || amountNum <= 0) return res.status(400).json({ error: '提现金额无效' });
-    if (amountNum < 100) return res.status(400).json({ error: '最低提现金额为100元' });
+    if (amountNum < MIN_PAYOUT_AMOUNT) return res.status(400).json({ error: `最低提现金额为${MIN_PAYOUT_AMOUNT}元` });
     if (!bankAccount || !bankName) return res.status(400).json({ error: '请填写银行卡号和开户行' });
 
     const [incomeRow] = await prisma.$queryRaw`
@@ -314,19 +350,25 @@ router.post('/finance/payout', writeLimiter, auth, async (req, res) => {
     if (amountNum > available) return res.status(400).json({ error: '提现金额超过可用余额' });
 
     const accountInfo = JSON.stringify({ bank_account: bankAccount, bank_name: bankName });
-    const [inserted] = await prisma.$queryRaw`
-      INSERT INTO withdrawal_requests (
-        owner_type, owner_id, amount, fee, actual_amount, account_type, account_info, bank_account, bank_name, status, note
-      )
-      VALUES (
-        'club', ${club.id}, ${amountNum}, 0, ${amountNum}, 'bank', ${accountInfo}, ${bankAccount}, ${bankName}, 'pending', NULL
-      )
-      RETURNING id
-    `;
+    const inserted = await prisma.withdrawalRequest.create({
+      data: {
+        ownerType: 'club',
+        ownerId: club.id,
+        amount: amountNum,
+        fee: 0,
+        actualAmount: amountNum,
+        accountType: 'bank',
+        accountInfo,
+        bankAccount,
+        bankName,
+        status: 'pending',
+      },
+      select: { id: true },
+    });
 
     res.json({
       success: true,
-      request_id: Number(inserted?.id || 0),
+      request_id: Number(inserted.id || 0),
       status: 'pending',
       amount: amountNum,
       bank_account: bankAccount,
