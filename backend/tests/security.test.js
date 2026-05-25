@@ -247,8 +247,7 @@ describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
     for (const file of htmlFiles) {
       const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
       expect(content).toContain('@alpinejs/csp');
-      expect(content).not.toContain('alpinejs@3.');
-      expect(content).not.toContain('alpinejs@3.x.x');
+      expect(content).not.toContain('/npm/alpinejs@');
     }
   });
 });

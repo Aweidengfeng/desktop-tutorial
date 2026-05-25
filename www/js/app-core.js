@@ -5094,10 +5094,8 @@ function alpineLink() {
       if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
       const StatusBar = window.Capacitor?.Plugins?.StatusBar;
       if (!StatusBar) return;
-      const rootStyles = window.getComputedStyle ? window.getComputedStyle(document.documentElement) : null;
-      const statusBarColor = rootStyles
-        ? (rootStyles.getPropertyValue('--color-status-bar-bg') || rootStyles.getPropertyValue('--bg-primary')).trim()
-        : '';
+      const rootStyles = window.getComputedStyle(document.documentElement);
+      const statusBarColor = ((rootStyles.getPropertyValue('--color-status-bar-bg') || rootStyles.getPropertyValue('--bg-primary') || '')).trim();
       try {
         await StatusBar.setStyle({ style: theme === 'dark' ? 'DARK' : 'LIGHT' });
         if (StatusBar.setBackgroundColor && statusBarColor) {
