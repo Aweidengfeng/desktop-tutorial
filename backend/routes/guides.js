@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const moderation = require('../utils/moderation');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const { GUIDE_CERT_LEVELS } = require('../utils/certLevels');
 const rateLimit = require('express-rate-limit');
 const { detectRegion } = require('../lib/region');
@@ -16,6 +17,7 @@ const applyRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHe
 const payRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作频率过高，请稍后再试' } });
 const guideReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁，请稍后再试' } });
 const guideWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁，请稍后再试' } });
+const SERVICE_PUBLISH_IDEMPOTENCY_WINDOW_SECONDS = 30;
 
 // Helper: parse peaks_led JSON field
 function parseGuide(guide) {
@@ -301,20 +303,20 @@ router.put('/my/routes/:routeId', guideWriteLimiter, auth, async (req, res) => {
             priceTiers, itinerary, equipmentList, includedServices, excludedServices } = req.body;
     await prisma.$executeRaw`
       UPDATE guide_routes SET
-        title = COALESCE(${title || null}, title),
-        peak_name = COALESCE(${peakName || null}, peak_name),
-        description = COALESCE(${description || null}, description),
-        difficulty_rating = COALESCE(${difficultyRating || null}, difficulty_rating),
-        duration_days = COALESCE(${durationDays || null}, duration_days),
-        best_season = COALESCE(${bestSeason || null}, best_season),
-        max_participants = COALESCE(${maxParticipants || null}, max_participants),
-        country = COALESCE(${country || null}, country),
-        cancellation_policy = COALESCE(${cancellationPolicy || null}, cancellation_policy),
-        price_tiers = COALESCE(${priceTiers || null}, price_tiers),
-        itinerary = COALESCE(${itinerary || null}, itinerary),
-        equipment_list = COALESCE(${equipmentList || null}, equipment_list),
-        included_services = COALESCE(${includedServices || null}, included_services),
-        excluded_services = COALESCE(${excludedServices || null}, excluded_services),
+        title = COALESCE(${title !== undefined ? title : null}, title),
+        peak_name = COALESCE(${peakName !== undefined ? peakName : null}, peak_name),
+        description = COALESCE(${description !== undefined ? description : null}, description),
+        difficulty_rating = COALESCE(${difficultyRating !== undefined ? difficultyRating : null}, difficulty_rating),
+        duration_days = COALESCE(${durationDays !== undefined ? durationDays : null}, duration_days),
+        best_season = COALESCE(${bestSeason !== undefined ? bestSeason : null}, best_season),
+        max_participants = COALESCE(${maxParticipants !== undefined ? maxParticipants : null}, max_participants),
+        country = COALESCE(${country !== undefined ? country : null}, country),
+        cancellation_policy = COALESCE(${cancellationPolicy !== undefined ? cancellationPolicy : null}, cancellation_policy),
+        price_tiers = COALESCE(${priceTiers !== undefined ? priceTiers : null}, price_tiers),
+        itinerary = COALESCE(${itinerary !== undefined ? itinerary : null}, itinerary),
+        equipment_list = COALESCE(${equipmentList !== undefined ? equipmentList : null}, equipment_list),
+        included_services = COALESCE(${includedServices !== undefined ? includedServices : null}, included_services),
+        excluded_services = COALESCE(${excludedServices !== undefined ? excludedServices : null}, excluded_services),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${routeId} AND guide_id = ${guide.id}
     `.catch(() => {});
@@ -773,14 +775,16 @@ router.get('/:guideId/services', async (req, res) => {
     const { type } = req.query;
 
     let isOwner = false;
+    const jwtSecret = process.env.JWT_SECRET;
     const authHeader = req.headers.authorization || '';
-    if (authHeader.startsWith('Bearer ')) {
+    if (jwtSecret && authHeader.startsWith('Bearer ')) {
       try {
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'summitlink_jwt_secret_2024');
-        const [g] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${decoded.id}`;
-        if (g && g.id === guideId) isOwner = true;
-      } catch (_) {}
+        const decoded = jwt.verify(authHeader.slice(7), jwtSecret);
+        const [ownerGuide] = await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${decoded.id}`;
+        if (ownerGuide && ownerGuide.id === guideId) isOwner = true;
+      } catch (error) {
+        // ignore invalid/expired token for public requests
+      }
     }
 
     let services;
@@ -839,13 +843,14 @@ router.post('/:guideId/services', guideWriteLimiter, auth, async (req, res) => {
       return res.status(422).json({ error: 'commercial_not_verified' });
     }
     // 幂等检测：30秒内相同向导+标题+开始日期视为重复提交
+    const idempotencyWindow = `-${SERVICE_PUBLISH_IDEMPOTENCY_WINDOW_SECONDS} seconds`;
     const recentDup = (await prisma.$queryRaw`
       SELECT id FROM guide_services
       WHERE guide_id = ${guide.id}
         AND title = ${title}
         AND start_date = ${start_date || ''}
-        AND created_at >= datetime('now', '-30 seconds')
-    `.catch(() => []))[0];
+        AND created_at >= datetime('now', ${idempotencyWindow})
+    `)[0];
     if (recentDup) return res.status(409).json({ error: '请勿重复提交，服务已创建' });
     const includesStr = includes ? JSON.stringify(includes) : null;
     await prisma.$executeRaw`
