@@ -58,24 +58,26 @@ jobs:
       - name: Install backend dependencies
         run: cd backend && npm install
 
-      # ── 生成 Prisma Client 并推送 schema（建表）────────────────────────────
-      # 必须加 --push，否则 /tmp/ci.db 里没有表结构，所有接口返回 500
-      # CHECKPOINT_DISABLE=1 禁用 Prisma 遥测，避免 CI 防火墙拦截 checkpoint.prisma.io
-      - name: Generate Prisma Client and push schema
-        run: cd backend && DATABASE_PROVIDER=sqlite DATABASE_URL="file:/tmp/ci.db" node scripts/generate-prisma-client.js --push
+      # ── 从根目录生成 Prisma Client ──────────────────────────────────────────
+      # 根因：root package.json 中安装了 @prisma/client，npm 将其 hoist 到根
+      # node_modules/@prisma/client。backend/lib/db.js 中的 require('@prisma/client')
+      # 因此解析到根目录的包，该包查找根 node_modules/.prisma/client（引擎二进制）。
+      # 必须从根目录执行 prisma generate，才能将引擎写入根 node_modules/.prisma/client/，
+      # 否则会报 "@prisma/client did not initialize yet"。
+      - name: Generate Prisma Client (root)
+        run: npx prisma generate --schema=backend/prisma/schema.prisma
         env:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 将生成的 Prisma Client 同步到根 node_modules ───────────────────────
-      # 根因：root package.json 中安装了 @prisma/client，npm 将其 hoist 到根
-      # node_modules/@prisma/client。backend/lib/db.js 中的 require('@prisma/client')
-      # 因此解析到根目录的包，该包查找根 node_modules/.prisma/client（引擎二进制）。
-      # generate-prisma-client.js 只生成到 backend/node_modules/.prisma/client，
-      # 故根目录缺少引擎，导致 "did not initialize yet"。
-      # 使用 rsync（带尾部斜线）同步目录内容，无论目标目录是否存在都能正确处理。
-      - name: Sync Prisma Client to root node_modules
-        run: rsync -a --delete backend/node_modules/.prisma/client/ node_modules/.prisma/client/
+      # ── 推送 schema 到 SQLite 数据库（建表）────────────────────────────────
+      # --skip-generate 避免重复生成，仅建表
+      - name: Push Prisma schema to database
+        run: npx prisma db push --schema=backend/prisma/schema.prisma --skip-generate
+        env:
+          DATABASE_URL: "file:/tmp/ci.db"
+          CHECKPOINT_DISABLE: "1"
+          PRISMA_TELEMETRY_INFORMATION: ""
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
