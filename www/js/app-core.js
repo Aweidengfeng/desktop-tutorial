@@ -692,8 +692,8 @@ function alpineLink() {
     meSection: 'profile',
     // Rescue contacts
     rescueContacts: [],
-    toasts: [],
     toast: { show: false, message: '', type: '' },
+    _toastTimer: null,
     newComment: '',
     selectedPostComments: [],
     commentsLoading: false,
