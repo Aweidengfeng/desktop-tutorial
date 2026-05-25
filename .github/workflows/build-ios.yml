@@ -84,26 +84,35 @@ jobs:
           fi
           find ios/App -name '*.bak' -delete
 
-      - name: Sync Capacitor and generate Podfile
+      - name: Sync Capacitor
         run: |
           npx cap sync ios
-          if [ ! -f ios/App/Podfile ]; then
-            echo "ERROR: Podfile not found after cap sync"
+          if [ ! -d ios/App/App.xcodeproj ]; then
+            echo "ERROR: ios/App/App.xcodeproj not found after cap sync"
             ls -la ios/App/ 2>/dev/null || echo "ios/App dir does not exist"
             exit 1
           fi
-          echo "Podfile found at ios/App/Podfile"
+          echo "iOS project ready at ios/App/App.xcodeproj"
+          if [ -f ios/App/Podfile ]; then
+            echo "CocoaPods project detected"
+          elif [ -d ios/App/CapApp-SPM ]; then
+            echo "Swift Package Manager project detected - skipping pod install"
+          fi
 
-      - name: Install CocoaPods (with retry)
+      - name: Install CocoaPods (only if Podfile exists)
         run: |
-          cd ios/App
-          for attempt in 1 2 3; do
-            pod install && exit 0
-            echo "pod install failed on attempt ${attempt}, retrying..."
-            sleep $((attempt * 10))
-          done
-          echo "pod install failed after 3 attempts"
-          exit 1
+          if [ -f ios/App/Podfile ]; then
+            cd ios/App
+            for attempt in 1 2 3; do
+              pod install && exit 0
+              echo "pod install failed on attempt ${attempt}, retrying..."
+              sleep $((attempt * 10))
+            done
+            echo "pod install failed after 3 attempts"
+            exit 1
+          else
+            echo "No Podfile found (SPM project) - skipping pod install"
+          fi
 
       - name: Import signing certificate
         if: startsWith(github.ref, 'refs/tags/v') && env.HAS_IOS_CERT == 'true'
@@ -125,7 +134,16 @@ jobs:
       - name: Build & Archive (signed release)
         if: startsWith(github.ref, 'refs/tags/v') && env.HAS_IOS_CERT == 'true' && env.HAS_IOS_PROFILE == 'true'
         run: |
-          xcodebuild -workspace ios/App/App.xcworkspace \
+          if [ -d ios/App/App.xcworkspace ]; then
+            XCODE_TARGET=(-workspace ios/App/App.xcworkspace)
+          elif [ -d ios/App/App.xcodeproj ]; then
+            XCODE_TARGET=(-project ios/App/App.xcodeproj)
+          else
+            echo "ERROR: Neither App.xcworkspace nor App.xcodeproj found"
+            ls -la ios/App/ 2>/dev/null || true
+            exit 1
+          fi
+          xcodebuild "${XCODE_TARGET[@]}" \
             -scheme App \
             -configuration Release \
             -archivePath $PWD/build/App.xcarchive \
@@ -134,7 +152,16 @@ jobs:
       - name: Build & Archive (unsigned validation)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') || env.HAS_IOS_CERT != 'true' || env.HAS_IOS_PROFILE != 'true' }}
         run: |
-          xcodebuild -workspace ios/App/App.xcworkspace \
+          if [ -d ios/App/App.xcworkspace ]; then
+            XCODE_TARGET=(-workspace ios/App/App.xcworkspace)
+          elif [ -d ios/App/App.xcodeproj ]; then
+            XCODE_TARGET=(-project ios/App/App.xcodeproj)
+          else
+            echo "ERROR: Neither App.xcworkspace nor App.xcodeproj found"
+            ls -la ios/App/ 2>/dev/null || true
+            exit 1
+          fi
+          xcodebuild "${XCODE_TARGET[@]}" \
             -scheme App \
             -configuration Release \
             -archivePath $PWD/build/App.xcarchive \
