@@ -3146,22 +3146,39 @@ function alpineLink() {
     },
     async deleteMyAccount() {
       if (!this.requireAuth()) return;
-      if (!window.confirm('确认注销账号？此操作将清空您的个人信息且不可撤销。')) return;
+      if (!window.confirm('确认申请注销账号？您将有 24 小时冷静期，期间可登录取消注销。')) return;
       this.accountDeletionLoading = true;
       try {
-        const res = await fetch('/api/gdpr/delete-account', { method: 'DELETE', headers: this.getAuthHeaders() });
+        const res = await fetch('/api/auth/request-deletion', {
+          method: 'POST',
+          headers: this.getAuthHeaders()
+        });
         const d = await res.json().catch(() => ({}));
         if (!res.ok) {
-          this.showToast(d.error || '注销失败', 'error');
+          this.showToast(d.error || '申请失败', 'error');
           return;
         }
-        this.doLogout();
+        this.showToast('注销申请已提交，账号将在 24 小时后删除。您可在此期间登录取消。');
         this.showSettings = false;
-        this.showToast('账号已注销');
+        // 不立即登出，让用户有机会取消
       } catch (e) {
         this.showToast('网络错误', 'error');
       } finally {
         this.accountDeletionLoading = false;
+      }
+    },
+    async cancelAccountDeletion() {
+      if (!this.requireAuth()) return;
+      try {
+        const res = await fetch('/api/auth/cancel-deletion', {
+          method: 'POST',
+          headers: this.getAuthHeaders()
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) { this.showToast(d.error || '取消失败', 'error'); return; }
+        this.showToast('已取消注销申请 ✅');
+      } catch (e) {
+        this.showToast('网络错误', 'error');
       }
     },
 

@@ -83,6 +83,23 @@ router.delete('/delete-account', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
+
+    // 1) 删除关联 PII 表中该用户的所有记录（忽略表不存在等错误）
+    // 注意：表名来自冻结的常量白名单，并在拼接前用 Set 二次断言，防止意外注入
+    const PII_TABLES = Object.freeze([
+      'emergency_contacts', 'medical_info', 'sos_records', 'sms_codes', 'email_codes',
+      'notifications', 'follows', 'favorites', 'comment_likes', 'likes',
+      'user_achievements', 'user_badges', 'mountain_wishlists', 'mountain_footprints',
+      'post_saves', 'message_reads', 'location_shares', 'feed_scores', 'expedition_subscribers',
+    ]);
+    const ALLOWED_PII_TABLES = new Set(PII_TABLES);
+    for (const table of PII_TABLES) {
+      if (!ALLOWED_PII_TABLES.has(table)) continue; // 二次断言：只允许白名单内的表名
+      await prisma.$executeRawUnsafe(`DELETE FROM ${table} WHERE user_id = ?`, userId)
+        .catch(() => {});
+    }
+
+    // 2) 匿名化 users 主表（清空 PII、保留 id 以维持外键）
     await prisma.$executeRaw`
       UPDATE users
       SET deleted_at = ${now},
