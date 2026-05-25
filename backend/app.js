@@ -562,8 +562,8 @@ app.get('/investor', htmlPageLimiter, (req, res) => {
   const investorToken = process.env.INVESTOR_TOKEN;
   if (investorToken) {
     const authorization = req.headers.authorization;
-    const bearerToken = authorization && authorization.startsWith('Bearer ')
-      ? authorization.slice('Bearer '.length)
+    const bearerToken = authorization
+      ? ((authorization.match(/^Bearer\s+(.+)$/i) || [])[1] || '').trim()
       : '';
     const providedToken = req.query.token
       || bearerToken;
