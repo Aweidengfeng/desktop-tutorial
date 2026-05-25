@@ -10,6 +10,8 @@
  * @param {'home'|'explore'|'discover'|'chat'|'me'} tabName
  */
 async function gotoTab(page, tabName) {
+  const STABLE_STATE_THRESHOLD_MS = 400;
+  const ALPINE_READY_BUFFER_MS = 300;
   // Ensure we are on the app page before trying to click nav
   if (!page.url().includes('/summitlink')) {
     await page.goto('/summitlink');
@@ -40,9 +42,9 @@ async function gotoTab(page, tabName) {
         window.__gotoTabStableState = { key, t: now };
         return false;
       }
-      return (now - window.__gotoTabStableState.t) > 400;
+      return (now - window.__gotoTabStableState.t) > STABLE_STATE_THRESHOLD_MS;
     }, { timeout: 3000 }).catch(() => {});
-    await page.waitForTimeout(300).catch(() => {});
+    await page.waitForTimeout(ALPINE_READY_BUFFER_MS).catch(() => {});
   };
   const navBtn = page.locator(navSel).first();
   await navBtn.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
