@@ -561,8 +561,12 @@ app.get('/investor', htmlPageLimiter, (req, res) => {
   // 服务端鉴权：验证 investor token（query param 或 Authorization header）
   const investorToken = process.env.INVESTOR_TOKEN;
   if (investorToken) {
+    const authorization = req.headers.authorization;
+    const bearerToken = authorization && authorization.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length)
+      : '';
     const providedToken = req.query.token
-      || (req.headers.authorization && req.headers.authorization.replace('Bearer ', ''));
+      || bearerToken;
     if (!providedToken || providedToken !== investorToken) {
       return res.status(401).send(`
         <!DOCTYPE html>
