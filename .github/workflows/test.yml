@@ -70,10 +70,14 @@ jobs:
       # ── 将生成的 Prisma Client 同步到根 node_modules ───────────────────────
       # generate-prisma-client.js 将 client 输出到 backend/node_modules/.prisma/client
       # 但 Jest 从根目录运行时，require('@prisma/client') 解析到根 node_modules/@prisma/client
-      # 该包会去查找根 node_modules/.prisma/client，若不存在则报 "did not initialize yet"
-      # 因此需将生成好的 client 复制到根目录，使两处都能正常初始化
+      # 该包会查找根 node_modules/.prisma/client；
+      # 注意：npm install 时 @prisma/client postinstall 会预先创建该空目录，
+      # 直接 cp -r src dest/ 会把 src 放进 dest/src（多一层），
+      # 必须先 rm -rf 再 cp，确保文件直接落在正确层级。
       - name: Copy Prisma Client to root node_modules
-        run: mkdir -p node_modules/.prisma && cp -r backend/node_modules/.prisma/client node_modules/.prisma/
+        run: |
+          rm -rf node_modules/.prisma/client
+          cp -r backend/node_modules/.prisma/client node_modules/.prisma/client
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
