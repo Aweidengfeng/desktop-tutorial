@@ -36,7 +36,7 @@ function getInvestorPageToken(req) {
   }
 
   const separator = authorization[6];
-  if (!separator || !' \t'.includes(separator)) {
+  if (!separator || (separator !== ' ' && separator !== '\t')) {
     return '';
   }
 
