@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "355960530626",
+    "project_id": "summitlink-5975e",
+    "storage_bucket": "summitlink-5975e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:355960530626:android:3516215995f8b5b4f77d5b",
+        "android_client_info": {
+          "package_name": "com.summitlink.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuEY5-fQiafWss3w_dj8AZSZi9-YL7KI0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
