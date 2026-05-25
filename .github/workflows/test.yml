@@ -163,15 +163,20 @@ jobs:
       # 解决方案：生成后将 backend/node_modules/.prisma/client/ 的内容复制到根位置。
       - name: Re-generate Prisma Client before API tests
         run: |
-          # 在两个位置都执行 generate（双重保险）
+          # Generate from root (writes engine to root node_modules/.prisma/client if no custom output)
           npx prisma generate --schema=backend/prisma/schema.prisma
+          
+          # Generate from backend (writes to backend/node_modules/.prisma/client per schema output config)
           cd backend && npx prisma generate --schema=prisma/schema.prisma && cd ..
 
-          # 关键修复：将生成的引擎文件同步到根 node_modules/.prisma/client/
-          # （@prisma/client 被 hoist 到根，因此引擎必须在此处）
+          # Sync engine artifacts to root node_modules/.prisma/client (portable, no -T flag)
           mkdir -p node_modules/.prisma/client
-          cp -rT backend/node_modules/.prisma/client/ node_modules/.prisma/client/
-          echo "✅ Prisma engine artifacts synced to root node_modules/.prisma/client/"
+          if [ -d "backend/node_modules/.prisma/client" ]; then
+            cp -r backend/node_modules/.prisma/client/. node_modules/.prisma/client/
+            echo "✅ Prisma engine artifacts synced to root node_modules/.prisma/client/"
+          else
+            echo "⚠️ backend/node_modules/.prisma/client not found — root generate should suffice"
+          fi
           ls node_modules/.prisma/client/ | head -20
         env:
           CHECKPOINT_DISABLE: "1"
