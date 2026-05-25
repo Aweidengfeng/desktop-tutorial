@@ -21,6 +21,14 @@ const certWriteLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+function isValidUploadUrl(url) {
+  if (!url) return true;
+  return typeof url === 'string' && (
+    url.startsWith('/uploads/') ||
+    /^https:\/\/[a-z0-9-]+\.(oss-cn|cos\.|obs\.|myqcloud\.com|aliyuncs\.com|summitlink\.app)/.test(url)
+  );
+}
+
 // GET /api/certification/levels
 router.get('/levels', certReadLimiter, (req, res) => {
   res.json({ guide: GUIDE_CERT_LEVELS, club: CLUB_CERT_LEVELS });
@@ -87,10 +95,14 @@ router.get('/club/status', certReadLimiter, auth, async (req, res) => {
 // POST /api/certification/guide/apply
 router.post('/guide/apply', certWriteLimiter, auth, async (req, res) => {
   try {
-    const { certLevel = 'basic', name, cert, specialty, languages, dayRate, region } = req.body;
+    const { certLevel = 'basic', name, cert, specialty, languages, dayRate, region,
+            id_card_url, climbing_cert_url, passport_url, is_international, nationality } = req.body;
     if (!name) return res.status(400).json({ error: '姓名不能为空' });
     if (!GUIDE_CERT_LEVELS[certLevel]) {
       return res.status(400).json({ error: '无效的认证等级' });
+    }
+    if (![id_card_url, climbing_cert_url, passport_url].every(isValidUploadUrl)) {
+      return res.status(400).json({ error: '证件文件地址无效，请通过平台上传' });
     }
     const existing = (await prisma.$queryRaw`
       SELECT id, status FROM guide_applications WHERE user_id = ${req.user.id} AND status = 'pending'
@@ -100,23 +112,37 @@ router.post('/guide/apply', certWriteLimiter, auth, async (req, res) => {
     }
     const yearFee = GUIDE_CERT_LEVELS[certLevel].yearFee;
     await prisma.$executeRaw`
-      INSERT INTO guide_applications (user_id, name, cert, specialty, languages, day_rate, region, cert_level)
-      VALUES (${req.user.id}, ${name}, ${cert || ''}, ${specialty || ''}, ${languages || ''}, ${dayRate || 0}, ${region || ''}, ${certLevel})
+      INSERT INTO guide_applications (user_id, name, cert, specialty, languages, day_rate, region, cert_level,
+        id_card_url, climbing_cert_url, passport_url, is_international, nationality)
+      VALUES (${req.user.id}, ${name}, ${cert || ''}, ${specialty || ''}, ${languages || ''}, ${dayRate || 0}, ${region || ''}, ${certLevel},
+              ${id_card_url || null}, ${climbing_cert_url || null}, ${passport_url || null},
+              ${is_international ? 1 : 0}, ${nationality || null})
     `;
     const existingGuide = (await prisma.$queryRaw`SELECT id FROM guides WHERE user_id = ${req.user.id}`)[0];
     if (!existingGuide) {
       await prisma.$executeRaw`
-        INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status, cert_level, cert_year_fee)
-        VALUES (${req.user.id}, ${name}, ${cert || ''}, ${specialty || ''}, ${languages || ''}, ${dayRate || 0}, ${region || ''}, 'pending', ${certLevel}, ${yearFee})
+        INSERT INTO guides (user_id, name, cert, specialty, languages, day_rate, region, status, cert_level, cert_year_fee,
+          id_card_url, climbing_cert_url, passport_url, is_international, nationality)
+        VALUES (${req.user.id}, ${name}, ${cert || ''}, ${specialty || ''}, ${languages || ''}, ${dayRate || 0}, ${region || ''}, 'pending', ${certLevel}, ${yearFee},
+                ${id_card_url || null}, ${climbing_cert_url || null}, ${passport_url || null},
+                ${is_international ? 1 : 0}, ${nationality || null})
       `;
     } else {
       await prisma.$executeRaw`
-        UPDATE guides SET status='pending', name=${name}, cert=${cert || ''}, specialty=${specialty || ''}, languages=${languages || ''}, day_rate=${dayRate || 0}, region=${region || ''}, cert_level=${certLevel}, cert_year_fee=${yearFee}
+        UPDATE guides SET status='pending', name=${name}, cert=${cert || ''}, specialty=${specialty || ''},
+          languages=${languages || ''}, day_rate=${dayRate || 0}, region=${region || ''},
+          cert_level=${certLevel}, cert_year_fee=${yearFee},
+          id_card_url = COALESCE(${id_card_url || null}, id_card_url),
+          climbing_cert_url = COALESCE(${climbing_cert_url || null}, climbing_cert_url),
+          passport_url = COALESCE(${passport_url || null}, passport_url),
+          is_international = ${is_international ? 1 : 0},
+          nationality = COALESCE(${nationality || null}, nationality)
         WHERE user_id=${req.user.id}
       `;
     }
     res.json({ success: true, message: '申请已提交，7天内审核完成', certLevel, yearFee });
   } catch (e) {
+    console.error('[certification/guide/apply]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });

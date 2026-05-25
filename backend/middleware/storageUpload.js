@@ -13,7 +13,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { uploadFile } = require('../lib/storage');
 
-const SAFE_IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+const SAFE_UPLOAD_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']);
 
 const CLOUD_STORAGE_ENABLED = !!(
   process.env.COS_BUCKET &&
@@ -32,7 +32,7 @@ const CLOUD_STORAGE_ENABLED = !!(
  */
 async function uploadBufferToStorage(buffer, originalname, folder = 'uploads', contentType = 'application/octet-stream') {
   const rawExt = path.extname(originalname || '').toLowerCase();
-  const ext = SAFE_IMAGE_EXTENSIONS.has(rawExt) ? rawExt : '.jpg';
+  const ext = SAFE_UPLOAD_EXTENSIONS.has(rawExt) ? rawExt : '.jpg';
   const key = `${folder}/${crypto.randomUUID()}${ext}`;
   const result = await uploadFile(buffer, key, { region: 'cn', contentType });
   return result.url;

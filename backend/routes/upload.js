@@ -36,6 +36,12 @@ const imageFilter = (req, file, cb) => {
   else cb(new Error('只允许上传图片文件（jpg/png/gif/webp）'));
 };
 
+const documentFilter = (req, file, cb) => {
+  const allowedDocumentTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+  if (allowedDocumentTypes.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('只允许上传证件文件（jpg/png/webp/pdf）'));
+};
+
 const videoFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
   if (ALLOWED_VIDEO_TYPES.includes(file.mimetype) || ext === '.mp4' || ext === '.mov' || ext === '.m4v') {
@@ -55,6 +61,12 @@ const upload = multer({
   storage: CLOUD_STORAGE_ENABLED ? multer.memoryStorage() : storage,
   fileFilter: imageFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB 单文件上限（图片）
+});
+
+const uploadDocument = multer({
+  storage: CLOUD_STORAGE_ENABLED ? multer.memoryStorage() : storage,
+  fileFilter: documentFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB（证件文件）
 });
 
 const uploadVideo = multer({
@@ -138,6 +150,29 @@ router.post('/multiple', uploadLimiter, auth, (req, res, next) => {
       `.catch((e) => console.error('[upload] images 记录写入失败:', e.message));
     }
     res.json({ urls });
+  });
+});
+
+// POST /api/upload/document — 证件/材料上传（支持图片/PDF，需要JWT）
+router.post('/document', uploadLimiter, auth, (req, res, next) => {
+  uploadDocument.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message || '文件类型不支持（仅支持 jpg/png/webp/pdf）' });
+    if (!req.file) return res.status(400).json({ error: '未收到文件' });
+    try {
+      if (CLOUD_STORAGE_ENABLED) {
+        await uploadFilesToStorage([req.file], uploadDir);
+      }
+      const url = req.file.storageUrl || ('/uploads/' + req.file.filename);
+      const storedFilename = req.file.filename || req.file.originalname || '';
+      prisma.$executeRaw`
+        INSERT INTO images (url, filename, size, mime_type, owner_type, owner_id, field_name)
+        VALUES (${url}, ${storedFilename}, ${req.file.size || null}, ${req.file.mimetype || null}, ${'user'}, ${req.user.id}, ${null})
+      `.catch((e) => console.error('[upload/document] images 记录写入失败:', e.message));
+      res.json({ url, filename: storedFilename });
+    } catch (e) {
+      console.error('[upload/document]', e);
+      res.status(500).json({ error: '服务器错误' });
+    }
   });
 });
 

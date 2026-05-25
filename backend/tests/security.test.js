@@ -79,6 +79,7 @@ describe('安全测试 2 — sms-codes 生产环境返回 404', () => {
 describe('安全测试 3 — 上传非图片格式返回 400', () => {
   let app, db, userToken;
   const tmpExe = path.join('/tmp', 'malicious.exe');
+  const tmpPdf = path.join('/tmp', 'document.pdf');
 
   beforeAll(() => {
     clearDbCache();
@@ -93,15 +94,35 @@ describe('安全测试 3 — 上传非图片格式返回 400', () => {
 
     // 创建一个模拟的 exe 文件（MZ 为 DOS/Windows 可执行文件的魔数标头）
     fs.writeFileSync(tmpExe, 'MZ\x90\x00 fake exe content');
+    fs.writeFileSync(tmpPdf, '%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF');
   });
 
   afterAll(() => {
     try { fs.unlinkSync(tmpExe); } catch (_) {}
+    try { fs.unlinkSync(tmpPdf); } catch (_) {}
   });
 
   test('POST /api/upload — 上传 .exe 文件 → 400', async () => {
     const res = await request(app)
       .post('/api/upload')
+      .set('Authorization', `Bearer ${userToken}`)
+      .attach('file', tmpExe, { filename: 'virus.exe', contentType: 'application/octet-stream' });
+    expect(res.status).toBe(400);
+  });
+
+  test('POST /api/upload/document — 上传 PDF 证件 → 200', async () => {
+    const res = await request(app)
+      .post('/api/upload/document')
+      .set('Authorization', `Bearer ${userToken}`)
+      .attach('file', tmpPdf, { filename: 'guide-license.pdf', contentType: 'application/pdf' });
+    expect(res.status).toBe(200);
+    expect(res.body.url).toMatch(/^\/uploads\//);
+    expect(res.body.filename).toMatch(/\.pdf$/);
+  });
+
+  test('POST /api/upload/document — 上传 exe 仍然被拒绝 → 400', async () => {
+    const res = await request(app)
+      .post('/api/upload/document')
       .set('Authorization', `Bearer ${userToken}`)
       .attach('file', tmpExe, { filename: 'virus.exe', contentType: 'application/octet-stream' });
     expect(res.status).toBe(400);
