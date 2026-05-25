@@ -134,6 +134,13 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
 
+      - name: Re-generate Prisma Client before API tests
+        run: npx prisma generate --schema=backend/prisma/schema.prisma
+        env:
+          CHECKPOINT_DISABLE: "1"
+          PRISMA_TELEMETRY_INFORMATION: ""
+          DATABASE_URL: "file:/tmp/ci.db"
+
       # ── 运行 API 集成测试（旧版 + 新版 jest/supertest）─────────────────────
       - name: Run API tests
         run: npm run test:api
