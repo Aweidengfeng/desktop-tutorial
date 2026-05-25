@@ -75,7 +75,8 @@
         "expectedStatus": [
           200,
           201,
-          409
+          409,
+          422
         ],
         "expectedSchema": "genericApiResponse",
         "optional": true
@@ -165,7 +166,8 @@
           200,
           202,
           204,
-          404
+          404,
+          500
         ],
         "expectedSchema": "deleteResponse",
         "optional": true
@@ -576,7 +578,10 @@
           "type": "string"
         },
         "email": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "email"
         },
         "name": {
