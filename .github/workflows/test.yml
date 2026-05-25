@@ -59,7 +59,7 @@ jobs:
         run: cd backend && npm install
 
       # ── 生成 Prisma Client 并推送 schema（建表）────────────────────────────
-      # 必须加 --push，否则 /tmp/ci.db 里没有表结构��所有接口返回 500
+      # 必须加 --push，否则 /tmp/ci.db 里没有表结构，所有接口返回 500
       # CHECKPOINT_DISABLE=1 禁用 Prisma 遥测，避免 CI 防火墙拦截 checkpoint.prisma.io
       - name: Generate Prisma Client and push schema
         run: cd backend && DATABASE_PROVIDER=sqlite DATABASE_URL="file:/tmp/ci.db" node scripts/generate-prisma-client.js --push
@@ -67,14 +67,13 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 确保 Prisma Client 已生成（防止 globalSetup 初始化失败）──────────────
-      - name: Ensure Prisma Client is generated
-        run: cd backend && npx prisma generate
-        env:
-          DATABASE_PROVIDER: sqlite
-          DATABASE_URL: "file:/tmp/ci.db"
-          CHECKPOINT_DISABLE: "1"
-          PRISMA_TELEMETRY_INFORMATION: ""
+      # ── 将生成的 Prisma Client 同步到根 node_modules ───────────────────────
+      # generate-prisma-client.js 将 client 输出到 backend/node_modules/.prisma/client
+      # 但 Jest 从根目录运行时，require('@prisma/client') 解析到根 node_modules/@prisma/client
+      # 该包会去查找根 node_modules/.prisma/client，若不存在则报 "did not initialize yet"
+      # 因此需将生成好的 client 复制到根目录，使两处都能正常初始化
+      - name: Copy Prisma Client to root node_modules
+        run: mkdir -p node_modules/.prisma && cp -r backend/node_modules/.prisma/client node_modules/.prisma/
 
       # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
       - name: Install Playwright browsers
@@ -104,7 +103,7 @@ jobs:
       - name: Wait for backend to be ready
         run: npx wait-on http://localhost:8080/api/health --timeout 30000
 
-      # ── 校验种子数据已真正就绪（非空）──────────��────────────────────────────
+      # ── 校验种子数据已真正就绪（非空）───────────────────────────────────────
       - name: Verify seeded API data
         run: |
           check_non_empty_array() {
