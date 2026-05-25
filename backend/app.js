@@ -270,6 +270,29 @@ const renderMainPage = (req, res) => {
 // 根路径和 SummitLink 入口都走动态注入逻辑，避免 express.static 直接返回未替换占位符
 app.get(['/', '/index.html', '/summitlink', '/summitlink.html'], htmlPageLimiter, renderMainPage);
 
+// 敏感文件保护：阻止测试脚本、配置文件被直接下载
+const BLOCKED_STATIC_FILES = new Set([
+  '/config.json',
+  '/api_test.js',
+  '/db_test.js',
+  '/frontend_test.js',
+  '/run_all_tests.js',
+  '/audit-clickables.json',
+  '/playwright.config.js',
+  '/vite.config.js',
+  '/vite.admin.config.js',
+  '/tsconfig.admin.json',
+  '/railpack.toml',
+  '/railway.toml',
+  '/docker-compose.prod.yml',
+  '/docker-compose.cn.yml',
+]);
+app.use((req, res, next) => {
+  if (BLOCKED_STATIC_FILES.has(req.path)) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+  next();
+});
 // 静态文件服务 - 根目录（必须放在根路径 HTML 注入路由之后）
 app.use(express.static(rootPath));
 // 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
@@ -535,12 +558,31 @@ app.use('/api/altitude', require('./routes/altitude'));
 // 投资者看板
 const investorHtmlFile = path.join(rootPath, 'investor.html');
 app.get('/investor', htmlPageLimiter, (req, res) => {
+  // 服务端鉴权：验证 investor token（query param 或 Authorization header）
+  const investorToken = process.env.INVESTOR_TOKEN;
+  if (investorToken) {
+    const providedToken = req.query.token
+      || (req.headers.authorization && req.headers.authorization.replace('Bearer ', ''));
+    if (!providedToken || providedToken !== investorToken) {
+      return res.status(401).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Access Denied</title>
+        <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb;}
+        .box{text-align:center;padding:40px;border:1px solid #e5e7eb;border-radius:12px;background:white;}
+        h2{color:#374151;} p{color:#6b7280;} </style></head>
+        <body><div class="box"><h2>🔒 Access Denied</h2><p>Investor dashboard requires authentication.</p></div></body>
+        </html>
+      `);
+    }
+  }
   if (!fs.existsSync(investorHtmlFile)) {
     return res.status(404).send('Investor dashboard not found');
   }
   fs.readFile(investorHtmlFile, 'utf8', (err, html) => {
     if (err) return res.status(500).send('Internal Server Error');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
     res.send(html);
   });
 });
