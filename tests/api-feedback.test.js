@@ -28,23 +28,24 @@ describe('POST /api/feedback', () => {
     user = createTestUser(db, { phone: '13900001200', name: '反馈用户' });
   });
 
-  test('匿名提交成功 → 200 + { success: true, id }', async () => {
+  test('匿名提交成功 → 200 + 标准成功响应', async () => {
     const res = await request(app)
       .post('/api/feedback')
       .send({ type: 'suggestion', content: '这是一条匿名建议' });
     expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(typeof res.body.id).toBe('number');
+    expect(res.body.code).toBe(0);
+    expect(typeof res.body.data.id).toBe('number');
+    expect(typeof res.body.message).toBe('string');
   });
 
-  test('登录用户提交成功 → 200 + { success: true, id }', async () => {
+  test('登录用户提交成功 → 200 + 标准成功响应', async () => {
     const res = await request(app)
       .post('/api/feedback')
       .set('Authorization', `Bearer ${user.token}`)
       .send({ type: 'bug', content: '发现了一个 bug', contact: 'user@example.com' });
     expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(typeof res.body.id).toBe('number');
+    expect(res.body.code).toBe(0);
+    expect(typeof res.body.data.id).toBe('number');
   });
 
   test('内容为空 → 400', async () => {
@@ -52,6 +53,7 @@ describe('POST /api/feedback', () => {
       .post('/api/feedback')
       .send({ type: 'suggestion', content: '   ' });
     expect(res.status).toBe(400);
+    expect(res.body.code).not.toBe(0);
     expect(res.body.error).toBeTruthy();
   });
 
@@ -60,6 +62,7 @@ describe('POST /api/feedback', () => {
       .post('/api/feedback')
       .send({ type: 'other' });
     expect(res.status).toBe(400);
+    expect(res.body.code).not.toBe(0);
     expect(res.body.error).toBeTruthy();
   });
 
@@ -68,6 +71,7 @@ describe('POST /api/feedback', () => {
       .post('/api/feedback')
       .send({ type: 'suggestion', content: 'x'.repeat(2001) });
     expect(res.status).toBe(400);
+    expect(res.body.code).not.toBe(0);
     expect(res.body.error).toBeTruthy();
   });
 });

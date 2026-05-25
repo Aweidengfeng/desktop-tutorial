@@ -123,14 +123,16 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
-        "'unsafe-eval'", // Alpine.js x-data 内嵌表达式编译需要
         'https://cdn.tailwindcss.com',
+        'https://unpkg.com',
         'https://cdn.jsdelivr.net',
         'https://cdn.socket.io',
         'https://webapi.amap.com',
         'https://*.amap.com',
         'https://api.mapbox.com',
         'https://*.mapbox.com',
+        'https://accounts.google.com',
+        'https://appleid.cdn-apple.com',
         'https://js.stripe.com',
       ],
       styleSrc: [

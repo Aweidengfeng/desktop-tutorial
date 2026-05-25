@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
+const { success, fail } = require('../lib/response');
 
 const feedbackLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '提交过于频繁，请稍后再试' },
+  message: { code: -1, error: '提交过于频繁，请稍后再试', message: '提交过于频繁，请稍后再试' },
 });
 
 // POST /api/feedback — 提交反馈（登录可选）
@@ -27,10 +28,10 @@ router.post('/', feedbackLimiter, async (req, res) => {
 
   const { type = 'suggestion', content, contact } = req.body || {};
   if (!content || String(content).trim().length === 0) {
-    return res.status(400).json({ error: '反馈内容不能为空' });
+    return fail(res, '反馈内容不能为空', 400);
   }
   if (String(content).length > 2000) {
-    return res.status(400).json({ error: '反馈内容过长（最多 2000 字）' });
+    return fail(res, '反馈内容过长（最多 2000 字）', 400);
   }
 
   try {
@@ -42,10 +43,10 @@ router.post('/', feedbackLimiter, async (req, res) => {
         contact: contact ? String(contact).slice(0, 200) : null,
       },
     });
-    return res.json({ success: true, id: record.id });
+    return success(res, { id: record.id });
   } catch (e) {
     console.error('[feedback] insert error:', e.message);
-    return res.status(500).json({ error: '提交失败，请稍后重试' });
+    return fail(res, '提交失败，请稍后重试', 500);
   }
 });
 

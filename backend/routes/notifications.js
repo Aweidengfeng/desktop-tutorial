@@ -3,8 +3,15 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const { success, fail } = require('../lib/response');
 
-const notifLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
+const notifLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { code: -1, error: '请求过于频繁', message: '请求过于频繁' },
+});
 
 // GET /api/notifications（需要JWT）
 router.get('/', notifLimiter, auth, async (req, res) => {
@@ -90,9 +97,9 @@ router.get('/unread', notifLimiter, auth, async (req, res) => {
       FROM notifications WHERE user_id = ${req.user.id} AND is_read = 0
       ORDER BY created_at DESC LIMIT 20
     `;
-    res.json(notifications);
+    return success(res, notifications);
   } catch (e) {
-    res.status(500).json({ error: '服务器错误' });
+    return fail(res, '服务器错误', 500);
   }
 });
 

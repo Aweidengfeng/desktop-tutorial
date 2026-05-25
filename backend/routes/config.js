@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
+const { success } = require('../lib/response');
 
-const configLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '请求太频繁' }, standardHeaders: true, legacyHeaders: false });
+const configLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { code: -1, error: '请求太频繁', message: '请求太频繁' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function isPaymentsEnabled() {
   return String(process.env.PAYMENTS_ENABLED || 'false').toLowerCase() === 'true';
@@ -21,7 +28,7 @@ router.get('/', configLimiter, (_req, res) => {
   const emergencyPhoneRaw = String(process.env.SOS_EMERGENCY_PHONE || '').trim();
   const emergencyPhone = emergencyPhoneRaw || '112';
   res.setHeader('Cache-Control', 'public, max-age=60');
-  res.json({
+  return success(res, {
     paymentsEnabled,
     stripePublishableKey: paymentsEnabled ? String(process.env.STRIPE_PUBLISHABLE_KEY || '').trim() : '',
     emergencyPhone,

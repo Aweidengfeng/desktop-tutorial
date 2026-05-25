@@ -4157,7 +4157,10 @@ function alpineLink() {
         // 先尝试新的 /api/notifications/unread 端点，获取通知列表
         const res = await fetch('/api/notifications/unread', { headers: this.getAuthHeaders() });
         if (res.ok) {
-          const list = await res.json();
+          const unreadPayload = await res.json();
+          const list = Array.isArray(unreadPayload)
+            ? unreadPayload
+            : (Array.isArray(unreadPayload && unreadPayload.data) ? unreadPayload.data : []);
           if (Array.isArray(list)) {
             this.notifUnreadList = list;
             this.notifUnreadCount = list.length;
@@ -5215,7 +5218,8 @@ function alpineLink() {
       try {
         const res = await fetch('/api/config');
         if (!res.ok) return;
-        const data = await res.json();
+        const payload = await res.json();
+        const data = payload && payload.code === 0 && payload.data ? payload.data : payload;
         this.paymentsEnabled = !!data.paymentsEnabled;
         this.stripePublishableKey = (data.stripePublishableKey || '').trim();
         this.sosEmergencyPhone = String(data.emergencyPhone || '112').trim();

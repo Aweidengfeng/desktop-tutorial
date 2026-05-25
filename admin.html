@@ -2183,7 +2183,8 @@
           try {
             const cfg = await fetch('/api/config');
             if (cfg.ok) {
-              const d = await cfg.json();
+              const payload = await cfg.json();
+              const d = payload && payload.code === 0 && payload.data ? payload.data : payload;
               this.paymentsEnabled = !!d.paymentsEnabled;
             }
           } catch (e) {}

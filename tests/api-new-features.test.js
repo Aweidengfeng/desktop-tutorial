@@ -627,6 +627,21 @@ describe('11. 通知 /api/notifications', () => {
     const unread = db.prepare('SELECT COUNT(*) as c FROM notifications WHERE user_id = ? AND is_read = 0').get(userId);
     expect(unread.c).toBe(0);
   });
+
+  test('GET /api/notifications/unread → 200，返回标准成功响应', async () => {
+    db.prepare(`
+      INSERT INTO notifications (user_id, type, title, body, is_read)
+      VALUES (?, 'system', '新通知', '测试未读通知', 0)
+    `).run(userId);
+
+    const res = await request(app)
+      .get('/api/notifications/unread')
+      .set(authHeader(userToken));
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe(0);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(typeof res.body.message).toBe('string');
+  });
 });
 
 // ── 12. pino 请求 ID 链路 ─────────────────────────────────────────────────────
@@ -708,8 +723,9 @@ describe('14. GET /api/config payments gating', () => {
 
     const res = await request(app).get('/api/config');
     expect(res.status).toBe(200);
-    expect(res.body.paymentsEnabled).toBe(false);
-    expect(res.body.stripePublishableKey).toBe('');
+    expect(res.body.code).toBe(0);
+    expect(res.body.data.paymentsEnabled).toBe(false);
+    expect(res.body.data.stripePublishableKey).toBe('');
   });
 
   test('PAYMENTS_ENABLED=true 时返回 stripePublishableKey', async () => {
@@ -720,7 +736,8 @@ describe('14. GET /api/config payments gating', () => {
 
     const res = await request(app).get('/api/config');
     expect(res.status).toBe(200);
-    expect(res.body.paymentsEnabled).toBe(true);
-    expect(res.body.stripePublishableKey).toBe('pk_test_visible_when_enabled');
+    expect(res.body.code).toBe(0);
+    expect(res.body.data.paymentsEnabled).toBe(true);
+    expect(res.body.data.stripePublishableKey).toBe('pk_test_visible_when_enabled');
   });
 });
