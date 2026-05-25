@@ -217,3 +217,37 @@ describe('安全测试 7 — 公共 GET 接口缓存头', () => {
     expect(String(res.headers['cache-control'] || '')).toContain('max-age=3600');
   });
 });
+
+// ── 8. CSP 不包含 unsafe-eval + Alpine 使用 CSP 构建 ─────────────────────────
+describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
+  let app;
+
+  beforeAll(() => {
+    clearDbCache();
+    process.env.NODE_ENV = 'test';
+    app = createApp();
+    createTestDb();
+  });
+
+  test('后端 CSP 配置不应包含 unsafe-eval', () => {
+    const appJs = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+    expect(appJs).toContain('scriptSrc');
+    expect(appJs).not.toContain("'unsafe-eval'");
+  });
+
+  test('入口页面与门户页面应使用 Alpine CSP 构建', () => {
+    const htmlFiles = [
+      '../../index.html',
+      '../../www/index.html',
+      '../../admin.html',
+      '../../club-portal.html',
+      '../../guide-portal.html',
+      '../../investor.html',
+    ];
+    for (const file of htmlFiles) {
+      const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
+      expect(content).toContain('@alpinejs/csp');
+      expect(content).not.toContain('/npm/alpinejs@');
+    }
+  });
+});

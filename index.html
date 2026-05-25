@@ -6,7 +6,7 @@
   <title>巅峰探索 / SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="/js/app-core.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
   <script>
     // Global fallback for i18n t() function until Alpine/app-core loads
     window.t = function(key) { return key; };
@@ -49,7 +49,10 @@
   </script>
   <style>
     :root {
-      --bg-primary: #f2f5fa;
+      --color-bg-light: #f2f5fa;
+      --color-bg-dark: #1a1a2e;
+      --color-status-bar-bg: var(--color-bg-light);
+      --bg-primary: var(--color-bg-light);
       --bg-secondary: #e8edf5;
       --text-primary: #0f172a;
       --text-secondary: #475569;
@@ -69,7 +72,8 @@
       --drawer-bg: rgba(15, 23, 42, 0.84);
     }
     [data-theme="dark"] {
-      --bg-primary: #0f172a;
+      --color-status-bar-bg: var(--color-bg-dark);
+      --bg-primary: var(--color-bg-dark);
       --bg-secondary: #111827;
       --text-primary: #f1f5f9;
       --text-secondary: #94a3b8;
@@ -80,7 +84,8 @@
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg-primary: #0f172a;
+        --color-status-bar-bg: var(--color-bg-dark);
+        --bg-primary: var(--color-bg-dark);
         --bg-secondary: #111827;
         --text-primary: #f1f5f9;
         --text-secondary: #94a3b8;

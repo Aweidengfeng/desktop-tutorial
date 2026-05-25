@@ -5094,10 +5094,16 @@ function alpineLink() {
       if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
       const StatusBar = window.Capacitor?.Plugins?.StatusBar;
       if (!StatusBar) return;
+      const rootStyles = window.getComputedStyle(document.documentElement);
+      const statusBarColor = ((rootStyles.getPropertyValue('--color-status-bar-bg') || rootStyles.getPropertyValue('--bg-primary') || '')).trim();
       try {
         await StatusBar.setStyle({ style: theme === 'dark' ? 'DARK' : 'LIGHT' });
-        if (StatusBar.setBackgroundColor) {
-          await StatusBar.setBackgroundColor({ color: theme === 'dark' ? '#1a1a2e' : '#f2f5fa' });
+        if (StatusBar.setBackgroundColor && statusBarColor) {
+          await StatusBar.setBackgroundColor({ color: statusBarColor });
+        }
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta && statusBarColor) {
+          themeMeta.setAttribute('content', statusBarColor);
         }
       } catch (e) {}
     },
