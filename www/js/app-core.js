@@ -3180,7 +3180,7 @@ function alpineLink() {
       } catch (e) {
         this.showToast('网络错误', 'error');
       }
-    },,
+    },
 
     // Auth methods
     getAuthHeaders() {
