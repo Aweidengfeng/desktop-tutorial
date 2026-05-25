@@ -43,7 +43,9 @@ module.exports = async function globalSetup() {
     for (const modulePath of [databaseModulePath, prismaModulePath, migrationsModulePath]) {
       try {
         delete require.cache[require.resolve(modulePath)];
-      } catch (e) {}
+      } catch (e) {
+        // ignore cache cleanup misses when module was not loaded
+      }
     }
     if (typeof prevDatabasePath === 'undefined') delete process.env.DATABASE_PATH;
     else process.env.DATABASE_PATH = prevDatabasePath;

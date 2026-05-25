@@ -36,8 +36,8 @@ async function runStartupMigrations(prisma) {
       ]) {
         try { await prisma.$executeRawUnsafe(sql); } catch (err) {
           // Ignore "duplicate column" errors; warn on anything unexpected
-          const msg = (err && err.message ? String(err.message) : '').toLowerCase();
-          if (!msg.includes('already') && !msg.includes('duplicate column')) {
+          const msg = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
+          if (!msg || (!msg.includes('already') && !msg.includes('duplicate column'))) {
             console.warn('[startup] migration warning:', err.message);
           }
         }
