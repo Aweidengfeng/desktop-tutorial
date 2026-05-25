@@ -1466,22 +1466,22 @@
             });
           } else {
             // Publish as guide service
-            const body = {
-              title: this.newActivity.title,
-              description: this.newActivity.description,
-              type: 'guided_climb',
-              mountain: this.newActivity.mountain,
-              region: this.newActivity.region || '',
-              price: this.newActivity.price,
-              max_clients: this.newActivity.maxMembers,
-              start_date: this.newActivity.startDate,
-              duration_days: this.newActivity.durationDays || 1,
-              difficulty: this.newActivity.difficulty,
-            };
-            r = await fetch(`/api/guides/${this.certStatus.guide.id}/services`, {
+            const guideId = this.certStatus.guide?.id;
+            if (!guideId) { this.toast('未找到向导信息', 'error'); this.publishLoading = false; return; }
+            r = await fetch(`/api/guides/${guideId}/services`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-              body: JSON.stringify(body),
+              body: JSON.stringify({
+                title: this.newActivity.title,
+                mountain: this.newActivity.mountain || '',
+                difficulty: this.newActivity.difficulty || '',
+                max_clients: this.newActivity.maxMembers || 8,
+                start_date: this.newActivity.startDate || '',
+                price: this.newActivity.price || 0,
+                description: this.newActivity.description || '',
+                type: 'guided_climb',
+                duration_days: 1,
+              }),
             });
           }
           if (r.ok) {

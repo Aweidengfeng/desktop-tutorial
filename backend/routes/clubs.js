@@ -297,13 +297,14 @@ router.post('/my/kyc', clubWriteLimiter, auth, async (req, res) => {
   try {
     const [club] = await prisma.$queryRaw`SELECT * FROM clubs WHERE creator_id = ${req.user.id}`;
     if (!club) return res.status(403).json({ error: '仅俱乐部管理员可提交 KYC' });
-    const { businessLicenseUrl, legalRepIdUrl, bankAccountInfo, insuranceCertUrl } = req.body;
+    const { businessLicenseUrl, legalRepIdUrl, bankAccountInfo, insuranceCertUrl, businessLicenseNo } = req.body;
     await prisma.$executeRaw`
       UPDATE clubs SET
         business_license_url = COALESCE(${businessLicenseUrl || null}, business_license_url),
         legal_rep_id_url     = COALESCE(${legalRepIdUrl || null}, legal_rep_id_url),
         bank_account_info    = COALESCE(${bankAccountInfo || null}, bank_account_info),
         insurance_cert_url   = COALESCE(${insuranceCertUrl || null}, insurance_cert_url),
+        business_license_no  = COALESCE(${businessLicenseNo || null}, business_license_no),
         kyc_status           = 'pending',
         kyc_submitted_at     = CURRENT_TIMESTAMP
       WHERE creator_id = ${req.user.id}

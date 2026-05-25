@@ -502,11 +502,12 @@ describe('四、认证材料兼容性与俱乐部 KYC', () => {
         legalRepIdUrl: '/uploads/legal-id.jpg',
         bankAccountInfo: '中国银行 62220000',
         insuranceCertUrl: '/uploads/insurance.pdf',
+        businessLicenseNo: '91110000TEST12345A',
       });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(db.prepare(`
-      SELECT kyc_status, business_license_url, legal_rep_id_url, bank_account_info, insurance_cert_url
+      SELECT kyc_status, business_license_url, legal_rep_id_url, bank_account_info, insurance_cert_url, business_license_no
       FROM clubs WHERE id = ?
     `).get(clubId)).toEqual(expect.objectContaining({
       kyc_status: 'pending',
@@ -514,6 +515,7 @@ describe('四、认证材料兼容性与俱乐部 KYC', () => {
       legal_rep_id_url: '/uploads/legal-id.jpg',
       bank_account_info: '中国银行 62220000',
       insurance_cert_url: '/uploads/insurance.pdf',
+      business_license_no: '91110000TEST12345A',
     }));
   });
 
