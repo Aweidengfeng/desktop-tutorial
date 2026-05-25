@@ -84,9 +84,15 @@ jobs:
           fi
           find ios/App -name '*.bak' -delete
 
-      - name: Sync Capacitor
-        working-directory: .
-        run: npx cap sync ios
+      - name: Sync Capacitor and generate Podfile
+        run: |
+          npx cap sync ios
+          if [ ! -f ios/App/Podfile ]; then
+            echo "ERROR: Podfile not found after cap sync"
+            ls -la ios/App/ 2>/dev/null || echo "ios/App dir does not exist"
+            exit 1
+          fi
+          echo "Podfile found at ios/App/Podfile"
 
       - name: Install CocoaPods (with retry)
         run: |
