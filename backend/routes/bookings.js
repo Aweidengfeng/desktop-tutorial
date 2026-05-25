@@ -239,6 +239,39 @@ router.put('/:id/reject', auth, async (req, res) => {
   }
 });
 
+// PUT /api/bookings/:id/cancel — 用户取消自己的预约
+router.put('/:id/cancel', auth, async (req, res) => {
+  try {
+    const booking = (await prisma.$queryRaw`SELECT * FROM bookings WHERE id = ${Number(req.params.id)}`)[0];
+    if (!booking) return res.status(404).json({ error: '预约不存在' });
+    if (booking.user_id !== req.user.id) return res.status(403).json({ error: '无权操作此预约' });
+    if (!['pending', 'confirmed'].includes(booking.status)) {
+      return res.status(400).json({ error: '该预约状态不可取消' });
+    }
+    await prisma.$executeRaw`UPDATE bookings SET status='cancelled' WHERE id=${Number(req.params.id)}`;
+    // 通知向导/俱乐部
+    try {
+      if (booking.guide_id) {
+        const guide = (await prisma.$queryRaw`SELECT user_id FROM guides WHERE id = ${booking.guide_id}`)[0];
+        if (guide) {
+          await prisma.$executeRaw`INSERT INTO notifications (user_id, type, content, related_id)
+            VALUES (${guide.user_id}, 'booking_cancelled', ${`用户已取消预约 [${booking.mountain}] [${booking.date}]`}, ${booking.id})`;
+        }
+      }
+      if (booking.club_id) {
+        const club = (await prisma.$queryRaw`SELECT creator_id FROM clubs WHERE id = ${booking.club_id}`)[0];
+        if (club) {
+          await prisma.$executeRaw`INSERT INTO notifications (user_id, type, content, related_id)
+            VALUES (${club.creator_id}, 'booking_cancelled', ${`用户已取消预约 [${booking.mountain}] [${booking.date}]`}, ${booking.id})`;
+        }
+      }
+    } catch (_) {}
+    res.json({ success: true, message: '预约已取消' });
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // POST /api/bookings/:id/claim
 router.post('/:id/claim', claimLimiter, auth, async (req, res) => {
   try {

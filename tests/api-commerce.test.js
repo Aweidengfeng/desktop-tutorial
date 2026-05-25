@@ -357,11 +357,107 @@ describe('三、向导商业服务全链路', () => {
     expect(res.body.title).toBe('珠峰向导服务');
   });
 
+  test('重复发布相同标题+开始日期服务（30秒内）→ 409', async () => {
+    const payload = { title: '幂等测试服务', start_date: '2026-08-01', price: 0, max_clients: 2 };
+    const first = await request(app)
+      .post(`/api/guides/${guideId}/services`)
+      .set(authHeader(guideUser.token))
+      .send(payload);
+    expect([200, 201]).toContain(first.status);
+    const second = await request(app)
+      .post(`/api/guides/${guideId}/services`)
+      .set(authHeader(guideUser.token))
+      .send(payload);
+    expect(second.status).toBe(409);
+    expect(second.body.error).toBe('请勿重复提交，服务已创建');
+  });
+
+  test('GET /api/guides/:id/commercial-status — 本人可查询商业资质状态', async () => {
+    const res = await request(app)
+      .get(`/api/guides/${guideId}/commercial-status`)
+      .set(authHeader(guideUser.token));
+    expect(res.status).toBe(200);
+    expect(res.body.status).toEqual(expect.any(String));
+    expect(res.body.verified).toEqual(expect.any(Boolean));
+    expect(res.body).toHaveProperty('applied_at');
+    expect(res.body).toHaveProperty('reviewed_at');
+    expect(res.body).toHaveProperty('reject_reason');
+    expect(res.body).toHaveProperty('need_info_reason');
+  });
+
+  test('GET /api/guides/my/finance 与 /api/guides/my/dashboard 可访问', async () => {
+    const financeRes = await request(app)
+      .get('/api/guides/my/finance')
+      .set(authHeader(guideUser.token));
+    expect(financeRes.status).toBe(200);
+    expect(financeRes.body).toEqual(expect.objectContaining({
+      availableBalance: expect.any(Number),
+      pendingBalance: expect.any(Number),
+      totalPaid: expect.any(Number),
+    }));
+
+    const dashboardRes = await request(app)
+      .get('/api/guides/my/dashboard')
+      .set(authHeader(guideUser.token));
+    expect(dashboardRes.status).toBe(200);
+    expect(dashboardRes.body).toEqual(expect.objectContaining({
+      monthlyGmv: expect.any(Number),
+      totalViews: expect.any(Number),
+      avgRating: expect.any(Number),
+      repeatRate: expect.any(Number),
+    }));
+  });
+
   test('GET /api/guides/:guideId/services → 服务列表', async () => {
+    db.prepare(`
+      INSERT INTO guide_services (guide_id, title, status, type)
+      VALUES (?, '审核中服务', 'pending', 'guided_climb')
+    `).run(guideId);
+    db.prepare(`
+      INSERT INTO guide_services (guide_id, title, status, type)
+      VALUES (?, '已下线服务', 'inactive', 'guided_climb')
+    `).run(guideId);
+
     const res = await request(app).get(`/api/guides/${guideId}/services`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
+
+    const ownerRes = await request(app)
+      .get(`/api/guides/${guideId}/services`)
+      .set(authHeader(guideUser.token));
+    expect(ownerRes.status).toBe(200);
+    expect(ownerRes.body.some(x => x.status === 'pending')).toBe(true);
+    expect(ownerRes.body.some(x => x.status === 'inactive')).toBe(true);
+  });
+
+  test('向导路线管理接口：创建、列表、更新、提交审核', async () => {
+    const createRes = await request(app)
+      .post('/api/guides/my/routes')
+      .set(authHeader(guideUser.token))
+      .send({ title: '安娜普尔纳环线', durationDays: 9 });
+    expect([200, 201]).toContain(createRes.status);
+    expect(createRes.body.title).toBe('安娜普尔纳环线');
+
+    const listRes = await request(app)
+      .get('/api/guides/my/routes')
+      .set(authHeader(guideUser.token));
+    expect(listRes.status).toBe(200);
+    expect(Array.isArray(listRes.body)).toBe(true);
+    const routeId = listRes.body[0].id;
+
+    const updateRes = await request(app)
+      .put(`/api/guides/my/routes/${routeId}`)
+      .set(authHeader(guideUser.token))
+      .send({ description: '更新描述' });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.description).toBe('更新描述');
+
+    const submitRes = await request(app)
+      .post(`/api/guides/routes/${routeId}/submit`)
+      .set(authHeader(guideUser.token));
+    expect(submitRes.status).toBe(200);
+    expect(submitRes.body.success).toBe(true);
   });
 
   test('预约服务缺紧急联系人 → 400', async () => {

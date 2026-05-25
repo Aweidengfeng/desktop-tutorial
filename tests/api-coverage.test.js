@@ -901,6 +901,23 @@ describe('十三、预约模块 /api/bookings', () => {
       .send({});
     expect(res.status).toBe(400);
   });
+
+  test('PUT /api/bookings/:id/cancel — 用户可取消自己的待处理预约', async () => {
+    const date = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const createRes = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${user.token}`)
+      .send({ mountain: '玉珠峰', date, members: 2 });
+    expect([200, 201]).toContain(createRes.status);
+    const bookingId = createRes.body.id;
+
+    const cancelRes = await request(app)
+      .put(`/api/bookings/${bookingId}/cancel`)
+      .set('Authorization', `Bearer ${user.token}`);
+    expect(cancelRes.status).toBe(200);
+    expect(cancelRes.body.success).toBe(true);
+    expect(cancelRes.body.message).toBe('预约已取消');
+  });
 });
 
 // ── 14. /api/orders ──────────────────────────────────────────────────────────
