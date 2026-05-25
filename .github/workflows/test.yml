@@ -30,6 +30,18 @@ jobs:
       - name: Install root dependencies
         run: npm install
 
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=backend/prisma/schema.prisma
+        env:
+          CHECKPOINT_DISABLE: "1"
+          DATABASE_URL: "file:/tmp/ci.db"
+
+      - name: Push Prisma schema to database
+        run: npx prisma db push --schema=backend/prisma/schema.prisma --skip-generate
+        env:
+          CHECKPOINT_DISABLE: "1"
+          DATABASE_URL: "file:/tmp/ci.db"
+
       - name: Run region unit tests
         run: npx jest --forceExit --no-coverage --runInBand --testMatch '**/backend/tests/{region,multi-region-db}.test.js'
 
@@ -43,7 +55,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 安装 Node.js 24 ─────────────────────────────────────────────────────
+      # ── 安装 Node.js 24 ───────────���─────────────────────────────────────────
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
@@ -143,23 +155,26 @@ jobs:
           BASE_URL: http://localhost:8080
 
       # ── 在 API 测试前重新生成 Prisma Client 并同步引擎到根目录 ──────────────
-      # 修复根因：schema 的 output = "../node_modules/.prisma/client" 始终相对于
-      # backend/prisma/ 解析，因此 prisma generate 只写入 backend/node_modules/.prisma/client。
-      # 但 @prisma/client 被 npm hoist 到根 node_modules/@prisma/client，
-      # 它查找引擎二进制的位置是根 node_modules/.prisma/client（从未被填充）。
-      # Jest globalSetup 子进程中的 require('@prisma/client') 因此报初始化错误。
-      # 解决方案：生成后将 backend/node_modules/.prisma/client/ 的内容复制到根位置。
+      # 修复根因：schema 的 output = "../../node_modules/.prisma/client" 始终相对于
+      # backend/prisma/ 解析，因此 prisma generate 只写入根 node_modules/.prisma/client。
+      # 但若 backend 也有自己的 .prisma/client，需同步过来。
+      # 解决方案：生成后将 backend/node_modules/.prisma/client/ 的内容复制到根位置（可选，有则同步）。
       - name: Re-generate Prisma Client before API tests
         run: |
-          # 在两个位置都执行 generate（双重保险）
+          # Generate from root (writes engine to root node_modules/.prisma/client if no custom output)
           npx prisma generate --schema=backend/prisma/schema.prisma
+          
+          # Generate from backend (writes to backend/node_modules/.prisma/client per schema output config)
           cd backend && npx prisma generate --schema=prisma/schema.prisma && cd ..
 
-          # 关键修复：将生成的引擎文件同步到根 node_modules/.prisma/client/
-          # （@prisma/client 被 hoist 到根，因此引擎必须在此处）
+          # Sync engine artifacts to root node_modules/.prisma/client (portable, no -T flag)
           mkdir -p node_modules/.prisma/client
-          cp -rT backend/node_modules/.prisma/client/ node_modules/.prisma/client/
-          echo "✅ Prisma engine artifacts synced to root node_modules/.prisma/client/"
+          if [ -d "backend/node_modules/.prisma/client" ]; then
+            cp -r backend/node_modules/.prisma/client/. node_modules/.prisma/client/
+            echo "✅ Prisma engine artifacts synced to root node_modules/.prisma/client/"
+          else
+            echo "⚠️ backend/node_modules/.prisma/client not found — root generate should suffice"
+          fi
           ls node_modules/.prisma/client/ | head -20
         env:
           CHECKPOINT_DISABLE: "1"
