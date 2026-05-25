@@ -2305,6 +2305,12 @@
           <span class="text-slate-300 text-xs">我已阅读并同意 <a href="/legal/terms" target="_blank" class="text-primary-light underline">用户协议</a></span>
         </label>
       </div>
+      <p class="text-xs text-slate-400 text-center mb-3">
+        注册即表示您同意我们的
+        <a href="/legal/terms" target="_blank" class="text-sky-400 hover:text-sky-300 underline">用户协议</a>
+        和
+        <a href="/legal/privacy" target="_blank" class="text-sky-400 hover:text-sky-300 underline">隐私政策</a>
+      </p>
       <button @click="doRegister()" :disabled="!agreedPrivacy || !agreedTerms" :class="(!agreedPrivacy || !agreedTerms) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-light text-white'" class="w-full font-bold py-3.5 rounded-xl transition-colors" data-testid="register-submit">注册</button>
       <p class="text-center text-slate-400 text-sm">已有账号？<button @click="showRegister=false;showLogin=true" class="text-primary-light font-semibold hover:underline">立即登录</button></p>
     </div>
@@ -3141,6 +3147,18 @@
                 <span :class="privacySettings.allow_stranger_msg ? 'translate-x-6' : 'translate-x-0'" class="block w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform shadow"></span>
               </button>
             </div>
+            <div class="mt-6 pt-5 border-t border-red-900/30">
+              <p class="text-xs text-slate-400 mb-3">危险操作</p>
+              <button
+                @click="deleteMyAccount()"
+                :disabled="accountDeletionLoading"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-950/60 border border-red-800/40 text-red-400 hover:bg-red-900/60 hover:text-red-300 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                <span x-show="!accountDeletionLoading">🗑️ 注销账号</span>
+                <span x-show="accountDeletionLoading">处理中...</span>
+              </button>
+              <p class="mt-2 text-xs text-slate-500 text-center">注销后账号数据将被清除，此操作不可撤销</p>
+            </div>
           </div>
           <div x-show="!['language','units','profile','privacy'].includes(settingsType)" class="space-y-4">
             <!-- 账号安全 -->
@@ -3154,6 +3172,18 @@
                 <div class="bg-slate-800 rounded-xl px-4 py-3 flex items-center justify-between">
                   <div><p class="text-white text-sm">登录密码</p><p class="text-slate-400 text-xs">已设置</p></div>
                   <button @click="settingsType='change-password'" class="text-primary-light text-xs">修改</button>
+                </div>
+                <div class="mt-4 pt-4 border-t border-white/5 flex flex-col gap-2">
+                  <a href="/legal/privacy" target="_blank"
+                     class="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm text-slate-300">
+                    <span>🔒 隐私政策</span>
+                    <span class="text-slate-500">›</span>
+                  </a>
+                  <a href="/legal/terms" target="_blank"
+                     class="flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm text-slate-300">
+                    <span>📄 用户协议</span>
+                    <span class="text-slate-500">›</span>
+                  </a>
                 </div>
               </div>
             </template>
@@ -3235,7 +3265,7 @@
               <div class="space-y-3">
                 <h4 class="text-red-400 text-sm font-semibold uppercase tracking-wider">危险区</h4>
                 <p class="text-slate-400 text-xs">注销账号后，您的所有数据将在24小时后永久删除，且无法恢复。</p>
-                <button @click="requestAccountDeletion()" class="w-full bg-red-600/20 border border-red-500/30 text-red-400 py-3 rounded-xl font-semibold text-sm hover:bg-red-600/30 transition-colors">申请注销账号</button>
+                <button @click="deleteMyAccount()" :disabled="accountDeletionLoading" class="w-full bg-red-600/20 border border-red-500/30 text-red-400 py-3 rounded-xl font-semibold text-sm hover:bg-red-600/30 transition-colors disabled:opacity-50" x-text="accountDeletionLoading ? '处理中...' : '注销账号'"></button>
               </div>
             </template>
             <!-- 默认：未知类型 -->
@@ -4226,6 +4256,12 @@
             <p class="text-xs" :class="activeChatSession.online ? 'text-green-400' : 'text-slate-500'" x-text="activeChatSession.online ? '在线' : '离线'"></p>
           </div>
           <span class="text-xl" x-text="activeChatSession.flag"></span>
+        </div>
+        <div x-show="activeChatSession.type === 'assistant' || activeChatSession.type === 'ai' || activeChatSession.isAI || (activeChatSession.name || '').includes('AI') || (activeChatSession.name || '').includes('助手') || (activeChatSession.name || '').includes('Coach')" class="px-4 pt-3 flex-shrink-0">
+          <div class="flex items-start gap-2 px-3 py-2 bg-amber-950/30 border border-amber-800/20 rounded-xl mb-3 text-xs text-amber-400/80">
+            <span class="shrink-0 mt-0.5">⚠️</span>
+            <span>AI 内容仅供参考，不构成专业登山建议。高风险活动请咨询认证向导。</span>
+          </div>
         </div>
         <!-- Messages -->
         <div class="flex-1 overflow-y-auto p-4 space-y-3" id="chat-messages-container">
