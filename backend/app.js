@@ -123,7 +123,6 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
-        "'unsafe-eval'", // Alpine.js x-data 内嵌表达式编译需要
         'https://cdn.tailwindcss.com',
         'https://cdn.jsdelivr.net',
         'https://cdn.socket.io',
