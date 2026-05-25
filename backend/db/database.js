@@ -1691,6 +1691,18 @@ if (!existingClubColsCommerce.includes('business_license_url')) {
 if (!existingClubColsCommerce.includes('insurance_cert_url')) {
   db.exec('ALTER TABLE clubs ADD COLUMN insurance_cert_url TEXT DEFAULT NULL');
 }
+if (!existingClubColsCommerce.includes('legal_rep_id_url')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN legal_rep_id_url TEXT DEFAULT NULL');
+}
+if (!existingClubColsCommerce.includes('bank_account_info')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN bank_account_info TEXT DEFAULT NULL');
+}
+if (!existingClubColsCommerce.includes('kyc_status')) {
+  db.exec("ALTER TABLE clubs ADD COLUMN kyc_status TEXT DEFAULT 'none'");
+}
+if (!existingClubColsCommerce.includes('kyc_submitted_at')) {
+  db.exec('ALTER TABLE clubs ADD COLUMN kyc_submitted_at DATETIME DEFAULT NULL');
+}
 if (!existingClubColsCommerce.includes('commercial_verified')) {
   db.exec('ALTER TABLE clubs ADD COLUMN commercial_verified INTEGER DEFAULT 0');
 }

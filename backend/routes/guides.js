@@ -28,6 +28,14 @@ function parseGuide(guide) {
   return guide;
 }
 
+function isValidUploadUrl(url) {
+  if (!url) return true;
+  return typeof url === 'string' && (
+    url.startsWith('/uploads/') ||
+    /^https:\/\/[a-z0-9-]+\.(oss-cn|cos\.|obs\.|myqcloud\.com|aliyuncs\.com|summitlink\.app)/.test(url)
+  );
+}
+
 // GET /api/guides
 // GET /api/guides — list approved guides
 /**
@@ -305,6 +313,10 @@ router.post('/apply', applyRateLimit, auth, async (req, res) => {
             id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url,
             passport_url, is_international, nationality, cert_level } = req.body;
     if (!name) return res.status(400).json({ error: '姓名不能为空' });
+    const uploadUrls = [id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url, passport_url];
+    if (!uploadUrls.every(isValidUploadUrl)) {
+      return res.status(400).json({ error: '证件文件地址无效，请通过平台上传' });
+    }
     // 检查是否已有申请
     const [existing] = await prisma.$queryRaw`
       SELECT id, status FROM guide_applications WHERE user_id = ${req.user.id}
@@ -351,6 +363,7 @@ router.post('/apply', applyRateLimit, auth, async (req, res) => {
     }
     res.json({ success: true, message: '申请已提交，7天内审核完成' });
   } catch (e) {
+    console.error('[guides/apply]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -493,6 +506,9 @@ router.post('/:id/commercial-apply', guideWriteLimiter, auth, async (req, res) =
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     if (guide.user_id !== req.user.id) return res.status(403).json({ error: '只能提交自己的资质' });
     const { id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url, passport_url } = req.body;
+    if (![id_card_url, climbing_cert_url, insurance_cert_url, health_cert_url, passport_url].every(isValidUploadUrl)) {
+      return res.status(400).json({ error: '证件文件地址无效，请通过平台上传' });
+    }
     await prisma.$executeRaw`
       UPDATE guides SET
         id_card_url = COALESCE(${id_card_url || null}, id_card_url),
@@ -506,6 +522,7 @@ router.post('/:id/commercial-apply', guideWriteLimiter, auth, async (req, res) =
     `;
     res.json({ success: true, message: '商业资质申请已提交，请等待审核' });
   } catch (e) {
+    console.error('[guides/commercial-apply]', e);
     res.status(500).json({ error: '服务器错误' });
   }
 });

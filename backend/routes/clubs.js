@@ -291,6 +291,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST /api/clubs/my/kyc — 俱乐部提交 KYC / 营业执照材料
+// 注意：此路由必须注册在 /:id 之前，防止 my 被解析为 id
+router.post('/my/kyc', clubWriteLimiter, auth, async (req, res) => {
+  try {
+    const [club] = await prisma.$queryRaw`SELECT * FROM clubs WHERE creator_id = ${req.user.id}`;
+    if (!club) return res.status(403).json({ error: '仅俱乐部管理员可提交 KYC' });
+    const { businessLicenseUrl, legalRepIdUrl, bankAccountInfo, insuranceCertUrl } = req.body;
+    await prisma.$executeRaw`
+      UPDATE clubs SET
+        business_license_url = COALESCE(${businessLicenseUrl || null}, business_license_url),
+        legal_rep_id_url     = COALESCE(${legalRepIdUrl || null}, legal_rep_id_url),
+        bank_account_info    = COALESCE(${bankAccountInfo || null}, bank_account_info),
+        insurance_cert_url   = COALESCE(${insuranceCertUrl || null}, insurance_cert_url),
+        kyc_status           = 'pending',
+        kyc_submitted_at     = CURRENT_TIMESTAMP
+      WHERE creator_id = ${req.user.id}
+    `;
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO notifications (user_id, type, title, body, link)
+        VALUES (${req.user.id}, 'kyc_submitted', '📄 KYC 材料已提交', '您的营业执照/KYC 材料已提交，平台将在 48 小时内完成审核。', '/club-portal')
+      `;
+    } catch (notificationError) {
+      console.error('[clubs/my/kyc][notification]', notificationError);
+    }
+    res.json({ success: true, message: 'KYC 材料已提交，平台将在 48 小时内审核' });
+  } catch (e) {
+    console.error('[clubs/my/kyc]', e);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/clubs/:id — 俱乐部详情
 /**
  * @swagger

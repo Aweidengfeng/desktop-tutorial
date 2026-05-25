@@ -317,13 +317,24 @@ describe('三、向导商业服务全链路', () => {
       .post(`/api/guides/${guideId}/commercial-apply`)
       .set(authHeader(guideUser.token))
       .send({
-        id_card_url: 'https://example.com/id.jpg',
-        climbing_cert_url: 'https://example.com/cert.jpg',
-        insurance_cert_url: 'https://example.com/insurance.jpg',
-        health_cert_url: 'https://example.com/health.jpg',
+        id_card_url: '/uploads/id.jpg',
+        climbing_cert_url: '/uploads/cert.jpg',
+        insurance_cert_url: '/uploads/insurance.jpg',
+        health_cert_url: '/uploads/health.jpg',
       });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  test('商业资质申请拒绝非平台证件 URL', async () => {
+    const res = await request(app)
+      .post(`/api/guides/${guideId}/commercial-apply`)
+      .set(authHeader(guideUser.token))
+      .send({
+        id_card_url: 'https://example.com/id.jpg',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('证件文件地址无效，请通过平台上传');
   });
 
   test('管理员审核通过向导商业资质', async () => {
@@ -456,7 +467,6 @@ describe('三、向导商业服务全链路', () => {
     const svc = db.prepare('SELECT status FROM guide_services WHERE id = ?').get(serviceId);
     expect(svc.status).toBe('deleted');
   });
-
   test('管理员审核需补充材料 → commercial_status=need_info', async () => {
     const res = await request(app)
       .post(`/api/admin/guides/${guideId}/commercial-review`)
@@ -465,6 +475,109 @@ describe('三、向导商业服务全链路', () => {
     expect(res.status).toBe(200);
     const guide = db.prepare('SELECT commercial_status FROM guides WHERE id = ?').get(guideId);
     expect(guide.commercial_status).toBe('need_info');
+  });
+});
+
+describe('四、认证材料兼容性与俱乐部 KYC', () => {
+  let app, db, guideUser, clubUser, clubId;
+
+  beforeAll(() => {
+    clearDbCache();
+    app = createApp();
+    db = require('../backend/db/database');
+    guideUser = createTestUser(db, { phone: '182' + String(Date.now()).slice(-8) });
+    clubUser = createTestUser(db, { phone: '183' + String(Date.now()).slice(-8) });
+    clubId = db.prepare(`
+      INSERT INTO clubs (name, description, creator_id, members_count, status)
+      VALUES ('KYC俱乐部', '测试', ?, 1, 'active')
+    `).run(clubUser.id).lastInsertRowid;
+  });
+
+  test('POST /api/clubs/my/kyc — 俱乐部管理员可提交 KYC', async () => {
+    const res = await request(app)
+      .post('/api/clubs/my/kyc')
+      .set(authHeader(clubUser.token))
+      .send({
+        businessLicenseUrl: '/uploads/license.pdf',
+        legalRepIdUrl: '/uploads/legal-id.jpg',
+        bankAccountInfo: '中国银行 62220000',
+        insuranceCertUrl: '/uploads/insurance.pdf',
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(db.prepare(`
+      SELECT kyc_status, business_license_url, legal_rep_id_url, bank_account_info, insurance_cert_url
+      FROM clubs WHERE id = ?
+    `).get(clubId)).toEqual(expect.objectContaining({
+      kyc_status: 'pending',
+      business_license_url: '/uploads/license.pdf',
+      legal_rep_id_url: '/uploads/legal-id.jpg',
+      bank_account_info: '中国银行 62220000',
+      insurance_cert_url: '/uploads/insurance.pdf',
+    }));
+  });
+
+  test('POST /api/guides/apply — 拒绝非平台证件 URL', async () => {
+    const res = await request(app)
+      .post('/api/guides/apply')
+      .set(authHeader(guideUser.token))
+      .send({
+        name: '认证向导',
+        cert: 'IFMGA',
+        specialty: '高海拔',
+        languages: '中文',
+        dayRate: 1200,
+        region: '西藏',
+        id_card_url: 'https://example.com/id.jpg',
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('证件文件地址无效，请通过平台上传');
+  });
+
+  test('POST /api/certification/guide/apply — 同步保存证件字段到申请和向导表', async () => {
+    const res = await request(app)
+      .post('/api/certification/guide/apply')
+      .set(authHeader(guideUser.token))
+      .send({
+        name: '认证向导',
+        certLevel: 'pro',
+        cert: 'IFMGA',
+        specialty: '高海拔',
+        languages: '中文,English',
+        dayRate: 1800,
+        region: '尼泊尔',
+        id_card_url: '/uploads/id-card.pdf',
+        climbing_cert_url: '/uploads/cert.pdf',
+        passport_url: '/uploads/passport.pdf',
+        is_international: true,
+        nationality: 'CN',
+      });
+    expect(res.status).toBe(200);
+    const appRow = db.prepare(`
+      SELECT cert_level, id_card_url, climbing_cert_url, passport_url, is_international, nationality
+      FROM guide_applications WHERE user_id = ? ORDER BY id DESC LIMIT 1
+    `).get(guideUser.id);
+    const guideRow = db.prepare(`
+      SELECT cert_level, id_card_url, climbing_cert_url, passport_url, is_international, nationality, cert_year_fee
+      FROM guides WHERE user_id = ?
+    `).get(guideUser.id);
+    expect(appRow).toEqual(expect.objectContaining({
+      cert_level: 'pro',
+      id_card_url: '/uploads/id-card.pdf',
+      climbing_cert_url: '/uploads/cert.pdf',
+      passport_url: '/uploads/passport.pdf',
+      is_international: 1,
+      nationality: 'CN',
+    }));
+    expect(guideRow).toEqual(expect.objectContaining({
+      cert_level: 'pro',
+      id_card_url: '/uploads/id-card.pdf',
+      climbing_cert_url: '/uploads/cert.pdf',
+      passport_url: '/uploads/passport.pdf',
+      is_international: 1,
+      nationality: 'CN',
+    }));
+    expect(Number(guideRow.cert_year_fee)).toBeGreaterThan(0);
   });
 });
 

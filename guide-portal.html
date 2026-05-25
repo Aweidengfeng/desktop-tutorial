@@ -1467,18 +1467,18 @@
           } else {
             // Publish as guide service
             const body = {
-              club_id: null,
-              guide_id: guide?.id,
               title: this.newActivity.title,
-              mountain: this.newActivity.mountain,
-              difficulty: this.newActivity.difficulty,
-              max_members: this.newActivity.maxMembers,
-              start_date: this.newActivity.startDate,
-              price: this.newActivity.price,
               description: this.newActivity.description,
-              type: 'guide_service',
+              type: 'guided_climb',
+              mountain: this.newActivity.mountain,
+              region: this.newActivity.region || '',
+              price: this.newActivity.price,
+              max_clients: this.newActivity.maxMembers,
+              start_date: this.newActivity.startDate,
+              duration_days: this.newActivity.durationDays || 1,
+              difficulty: this.newActivity.difficulty,
             };
-            r = await fetch('/api/club-activities', {
+            r = await fetch(`/api/guides/${this.certStatus.guide.id}/services`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
               body: JSON.stringify(body),
@@ -1495,6 +1495,7 @@
             this.toast(d.error || '发布失败', 'error');
           }
         } catch(e) {
+          console.error('[guidePortal.publishActivity]', e);
           this.toast('网络错误，请重试', 'error');
         }
         this.publishLoading = false;
@@ -1504,12 +1505,17 @@
         const token = this.getAuthToken();
         const fd = new FormData();
         fd.append('file', file);
-        const r = await fetch('/api/upload', {
+        const isPdf = file.type === 'application/pdf';
+        const endpoint = isPdf ? '/api/upload/document' : '/api/upload';
+        const r = await fetch(endpoint, {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token },
           body: fd,
         });
-        if (!r.ok) throw new Error('上传失败');
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || '上传失败');
+        }
         const d = await r.json();
         return d.url;
       },
@@ -1559,6 +1565,7 @@
             this.toast(d.error || '提交失败', 'error');
           }
         } catch(e) {
+          console.error('[guidePortal.submitApplication]', e);
           this.toast('网络错误，请重试', 'error');
         }
         this.uploadingFiles = false;
