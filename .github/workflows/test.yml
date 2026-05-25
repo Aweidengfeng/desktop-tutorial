@@ -134,13 +134,25 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
 
-      # ── 在 API 测试前重新生成 Prisma Client（根目录 + backend 双重保险）──────
-      # 修复：Jest globalSetup 在独立子进程中运行，可能解析到 backend 自身的
-      # node_modules/.prisma/client，因此需要同时在两个位置生成引擎二进制。
+      # ── 在 API 测试前重新生成 Prisma Client 并同步引擎到根目录 ──────────────
+      # 修复根因：schema 的 output = "../node_modules/.prisma/client" 始终相对于
+      # backend/prisma/ 解析，因此 prisma generate 只写入 backend/node_modules/.prisma/client。
+      # 但 @prisma/client 被 npm hoist 到根 node_modules/@prisma/client，
+      # 它查找引擎二进制的位置是根 node_modules/.prisma/client（从未被填充）。
+      # Jest globalSetup 子进程中的 require('@prisma/client') 因此报初始化错误。
+      # 解决方案：生成后将 backend/node_modules/.prisma/client/ 的内容复制到根位置。
       - name: Re-generate Prisma Client before API tests
         run: |
+          # 在两个位置都执行 generate（双重保险）
           npx prisma generate --schema=backend/prisma/schema.prisma
-          cd backend && npx prisma generate --schema=prisma/schema.prisma
+          cd backend && npx prisma generate --schema=prisma/schema.prisma && cd ..
+
+          # 关键修复：将生成的引擎文件同步到根 node_modules/.prisma/client/
+          # （@prisma/client 被 hoist 到根，因此引擎必须在此处）
+          mkdir -p node_modules/.prisma/client
+          cp -rT backend/node_modules/.prisma/client/ node_modules/.prisma/client/
+          echo "✅ Prisma engine artifacts synced to root node_modules/.prisma/client/"
+          ls node_modules/.prisma/client/ | head -20
         env:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
