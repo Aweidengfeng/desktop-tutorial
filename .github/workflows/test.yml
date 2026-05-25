@@ -70,6 +70,14 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
+      # ── 从 backend 目录生成 Prisma Client（backend/lib/db.js 优先使用 backend/node_modules 下的）──
+      - name: Generate Prisma Client (backend)
+        run: npx prisma generate --schema=prisma/schema.prisma
+        working-directory: backend
+        env:
+          CHECKPOINT_DISABLE: "1"
+          PRISMA_TELEMETRY_INFORMATION: ""
+
       # ── 推送 schema 到 SQLite 数据库（建表）────────────────────────────────
       # --skip-generate 避免重复生成，仅建表
       - name: Push Prisma schema to database
