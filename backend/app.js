@@ -558,13 +558,16 @@ app.use('/api/altitude', require('./routes/altitude'));
 // 投资者看板
 const investorHtmlFile = path.join(rootPath, 'investor.html');
 app.get('/investor', htmlPageLimiter, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   // 服务端鉴权：验证 investor token（query param 或 Authorization header）
   const investorToken = process.env.INVESTOR_TOKEN;
   if (investorToken) {
     const authorization = req.headers.authorization;
-    const bearerToken = authorization
-      ? ((authorization.match(/^Bearer\s+(.+)$/i) || [])[1] || '').trim()
-      : '';
+    let bearerToken = '';
+    if (authorization) {
+      const bearerMatch = authorization.match(/^Bearer\s+(.+)$/i);
+      if (bearerMatch && bearerMatch[1]) bearerToken = bearerMatch[1].trim();
+    }
     const providedToken = req.query.token
       || bearerToken;
     if (!providedToken || providedToken !== investorToken) {
@@ -586,7 +589,6 @@ app.get('/investor', htmlPageLimiter, (req, res) => {
   fs.readFile(investorHtmlFile, 'utf8', (err, html) => {
     if (err) return res.status(500).send('Internal Server Error');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store');
     res.send(html);
   });
 });
