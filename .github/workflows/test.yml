@@ -134,8 +134,13 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
 
+      # ── 在 API 测试前重新生成 Prisma Client（根目录 + backend 双重保险）──────
+      # 修复：Jest globalSetup 在独立子进程中运行，可能解析到 backend 自身的
+      # node_modules/.prisma/client，因此需要同时在两个位置生成引擎二进制。
       - name: Re-generate Prisma Client before API tests
-        run: npx prisma generate --schema=backend/prisma/schema.prisma
+        run: |
+          npx prisma generate --schema=backend/prisma/schema.prisma
+          cd backend && npx prisma generate --schema=prisma/schema.prisma
         env:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
