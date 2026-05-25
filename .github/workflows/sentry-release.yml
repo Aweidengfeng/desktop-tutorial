@@ -17,20 +17,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Check Sentry credentials
-        id: check-sentry
-        run: |
-          if [ -z "${{ secrets.SENTRY_AUTH_TOKEN }}" ]; then
-            echo "SENTRY_AUTH_TOKEN not configured, skipping Sentry release"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Skip Sentry release (missing token)
+        if: ${{ secrets.SENTRY_AUTH_TOKEN == '' }}
+        run: echo "SENTRY_AUTH_TOKEN not configured, skipping Sentry release"
       - name: Install sentry-cli
-        if: steps.check-sentry.outputs.skip != 'true'
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
         run: curl -sL https://sentry.io/get-cli/ | bash
       - name: Run release script
-        if: steps.check-sentry.outputs.skip != 'true'
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' }}
         run: bash scripts/sentry-release.sh
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
