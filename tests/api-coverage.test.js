@@ -1188,6 +1188,112 @@ describe('十八、远征队活动 /api/expeditions', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
+
+  test('获取远征列表与详情时都不统计超时未支付订单', async () => {
+    db.prepare(`
+      INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-3 hours'))
+    `).run(`EXP-OLD-${Date.now()}`, expeditionId, user.id, 3, 300, 30, 270, 'pending_payment');
+    db.prepare(`
+      INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `).run(`EXP-PAID-${Date.now()}`, expeditionId, user.id, 2, 300, 30, 270, 'paid');
+
+    const listRes = await request(app).get('/api/expeditions');
+    expect(listRes.status).toBe(200);
+    const listed = listRes.body.expeditions.find((item) => Number(item.id) === expeditionId);
+    expect(Number(listed.current_participants)).toBe(2);
+
+    const detailRes = await request(app).get(`/api/expeditions/${expeditionId}`);
+    expect(detailRes.status).toBe(200);
+    expect(Number(detailRes.body.current_participants)).toBe(2);
+    expect(detailRes.body.skus[0].slots_left).toBe(6);
+  });
+
+  test('远征下单前会清理超时未支付订单并释放名额', async () => {
+    const cleanupExpeditionId = Number(db.prepare(`
+      INSERT INTO expeditions (
+        publisher_type, publisher_id, title, base_price, commission_rate,
+        min_participants, max_participants, current_participants, status,
+        created_at, updated_at
+      ) VALUES (
+        'guide', ?, '超时清理测试路线', 120000, 0.15,
+        1, 1, 1, 'published',
+        datetime('now'), datetime('now')
+      )
+    `).run(db.prepare('SELECT publisher_id FROM expeditions WHERE id = ?').get(expeditionId).publisher_id).lastInsertRowid);
+    db.prepare(`
+      INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-3 hours'))
+    `).run(`EXP-TIMEOUT-${Date.now()}`, cleanupExpeditionId, user.id, 1, 300, 30, 270, 'pending_payment');
+
+    const orderRes = await request(app)
+      .post(`/api/expeditions/${cleanupExpeditionId}/order`)
+      .set('Authorization', `Bearer ${user.token}`)
+      .send({ participants: 1 });
+    expect(orderRes.status).toBe(200);
+    expect(orderRes.body.status).toBe('pending_payment');
+    expect(orderRes.body).toHaveProperty('id');
+    expect(orderRes.body).toHaveProperty('order_no');
+
+    const cancelled = db.prepare(`
+      SELECT status FROM expedition_orders
+      WHERE expedition_id = ? AND order_no LIKE 'EXP-TIMEOUT-%'
+      ORDER BY id DESC LIMIT 1
+    `).get(cleanupExpeditionId);
+    expect(cancelled.status).toBe('cancelled');
+    const expeditionRow = db.prepare('SELECT current_participants FROM expeditions WHERE id = ?').get(cleanupExpeditionId);
+    expect(Number(expeditionRow.current_participants)).toBe(1);
+  });
+
+  test('远征模拟支付成功后会给用户写入支付成功通知', async () => {
+    const orderId = Number(db.prepare(`
+      INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `).run(`EXP-MOCK-${Date.now()}`, expeditionId, user.id, 1, 300, 30, 270, 'pending_payment').lastInsertRowid);
+
+    const res = await request(app)
+      .post(`/api/expeditions/orders/${orderId}/mock-pay`)
+      .set('Authorization', `Bearer ${user.token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('paid');
+
+    const notification = db.prepare(`
+      SELECT type, content FROM notifications
+      WHERE user_id = ? AND related_id = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(user.id, orderId);
+    expect(notification.type).toBe('order_paid');
+    expect(notification.content).toContain('支付成功');
+  });
+
+  test('管理员审核通过远征后会通知发布者', async () => {
+    const adminToken = createAdminToken();
+    const approvalExpeditionId = Number(db.prepare(`
+      INSERT INTO expeditions (
+        publisher_type, publisher_id, title, base_price, commission_rate,
+        min_participants, max_participants, current_participants, status,
+        created_at, updated_at
+      ) VALUES (
+        'guide', ?, '待审核推送路线', 188000, 0.15,
+        1, 4, 0, 'pending',
+        datetime('now'), datetime('now')
+      )
+    `).run(db.prepare('SELECT publisher_id FROM expeditions WHERE id = ?').get(expeditionId).publisher_id).lastInsertRowid);
+
+    const res = await request(app)
+      .post(`/api/admin/expeditions/${approvalExpeditionId}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+
+    const notification = db.prepare(`
+      SELECT type, content FROM notifications
+      WHERE user_id = ? AND related_id = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(guideUser.id, approvalExpeditionId);
+    expect(notification.type).toBe('expedition_approved');
+    expect(notification.content).toContain('审核通过');
+  });
 });
 
 // ── 19. /api/group-chats ─────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ const { sendMail, certificationResultEmail } = require('../middleware/mailer');
 const PDFDocument = require('pdfkit');
 const stripeConnect = require('../lib/payment/stripe-connect');
 const { captureEvent } = require('../middleware/sentry');
+const { sendPushToUser } = require('../lib/pushSender');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
@@ -1131,6 +1132,30 @@ router.post('/expeditions/:id/approve', adminWriteLimiter, adminAuth, async (req
     const now = new Date().toISOString();
     const affected = await prisma.$executeRaw`UPDATE expeditions SET status = 'published', approved_at = ${now} WHERE id = ${req.params.id}`;
     if (affected === 0) return res.status(404).json({ error: '远征不存在' });
+    try {
+      const [expedition] = await prisma.$queryRaw`SELECT id, title, publisher_type, publisher_id FROM expeditions WHERE id = ${Number(req.params.id)}`;
+      if (expedition) {
+        let notifyUserId = null;
+        if (expedition.publisher_type === 'guide') {
+          const [guide] = await prisma.$queryRaw`SELECT user_id FROM guides WHERE id = ${expedition.publisher_id}`;
+          if (guide) notifyUserId = guide.user_id;
+        } else if (expedition.publisher_type === 'club') {
+          const [club] = await prisma.$queryRaw`SELECT creator_id FROM clubs WHERE id = ${expedition.publisher_id}`;
+          if (club) notifyUserId = club.creator_id;
+        }
+        if (notifyUserId) {
+          const content = `【远征审核通过】您发布的远征 ${expedition.title} 已审核通过并上架`;
+          await prisma.$executeRaw`INSERT INTO notifications (user_id, type, content, related_id) VALUES (${notifyUserId}, 'expedition_approved', ${content}, ${expedition.id})`;
+          await sendPushToUser(notifyUserId, {
+            title: '远征审核通过',
+            body: `${expedition.title} 已审核通过并上架`,
+            data: { type: 'expedition_approved', expeditionId: expedition.id },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[admin/expeditions/approve] 通知失败:', e.message);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

@@ -185,8 +185,8 @@
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
-      .replaceAll('\"', '&quot;')
-      .replaceAll(\"'\", '&#39;');
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
     const safeUrl = (v, fallback = '') => {
       const value = String(v || '').trim();
       if (!value) return fallback;
@@ -286,7 +286,7 @@
       document.getElementById('reviewSummary').textContent = `⭐ ${summary.average || 0} / 5 · ${summary.total || 0} reviews`;
       document.getElementById('reviewBars').innerHTML = [5,4,3,2,1].map(s=>`<div class="row"><span style="width:20px">${s}</span><div class="meter" style="flex:1"><span style="width:${summary.total?((summary.distribution[s]||0)*100/summary.total):0}%"></span></div><span>${summary.distribution[s]||0}</span></div>`).join('');
       const reviews = (data.reviews || []).slice(0,5);
-      document.getElementById('reviews').innerHTML = reviews.length ? reviews.map(r=>`<div class="recommend"><div class="row"><img src="${safeUrl((r.user&&r.user.avatar), 'https://i.pravatar.cc/40?u=u'+encodeURIComponent(r.id))}" width="32" height="32" style="border-radius:999px"> <strong>${esc((r.user&&r.user.name)||'匿名')}</strong> <span class="muted">${'★'.repeat(Math.round(r.rating||0))}</span> <span class="muted">${esc(formatDate(r.created_at))}</span></div><div>${esc(r.content || '')}</div></div>`).join('') : '<div class="muted">暂无评价</div>';
+      document.getElementById('reviews').innerHTML = reviews.length ? reviews.map(r=>`<div class="recommend"><div class="row"><img src="${safeUrl((r.user&&r.user.avatar), 'https://i.pravatar.cc/40?u=u'+encodeURIComponent(r.id))}" width="32" height="32" style="border-radius:999px"> <strong>${esc((r.user&&r.user.name)||'匿名')}</strong> <span class="muted">⭐ ${Number(r.rating||0).toFixed(1)}</span> <span class="muted">${esc(formatDate(r.created_at))}</span></div><div>${esc(r.content || '')}</div></div>`).join('') : '<div class="muted">暂无评价</div>';
 
       const faqs = Array.isArray(data.faqs) && data.faqs.length ? data.faqs : [{q:'体能要求？',a:'建议具备高海拔连续行进能力。'},{q:'是否可定制行程？',a:'可与商家沟通后定制。'}];
       document.getElementById('faq').innerHTML = faqs.map((f,i)=>`<div class="faq-item" style="margin-bottom:8px"><button type="button" data-i="${i}">${esc(f.q)}</button><div id="faq-${i}" class="muted" style="display:none;padding:6px 10px">${esc(f.a)}</div></div>`).join('');

@@ -101,6 +101,26 @@ function ensureInit() {
   initAPNs();
 }
 
+async function sendPushToUser(userId, payload) {
+  const numericUserId = Number(userId);
+  if (!Number.isFinite(numericUserId)) {
+    console.warn('[Push] 跳过用户推送：无效 userId', userId);
+    return;
+  }
+  try {
+    const prisma = require('../db/prisma');
+    const tokens = await prisma.$queryRawUnsafe(
+      'SELECT push_token as token, push_platform as platform FROM users WHERE id = ? AND push_token IS NOT NULL AND push_platform IS NOT NULL',
+      numericUserId,
+    );
+    if (tokens.length > 0) {
+      await sendPush(tokens, payload);
+    }
+  } catch (e) {
+    console.warn('[Push] 用户推送失败:', e.message);
+  }
+}
+
 /**
  * 向一组设备 token 发送推送通知。
  * 异步调用，失败不抛出（仅 console.warn）。
@@ -181,4 +201,4 @@ async function sendPush(tokens, { title, body, data = {} }) {
   }
 }
 
-module.exports = { sendPush };
+module.exports = { sendPush, sendPushToUser };

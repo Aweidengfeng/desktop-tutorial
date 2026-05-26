@@ -23,8 +23,10 @@ const auth = require('../middleware/auth');
 const devOnly = require('../middleware/devOnly');
 const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
 const { detectRegion } = require('../lib/region');
+const { sendPushToUser } = require('../lib/pushSender');
 const wechatPay = require('../lib/payment/wechat-pay');
 const { paymentLimiter } = require('../middleware/rateLimits');
+const PENDING_PAYMENT_TIMEOUT_HOURS = 2;
 
 // 下单限流：每分钟最多20次，防止刷单
 const orderLimiter = rateLimit({
@@ -72,6 +74,98 @@ function safeParseJson(value) {
   }
 }
 
+async function getExpeditionPublisherUserId(publisherType, publisherId) {
+  if (publisherType === 'guide') {
+    const [guide] = await prisma.$queryRaw`SELECT user_id FROM guides WHERE id = ${publisherId}`;
+    return guide ? guide.user_id : null;
+  }
+  if (publisherType === 'club') {
+    const [club] = await prisma.$queryRaw`SELECT creator_id FROM clubs WHERE id = ${publisherId}`;
+    return club ? club.creator_id : null;
+  }
+  return null;
+}
+
+async function notifyExpeditionOrderPaid(orderId) {
+  const [order] = await prisma.$queryRaw`
+    SELECT eo.*, e.title as expedition_title, e.publisher_type, e.publisher_id
+    FROM expedition_orders eo
+    LEFT JOIN expeditions e ON e.id = eo.expedition_id
+    WHERE eo.id = ${orderId}
+  `;
+  if (!order) return;
+
+  const expeditionTitle = order.expedition_title || '远征';
+  await prisma.$executeRaw`
+    INSERT INTO notifications (user_id, type, content, related_id)
+    VALUES (${order.user_id}, 'order_paid', ${`【支付成功】${expeditionTitle} 订单已支付成功，订单号：${order.order_no}`}, ${order.id})
+  `;
+  await sendPushToUser(order.user_id, {
+    title: '支付成功',
+    body: `${expeditionTitle} 订单已支付成功`,
+    data: { type: 'order_paid', orderId: order.id },
+  });
+
+  const notifyUserId = await getExpeditionPublisherUserId(order.publisher_type, order.publisher_id);
+  if (notifyUserId) {
+    await prisma.$executeRaw`
+      INSERT INTO notifications (user_id, type, content, related_id)
+      VALUES (${notifyUserId}, 'order_paid', ${`【新订单】${expeditionTitle} 已付款，订单号：${order.order_no}`}, ${order.id})
+    `;
+  }
+}
+
+async function cleanupExpiredPendingOrders(expeditionId) {
+  const [expiredRow] = await prisma.$queryRaw`
+    SELECT COALESCE(SUM(COALESCE(participants, 1)), 0) as expired_slots
+    FROM expedition_orders
+    WHERE expedition_id = ${expeditionId}
+      AND status = 'pending_payment'
+      AND created_at < datetime('now', ${`-${PENDING_PAYMENT_TIMEOUT_HOURS} hours`})
+  `;
+  const expiredSlots = Number(expiredRow?.expired_slots || 0);
+  if (expiredSlots <= 0) return 0;
+
+  await prisma.$transaction([
+    prisma.$executeRaw`
+      UPDATE expedition_orders
+      SET status = 'cancelled'
+      WHERE expedition_id = ${expeditionId}
+        AND status = 'pending_payment'
+        AND created_at < datetime('now', ${`-${PENDING_PAYMENT_TIMEOUT_HOURS} hours`})
+    `,
+    prisma.$executeRaw`
+      UPDATE expeditions
+      SET current_participants = MAX(0, COALESCE(current_participants, 0) - ${expiredSlots}),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${expeditionId}
+    `,
+  ]);
+  return expiredSlots;
+}
+
+async function getExpeditionForOrder(tx, expeditionId) {
+  const provider = String(process.env.DATABASE_PROVIDER || '').toLowerCase();
+  if (provider === 'postgresql') {
+    const [expedition] = await tx.$queryRaw`
+      SELECT id, title, base_price, commission_rate, max_participants, current_participants,
+             group_discount, status
+      FROM expeditions
+      WHERE id = ${expeditionId} FOR UPDATE
+    `;
+    return expedition;
+  }
+  // SQLite 无原生行锁能力；现有测试环境仅验证名额清理与基础流程，
+  // 更严格的并发防护仍依赖 PostgreSQL 的 FOR UPDATE 路径。
+  const [expedition] = await tx.$queryRaw`
+    SELECT id, title, base_price, commission_rate, max_participants, current_participants,
+           group_discount, status
+    FROM expeditions
+    WHERE id = ${expeditionId}
+  `;
+  return expedition;
+}
+
 // ── 订单相关路由（放在 /:id 之前，防止 'orders' 被当作 id 解析）────
 
 // GET /api/expeditions/orders/my — 我的订单
@@ -103,22 +197,8 @@ router.post('/orders/:id/mock-pay', devOnly, auth, async (req, res) => {
     }
     const now = new Date().toISOString();
     await prisma.$executeRaw`UPDATE expedition_orders SET status = 'paid', paid_at = ${now} WHERE id = ${order.id}`;
-    // 通知发布者（简单起见，写入 notifications）
     try {
-      const [expedition] = await prisma.$queryRaw`SELECT publisher_type, publisher_id, title FROM expeditions WHERE id = ${order.expedition_id}`;
-      if (expedition) {
-        let notifyUserId = null;
-        if (expedition.publisher_type === 'guide') {
-          const [g] = await prisma.$queryRaw`SELECT user_id FROM guides WHERE id = ${expedition.publisher_id}`;
-          if (g) notifyUserId = g.user_id;
-        } else if (expedition.publisher_type === 'club') {
-          const [c] = await prisma.$queryRaw`SELECT creator_id FROM clubs WHERE id = ${expedition.publisher_id}`;
-          if (c) notifyUserId = c.creator_id;
-        }
-        if (notifyUserId) {
-          await prisma.$executeRaw`INSERT INTO notifications (user_id, type, content, related_id) VALUES (${notifyUserId}, 'order_paid', ${`【新订单】${expedition.title} 已付款，订单号：${order.order_no}`}, ${order.id})`;
-        }
-      }
+      await notifyExpeditionOrderPaid(order.id);
     } catch (e) { /* 通知失败不影响主流程 */ }
     res.json({ success: true, status: 'paid', order_no: order.order_no });
   } catch (e) {
@@ -148,10 +228,18 @@ router.post('/payment/notify/wechat', async (req, res) => {
     const outTradeNo = notifyPayload.out_trade_no || null;
     if (outTradeNo) {
       const now = new Date().toISOString();
-      await prisma.$executeRaw`
+      const updated = await prisma.$executeRaw`
         UPDATE expedition_orders SET status = 'paid', paid_at = ${now}
         WHERE order_no = ${outTradeNo} AND status = 'pending_payment'
       `;
+      if (updated > 0) {
+        const [order] = await prisma.$queryRaw`SELECT id FROM expedition_orders WHERE order_no = ${outTradeNo}`;
+        if (order) {
+          try {
+            await notifyExpeditionOrderPaid(order.id);
+          } catch (_) {}
+        }
+      }
     }
     res.status(200).send('<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>');
   } catch (e) {
@@ -178,10 +266,18 @@ router.post('/payment/notify/stripe', express.raw({ type: 'application/json' }),
       const orderNo = pi.metadata && pi.metadata.orderNo;
       if (orderNo) {
         const now = new Date().toISOString();
-        await prisma.$executeRaw`
+        const updated = await prisma.$executeRaw`
           UPDATE expedition_orders SET status = 'paid', paid_at = ${now}
           WHERE order_no = ${orderNo} AND status = 'pending_payment'
         `;
+        if (updated > 0) {
+          const [order] = await prisma.$queryRaw`SELECT id FROM expedition_orders WHERE order_no = ${orderNo}`;
+          if (order) {
+            try {
+              await notifyExpeditionOrderPaid(order.id);
+            } catch (_) {}
+          }
+        }
       }
     }
     res.status(200).json({ received: true });
@@ -295,7 +391,12 @@ router.get('/', async (req, res) => {
     if (publisher_type) { where.push('e.publisher_type = ?'); params.push(publisher_type); }
     const whereStr = where.length ? 'WHERE ' + where.join(' AND ') : '';
     const expeditions = await prisma.$queryRawUnsafe(`
-      SELECT e.*, p.name as peak_name
+      SELECT e.*, p.name as peak_name,
+             COALESCE((
+               SELECT SUM(COALESCE(eo.participants, 1))
+               FROM expedition_orders eo
+               WHERE eo.expedition_id = e.id AND eo.status IN ('paid', 'confirmed')
+             ), 0) as active_participants
       FROM expeditions e
       LEFT JOIN peaks p ON p.id = e.peak_id
       ${whereStr}
@@ -304,7 +405,11 @@ router.get('/', async (req, res) => {
     `, ...params, parseInt(limit), offset);
     const [totalRow] = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as c FROM expeditions e ${whereStr}`, ...params);
     const total = Number(totalRow.c);
-    res.json({ expeditions, total, page: parseInt(page), limit: parseInt(limit) });
+    const normalizedExpeditions = expeditions.map(({ active_participants, ...expedition }) => ({
+      ...expedition,
+      current_participants: Number(active_participants || 0),
+    }));
+    res.json({ expeditions: normalizedExpeditions, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -340,6 +445,12 @@ router.get('/:id', async (req, res) => {
     ['gallery', 'itinerary', 'included_services', 'excluded_services', 'addons', 'group_discount', 'payment_stages'].forEach((field) => {
       expedition[field] = safeParseJson(expedition[field]);
     });
+    const [participantsRow] = await prisma.$queryRaw`
+      SELECT COALESCE(SUM(COALESCE(participants, 1)), 0) as current_participants
+      FROM expedition_orders
+      WHERE expedition_id = ${expId} AND status IN ('paid', 'confirmed')
+    `;
+    expedition.current_participants = Number(participantsRow?.current_participants || 0);
 
     const merchant = expedition.publisher_type === 'guide'
       ? {
@@ -502,14 +613,11 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
     const expId = parseInt(req.params.id);
     const { participants = 1, selected_addons, contact_name, contact_phone, emergency_contact, emergency_phone, notes } = req.body;
     const participantCount = parseInt(participants) || 1;
+    await cleanupExpiredPendingOrders(expId);
 
     const order = await prisma.$transaction(async (tx) => {
       // 1. 加行锁查询团期（防止并发超额）
-      const [expedition] = await tx.$queryRaw`
-        SELECT id, title, base_price, commission_rate, max_participants, current_participants,
-               group_discount, status
-        FROM expeditions WHERE id = ${expId} FOR UPDATE
-      `;
+      const expedition = await getExpeditionForOrder(tx, expId);
       if (!expedition) throw { status: 404, message: '远征不存在或暂未开放报名' };
       if (expedition.status !== 'published') throw { status: 404, message: '远征不存在或暂未开放报名' };
 
