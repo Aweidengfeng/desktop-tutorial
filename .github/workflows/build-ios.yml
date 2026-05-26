@@ -45,6 +45,9 @@ jobs:
       - name: Mark workflow start
         run: touch /tmp/start-marker
 
+      - name: Set safe ref name
+        run: echo "SAFE_REF=$(echo '${{ github.ref_name }}' | tr '/' '-')" >> $GITHUB_ENV
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -187,7 +190,7 @@ jobs:
         if: always() && hashFiles('build/ipa/**/*.ipa') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: summitlink-ios-${{ github.ref_name }}
+          name: summitlink-ios-${{ env.SAFE_REF }}
           path: build/ipa/
           retention-days: 30
 
@@ -195,7 +198,7 @@ jobs:
         if: always() && hashFiles('build/App.xcarchive/**') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: summitlink-ios-archive-${{ github.ref_name }}
+          name: summitlink-ios-archive-${{ env.SAFE_REF }}
           path: build/App.xcarchive
           retention-days: 30
 
