@@ -448,7 +448,7 @@ function alpineLink() {
     smsCode: '',
     smsCountdown: 0,
     smsTimer: null,
-    loginForm: { account: '', phone: '', email: '', password: '' },
+    loginForm: { account: '', phone: '', password: '' },
     registerForm: { name: '', phone: '', password: '' },
     agreedPrivacy: false,
     agreedTerms: false,
@@ -921,7 +921,7 @@ function alpineLink() {
       if (!post?.id) return;
       let targetPost = (this.communityPosts || []).find((item) => String(item.id) === String(post.id)) || post;
       try {
-        const res = await fetch('/api/posts/' + post.id);
+        const res = await fetch(`/api/posts/${post.id}`);
         if (res.ok) {
           const data = await res.json();
           targetPost = {
@@ -3286,7 +3286,7 @@ function alpineLink() {
       return h;
     },
     async doLogin() {
-      const account = String(this.loginForm.account || this.loginForm.phone || this.loginForm.email || '').trim();
+      const account = String(this.loginForm.account || this.loginForm.phone || '').trim();
       const isEmail = account.includes('@');
       if (!account) { this.showToast('请输入手机号或邮箱', 'error'); return; }
       if (!isEmail && !/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(account)) { this.showToast('手机号格式不正确', 'error'); return; }
@@ -3551,7 +3551,7 @@ function alpineLink() {
       }
       this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
       this.showLogin = false;
-      this.loginForm = { account: '', phone: '', email: '', password: '' };
+      this.loginForm = { account: '', phone: '', password: '' };
       this.smsCode = '';
       this.loadGuideStatus();
       this.loadClubStatus();

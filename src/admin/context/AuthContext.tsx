@@ -38,13 +38,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadSession]);
 
   const login = useCallback(async (username: string, password: string) => {
-    const res = await apiClient.post('/api/admin/login', { username, password });
-    if (!res.data?.success) {
-      throw new Error(res.data?.error || '登录失败，请检查账号密码');
+    try {
+      const res = await apiClient.post('/api/admin/login', { username, password });
+      if (!res.data?.success) {
+        throw new Error(res.data?.error || '登录失败，请检查账号密码');
+      }
+      const resolvedUsername = res.data?.username || username;
+      localStorage.setItem('adminUsername', resolvedUsername);
+      setUser({ id: 0, username: resolvedUsername, isAdmin: true });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('登录失败，请检查账号密码');
     }
-    const resolvedUsername = res.data?.username || username;
-    localStorage.setItem('adminUsername', resolvedUsername);
-    setUser({ id: 0, username: resolvedUsername, isAdmin: true });
   }, []);
 
   const logout = useCallback(async () => {

@@ -71,11 +71,6 @@ router.get('/', async (req, res) => {
                SELECT COUNT(*)
                FROM reviews r
                WHERE r.target_type = 'guide' AND r.target_id = g.id
-             ) AS reviews,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'guide' AND r.target_id = g.id
              ) AS review_count,
              g.specialty, g.day_rate as dayRate
       FROM guides g WHERE g.status = 'approved'
@@ -84,7 +79,7 @@ router.get('/', async (req, res) => {
     res.json(guides.map((guide) => ({
       ...guide,
       rating: Number(guide.rating || 0),
-      reviews: Number(guide.reviews || 0),
+      reviews: Number(guide.review_count || 0),
       review_count: Number(guide.review_count || 0),
     })));
   } catch (e) {
@@ -463,9 +458,10 @@ router.get('/:id', async (req, res) => {
       WHERE g.id = ${id} AND g.status = 'approved'
     `;
     if (!guide) return res.status(404).json({ error: '向导不存在' });
+    const reviewCount = Number(guide.review_count || 0);
     guide.rating = Number(guide.review_rating || 0);
-    guide.reviews = Number(guide.review_count || 0);
-    guide.review_count = Number(guide.review_count || 0);
+    guide.review_count = reviewCount;
+    guide.reviews = reviewCount;
     res.json(parseGuide(guide));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

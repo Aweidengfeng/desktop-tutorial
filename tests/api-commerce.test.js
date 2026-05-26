@@ -176,6 +176,7 @@ describe('二、俱乐部商业活动全链路', () => {
   });
 
   test('GET /api/clubs 和 /api/clubs/:id 返回基于 reviews 的动态评分', async () => {
+    // 把 clubs 表里的静态 rating 列故意改坏，验证接口仍以 reviews 动态均值为准。
     db.prepare('UPDATE clubs SET rating = ? WHERE id = ?').run(1.2, clubId);
 
     const listRes = await request(app).get('/api/clubs');
@@ -352,6 +353,7 @@ describe('三、向导商业服务全链路', () => {
       .send({ rating: 3, content: '整体不错' });
     expect(secondReview.status).toBe(200);
 
+    // 把 guides 表里的静态 rating 列故意改坏，验证接口仍以 reviews 动态均值为准。
     db.prepare('UPDATE guides SET rating = ? WHERE id = ?').run(1.1, guideId);
 
     const listRes = await request(app).get('/api/guides');

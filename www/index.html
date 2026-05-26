@@ -6745,7 +6745,7 @@ function alpineLink() {
       if (!post?.id) return;
       let targetPost = (this.communityPosts || []).find((item) => String(item.id) === String(post.id)) || post;
       try {
-        const res = await fetch(API_BASE + '/api/posts/' + post.id);
+        const res = await fetch(`${API_BASE}/api/posts/${post.id}`);
         if (res.ok) {
           const data = await res.json();
           targetPost = {

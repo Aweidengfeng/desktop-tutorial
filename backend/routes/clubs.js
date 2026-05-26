@@ -292,18 +292,13 @@ router.get('/', async (req, res) => {
                SELECT COUNT(*)
                FROM reviews r
                WHERE r.target_type = 'club' AND r.target_id = c.id
-             ) AS reviews,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'club' AND r.target_id = c.id
              ) AS review_count
       FROM clubs c WHERE c.status = 'active' ORDER BY members_count DESC LIMIT ${limit}
     `;
     res.json(clubs.map((club) => ({
       ...club,
       rating: Number(club.rating || 0),
-      reviews: Number(club.reviews || 0),
+      reviews: Number(club.review_count || 0),
       review_count: Number(club.review_count || 0),
     })));
   } catch (e) {
@@ -387,11 +382,6 @@ router.get('/:id', async (req, res) => {
                SELECT COUNT(*)
                FROM reviews r
                WHERE r.target_type = 'club' AND r.target_id = c.id
-             ) AS reviews,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'club' AND r.target_id = c.id
              ) AS review_count
       FROM clubs c WHERE c.id = ${id}
     `;
@@ -399,7 +389,7 @@ router.get('/:id', async (req, res) => {
     res.json({
       ...club,
       rating: Number(club.rating || 0),
-      reviews: Number(club.reviews || 0),
+      reviews: Number(club.review_count || 0),
       review_count: Number(club.review_count || 0),
     });
   } catch (e) {
