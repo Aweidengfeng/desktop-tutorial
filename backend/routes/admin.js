@@ -763,7 +763,7 @@ router.post('/clubs/:id/revoke-certification', adminWriteLimiter, adminAuth, asy
     const { reason = '' } = req.body;
     const club = (await prisma.$queryRaw`SELECT id, creator_id, name, status FROM clubs WHERE id = ${req.params.id}`)[0];
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
-    await prisma.$executeRaw`UPDATE clubs SET status = 'revoked', verified = 0, cert_expires_at = NULL, listing_fee_paid = 0 WHERE id = ${req.params.id}`;
+    await prisma.$executeRaw`UPDATE clubs SET status = 'revoked', verified = false, cert_expires_at = NULL, listing_fee_paid = false WHERE id = ${req.params.id}`;
     try {
       const notifBody = `您的俱乐部「${club.name}」认证已被管理员撤销${reason ? '，原因：' + reason : ''}，如有疑问请联系客服。`;
       await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${club.creator_id}, 'club_revoked', '俱乐部认证已撤销', ${notifBody}, '/club-portal')`;
@@ -780,7 +780,7 @@ router.post('/guides/:id/revoke-certification', adminWriteLimiter, adminAuth, as
     const { reason = '' } = req.body;
     const guide = (await prisma.$queryRaw`SELECT id, user_id, name, status FROM guides WHERE id = ${req.params.id}`)[0];
     if (!guide) return res.status(404).json({ error: '向导不存在' });
-    await prisma.$executeRaw`UPDATE guides SET status = 'revoked', cert_expires_at = NULL, listing_fee_paid = 0 WHERE id = ${req.params.id}`;
+    await prisma.$executeRaw`UPDATE guides SET status = 'revoked', cert_expires_at = NULL, listing_fee_paid = false WHERE id = ${req.params.id}`;
     try {
       const notifBody = `您的向导「${guide.name}」认证已被管理员撤销${reason ? '，原因：' + reason : ''}，如有疑问请联系客服。`;
       await prisma.$executeRaw`INSERT INTO notifications (user_id, type, title, body, link) VALUES (${guide.user_id}, 'guide_revoked', '向导认证已撤销', ${notifBody}, '/guide-portal')`;
@@ -1466,7 +1466,7 @@ router.post('/clubs/:id/commercial-review', adminWriteLimiter, adminAuth, async 
     const club = (await prisma.$queryRaw`SELECT * FROM clubs WHERE id = ${req.params.id}`)[0];
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
     if (action === 'approve') {
-      await prisma.$executeRaw`UPDATE clubs SET commercial_verified=1, commercial_status='approved',
+      await prisma.$executeRaw`UPDATE clubs SET commercial_verified=true, commercial_status='approved',
         commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=NULL WHERE id=${req.params.id}`;
       // 通知俱乐部创建者
       try {
@@ -1475,7 +1475,7 @@ router.post('/clubs/:id/commercial-review', adminWriteLimiter, adminAuth, async 
       } catch(e) {}
     } else if (action === 'reject') {
       const rejectReason = reason || '资质不符合要求';
-      await prisma.$executeRaw`UPDATE clubs SET commercial_verified=0, commercial_status='rejected',
+      await prisma.$executeRaw`UPDATE clubs SET commercial_verified=false, commercial_status='rejected',
         commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=${rejectReason} WHERE id=${req.params.id}`;
       try {
         const notifContent = `【资质审核未通过】您的俱乐部 ${club.name} 商业资质审核未通过：${rejectReason}`;
@@ -1526,7 +1526,7 @@ router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, async
     const guide = (await prisma.$queryRaw`SELECT * FROM guides WHERE id = ${req.params.id}`)[0];
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     if (action === 'approve') {
-      await prisma.$executeRaw`UPDATE guides SET commercial_verified=1, commercial_status='approved',
+      await prisma.$executeRaw`UPDATE guides SET commercial_verified=true, commercial_status='approved',
         commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=NULL WHERE id=${req.params.id}`;
       try {
         const notifContent = `【资质审核通过】您的向导商业资质已审核通过，可发布收费服务`;
@@ -1534,7 +1534,7 @@ router.post('/guides/:id/commercial-review', adminWriteLimiter, adminAuth, async
       } catch(e) {}
     } else if (action === 'reject') {
       const rejectReason = reason || '资质不符合要求';
-      await prisma.$executeRaw`UPDATE guides SET commercial_verified=0, commercial_status='rejected',
+      await prisma.$executeRaw`UPDATE guides SET commercial_verified=false, commercial_status='rejected',
         commercial_reviewed_at=CURRENT_TIMESTAMP, commercial_reject_reason=${rejectReason} WHERE id=${req.params.id}`;
       try {
         const notifContent = `【资质审核未通过】您的向导商业资质审核未通过：${rejectReason}`;

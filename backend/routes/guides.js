@@ -62,25 +62,16 @@ router.get('/', async (req, res) => {
   try {
     const guides = await prisma.$queryRaw`
       SELECT g.id, g.user_id as userId, g.name, g.avatar, g.flag, g.nationality,
-             ROUND(COALESCE((
-               SELECT AVG(CAST(r.rating AS REAL))
-               FROM reviews r
-               WHERE r.target_type = 'guide' AND r.target_id = g.id
-             ), g.rating), 1) AS rating,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'guide' AND r.target_id = g.id
-             ) AS review_count,
+             g.rating,
              g.specialty, g.day_rate as dayRate
       FROM guides g WHERE g.status = 'approved'
-      ORDER BY rating DESC
+      ORDER BY g.rating DESC
     `;
     res.json(guides.map((guide) => ({
       ...guide,
       rating: Number(guide.rating || 0),
-      reviews: Number(guide.review_count || 0),
-      review_count: Number(guide.review_count || 0),
+      reviews: 0,
+      review_count: 0,
     })));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -444,22 +435,14 @@ router.get('/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const [guide] = await prisma.$queryRaw`
       SELECT g.*,
-             ROUND(COALESCE((
-               SELECT AVG(CAST(r.rating AS REAL))
-               FROM reviews r
-               WHERE r.target_type = 'guide' AND r.target_id = g.id
-             ), g.rating), 1) AS review_rating,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'guide' AND r.target_id = g.id
-             ) AS review_count
+             g.rating AS review_rating,
+             CAST(0 AS INTEGER) AS review_count
       FROM guides g
       WHERE g.id = ${id} AND g.status = 'approved'
     `;
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     const reviewCount = Number(guide.review_count || 0);
-    guide.rating = Number(guide.review_rating || 0);
+    guide.rating = Number(guide.review_rating || guide.rating || 0);
     guide.review_count = reviewCount;
     guide.reviews = reviewCount;
     res.json(parseGuide(guide));
