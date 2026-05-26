@@ -1362,15 +1362,15 @@
       },
 
       async reapplyGuide() {
-        const token = localStorage.getItem('token');
-        if (!token) { alert('请先登录'); return; }
+        const token = this.getAuthToken();
+        if (!token) { this.toast('请先登录', 'error'); return; }
         try {
           const r = await fetch('/api/guides/reapply', { method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
           const data = await r.json();
-          if (!r.ok) { alert(data.error || '操作失败'); return; }
-          alert('已重新提交申请，请等待审核结果 ✅');
+          if (!r.ok) { this.toast(data.error || '操作失败', 'error'); return; }
+          this.toast('已重新提交申请，请等待审核结果 ✅');
           await this.loadCertStatus(token);
-        } catch(e) { alert('网络错误，请重试'); }
+        } catch(e) { this.toast('网络错误，请重试', 'error'); }
       },
 
       async loadActivities(token) {
@@ -1429,7 +1429,7 @@
         try {
           const guide = this.certStatus.guide;
           if (!guide) return;
-          const r = await fetch(`/api/guide-service-orders?guide_id=${guide.id}`, { headers: { Authorization: 'Bearer ' + token } });
+          const r = await fetch('/api/guide-service-orders/my', { headers: { Authorization: 'Bearer ' + token } });
           if (r.ok) {
             const data = await r.json();
             this.orders = Array.isArray(data) ? data : (data.orders || []);
@@ -1809,8 +1809,35 @@
         const token = this.getAuthToken();
         this.dashboardLoading = true;
         try {
-          const r = await fetch('/api/platform/merchant/dashboard', { headers: { Authorization: 'Bearer ' + token } });
-          if (r.ok) this.dashboardData = await r.json();
+          const r = await fetch('/api/guide-console/dashboard', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            this.dashboardData = await r.json();
+          } else {
+            const [withdrawalsResponse, ordersResponse] = await Promise.all([
+              fetch('/api/guides/withdrawals', { headers: { Authorization: 'Bearer ' + token } }),
+              fetch('/api/guide-service-orders/my', { headers: { Authorization: 'Bearer ' + token } }),
+            ]);
+            if (withdrawalsResponse.ok) {
+              const d = await withdrawalsResponse.json();
+              let totalOrders = 0;
+              if (ordersResponse.ok) {
+                const ordersData = await ordersResponse.json();
+                const orders = Array.isArray(ordersData) ? ordersData : (ordersData.orders || []);
+                totalOrders = orders.length;
+              }
+              this.dashboardData = {
+                currency: d.currency || 'CNY',
+                totalViews: 0,
+                avgRating: 0,
+                monthlyGmv: 0,
+                repeatRate: 0,
+                availableBalance: Number(d.balance || 0),
+                totalOrders,
+              };
+            } else {
+              this.dashboardData = null;
+            }
+          }
         } catch(e) {
           this.dashboardData = null;
         } finally { this.dashboardLoading = false; }
