@@ -102,7 +102,9 @@ async function gotoTab(page, tabName) {
           }
           if (obj) obj.currentPage = 'explore';
         }
-      } catch (e) {}
+      } catch (e) {
+        // Best-effort fallback only; the final wait below still fails loudly if explore stays hidden.
+      }
     }).catch(() => {});
     await page.waitForTimeout(600);
     if (await hasVisibleSection()) return;
