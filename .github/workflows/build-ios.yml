@@ -66,8 +66,19 @@ jobs:
       - name: Install root dependencies
         run: npm install
 
-      - name: Ensure Capacitor iOS dependencies
-        run: npm install --no-save @capacitor/cli@6.2.0
+      - name: Pin Capacitor plugin versions to match core
+        run: |
+          npm install --no-save \
+            @capacitor/cli@6.2.0 \
+            @capacitor/core@6.2.0 \
+            @capacitor/ios@6.2.0 \
+            @capacitor/status-bar@6.0.2 \
+            @capacitor/share@6.0.2 \
+            @capacitor/push-notifications@6.0.2 \
+            @capacitor/camera@6.1.3
+          echo "=== Capacitor versions ==="
+          npx cap --version
+          node -e "['@capacitor/core','@capacitor/status-bar','@capacitor/share','@capacitor/push-notifications','@capacitor/camera'].forEach(p => console.log(p, require(p + '/package.json').version))"
 
       - name: Ensure iOS platform exists
         run: |
