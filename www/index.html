@@ -10258,8 +10258,9 @@ function alpineLink() {
 
   document.addEventListener('alpine:initialized', function() {
     var body = document.body;
-    if (body && body.hasAttribute('x-cloak')) return;
-    clearGuard();
+    if (!body || !body.hasAttribute('x-cloak')) {
+      clearGuard();
+    }
   });
 
   window.addEventListener('error', function(e) {
