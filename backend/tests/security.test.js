@@ -255,10 +255,11 @@ describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
     const indexPath = path.join(__dirname, '../../www/index.html');
     const vendorPath = path.join(__dirname, '../../www/js/vendor/alpine.csp.min.js');
     const content = fs.readFileSync(indexPath, 'utf8');
-    expect(content).toContain("if (typeof tailwind !== 'undefined')");
-    expect(content).toContain('/js/vendor/alpine.csp.min.js');
-    expect(content).toContain("document.addEventListener('alpine:initialized'");
-    expect(content).toContain("if (body && body.hasAttribute('x-cloak'))");
+    expect(content).toMatch(/typeof\s+tailwind\s*!==\s*['"]undefined['"]/);
+    expect(content).toMatch(/id\s*=\s*['"]sl-alpine-fallback['"]/);
+    expect(content).toMatch(/src\s*=\s*['"]\/js\/vendor\/alpine\.csp\.min\.js['"]/);
+    expect(content).toMatch(/document\.addEventListener\(\s*['"]alpine:initialized['"]/);
+    expect(content).toMatch(/body\s*&&\s*body\.hasAttribute\(\s*['"]x-cloak['"]\s*\)/);
     expect(fs.existsSync(vendorPath)).toBe(true);
   });
 });

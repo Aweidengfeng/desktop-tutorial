@@ -16,7 +16,7 @@
       var s = document.createElement('script');
       s.id = 'sl-alpine-fallback';
       s.src = '/js/vendor/alpine.csp.min.js';
-      s.defer = true;
+      s.async = false;
       document.head.appendChild(s);
     }, 3000);
 
@@ -10256,8 +10256,11 @@ function alpineLink() {
     clearTimeout(timeout);
   }
 
-  document.addEventListener('alpine:init', clearGuard);
-  document.addEventListener('alpine:initialized', clearGuard);
+  document.addEventListener('alpine:initialized', function() {
+    var body = document.body;
+    if (body && body.hasAttribute('x-cloak')) return;
+    clearGuard();
+  });
 
   window.addEventListener('error', function(e) {
     var file = 'unknown';
