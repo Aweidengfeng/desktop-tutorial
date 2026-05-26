@@ -26,6 +26,7 @@ const { detectRegion } = require('../lib/region');
 const { sendPushToUser } = require('../lib/pushSender');
 const wechatPay = require('../lib/payment/wechat-pay');
 const { paymentLimiter } = require('../middleware/rateLimits');
+const PENDING_PAYMENT_TIMEOUT_HOURS = 2;
 
 // 下单限流：每分钟最多20次，防止刷单
 const orderLimiter = rateLimit({
@@ -120,7 +121,7 @@ async function cleanupExpiredPendingOrders(expeditionId) {
     FROM expedition_orders
     WHERE expedition_id = ${expeditionId}
       AND status = 'pending_payment'
-      AND created_at < datetime('now', '-2 hours')
+      AND created_at < datetime('now', ${`-${PENDING_PAYMENT_TIMEOUT_HOURS} hours`})
   `;
   const expiredSlots = Number(expiredRow?.expired_slots || 0);
   if (expiredSlots <= 0) return 0;
@@ -131,7 +132,7 @@ async function cleanupExpiredPendingOrders(expeditionId) {
       SET status = 'cancelled'
       WHERE expedition_id = ${expeditionId}
         AND status = 'pending_payment'
-        AND created_at < datetime('now', '-2 hours')
+        AND created_at < datetime('now', ${`-${PENDING_PAYMENT_TIMEOUT_HOURS} hours`})
     `,
     prisma.$executeRaw`
       UPDATE expeditions
@@ -143,17 +144,24 @@ async function cleanupExpiredPendingOrders(expeditionId) {
   return expiredSlots;
 }
 
-function getExpeditionLockQuery() {
-  // SQLite 不支持 FOR UPDATE；PostgreSQL 需要它来降低并发超卖风险。
-  const provider = String(process.env.DATABASE_PROVIDER || '');
-  const databaseUrl = String(process.env.DATABASE_URL || '');
-  const useRowLock = provider === 'postgresql' || (!provider && !databaseUrl.startsWith('file:'));
-  return `
+async function getExpeditionForOrder(tx, expeditionId) {
+  const provider = String(process.env.DATABASE_PROVIDER || '').toLowerCase();
+  if (provider === 'postgresql') {
+    const [expedition] = await tx.$queryRaw`
+      SELECT id, title, base_price, commission_rate, max_participants, current_participants,
+             group_discount, status
+      FROM expeditions
+      WHERE id = ${expeditionId} FOR UPDATE
+    `;
+    return expedition;
+  }
+  const [expedition] = await tx.$queryRaw`
     SELECT id, title, base_price, commission_rate, max_participants, current_participants,
            group_discount, status
     FROM expeditions
-    WHERE id = ?${useRowLock ? ' FOR UPDATE' : ''}
+    WHERE id = ${expeditionId}
   `;
+  return expedition;
 }
 
 // ── 订单相关路由（放在 /:id 之前，防止 'orders' 被当作 id 解析）────
@@ -607,7 +615,7 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
 
     const order = await prisma.$transaction(async (tx) => {
       // 1. 加行锁查询团期（防止并发超额）
-      const [expedition] = await tx.$queryRawUnsafe(getExpeditionLockQuery(), expId);
+      const expedition = await getExpeditionForOrder(tx, expId);
       if (!expedition) throw { status: 404, message: '远征不存在或暂未开放报名' };
       if (expedition.status !== 'published') throw { status: 404, message: '远征不存在或暂未开放报名' };
 

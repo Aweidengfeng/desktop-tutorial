@@ -1189,7 +1189,7 @@ describe('十八、远征队活动 /api/expeditions', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test('GET /api/expeditions 与详情的名额统计不包含超时未支付订单', async () => {
+  test('GET /api/expeditions 与详情接口都不统计超时未支付订单', async () => {
     db.prepare(`
       INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-3 hours'))
