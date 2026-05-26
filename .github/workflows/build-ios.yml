@@ -64,7 +64,7 @@ jobs:
         run: npm install
 
       - name: Ensure Capacitor iOS dependencies
-        run: npm install --no-save @capacitor/cli@8.0.2
+        run: npm install --no-save @capacitor/cli@6.2.0
 
       - name: Ensure iOS platform exists
         run: |
