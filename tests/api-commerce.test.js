@@ -158,6 +158,23 @@ describe('二、俱乐部商业活动全链路', () => {
     actId = res.body.id;
   });
 
+  test('提交评价后会回填俱乐部 rating 平均分', async () => {
+    const firstReview = await request(app)
+      .post(`/api/clubs/${clubId}/review`)
+      .set(authHeader(clubUser.token))
+      .send({ rating: 5, content: '非常专业' });
+    expect(firstReview.status).toBe(200);
+
+    const secondReview = await request(app)
+      .post(`/api/clubs/${clubId}/review`)
+      .set(authHeader(otherUser.token))
+      .send({ rating: 3, content: '整体不错' });
+    expect(secondReview.status).toBe(200);
+
+    const club = db.prepare('SELECT rating FROM clubs WHERE id = ?').get(clubId);
+    expect(Number(club.rating)).toBeCloseTo(4.0, 1);
+  });
+
   test('商业资质申请提交成功', async () => {
     const res = await request(app)
       .post(`/api/clubs/${clubId}/commercial-apply`)
