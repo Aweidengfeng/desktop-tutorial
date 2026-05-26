@@ -3286,7 +3286,7 @@ function alpineLink() {
       return h;
     },
     async doLogin() {
-      const account = String(this.loginForm.account || this.loginForm.phone || '').trim();
+      const account = String(this.loginForm.account || '').trim();
       const isEmail = account.includes('@');
       if (!account) { this.showToast('请输入手机号或邮箱', 'error'); return; }
       if (!isEmail && !/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(account)) { this.showToast('手机号格式不正确', 'error'); return; }
