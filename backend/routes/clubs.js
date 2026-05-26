@@ -283,23 +283,14 @@ router.get('/', async (req, res) => {
     const clubs = await prisma.$queryRaw`
       SELECT c.id, c.name, c.description, c.cover, c.specialty, c.region, c.type,
              c.members_count as members, c.expeditions, c.verified, c.founded, c.status, c.created_at,
-             ROUND(COALESCE((
-               SELECT AVG(CAST(r.rating AS REAL))
-               FROM reviews r
-               WHERE r.target_type = 'club' AND r.target_id = c.id
-             ), c.rating), 1) AS rating,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'club' AND r.target_id = c.id
-             ) AS review_count
+             c.rating
       FROM clubs c WHERE c.status = 'active' ORDER BY members_count DESC LIMIT ${limit}
     `;
     res.json(clubs.map((club) => ({
       ...club,
       rating: Number(club.rating || 0),
-      reviews: Number(club.review_count || 0),
-      review_count: Number(club.review_count || 0),
+      reviews: 0,
+      review_count: 0,
     })));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -373,24 +364,15 @@ router.get('/:id', async (req, res) => {
       SELECT c.id, c.name, c.description, c.cover, c.specialty, c.region, c.type,
              c.members_count as members, c.expeditions, c.verified, c.founded, c.status, c.creator_id,
              c.contact, c.wechat, c.website, c.cover_image, c.logo, c.created_at,
-             ROUND(COALESCE((
-               SELECT AVG(CAST(r.rating AS REAL))
-               FROM reviews r
-               WHERE r.target_type = 'club' AND r.target_id = c.id
-             ), c.rating), 1) AS rating,
-             (
-               SELECT COUNT(*)
-               FROM reviews r
-               WHERE r.target_type = 'club' AND r.target_id = c.id
-             ) AS review_count
+             c.rating
       FROM clubs c WHERE c.id = ${id}
     `;
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
     res.json({
       ...club,
       rating: Number(club.rating || 0),
-      reviews: Number(club.review_count || 0),
-      review_count: Number(club.review_count || 0),
+      reviews: 0,
+      review_count: 0,
     });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
@@ -836,12 +818,12 @@ router.post('/pay-listing-fee', clubPayRateLimit, auth, async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
     await prisma.$executeRaw`
-      UPDATE clubs SET status = 'active', verified = 1, listing_fee_paid = 1,
+      UPDATE clubs SET status = 'active', verified = true, listing_fee_paid = true,
         listing_fee_paid_at = CURRENT_TIMESTAMP, cert_expires_at = ${expiresAt.toISOString()}, cert_year_fee = ${levelInfo.yearFee}
       WHERE id = ${club.id}
     `;
     await prisma.$executeRaw`
-      UPDATE club_applications SET status = 'approved', listing_fee_paid = 1, listing_fee_paid_at = CURRENT_TIMESTAMP
+      UPDATE club_applications SET status = 'approved', listing_fee_paid = true, listing_fee_paid_at = CURRENT_TIMESTAMP
       WHERE user_id = ${req.user.id} AND status = 'approved_pending_payment'
     `;
     try {

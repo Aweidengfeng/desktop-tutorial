@@ -14,8 +14,7 @@ router.get('/', teamsReadLimiter, async (req, res) => {
     try {
       teams = await prisma.$queryRaw`
         SELECT t.id, t.name, t.peak, t.date, t.spots, t.total_spots as totalSpots,
-               t.level, u.name as leader, u.avatar as leaderAvatar, t.description,
-               t.equipment_required as equipmentRequired, t.notes, t.difficulty, t.fee
+               t.level, u.name as leader, u.avatar as leaderAvatar, t.description
         FROM teams t
         LEFT JOIN users u ON t.leader_id = u.id
         WHERE t.status = 'recruiting'
@@ -41,10 +40,6 @@ router.get('/', teamsReadLimiter, async (req, res) => {
         ...team,
         leader: null,
         leaderAvatar: null,
-        equipmentRequired: null,
-        notes: null,
-        difficulty: null,
-        fee: null,
       }));
     }
     res.json(teams);
@@ -59,8 +54,7 @@ router.get('/:id', teamsReadLimiter, async (req, res) => {
     const team = (await prisma.$queryRaw`
       SELECT t.id, t.name, t.peak, t.date, t.spots, t.total_spots as totalSpots,
              t.level, u.name as leader, u.avatar as leaderAvatar, t.leader_id as leaderId,
-             t.description, t.equipment_required as equipmentRequired, t.notes, t.difficulty, t.fee,
-             t.status, t.group_chat_id as groupChatId, t.created_at as createdAt
+             t.description, t.status, t.group_chat_id as groupChatId, t.created_at as createdAt
       FROM teams t
       LEFT JOIN users u ON t.leader_id = u.id
       WHERE t.id = ${Number(req.params.id)}
@@ -81,13 +75,12 @@ router.get('/:id', teamsReadLimiter, async (req, res) => {
 // POST /api/teams（需要JWT）
 router.post('/', teamsWriteLimiter, auth, async (req, res) => {
   try {
-    const { name, peak, date, totalSpots, level, description, equipment_required, notes, difficulty, fee } = req.body;
+    const { name, peak, date, totalSpots, level, description } = req.body;
     const user = (await prisma.$queryRaw`SELECT * FROM users WHERE id = ${req.user.id}`)[0];
     const [{ id: teamId }] = await prisma.$queryRaw`
-      INSERT INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description, equipment_required, notes, difficulty, fee)
+      INSERT INTO teams (name, peak, date, spots, total_spots, level, leader, leader_avatar, leader_id, description)
       VALUES (${name}, ${peak}, ${date}, ${totalSpots}, ${totalSpots}, ${level},
-              ${user.name}, ${user.avatar}, ${req.user.id}, ${description || ''},
-              ${equipment_required || null}, ${notes || null}, ${difficulty || null}, ${fee || null})
+              ${user.name}, ${user.avatar}, ${req.user.id}, ${description || ''})
       RETURNING id
     `;
     // 创建者自动加入 team_members（leader）
@@ -106,7 +99,6 @@ router.post('/', teamsWriteLimiter, auth, async (req, res) => {
     const team = (await prisma.$queryRaw`
       SELECT id, name, peak, date, spots, total_spots as totalSpots,
              level, leader, leader_avatar as leaderAvatar, description,
-             equipment_required as equipmentRequired, notes, difficulty, fee,
              group_chat_id as groupChatId
       FROM teams WHERE id = ${teamId}
     `)[0];
