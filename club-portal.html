@@ -114,8 +114,11 @@
         <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'approved_pending_payment'">
           <span class="text-xs bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full font-semibold">待付费</span>
         </template>
-        <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status !== 'approved_pending_payment'">
+        <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'pending'">
           <span class="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full font-semibold">审核中</span>
+        </template>
+        <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'rejected'">
+          <span class="text-xs bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-semibold">已拒绝</span>
         </template>
         <template x-if="!certStatus.certified && !certStatus.club">
           <span class="text-xs bg-slate-500/20 text-slate-400 px-3 py-1 rounded-full font-semibold">未认证</span>
@@ -151,9 +154,21 @@
       </template>
 
       <!-- 审核中展示 -->
-      <template x-if="!certStatus.certified && certStatus.application && certStatus.application.status === 'pending'">
+      <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'pending'">
         <div class="text-slate-300 text-sm py-2">
-          <p>您的认证申请（<span class="text-yellow-400" x-text="certStatus.application.cert_level"></span> 等级）正在审核中，预计7天内完成。</p>
+          <p>您的认证申请（<span class="text-yellow-400" x-text="certStatus.club?.cert_level || certStatus.application?.cert_level || '未知'"></span> 等级）正在审核中，预计7天内完成。</p>
+        </div>
+      </template>
+
+      <!-- 被拒绝展示 -->
+      <template x-if="!certStatus.certified && certStatus.club && certStatus.club.status === 'rejected'">
+        <div class="text-slate-300 text-sm py-2">
+          <p class="text-red-400 font-semibold mb-2">❌ 申请已被拒绝</p>
+          <p x-show="certStatus.club?.reject_reason" class="text-slate-400 text-xs mb-3 bg-red-500/10 rounded-xl px-3 py-2">
+            拒绝原因：<span x-text="certStatus.club.reject_reason"></span>
+          </p>
+          <p class="text-slate-400 text-xs mb-3" x-show="!certStatus.club?.reject_reason">您的俱乐部认证申请已被拒绝，请修改申请材料后重新提交。</p>
+          <button @click="page='apply'" class="mt-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl font-semibold text-sm transition hover:opacity-90">🔄 重新申请</button>
         </div>
       </template>
 
@@ -178,7 +193,7 @@
     <!-- 导航标签 -->
     <div x-show="certStatus.certified" class="flex gap-2 overflow-x-auto pb-1">
       <template x-for="tab in tabs" :key="tab.id">
-        <button @click="page=tab.id"
+        <button @click="selectClubTab(tab.id)"
                 :class="page===tab.id ? 'bg-blue-600 text-white' : 'glass text-slate-300 hover:bg-white/10'"
                 class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors">
           <span x-text="tab.icon + ' ' + tab.label"></span>
@@ -503,7 +518,7 @@
     </div>
 
     <!-- ── Club Guide Members ── -->
-    <div x-show="page === 'guides'" x-init="page === 'guides' && loadClubGuides()">
+    <div x-show="page === 'guides'">
       <div class="space-y-4">
         <div class="glass rounded-2xl p-6">
           <h2 class="text-lg font-bold mb-4">🧭 旗下向导管理</h2>
@@ -531,6 +546,97 @@
                 <button @click="removeGuide(g)" class="px-2 py-1 glass rounded text-xs text-red-300 hover:bg-red-900/30">移除</button>
               </div>
             </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Finance Center ── -->
+    <div x-show="page === 'finance' && certStatus.certified">
+      <div class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="text-lg font-bold mb-4">💰 资金中心</h2>
+          <div x-show="financeLoading" class="text-center py-6 text-slate-400">加载中…</div>
+          <div x-show="!financeLoading && !financeData" class="text-center py-6 text-slate-400">
+            <p class="text-2xl mb-2">💰</p><p>暂无资金数据</p>
+          </div>
+          <div x-show="!financeLoading && financeData" class="space-y-4">
+            <div class="grid grid-cols-3 gap-4">
+              <div class="glass-dark rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400">待结算余额</p>
+                <p class="text-xl font-bold text-yellow-400 mt-1" x-text="(financeData?.currency||'CNY') + ' ' + (financeData?.pendingBalance||0).toLocaleString()"></p>
+              </div>
+              <div class="glass-dark rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400">可提现余额</p>
+                <p class="text-xl font-bold text-green-400 mt-1" x-text="(financeData?.currency||'CNY') + ' ' + (financeData?.availableBalance||0).toLocaleString()"></p>
+              </div>
+              <div class="glass-dark rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400">累计已到账</p>
+                <p class="text-xl font-bold text-blue-400 mt-1" x-text="(financeData?.currency||'CNY') + ' ' + (financeData?.totalPaid||0).toLocaleString()"></p>
+              </div>
+            </div>
+            <div class="glass-dark rounded-xl p-4">
+              <h3 class="font-semibold mb-3 text-sm">申请提现</h3>
+              <div class="grid md:grid-cols-3 gap-3">
+                <input x-model="payoutRequest.amount" type="number" min="100" placeholder="提现金额（最低100）" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+                <input x-model="payoutRequest.bank_name" type="text" placeholder="开户行（如招商银行）" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+                <input x-model="payoutRequest.bank_account" type="text" placeholder="银行卡号" class="bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+              </div>
+              <div class="mt-3">
+                <button @click="requestPayout()" :disabled="payoutLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl text-sm font-semibold" x-text="payoutLoading ? '提交中…' : '申请提现'"></button>
+              </div>
+              <p class="text-xs text-slate-400 mt-2">提交后进入待审核状态，可在下方查看审批结果。</p>
+            </div>
+            <div class="glass-dark rounded-xl p-4">
+              <h3 class="font-semibold mb-3 text-sm">提现历史</h3>
+              <div x-show="withdrawalHistory.length===0" class="text-xs text-slate-400 py-2">暂无提现记录</div>
+              <div class="space-y-2" x-show="withdrawalHistory.length>0">
+                <template x-for="w in withdrawalHistory" :key="w.id">
+                  <div class="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2">
+                    <div>
+                      <p class="text-sm text-white" x-text="'¥' + Number(w.amount || 0).toFixed(2)"></p>
+                      <p class="text-xs text-slate-400" x-text="(w.bank_name || '-') + ' · ' + (w.bank_account || '-')"></p>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-xs px-2 py-0.5 rounded-full"
+                            :class="w.status==='pending'?'bg-yellow-500/20 text-yellow-300':w.status==='approved'?'bg-emerald-500/20 text-emerald-300':'bg-red-500/20 text-red-300'"
+                            x-text="w.status==='pending'?'待审核':w.status==='approved'?'已批准':'已拒绝'"></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Dashboard ── -->
+    <div x-show="page === 'dashboard' && certStatus.certified">
+      <div class="glass rounded-2xl p-6">
+        <h2 class="text-lg font-bold mb-4">📊 数据看板</h2>
+        <div x-show="dashboardLoading" class="text-center py-6 text-slate-400">加载中…</div>
+        <div x-show="!dashboardLoading && !dashboardData" class="text-center py-6 text-slate-400">
+          <p class="text-2xl mb-2">📊</p>
+          <p>数据看板功能即将上线</p>
+          <p class="text-xs mt-1">需要有真实订单数据才能展示统计信息</p>
+        </div>
+        <div x-show="!dashboardLoading && dashboardData" class="grid grid-cols-2 gap-4">
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">活动浏览量</p>
+            <p class="text-2xl font-bold mt-1" x-text="(dashboardData?.totalViews||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">平均评分</p>
+            <p class="text-2xl font-bold mt-1 text-yellow-400" x-text="(dashboardData?.avgRating||0).toFixed(1) + ' ⭐'"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">月度 GMV</p>
+            <p class="text-2xl font-bold mt-1 text-green-400" x-text="(dashboardData?.currency||'CNY') + ' ' + (dashboardData?.monthlyGmv||0).toLocaleString()"></p>
+          </div>
+          <div class="glass-dark rounded-xl p-4">
+            <p class="text-xs text-slate-400">复购率</p>
+            <p class="text-2xl font-bold mt-1 text-blue-400" x-text="((dashboardData?.repeatRate||0)*100).toFixed(0) + '%'"></p>
           </div>
         </div>
       </div>
@@ -594,6 +700,8 @@
         { id: 'publish',    icon: '➕', label: '发布活动' },
         { id: 'orders',     icon: '📦', label: '报名管理' },
         { id: 'guides',     icon: '🧭', label: '旗下向导' },
+        { id: 'finance',    icon: '💰', label: '资金中心' },
+        { id: 'dashboard',  icon: '📊', label: '数据看板' },
         { id: 'license',    icon: '📄', label: '营业执照/KYC' },
       ],
       activities: [],
@@ -616,6 +724,15 @@
       clubGuides: [], clubGuidesLoading: false,
       inviteGuideEmail: '',
       inviteGuideLoading: false,
+
+      // Finance Center
+      financeData: null, financeLoading: false,
+      payoutRequest: { amount: '', bank_account: '', bank_name: '' },
+      payoutLoading: false,
+      withdrawalHistory: [],
+
+      // Dashboard
+      dashboardData: null, dashboardLoading: false,
 
       // License / KYC documents
       licenseForm: {
@@ -678,7 +795,10 @@
       async loadCertStatus(token) {
         try {
           const r = await fetch('/api/certification/club/status', { headers: { Authorization: 'Bearer ' + token } });
-          if (r.ok) this.certStatus = await r.json();
+          if (r.ok) {
+            this.certStatus = await r.json();
+            this.licenseStatus = this.certStatus.club?.kyc_status || null;
+          }
         } catch(e) {}
       },
 
@@ -735,10 +855,10 @@
 
       async loadOrders(token) {
         this.ordersLoading = true;
+        const t = token || this.getAuthToken();
+        if (!t) { this.ordersLoading = false; return; }
         try {
-          const club = this.certStatus.club;
-          if (!club) return;
-          const r = await fetch(`/api/activity-orders?club_id=${club.id}`, { headers: { Authorization: 'Bearer ' + token } });
+          const r = await fetch('/api/club-console/orders', { headers: { Authorization: 'Bearer ' + t } });
           if (r.ok) {
             const data = await r.json();
             this.orders = Array.isArray(data) ? data : (data.orders || []);
@@ -847,6 +967,7 @@
             this.toast('🎉 支付成功！俱乐部已正式上线');
             await this.loadCertStatus(token);
             this.loadActivities(token);
+            this.loadMyExpeditions(token);
             this.loadOrders(token);
             this.page = 'activities';
           } else {
@@ -858,9 +979,72 @@
         this.payLoading = false;
       },
 
+      async loadFinanceData() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        this.financeLoading = true;
+        try {
+          const r = await fetch('/api/club-console/finance', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) {
+            const d = await r.json();
+            this.financeData = d;
+            this.withdrawalHistory = d.withdrawalHistory || [];
+          }
+        } catch(e) {}
+        this.financeLoading = false;
+      },
+
+      async requestPayout() {
+        const token = this.getAuthToken();
+        if (!this.payoutRequest.amount || !this.payoutRequest.bank_account || !this.payoutRequest.bank_name) {
+          this.toast('请填写完整提现信息', 'error'); return;
+        }
+        this.payoutLoading = true;
+        try {
+          const r = await fetch('/api/club-console/finance/payout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify(this.payoutRequest),
+          });
+          const d = await r.json();
+          if (r.ok) {
+            this.toast('提现申请已提交，等待审核');
+            this.payoutRequest = { amount: '', bank_account: '', bank_name: '' };
+            this.loadFinanceData();
+          } else {
+            this.toast(d.error || '提交失败', 'error');
+          }
+        } catch(e) { this.toast('网络错误', 'error'); }
+        this.payoutLoading = false;
+      },
+
+      async loadDashboardData() {
+        const token = this.getAuthToken();
+        if (!token) return;
+        this.dashboardLoading = true;
+        try {
+          const r = await fetch('/api/club-console/dashboard', { headers: { Authorization: 'Bearer ' + token } });
+          if (r.ok) this.dashboardData = await r.json();
+        } catch(e) {}
+        this.dashboardLoading = false;
+      },
+
       toast(msg, type = 'success') {
         this.toasts.push({ msg, type });
         setTimeout(() => this.toasts.shift(), 3500);
+      },
+
+      selectClubTab(nextPage) {
+        this.page = nextPage;
+        if (nextPage === 'guides') this.loadClubGuides();
+        if (nextPage === 'finance') this.loadFinanceData();
+        if (nextPage === 'dashboard') this.loadDashboardData();
+        if (nextPage === 'orders') this.loadOrders();
+        if (nextPage === 'activities') {
+          const token = this.getAuthToken();
+          this.loadActivities(token);
+          this.loadMyExpeditions(token);
+        }
       },
 
       // ── Club Guide Members ─────────────────────────────────────────────────
@@ -963,6 +1147,7 @@
           const d = await r.json();
           if (r.ok) {
             this.licenseStatus = 'pending';
+            if (this.certStatus.club) this.certStatus.club.kyc_status = 'pending';
             this.toast('KYC 材料已提交，平台将在 48 小时内审核');
           } else {
             this.toast(d.error || '提交失败', 'error');
