@@ -672,7 +672,6 @@ function alpineLink() {
     showClubDetail: false,
     selectedClub: null,
     showArticle: false,
-    selectedArticle: null,
     showGearDetail: false,
     selectedGear: null,
     showWorldPeakDetail: false,
@@ -1479,7 +1478,6 @@ function alpineLink() {
     bookVIPService() { this.showToast('VIP 服务预约成功'); },
 
     // Expeditions & Clubs
-    openExpeditionDetail(exp) { this.selectedExpedition = exp; this.showExpeditionDetail = true; },
     openClubDetail(club) { this.selectedClub = club; this.showClubDetail = true; },
     async joinClub() {
       if (!this.requireAuth()) return;
@@ -1880,12 +1878,18 @@ function alpineLink() {
       return !!(this.currentUser && this.currentUser.guide_status !== 'pending' && !this.isGuideApproved() && !this.isClubAdminUser());
     },
 
-    openExpeditionDetail(item) {
-      if (!item || !item.id) {
+    async openExpeditionDetail(item) {
+      if (!item) {
         this.showToast('探险详情暂不可用', 'warning');
         return;
       }
-      window.location.href = `/expedition-detail.html?id=${encodeURIComponent(item.id)}`;
+      this.selectedExpedition = item;
+      this.showExpeditionDetail = true;
+      if (!item.id) return;
+      try {
+        const res = await fetch(`/api/expeditions/${encodeURIComponent(item.id)}`);
+        if (res.ok) this.selectedExpedition = await res.json();
+      } catch (e) {}
     },
 
     toggleMapSearch() {
@@ -2774,15 +2778,17 @@ function alpineLink() {
       }
     },
     async openTrackDetail(track) {
+      if (!track) return;
       this.selectedTrackDetail = track;
       this.showTrackDetail = true;
-      const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
+      const trackId = typeof track.id === 'string' ? track.id.trim() : track.id;
+      const claimedKey = 'track_pts_claimed_' + (trackId || track.name);
       if (localStorage.getItem(claimedKey)) track._pointsClaimed = true;
-      const isLocalTrack = typeof track.id === 'string' && track.id.startsWith('local_');
+      const isLocalTrack = !trackId || (typeof trackId === 'string' && trackId.startsWith('local_'));
       if (isLocalTrack) return;
-      if (this.authToken && track.id) {
+      if (this.authToken) {
         try {
-          const res = await fetch('/api/tracks/' + track.id, { headers: this.getAuthHeaders() });
+          const res = await fetch('/api/tracks/' + encodeURIComponent(trackId), { headers: this.getAuthHeaders() });
           if (res.ok) {
             this.selectedTrackDetail = await res.json();
             if (localStorage.getItem(claimedKey)) this.selectedTrackDetail._pointsClaimed = true;
