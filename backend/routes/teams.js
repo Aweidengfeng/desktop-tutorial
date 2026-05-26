@@ -13,11 +13,13 @@ router.get('/', teamsReadLimiter, async (req, res) => {
     let teams;
     try {
       teams = await prisma.$queryRaw`
-        SELECT id, name, peak, date, spots, total_spots as totalSpots,
-               level, leader, leader_avatar as leaderAvatar, description,
-               equipment_required as equipmentRequired, notes, difficulty, fee
-        FROM teams WHERE status = 'recruiting'
-        ORDER BY created_at DESC
+        SELECT t.id, t.name, t.peak, t.date, t.spots, t.total_spots as totalSpots,
+               t.level, u.name as leader, u.avatar as leaderAvatar, t.description,
+               t.equipment_required as equipmentRequired, t.notes, t.difficulty, t.fee
+        FROM teams t
+        LEFT JOIN users u ON t.leader_id = u.id
+        WHERE t.status = 'recruiting'
+        ORDER BY t.created_at DESC
       `;
     } catch (rawErr) {
       console.warn('[teams] Raw SQL query failed, falling back to Prisma ORM:', rawErr.message);
@@ -55,11 +57,13 @@ router.get('/', teamsReadLimiter, async (req, res) => {
 router.get('/:id', teamsReadLimiter, async (req, res) => {
   try {
     const team = (await prisma.$queryRaw`
-      SELECT id, name, peak, date, spots, total_spots as totalSpots,
-             level, leader, leader_avatar as leaderAvatar, leader_id as leaderId,
-             description, equipment_required as equipmentRequired, notes, difficulty, fee,
-             status, group_chat_id as groupChatId, created_at as createdAt
-      FROM teams WHERE id = ${Number(req.params.id)}
+      SELECT t.id, t.name, t.peak, t.date, t.spots, t.total_spots as totalSpots,
+             t.level, u.name as leader, u.avatar as leaderAvatar, t.leader_id as leaderId,
+             t.description, t.equipment_required as equipmentRequired, t.notes, t.difficulty, t.fee,
+             t.status, t.group_chat_id as groupChatId, t.created_at as createdAt
+      FROM teams t
+      LEFT JOIN users u ON t.leader_id = u.id
+      WHERE t.id = ${Number(req.params.id)}
     `)[0];
     if (!team) return res.status(404).json({ error: '队伍不存在' });
     const members = await prisma.$queryRaw`
