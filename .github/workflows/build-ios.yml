@@ -68,9 +68,15 @@ jobs:
 
       - name: Ensure iOS platform exists
         run: |
-          if [ ! -d ios ] || [ ! -d ios/App ]; then
+          if [ ! -d ios/App ] || [ ! -f ios/App/Podfile ]; then
+            if [ -f ios/ExportOptions.plist ]; then
+              cp ios/ExportOptions.plist /tmp/ExportOptions.plist
+            fi
             rm -rf ios
-            npx cap add ios
+            npx cap add ios --packagemanager CocoaPods
+            if [ -f /tmp/ExportOptions.plist ]; then
+              cp /tmp/ExportOptions.plist ios/ExportOptions.plist
+            fi
           fi
 
       - name: Normalize iOS deployment target
@@ -92,27 +98,24 @@ jobs:
             ls -la ios/App/ 2>/dev/null || echo "ios/App dir does not exist"
             exit 1
           fi
-          echo "iOS project ready at ios/App/App.xcodeproj"
-          if [ -f ios/App/Podfile ]; then
-            echo "CocoaPods project detected"
-          elif [ -d ios/App/CapApp-SPM ]; then
-            echo "Swift Package Manager project detected - skipping pod install"
-          fi
-
-      - name: Install CocoaPods (only if Podfile exists)
-        run: |
-          if [ -f ios/App/Podfile ]; then
-            cd ios/App
-            for attempt in 1 2 3; do
-              pod install && exit 0
-              echo "pod install failed on attempt ${attempt}, retrying..."
-              sleep $((attempt * 10))
-            done
-            echo "pod install failed after 3 attempts"
+          if [ ! -f ios/App/Podfile ]; then
+            echo "ERROR: expected CocoaPods-based iOS project, but ios/App/Podfile is missing"
+            find ios/App -maxdepth 3 -type f | sort | head -100
             exit 1
-          else
-            echo "No Podfile found (SPM project) - skipping pod install"
           fi
+          echo "iOS project ready at ios/App/App.xcodeproj"
+          echo "CocoaPods project detected"
+
+      - name: Install CocoaPods
+        run: |
+          cd ios/App
+          for attempt in 1 2 3; do
+            pod install && exit 0
+            echo "pod install failed on attempt ${attempt}, retrying..."
+            sleep $((attempt * 10))
+          done
+          echo "pod install failed after 3 attempts"
+          exit 1
 
       - name: Import signing certificate
         if: startsWith(github.ref, 'refs/tags/v') && env.HAS_IOS_CERT == 'true'

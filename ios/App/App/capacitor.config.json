@@ -1,0 +1,65 @@
+{
+	"appId": "app.summitlink",
+	"appName": "SummitLink",
+	"webDir": "www",
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"launchAutoHide": true,
+			"backgroundColor": "#1a1a2e",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_CROP",
+			"showSpinner": false,
+			"iosSpinnerStyle": "large",
+			"spinnerColor": "#ffffff",
+			"splashFullScreen": true,
+			"splashImmersive": true
+		},
+		"StatusBar": {
+			"style": "DARK",
+			"backgroundColor": "#1a1a2e",
+			"overlaysWebView": false
+		},
+		"Keyboard": {
+			"resize": "body",
+			"resizeOnFullScreen": true
+		},
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		},
+		"BiometricAuth": {
+			"androidTitle": "SummitLink 身份验证",
+			"androidSubtitle": "使用生物识别登录",
+			"iosFallbackTitle": "使用密码"
+		}
+	},
+	"server": {
+		"androidScheme": "https",
+		"allowNavigation": [
+			"*.summitlink.app",
+			"*.railway.app"
+		],
+		"allowMixedContent": false,
+		"hostname": "summitlink.app"
+	},
+	"ios": {
+		"contentInset": "automatic",
+		"scrollEnabled": true,
+		"limitsNavigationsToAppBoundDomains": true
+	},
+	"android": {
+		"allowMixedContent": false,
+		"captureInput": true,
+		"webContentsDebuggingEnabled": false
+	},
+	"packageClassList": [
+		"CAPCameraPlugin",
+		"PushNotificationsPlugin",
+		"SharePlugin",
+		"StatusBarPlugin"
+	]
+}
