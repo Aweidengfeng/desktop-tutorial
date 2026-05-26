@@ -105,6 +105,7 @@ async function gotoTab(page, tabName) {
       } catch (e) {}
     }).catch(() => {});
     await page.waitForTimeout(600);
+    if (await hasVisibleSection()) return;
   }
 
   await page
