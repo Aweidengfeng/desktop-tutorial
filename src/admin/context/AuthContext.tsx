@@ -12,21 +12,11 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function setAdminCookie(token: string) {
-  document.cookie = `adminToken=${encodeURIComponent(token)}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=strict`;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadSession = useCallback(async () => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
     try {
       const res = await apiClient.get('/api/admin/check');
       const data = res.data as Partial<AdminUser> & { username?: string };
@@ -37,7 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: true,
       });
     } catch {
-      localStorage.removeItem('adminToken');
       setUser(null);
     } finally {
       setLoading(false);
@@ -49,31 +38,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadSession]);
 
   const login = useCallback(async (username: string, password: string) => {
-    const endpoints = ['/api/auth/admin-login', '/api/admin/login', '/api/auth/login'];
-    let token = '';
-    let lastErrorMessage = '';
-    for (const endpoint of endpoints) {
-      try {
-        const payload = endpoint === '/api/auth/login'
-          ? { username, password, isAdmin: true }
-          : { username, password };
-        const res = await apiClient.post(endpoint, payload);
-        token = String(res.data?.token || '');
-        if (token) break;
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          lastErrorMessage = error.message;
-        }
+    try {
+      const res = await apiClient.post('/api/admin/login', { username, password });
+      if (!res.data?.success) {
+        throw new Error(res.data?.error || '登录失败，请检查账号密码');
       }
+      const resolvedUsername = res.data?.username || username;
+      localStorage.setItem('adminUsername', resolvedUsername);
+      setUser({ id: 0, username: resolvedUsername, isAdmin: true });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('登录失败，请检查账号密码');
     }
-    if (!token) {
-      throw new Error(lastErrorMessage || '登录失败，请检查账号密码');
-    }
-
-    localStorage.setItem('adminToken', token);
-    localStorage.setItem('adminUsername', username);
-    setAdminCookie(token);
-    setUser({ id: 0, username, isAdmin: true });
   }, []);
 
   const logout = useCallback(async () => {
@@ -82,9 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore network errors on logout
     }
-    localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUsername');
-    document.cookie = 'adminToken=; path=/; max-age=0';
     setUser(null);
   }, []);
 

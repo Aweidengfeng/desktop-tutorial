@@ -6731,13 +6731,37 @@ function alpineLink() {
       else if (result.type === 'guide') this.viewGuideProfile(result);
       else if (result.type === 'club') this.openClubDetail(result);
       else if (result.type === 'gear') this.openGearDetail(result);
-      else if (result.type === 'post') { this.currentPage = 'discover'; }
+      else if (result.type === 'post') {
+        this.currentPage = 'discover';
+        this.$nextTick(() => this.openPostDetail(result));
+      }
       this.showSearch = false;
       this.searchQuery = '';
       this.searchResults = [];
     },
     searchByKeyword(keyword) { this.searchQuery = keyword; this.performSearch(); },
     removeHistory(index) { this.searchHistory.splice(index, 1); },
+    async openPostDetail(post) {
+      if (!post?.id) return;
+      let targetPost = (this.communityPosts || []).find((item) => String(item.id) === String(post.id)) || post;
+      try {
+        const res = await fetch(`${API_BASE}/api/posts/${post.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          targetPost = {
+            ...targetPost,
+            ...data,
+            author: data.authorName || targetPost.author || targetPost.author_name,
+            authorAvatar: data.authorAvatar || targetPost.authorAvatar || targetPost.author_avatar,
+            timeAgo: data.createdAt ? new Date(data.createdAt).toLocaleDateString('zh-CN') : (targetPost.timeAgo || '最近'),
+            isLiked: targetPost.isLiked || false,
+            isFavorited: targetPost.isFavorited || false,
+            commentPreview: targetPost.commentPreview || [],
+          };
+        }
+      } catch (e) {}
+      this.openComments(targetPost);
+    },
 
     // Peak detail
     openPeakDetail(peak) {

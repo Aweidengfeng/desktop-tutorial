@@ -281,11 +281,26 @@ router.get('/', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 100, 100);
     const clubs = await prisma.$queryRaw`
-      SELECT id, name, description, cover, specialty, region, type,
-             members_count as members, expeditions, verified, founded, status, created_at
-      FROM clubs WHERE status = 'active' ORDER BY members_count DESC LIMIT ${limit}
+      SELECT c.id, c.name, c.description, c.cover, c.specialty, c.region, c.type,
+             c.members_count as members, c.expeditions, c.verified, c.founded, c.status, c.created_at,
+             ROUND(COALESCE((
+               SELECT AVG(CAST(r.rating AS REAL))
+               FROM reviews r
+               WHERE r.target_type = 'club' AND r.target_id = c.id
+             ), c.rating), 1) AS rating,
+             (
+               SELECT COUNT(*)
+               FROM reviews r
+               WHERE r.target_type = 'club' AND r.target_id = c.id
+             ) AS review_count
+      FROM clubs c WHERE c.status = 'active' ORDER BY members_count DESC LIMIT ${limit}
     `;
-    res.json(clubs);
+    res.json(clubs.map((club) => ({
+      ...club,
+      rating: Number(club.rating || 0),
+      reviews: Number(club.review_count || 0),
+      review_count: Number(club.review_count || 0),
+    })));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -355,13 +370,28 @@ router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [club] = await prisma.$queryRaw`
-      SELECT id, name, description, cover, specialty, region, type,
-             members_count as members, expeditions, verified, founded, status, creator_id,
-             contact, wechat, website, cover_image, logo, created_at
-      FROM clubs WHERE id = ${id}
+      SELECT c.id, c.name, c.description, c.cover, c.specialty, c.region, c.type,
+             c.members_count as members, c.expeditions, c.verified, c.founded, c.status, c.creator_id,
+             c.contact, c.wechat, c.website, c.cover_image, c.logo, c.created_at,
+             ROUND(COALESCE((
+               SELECT AVG(CAST(r.rating AS REAL))
+               FROM reviews r
+               WHERE r.target_type = 'club' AND r.target_id = c.id
+             ), c.rating), 1) AS rating,
+             (
+               SELECT COUNT(*)
+               FROM reviews r
+               WHERE r.target_type = 'club' AND r.target_id = c.id
+             ) AS review_count
+      FROM clubs c WHERE c.id = ${id}
     `;
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
-    res.json(club);
+    res.json({
+      ...club,
+      rating: Number(club.rating || 0),
+      reviews: Number(club.review_count || 0),
+      review_count: Number(club.review_count || 0),
+    });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
