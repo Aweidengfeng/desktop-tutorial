@@ -593,8 +593,11 @@ describe('11. 通知 /api/notifications', () => {
       .get('/api/notifications')
       .set(authHeader(userToken));
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.body.notifications)).toBe(true);
+    expect(res.body.notifications.length).toBeGreaterThan(0);
+    expect(typeof res.body.total).toBe('number');
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(20);
   });
 
   test('GET /api/notifications/unread-count → 200，count 正确', async () => {

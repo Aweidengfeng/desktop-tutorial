@@ -9,12 +9,19 @@ const notifLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: 
 // GET /api/notifications（需要JWT）
 router.get('/', notifLimiter, auth, async (req, res) => {
   try {
-    const notifications = await prisma.$queryRaw`
-      SELECT id, type, content, title, body, link, related_id, is_read, read_at, created_at
-      FROM notifications WHERE user_id = ${req.user.id}
-      ORDER BY created_at DESC LIMIT 20
-    `;
-    res.json(notifications);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const offset = (page - 1) * limit;
+    const [notifications, totalRows] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT id, type, content, title, body, link, related_id, is_read, read_at, created_at
+        FROM notifications WHERE user_id = ${req.user.id}
+        ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
+      `,
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM notifications WHERE user_id = ${req.user.id}`,
+    ]);
+    const total = Number(totalRows[0]?.count ?? 0);
+    res.json({ notifications, total, page, limit });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
