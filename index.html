@@ -5849,7 +5849,7 @@
     <!-- Phase 2 - “地图/轨迹” 主导航入口已移除，底部导航由 app-core.js 的 navTabs 驱动 -->
     <div class="flex items-center justify-around px-2 py-2">
       <template x-for="tab in navTabs" :key="tab.id">
-        <button @click="switchPrimaryTab(tab.id)"
+        <button @click="handleTabClick(tab.id === 'discover' ? 'explore' : tab.id)"
                 :data-tab="tab.id === 'discover' ? 'explore' : tab.id"
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
                 :class="isPrimaryTabActive(tab.id) ? 'bg-primary/20 text-primary-light' : 'text-slate-500 hover:text-slate-300'">

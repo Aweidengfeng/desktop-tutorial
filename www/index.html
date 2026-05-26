@@ -6162,7 +6162,7 @@
   <nav class="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10" style="max-width:430px;margin:0 auto;">
     <div class="flex items-center justify-around px-2 py-2">
       <template x-for="tab in navTabs" :key="tab.id">
-        <button @click="handleTabClick(tab.id)"
+        <button @click="handleTabClick(tab.id === 'discover' ? 'explore' : tab.id)"
                 :data-tab="tab.id === 'discover' ? 'explore' : tab.id"
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
                 :class="isPrimaryTabActive(tab.id) ? 'bg-primary/20 text-primary-light' : 'text-slate-500 hover:text-slate-300'">
