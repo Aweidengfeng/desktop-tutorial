@@ -8,16 +8,26 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
   <script>
   // Alpine.js CDN 失败时回退到本地副本
-  setTimeout(function() {
-    if (typeof Alpine === 'undefined' && !document.getElementById('sl-alpine-fallback')) {
+  (function() {
+    var fallbackTimeout = setTimeout(function() {
+      if (window.__slAlpineReady) return;
+      if (document.getElementById('sl-alpine-fallback')) return;
       console.warn('[SummitLink] Alpine.js CDN 加载失败，尝试备用路径');
       var s = document.createElement('script');
       s.id = 'sl-alpine-fallback';
       s.src = '/js/vendor/alpine.csp.min.js';
       s.defer = true;
       document.head.appendChild(s);
+    }, 3000);
+
+    function markReady() {
+      window.__slAlpineReady = true;
+      clearTimeout(fallbackTimeout);
     }
-  }, 3000);
+
+    document.addEventListener('alpine:init', markReady);
+    document.addEventListener('alpine:initialized', markReady);
+  })();
   </script>
   <!-- Socket.IO client for real-time chat and notifications -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -10220,6 +10230,7 @@ function alpineLink() {
 <script>
 // Alpine.js 加载保障：5 秒未初始化则移除 x-cloak 并显示错误提示
 (function() {
+  var lastErrorDetail = '';
   var timeout = setTimeout(function() {
     var body = document.body;
     if (body && body.hasAttribute('x-cloak')) {
@@ -10227,12 +10238,21 @@ function alpineLink() {
       body.style.display = '';
       var errDiv = document.createElement('div');
       errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:white;font-family:sans-serif;padding:24px;text-align:center;';
-      errDiv.innerHTML = '<div style="font-size:48px;margin-bottom:16px">⛰️</div><h2 style="font-size:20px;font-weight:bold;margin-bottom:8px">巅峰探索</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px">页面加载遇到问题，请检查网络连接后刷新</p><button onclick="location.reload()" style="background:#2b6579;color:white;border:none;padding:12px 24px;border-radius:12px;font-size:14px;cursor:pointer;">重新加载</button><p style="color:#475569;font-size:12px;margin-top:16px" id="sl-err-detail"></p>';
+      errDiv.innerHTML = '<div style="font-size:48px;margin-bottom:16px">⛰️</div><h2 style="font-size:20px;font-weight:bold;margin-bottom:8px">巅峰探索</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px">页面加载遇到问题，请检查网络连接后刷新</p><button id="sl-reload-btn" style="background:#2b6579;color:white;border:none;padding:12px 24px;border-radius:12px;font-size:14px;cursor:pointer;">重新加载</button><p style="color:#475569;font-size:12px;margin-top:16px" id="sl-err-detail"></p>';
       body.appendChild(errDiv);
+      if (lastErrorDetail) {
+        var initialDetail = document.getElementById('sl-err-detail');
+        if (initialDetail) initialDetail.textContent = lastErrorDetail;
+      }
+      var reloadBtn = document.getElementById('sl-reload-btn');
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', function() { location.reload(); });
+      }
     }
   }, 5000);
 
   function clearGuard() {
+    window.__slAlpineReady = true;
     clearTimeout(timeout);
   }
 
@@ -10240,10 +10260,22 @@ function alpineLink() {
   document.addEventListener('alpine:initialized', clearGuard);
 
   window.addEventListener('error', function(e) {
+    var file = 'unknown';
+    if (e.filename) {
+      file = e.filename.split('/').pop() || 'unknown';
+    } else if (e.error && e.error.fileName) {
+      file = e.error.fileName.split('/').pop() || 'unknown';
+    } else if (e.error && e.error.stack) {
+      var stackLine = e.error.stack.split('\n')[0] || '';
+      var stackMatch = stackLine.match(/([A-Za-z0-9_.-]+\.[A-Za-z0-9]+):\d+/);
+      if (stackMatch && stackMatch[1]) file = stackMatch[1];
+    }
+    var line = e.lineno || (e.error && e.error.lineNumber) || '?';
+    var message = (e.message || 'Unknown error') + ' (' + file + ':' + line + ')';
+    lastErrorDetail = message;
     var detail = document.getElementById('sl-err-detail');
     if (!detail) return;
-    var file = (e.filename || '').split('/').pop();
-    detail.textContent = e.message + ' (' + file + ':' + e.lineno + ')';
+    detail.textContent = message;
   });
 })();
 </script>
