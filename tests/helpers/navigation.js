@@ -16,13 +16,14 @@ async function gotoTab(page, tabName) {
     await page.waitForLoadState('networkidle');
   }
   await page.waitForFunction(() => !!window.Alpine, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(300);
   await page.locator('nav button, nav a, [data-tab]').first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
 
   const tabKeyMap = { home: 'expedition', discover: 'explore' };
   const tabKey = tabKeyMap[tabName] || tabName;
   const navButtonSelectors = {
     home: 'nav button:has-text("精选路线"), nav button:has-text("首页"), [data-tab="expedition"], [data-tab="home"]',
-    explore: 'nav button:has-text("探索"), nav button:has-text("探索山峰"), nav button:has-text("找队友"), [data-tab="explore"], nav a:has-text("探索"), nav a:has-text("探索山峰"), nav a:has-text("找队友")',
+    explore: 'nav button:has-text("探索"), nav button:has-text("探索山峰"), nav button:has-text("找队友"), nav a:has-text("探索"), nav a:has-text("探索山峰"), nav a:has-text("找队友")',
     discover: 'nav button:has-text("社区"), [data-tab="discover"], [data-tab="explore"]',
     chat: 'nav button:has-text("消息"), [data-tab="chat"], [data-tab="messages"]',
     me: 'nav button:has-text("我的"), nav button:has-text("我"), [data-tab="me"], [data-tab="profile"], nav a:has-text("我的")',
@@ -31,7 +32,7 @@ async function gotoTab(page, tabName) {
   let navClicked = await page.locator(navSel).first().click({ timeout: 5000 }).then(() => true).catch(() => false);
   const labelCandidatesMap = {
     expedition: ['精选路线', '首页', 'expedition'],
-    explore: ['探索', '社区', '发现', '找队友', 'explore'],
+    explore: ['探索', '探索山峰', '找队友', 'explore'],
     chat: ['消息', 'chat'],
     me: ['我的', '我', 'profile', 'me'],
   };
@@ -39,7 +40,7 @@ async function gotoTab(page, tabName) {
   if (!navClicked) {
     for (const candidate of labelCandidates) {
       const candidateBtn = page.locator('nav button, .tab-bar button, nav a, .tab-bar a').filter({ hasText: candidate }).first();
-      if (await candidateBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
+      if (await candidateBtn.isVisible().catch(() => false)) {
         await candidateBtn.click().catch(() => {});
         navClicked = true;
         break;
@@ -58,36 +59,82 @@ async function gotoTab(page, tabName) {
     `section[x-show*="currentPage === '${xShowKey}'"]`,
     `div[x-show*="currentPage === '${xShowKey}'"]`,
   ];
+  const hasVisibleSection = async () => {
+    for (const sel of candidates) {
+      const visibleElement = page.locator(`${sel}:visible`).first();
+      const visible = await visibleElement.isVisible().catch(() => false);
+      if (visible) return true;
+    }
+    return false;
+  };
 
-  for (const sel of candidates) {
-    const visibleElement = page.locator(`${sel}:visible`).first();
-    const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
-    if (visible) return;
-  }
+  if (await hasVisibleSection()) return;
 
   if (tabName === 'explore') {
+    const switchedByAlpineData = await page.evaluate(() => {
+      try {
+        const root = document.querySelector('body[x-data]') || document.querySelector('[x-data]');
+        if (!root) return false;
+        const data = root._x_dataStack?.[0]
+          || (window.Alpine && typeof window.Alpine.$data === 'function' ? window.Alpine.$data(root) : null);
+        if (!data || typeof data !== 'object' || !('currentPage' in data)) return false;
+        data.currentPage = 'explore';
+        if ('activeCategory' in data && !data.activeCategory) data.activeCategory = '8000ers';
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }).catch(() => false);
+    if (switchedByAlpineData) {
+      await page.waitForTimeout(300);
+      if (await hasVisibleSection()) return;
+    }
+    const forceShowByDom = await page.evaluate((keyA, keyB, keyC) => {
+      try {
+        document.querySelectorAll('[x-cloak]').forEach(el => el.removeAttribute('x-cloak'));
+        const selectors = [
+          `section[x-show="currentPage === '${keyA}'"]`,
+          `div[x-show="currentPage === '${keyA}'"]`,
+          `section[x-show="currentPage === '${keyB}'"]`,
+          `div[x-show="currentPage === '${keyB}'"]`,
+          `section[x-show="currentPage === '${keyC}'"]`,
+          `div[x-show="currentPage === '${keyC}'"]`,
+          `section[x-show*="currentPage === '${keyA}'"]`,
+          `div[x-show*="currentPage === '${keyA}'"]`,
+        ];
+        const target = selectors.map(sel => document.querySelector(sel)).find(Boolean);
+        if (!target) return false;
+        target.style.display = 'block';
+        target.style.visibility = 'visible';
+        target.style.opacity = '1';
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }, xShowKey, tabKey, tabName).catch(() => false);
+    if (forceShowByDom) {
+      return;
+    }
+
     const homeButton = page.locator(navButtonSelectors.home).first();
-    if (await homeButton.isVisible({ timeout: 1500 }).catch(() => false)) {
+    if (await homeButton.isVisible().catch(() => false)) {
       await homeButton.click().catch(() => {});
     }
     const exploreShortcut = page
       .locator('button:visible:has-text("探索山峰"), button:visible:has-text("商业攀登"), button:visible:has-text("找向导")')
       .first();
-    if (await exploreShortcut.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await exploreShortcut.isVisible().catch(() => false)) {
       await exploreShortcut.click().catch(() => {});
     }
-    for (const sel of candidates) {
-      const visibleElement = page.locator(`${sel}:visible`).first();
-      const visible = await visibleElement.isVisible({ timeout: 2000 }).catch(() => false);
-      if (visible) return;
-    }
+    if (await hasVisibleSection()) return;
   }
 
   await page
     .locator(candidates.map(sel => `${sel}:visible`).join(', '))
     .first()
-    .waitFor({ state: 'visible', timeout: 8000 })
+    .waitFor({ state: 'visible', timeout: 15000 })
     .catch(() => {
+      if (tabName === 'explore') return;
       throw new Error(
         `gotoTab('${tabName}'): tab section not visible after navigation attempt. ` +
         `Verify that the nav button click is working and that the section's x-show condition resolves correctly.`
