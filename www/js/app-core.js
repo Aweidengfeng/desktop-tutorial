@@ -1444,12 +1444,13 @@ function alpineLink() {
           if (res.ok) {
             const conv = await res.json();
             if (this._openChatWithUserRequestToken !== requestToken || this.activeChatSession !== session) return;
-            let targetSession = this.chatSessions.find((s) => Number(s.conversationId) === Number(conv.id));
-            if (!targetSession) {
-              targetSession = { ...session, id: conv.id, conversationId: conv.id };
-              this.chatSessions.unshift(targetSession);
+            let existingSession = this.chatSessions.find((s) => Number(s.conversationId) === Number(conv.id));
+            if (!existingSession) {
+              this.chatSessions = this.chatSessions.filter((s) => s.id !== session.id);
+              existingSession = { ...session, id: conv.id, conversationId: conv.id };
+              this.chatSessions.unshift(existingSession);
             }
-            await this.openChatSession(targetSession);
+            await this.openChatSession(existingSession);
           }
         } catch(e) {}
       }
@@ -2768,6 +2769,12 @@ function alpineLink() {
         }
       } catch(e) {}
     },
+    getGroupSessionId(session) {
+      if (!session) return null;
+      if (session.groupChatId != null) return Number(session.groupChatId);
+      if (session.type === 'team' || session.type === 'club') return Number(session.id);
+      return null;
+    },
     async sendTeamChat() {
       const text = this.teamChatInput.trim();
       if (!text) return;
@@ -2795,7 +2802,11 @@ function alpineLink() {
               this._teamChatLastId = data.id;
             }
             // C5: Update the matching session entry's lastMsg and time
-            const sessionEntry = this.chatSessions.find((s) => Number(s.groupChatId ?? ((s.type === 'team' || s.type === 'club') ? s.id : null)) === Number(this.teamChatGroupId));
+            const groupSessionId = Number(this.teamChatGroupId);
+            const sessionEntry = this.chatSessions.find((s) => {
+              const sessionGroupId = this.getGroupSessionId(s);
+              return sessionGroupId === groupSessionId;
+            });
             if (sessionEntry) {
               sessionEntry.lastMsg = text;
               sessionEntry.time = tempMsg.time;
