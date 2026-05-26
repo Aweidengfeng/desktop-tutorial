@@ -81,6 +81,30 @@ async function gotoTab(page, tabName) {
       await exploreShortcut.click().catch(() => {});
     }
     if (await hasVisibleSection()) return;
+    await page.evaluate(() => {
+      try {
+        const el = document.querySelector('body[x-data]') || document.querySelector('[x-data]');
+        const data = el?._x_dataStack?.[0]
+          || (el && window.Alpine && typeof window.Alpine.$data === 'function' ? window.Alpine.$data(el) : null);
+        if (data) {
+          if (typeof data.goToPage === 'function') {
+            data.goToPage('explore');
+            return;
+          }
+          data.currentPage = 'explore';
+          return;
+        }
+        if (typeof window.alpineLink === 'function') {
+          const obj = window.alpineLink();
+          if (typeof obj?.goToPage === 'function') {
+            obj.goToPage('explore');
+            return;
+          }
+          if (obj) obj.currentPage = 'explore';
+        }
+      } catch (e) {}
+    }).catch(() => {});
+    await page.waitForTimeout(600);
   }
 
   await page
