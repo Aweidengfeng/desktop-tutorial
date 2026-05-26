@@ -16,7 +16,6 @@ async function gotoTab(page, tabName) {
     await page.waitForLoadState('networkidle');
   }
   await page.waitForFunction(() => !!window.Alpine, { timeout: 5000 }).catch(() => {});
-  await page.waitForTimeout(300);
   await page.locator('nav button, nav a, [data-tab]').first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
 
   const tabKeyMap = { home: 'expedition', discover: 'explore' };
@@ -40,7 +39,7 @@ async function gotoTab(page, tabName) {
   if (!navClicked) {
     for (const candidate of labelCandidates) {
       const candidateBtn = page.locator('nav button, .tab-bar button, nav a, .tab-bar a').filter({ hasText: candidate }).first();
-      if (await candidateBtn.isVisible().catch(() => false)) {
+      if (await candidateBtn.isVisible({ timeout: 300 }).catch(() => false)) {
         await candidateBtn.click().catch(() => {});
         navClicked = true;
         break;
@@ -62,7 +61,7 @@ async function gotoTab(page, tabName) {
   const hasVisibleSection = async () => {
     for (const sel of candidates) {
       const visibleElement = page.locator(`${sel}:visible`).first();
-      const visible = await visibleElement.isVisible().catch(() => false);
+      const visible = await visibleElement.isVisible({ timeout: 300 }).catch(() => false);
       if (visible) return true;
     }
     return false;
@@ -71,59 +70,14 @@ async function gotoTab(page, tabName) {
   if (await hasVisibleSection()) return;
 
   if (tabName === 'explore') {
-    const switchedByAlpineData = await page.evaluate(() => {
-      try {
-        const root = document.querySelector('body[x-data]') || document.querySelector('[x-data]');
-        if (!root) return false;
-        const data = root._x_dataStack?.[0]
-          || (window.Alpine && typeof window.Alpine.$data === 'function' ? window.Alpine.$data(root) : null);
-        if (!data || typeof data !== 'object' || !('currentPage' in data)) return false;
-        data.currentPage = 'explore';
-        if ('activeCategory' in data && !data.activeCategory) data.activeCategory = '8000ers';
-        return true;
-      } catch (_) {
-        return false;
-      }
-    }).catch(() => false);
-    if (switchedByAlpineData) {
-      await page.waitForTimeout(300);
-      if (await hasVisibleSection()) return;
-    }
-    const forceShowByDom = await page.evaluate((keyA, keyB, keyC) => {
-      try {
-        document.querySelectorAll('[x-cloak]').forEach(el => el.removeAttribute('x-cloak'));
-        const selectors = [
-          `section[x-show="currentPage === '${keyA}'"]`,
-          `div[x-show="currentPage === '${keyA}'"]`,
-          `section[x-show="currentPage === '${keyB}'"]`,
-          `div[x-show="currentPage === '${keyB}'"]`,
-          `section[x-show="currentPage === '${keyC}'"]`,
-          `div[x-show="currentPage === '${keyC}'"]`,
-          `section[x-show*="currentPage === '${keyA}'"]`,
-          `div[x-show*="currentPage === '${keyA}'"]`,
-        ];
-        const target = selectors.map(sel => document.querySelector(sel)).find(Boolean);
-        if (!target) return false;
-        target.style.display = 'block';
-        target.style.visibility = 'visible';
-        target.style.opacity = '1';
-        return true;
-      } catch (_) {
-        return false;
-      }
-    }, xShowKey, tabKey, tabName).catch(() => false);
-    if (forceShowByDom) {
-      return;
-    }
-
     const homeButton = page.locator(navButtonSelectors.home).first();
-    if (await homeButton.isVisible().catch(() => false)) {
+    if (await homeButton.isVisible({ timeout: 300 }).catch(() => false)) {
       await homeButton.click().catch(() => {});
     }
     const exploreShortcut = page
       .locator('button:visible:has-text("探索山峰"), button:visible:has-text("商业攀登"), button:visible:has-text("找向导")')
       .first();
-    if (await exploreShortcut.isVisible().catch(() => false)) {
+    if (await exploreShortcut.isVisible({ timeout: 300 }).catch(() => false)) {
       await exploreShortcut.click().catch(() => {});
     }
     if (await hasVisibleSection()) return;
@@ -134,7 +88,6 @@ async function gotoTab(page, tabName) {
     .first()
     .waitFor({ state: 'visible', timeout: 15000 })
     .catch(() => {
-      if (tabName === 'explore') return;
       throw new Error(
         `gotoTab('${tabName}'): tab section not visible after navigation attempt. ` +
         `Verify that the nav button click is working and that the section's x-show condition resolves correctly.`
