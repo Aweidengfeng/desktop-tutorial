@@ -1813,12 +1813,26 @@
           if (r.ok) {
             this.dashboardData = await r.json();
           } else {
-            const r2 = await fetch('/api/guides/withdrawals', { headers: { Authorization: 'Bearer ' + token } });
-            if (r2.ok) {
-              const d = await r2.json();
+            const [withdrawalsResponse, ordersResponse] = await Promise.all([
+              fetch('/api/guides/withdrawals', { headers: { Authorization: 'Bearer ' + token } }),
+              fetch('/api/guide-service-orders/my', { headers: { Authorization: 'Bearer ' + token } }),
+            ]);
+            if (withdrawalsResponse.ok) {
+              const d = await withdrawalsResponse.json();
+              let totalOrders = 0;
+              if (ordersResponse.ok) {
+                const ordersData = await ordersResponse.json();
+                const orders = Array.isArray(ordersData) ? ordersData : (ordersData.orders || []);
+                totalOrders = orders.length;
+              }
               this.dashboardData = {
+                currency: d.currency || 'CNY',
+                totalViews: 0,
+                avgRating: 0,
+                monthlyGmv: 0,
+                repeatRate: 0,
                 availableBalance: Number(d.balance || 0),
-                totalOrders: this.orders.length,
+                totalOrders,
               };
             } else {
               this.dashboardData = null;
