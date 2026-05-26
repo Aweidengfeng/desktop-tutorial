@@ -16,6 +16,7 @@ const auth = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 const { VALID_TRANSITIONS, appendStatusHistory } = require('./orderStateMachine');
 const { paymentsEnabled, paymentsDisabledResponse } = require('../utils/payments');
+const { sendPushToUser } = require('../lib/pushSender');
 
 const activityOrdersReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁' } });
 const activityOrdersWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁' } });
@@ -55,6 +56,11 @@ router.post('/:id/pay', activityOrdersWriteLimiter, auth, async (req, res) => {
       const act = (await prisma.$queryRaw`SELECT title FROM club_activities WHERE id = ${order.activity_id}`)[0];
       if (act) {
         await prisma.$executeRaw`INSERT INTO notifications (user_id, type, content, related_id) VALUES (${order.user_id}, 'activity_paid', ${`【支付成功】${act.title} 报名费已支付，订单号：${order.order_no}`}, ${order.id})`;
+        await sendPushToUser(order.user_id, {
+          title: '支付成功',
+          body: `${act.title} 报名费已支付成功`,
+          data: { type: 'activity_paid', orderId: order.id },
+        });
       }
     } catch(e) {}
     res.json({ success: true, status: 'paid', order_no: order.order_no });

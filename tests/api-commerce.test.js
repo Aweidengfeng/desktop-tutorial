@@ -560,6 +560,17 @@ describe('三、向导商业服务全链路', () => {
     expect(res.body.status).toBe('paid');
   });
 
+  test('已支付的向导服务订单可以申请退款', async () => {
+    const orders = db.prepare('SELECT * FROM guide_service_orders WHERE user_id = ?').all(clientUser.id);
+    const orderId = orders[0].id;
+    const res = await request(app)
+      .post(`/api/guide-service-orders/${orderId}/refund-request`)
+      .set(authHeader(clientUser.token))
+      .send({ reason: '行程变化' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('refund_requested');
+  });
+
   test('向导查看预约列表', async () => {
     const res = await request(app)
       .get(`/api/guides/${guideId}/services/${serviceId}/bookings`)
@@ -572,6 +583,7 @@ describe('三、向导商业服务全链路', () => {
   test('取消已支付订单 → 200（paid 可以取消）', async () => {
     const orders = db.prepare('SELECT * FROM guide_service_orders WHERE user_id = ?').all(clientUser.id);
     const orderId = orders[0].id;
+    db.prepare(`UPDATE guide_service_orders SET status = 'paid' WHERE id = ?`).run(orderId);
     const res = await request(app)
       .post(`/api/guide-service-orders/${orderId}/cancel`)
       .set(authHeader(clientUser.token));
