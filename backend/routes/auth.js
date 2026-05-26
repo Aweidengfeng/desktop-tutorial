@@ -359,9 +359,27 @@ router.post('/register', registerLimiter, async (req, res) => {
     };
     if (phone) userData.phone = encryptPII(phone);
     if (email) userData.email = encryptPII(email);
-    const user = await prisma.user.create({ data: userData });
+    let user;
+    try {
+      user = await prisma.user.create({ data: userData });
+    } catch (e) {
+      if (e.code === 'P2002') {
+        const target = e.meta?.target || '';
+        if (target.includes('phone')) return res.status(400).json({ error: '手机号已注册' });
+        if (target.includes('email')) return res.status(400).json({ error: '邮箱已注册' });
+        if (target.includes('username')) {
+          // username 冲突时自动追加随机后缀重试一次
+          const retryUsername = username + '_' + crypto.randomBytes(3).toString('hex');
+          user = await prisma.user.create({ data: { ...userData, username: retryUsername } });
+          return res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
+        }
+        return res.status(400).json({ error: '注册失败，请稍后重试' });
+      }
+      throw e;
+    }
     res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
+    // 此处捕获：重新抛出的非 P2002 错误，以及 retryUsername 创建时的 P2002（二次冲突）
     if (e.code === 'P2002') {
       const target = e.meta?.target || '';
       if (target.includes('phone')) return res.status(400).json({ error: '手机号已注册' });

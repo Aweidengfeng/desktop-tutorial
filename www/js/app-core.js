@@ -3262,7 +3262,7 @@ function alpineLink() {
       return h;
     },
     async doLogin() {
-      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       this.loginLoading = true;
       try {
         const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
@@ -3302,7 +3302,7 @@ function alpineLink() {
       }
     },
     async doRegister() {
-      if (!/^1[3-9]\d{9}$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
         const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION }) });
@@ -3346,7 +3346,7 @@ function alpineLink() {
     },
     // SMS login
     async sendSmsCode() {
-      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.smsCountdown > 0) return;
       try {
         const res = await fetch('/api/auth/sms/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: this.loginForm.phone }) });
@@ -3361,7 +3361,7 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async doSmsLogin() {
-      if (!/^1[3-9]\d{9}$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (!this.smsCode || this.smsCode.length !== 6) { this.showToast('请输入6位验证码', 'error'); return; }
       this.loginLoading = true;
       try {
