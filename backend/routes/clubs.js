@@ -445,7 +445,9 @@ router.post('/:id/review', clubWriteLimiter, auth, async (req, res) => {
         const newRating = Math.round(Number(avgResult.avg_rating) * 10) / 10;
         await prisma.$executeRaw`UPDATE clubs SET rating = ${newRating} WHERE id = ${id}`;
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[clubs] Failed to backfill club rating after review submit:', e.message);
+    }
     res.json({ success: true, message: '评价已提交' });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) {

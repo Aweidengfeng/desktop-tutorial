@@ -1430,10 +1430,11 @@ function alpineLink() {
     },
     openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
     async openChatWithUser(name, avatar, userId) {
+      const requestToken = Symbol('openChatWithUser');
+      this._openChatWithUserRequestToken = requestToken;
       const session = { id: Date.now(), name, avatar, flag: '', type: 'guide', online: false, unread: 0, lastMsg: '', messages: [], conversationId: null };
-      this.activeChatSession = session;
-      this.showChatWindow = true;
       this.currentPage = 'chat';
+      await this.openChatSession(session);
       if (userId && this.authToken) {
         try {
           const res = await fetch('/api/messages/conversations', {
@@ -1442,7 +1443,13 @@ function alpineLink() {
           });
           if (res.ok) {
             const conv = await res.json();
-            this.activeChatSession = { ...session, conversationId: conv.id };
+            if (this._openChatWithUserRequestToken !== requestToken || this.activeChatSession !== session) return;
+            let targetSession = this.chatSessions.find((s) => Number(s.conversationId) === Number(conv.id));
+            if (!targetSession) {
+              targetSession = { ...session, id: conv.id, conversationId: conv.id };
+              this.chatSessions.unshift(targetSession);
+            }
+            await this.openChatSession(targetSession);
           }
         } catch(e) {}
       }
@@ -2788,7 +2795,7 @@ function alpineLink() {
               this._teamChatLastId = data.id;
             }
             // C5: Update the matching session entry's lastMsg and time
-            const sessionEntry = this.chatSessions.find(s => s.groupChatId === this.teamChatGroupId);
+            const sessionEntry = this.chatSessions.find((s) => Number(s.groupChatId ?? ((s.type === 'team' || s.type === 'club') ? s.id : null)) === Number(this.teamChatGroupId));
             if (sessionEntry) {
               sessionEntry.lastMsg = text;
               sessionEntry.time = tempMsg.time;
