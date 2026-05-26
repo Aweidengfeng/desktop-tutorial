@@ -26,10 +26,9 @@ module.exports = async function authMiddleware(req, res, next) {
       try {
         const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { deletedAt: true } });
         if (user && user.deletedAt && user.deletedAt > new Date()) {
-          // 允许撤销注销申请接口和认证相关接口通过
-          const isCancelDeletion = req.path === '/cancel-deletion' || req.path.endsWith('/cancel-deletion');
-          const isAuthPath = /^\/?(api\/)?auth(\/|$)/.test(req.path);
-          if (!isCancelDeletion && !isAuthPath) {
+          // 仅允许撤销注销申请的接口通过（精确匹配，防止路径前缀绕过）
+          const isCancelDeletion = req.path === '/cancel-deletion' || req.path === '/api/auth/cancel-deletion';
+          if (!isCancelDeletion) {
             return res.status(423).json({ error: '账号正在注销审核期，如需继续使用请先撤销注销申请' });
           }
         }

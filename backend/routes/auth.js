@@ -379,6 +379,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     }
     res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {
+    // 此处捕获：重新抛出的非 P2002 错误，以及 retryUsername 创建时的 P2002（二次冲突）
     if (e.code === 'P2002') {
       const target = e.meta?.target || '';
       if (target.includes('phone')) return res.status(400).json({ error: '手机号已注册' });

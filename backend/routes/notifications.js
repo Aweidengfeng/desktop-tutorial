@@ -9,8 +9,8 @@ const notifLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: 
 // GET /api/notifications（需要JWT）
 router.get('/', notifLimiter, auth, async (req, res) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const offset = (page - 1) * limit;
     const [notifications, totalRows] = await Promise.all([
       prisma.$queryRaw`
