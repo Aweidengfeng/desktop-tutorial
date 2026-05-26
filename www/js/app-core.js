@@ -1850,7 +1850,7 @@ function alpineLink() {
     switchPrimaryTab(tabId) {
       const pageMap = {
         expedition: 'home',
-        discover: 'community',
+        discover: 'explore',
         chat: 'chat',
         me: 'me',
       };
