@@ -2104,8 +2104,8 @@
     <!-- Password Login -->
     <div x-show="loginType==='password'" class="space-y-4">
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="loginForm.phone" type="tel" :placeholder="t('login_phone_placeholder')" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label class="text-slate-400 text-xs mb-1.5 block">手机号 / 邮箱</label>
+        <input x-model="loginForm.account" type="text" placeholder="手机号 / 邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>

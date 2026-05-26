@@ -175,6 +175,24 @@ describe('二、俱乐部商业活动全链路', () => {
     expect(Number(club.rating)).toBeCloseTo(4.0, 1);
   });
 
+  test('GET /api/clubs 和 /api/clubs/:id 返回基于 reviews 的动态评分', async () => {
+    db.prepare('UPDATE clubs SET rating = ? WHERE id = ?').run(1.2, clubId);
+
+    const listRes = await request(app).get('/api/clubs');
+    expect(listRes.status).toBe(200);
+    const listedClub = listRes.body.find((club) => Number(club.id) === Number(clubId));
+    expect(listedClub).toBeTruthy();
+    expect(Number(listedClub.rating)).toBeCloseTo(4.0, 1);
+    expect(Number(listedClub.review_count)).toBe(2);
+    expect(Number(listedClub.reviews)).toBe(2);
+
+    const detailRes = await request(app).get(`/api/clubs/${clubId}`);
+    expect(detailRes.status).toBe(200);
+    expect(Number(detailRes.body.rating)).toBeCloseTo(4.0, 1);
+    expect(Number(detailRes.body.review_count)).toBe(2);
+    expect(Number(detailRes.body.reviews)).toBe(2);
+  });
+
   test('商业资质申请提交成功', async () => {
     const res = await request(app)
       .post(`/api/clubs/${clubId}/commercial-apply`)
@@ -302,7 +320,7 @@ describe('二、俱乐部商业活动全链路', () => {
 
 // ── 三、向导商业服务全链路 ──────────────────────────────────────
 describe('三、向导商业服务全链路', () => {
-  let app, db, adminToken, guideUser, clientUser, guideId, serviceId;
+  let app, db, adminToken, guideUser, clientUser, secondClientUser, guideId, serviceId;
 
   beforeAll(() => {
     clearDbCache();
@@ -311,6 +329,7 @@ describe('三、向导商业服务全链路', () => {
     adminToken = createAdminToken();
     guideUser = createTestUser(db, { phone: '160' + String(Date.now()).slice(-8) });
     clientUser = createTestUser(db, { phone: '161' + String(Date.now()).slice(-8) });
+    secondClientUser = createTestUser(db, { phone: '162' + String(Date.now()).slice(-8) });
 
     // 创建向导记录
     const guideResult = db.prepare(`
@@ -318,6 +337,36 @@ describe('三、向导商业服务全链路', () => {
       VALUES (?, '测试向导', '', '高山攀登', 1000, 'approved')
     `).run(guideUser.id);
     guideId = guideResult.lastInsertRowid;
+  });
+
+  test('GET /api/guides 和 /api/guides/:id 返回基于 reviews 的动态评分', async () => {
+    const firstReview = await request(app)
+      .post(`/api/guides/${guideId}/review`)
+      .set(authHeader(clientUser.token))
+      .send({ rating: 5, content: '很专业' });
+    expect(firstReview.status).toBe(200);
+
+    const secondReview = await request(app)
+      .post(`/api/guides/${guideId}/review`)
+      .set(authHeader(secondClientUser.token))
+      .send({ rating: 3, content: '整体不错' });
+    expect(secondReview.status).toBe(200);
+
+    db.prepare('UPDATE guides SET rating = ? WHERE id = ?').run(1.1, guideId);
+
+    const listRes = await request(app).get('/api/guides');
+    expect(listRes.status).toBe(200);
+    const listedGuide = listRes.body.find((guide) => Number(guide.id) === Number(guideId));
+    expect(listedGuide).toBeTruthy();
+    expect(Number(listedGuide.rating)).toBeCloseTo(4.0, 1);
+    expect(Number(listedGuide.review_count)).toBe(2);
+    expect(Number(listedGuide.reviews)).toBe(2);
+
+    const detailRes = await request(app).get(`/api/guides/${guideId}`);
+    expect(detailRes.status).toBe(200);
+    expect(Number(detailRes.body.rating)).toBeCloseTo(4.0, 1);
+    expect(Number(detailRes.body.review_count)).toBe(2);
+    expect(Number(detailRes.body.reviews)).toBe(2);
   });
 
   test('未通过商业资质 → 发布 price>0 服务返回 422', async () => {

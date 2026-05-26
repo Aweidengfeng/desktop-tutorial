@@ -688,6 +688,25 @@
 
   </div>
   <script>
+  function resolvePortalAuthToken() {
+    // 1. URL token：支持主 App 跳转到 Portal 时携带 token，并在读取后立即从 URL 清理
+    const urlToken = new URLSearchParams(window.location.search).get('token');
+    if (urlToken) {
+      try { localStorage.setItem('summitlink_token', urlToken); } catch(e) {}
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('token');
+        window.history.replaceState({}, '', url.toString());
+      } catch(e) {}
+      return urlToken;
+    }
+    // 2. localStorage：主存储位置，优先读取主 App 标准键 summitlink_token，再兼容旧 token 键
+    const localToken = localStorage.getItem('summitlink_token') || localStorage.getItem('token');
+    if (localToken) return localToken;
+    // 3. sessionStorage：兼容旧版本或临时登录场景，作为最后兜底来源
+    return sessionStorage.getItem('token');
+  }
+
   function clubPortalApp() {
     return {
       loading: true,
@@ -751,17 +770,7 @@
       },
 
       getAuthToken() {
-        const urlToken = new URLSearchParams(window.location.search).get('token');
-        if (urlToken) {
-          try { localStorage.setItem('summitlink_token', urlToken); } catch(e) {}
-          try {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('token');
-            window.history.replaceState({}, '', url.toString());
-          } catch(e) {}
-          return urlToken;
-        }
-        return localStorage.getItem('summitlink_token') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        return resolvePortalAuthToken();
       },
 
       async loadLevels() {

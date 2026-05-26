@@ -448,7 +448,7 @@ function alpineLink() {
     smsCode: '',
     smsCountdown: 0,
     smsTimer: null,
-    loginForm: { phone: '', password: '' },
+    loginForm: { account: '', phone: '', email: '', password: '' },
     registerForm: { name: '', phone: '', password: '' },
     agreedPrivacy: false,
     agreedTerms: false,
@@ -907,13 +907,37 @@ function alpineLink() {
       else if (result.type === 'guide') this.viewGuideProfile(result);
       else if (result.type === 'club') this.openClubDetail(result);
       else if (result.type === 'gear') this.openGearDetail(result);
-      else if (result.type === 'post') { this.currentPage = 'discover'; }
+      else if (result.type === 'post') {
+        this.currentPage = 'discover';
+        this.$nextTick(() => this.openPostDetail(result));
+      }
       this.showSearch = false;
       this.searchQuery = '';
       this.searchResults = [];
     },
     searchByKeyword(keyword) { this.searchQuery = keyword; this.performSearch(); },
     removeHistory(index) { this.searchHistory.splice(index, 1); },
+    async openPostDetail(post) {
+      if (!post?.id) return;
+      let targetPost = (this.communityPosts || []).find((item) => String(item.id) === String(post.id)) || post;
+      try {
+        const res = await fetch('/api/posts/' + post.id);
+        if (res.ok) {
+          const data = await res.json();
+          targetPost = {
+            ...targetPost,
+            ...data,
+            author: data.authorName || targetPost.author || targetPost.author_name,
+            authorAvatar: data.authorAvatar || targetPost.authorAvatar || targetPost.author_avatar,
+            timeAgo: data.createdAt ? new Date(data.createdAt).toLocaleDateString('zh-CN') : (targetPost.timeAgo || '最近'),
+            isLiked: targetPost.isLiked || false,
+            isFavorited: targetPost.isFavorited || false,
+            commentPreview: targetPost.commentPreview || [],
+          };
+        }
+      } catch (e) {}
+      this.openComments(targetPost);
+    },
 
     // Peak detail
     navigateToPeakDetail(peakName) {
@@ -3262,10 +3286,16 @@ function alpineLink() {
       return h;
     },
     async doLogin() {
-      if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.loginForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      const account = String(this.loginForm.account || this.loginForm.phone || this.loginForm.email || '').trim();
+      const isEmail = account.includes('@');
+      if (!account) { this.showToast('请输入手机号或邮箱', 'error'); return; }
+      if (!isEmail && !/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(account)) { this.showToast('手机号格式不正确', 'error'); return; }
       this.loginLoading = true;
       try {
-        const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(this.loginForm) });
+        const body = isEmail
+          ? { email: account, password: this.loginForm.password }
+          : { phone: account, password: this.loginForm.password };
+        const res = await fetch('/api/auth/login', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(body) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
@@ -3521,7 +3551,7 @@ function alpineLink() {
       }
       this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: data.user.level || '攀登者', summits: data.user.summits || 0, expeditions: data.user.expeditions || 0, followers: data.user.followers || 0, following: data.user.following || 0 };
       this.showLogin = false;
-      this.loginForm = { phone: '', password: '' };
+      this.loginForm = { account: '', phone: '', email: '', password: '' };
       this.smsCode = '';
       this.loadGuideStatus();
       this.loadClubStatus();
