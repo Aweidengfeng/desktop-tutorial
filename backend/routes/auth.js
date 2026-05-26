@@ -369,8 +369,8 @@ router.post('/register', registerLimiter, async (req, res) => {
         if (target.includes('email')) return res.status(400).json({ error: '邮箱已注册' });
         if (target.includes('username')) {
           // username 冲突时自动追加随机后缀重试一次
-          const username2 = username + '_' + crypto.randomBytes(3).toString('hex');
-          user = await prisma.user.create({ data: { ...userData, username: username2 } });
+          const retryUsername = username + '_' + crypto.randomBytes(3).toString('hex');
+          user = await prisma.user.create({ data: { ...userData, username: retryUsername } });
           return res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
         }
         return res.status(400).json({ error: '注册失败，请稍后重试' });

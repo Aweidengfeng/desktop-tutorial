@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { setSentryUser } = require('./sentry');
 const prisma = require('../db/prisma');
 
-module.exports = function authMiddleware(req, res, next) {
+module.exports = async function authMiddleware(req, res, next) {
   const DEFAULT_SECRET = 'summitlink_dev_secret_do_not_use_in_production';
   const secret = process.env.JWT_SECRET || DEFAULT_SECRET;
   if (process.env.NODE_ENV === 'production' && secret === DEFAULT_SECRET) {
@@ -23,18 +23,19 @@ module.exports = function authMiddleware(req, res, next) {
     // 检查账号是否处于注销冷静期，如是则阻止写操作
     const writeMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
     if (writeMethods.includes(req.method)) {
-      prisma.user.findUnique({ where: { id: decoded.id }, select: { deletedAt: true } })
-        .then((user) => {
-          if (user && user.deletedAt && user.deletedAt > new Date()) {
-            // 允许撤销注销申请和认证相关接口通过
-            if (!req.path.includes('/cancel-deletion') && !req.path.includes('/auth/')) {
-              return res.status(423).json({ error: '账号正在注销审核期，如需继续使用请先撤销注销申请' });
-            }
+      try {
+        const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: { deletedAt: true } });
+        if (user && user.deletedAt && user.deletedAt > new Date()) {
+          // 允许撤销注销申请接口和认证相关接口通过
+          const isCancelDeletion = req.path === '/cancel-deletion' || req.path.endsWith('/cancel-deletion');
+          const isAuthPath = /^\/?(api\/)?auth(\/|$)/.test(req.path);
+          if (!isCancelDeletion && !isAuthPath) {
+            return res.status(423).json({ error: '账号正在注销审核期，如需继续使用请先撤销注销申请' });
           }
-          next();
-        })
-        .catch(() => next());
-      return;
+        }
+      } catch (_) {
+        // DB 查询失败时不阻断请求
+      }
     }
 
     next();
