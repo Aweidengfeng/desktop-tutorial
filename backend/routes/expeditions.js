@@ -155,6 +155,8 @@ async function getExpeditionForOrder(tx, expeditionId) {
     `;
     return expedition;
   }
+  // SQLite 无原生行锁能力；现有测试环境仅验证名额清理与基础流程，
+  // 更严格的并发防护仍依赖 PostgreSQL 的 FOR UPDATE 路径。
   const [expedition] = await tx.$queryRaw`
     SELECT id, title, base_price, commission_rate, max_participants, current_participants,
            group_discount, status

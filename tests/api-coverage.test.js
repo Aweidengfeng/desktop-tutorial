@@ -1189,7 +1189,7 @@ describe('十八、远征队活动 /api/expeditions', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  test('GET /api/expeditions 与详情接口都不统计超时未支付订单', async () => {
+  test('获取远征列表与详情时都不统计超时未支付订单', async () => {
     db.prepare(`
       INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-3 hours'))
@@ -1210,7 +1210,7 @@ describe('十八、远征队活动 /api/expeditions', () => {
     expect(detailRes.body.skus[0].slots_left).toBe(6);
   });
 
-  test('POST /api/expeditions/:id/order 会清理超时未支付订单并释放名额', async () => {
+  test('远征下单前会清理超时未支付订单并释放名额', async () => {
     const cleanupExpeditionId = Number(db.prepare(`
       INSERT INTO expeditions (
         publisher_type, publisher_id, title, base_price, commission_rate,
@@ -1246,7 +1246,7 @@ describe('十八、远征队活动 /api/expeditions', () => {
     expect(Number(expeditionRow.current_participants)).toBe(1);
   });
 
-  test('POST /api/expeditions/orders/:id/mock-pay 会给用户写入支付成功通知', async () => {
+  test('远征模拟支付成功后会给用户写入支付成功通知', async () => {
     const orderId = Number(db.prepare(`
       INSERT INTO expedition_orders (order_no, expedition_id, user_id, participants, total, platform_fee, publisher_income, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -1267,7 +1267,7 @@ describe('十八、远征队活动 /api/expeditions', () => {
     expect(notification.content).toContain('支付成功');
   });
 
-  test('POST /api/admin/expeditions/:id/approve 会通知远征发布者', async () => {
+  test('管理员审核通过远征后会通知发布者', async () => {
     const adminToken = createAdminToken();
     const approvalExpeditionId = Number(db.prepare(`
       INSERT INTO expeditions (
