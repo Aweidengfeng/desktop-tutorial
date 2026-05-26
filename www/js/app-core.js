@@ -5416,5 +5416,5 @@ function alpineLink() {
 
 if (typeof window !== 'undefined') {
   window.alpineLink = alpineLink;
-  window.__SUMMITLINK_APP_CORE_BUILD__ = '2026-05-26-syntax-hotfix-2';
+  window.__SUMMITLINK_APP_CORE_BUILD__ = '2026-05-26-syntax-hotfix-3';
 }
