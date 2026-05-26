@@ -51,30 +51,29 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      # ── 检出代码 ────────────────────────────────────────────────────────
+      # ── 基础设置 ──────────────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 安装 Node.js 24 ─────────────────────────────────────────────────────
+      # ── 安装 Node.js 24 ──────────────────────────────────────────────────────────
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
 
-      # ── 安装根级依赖（含 jest + supertest + playwright）──────────────────────
+      # ── 安装全部依赖包（包含 jest + supertest + playwright）─────────────────────
       - name: Install root dependencies
         run: npm install
 
-      # ── 安装后端依赖（pino, express-rate-limit, multer 等）──────────────────
+      # ── 安装后端依赖（pino, express-rate-limit, multer 等）──────────────────────
       - name: Install backend dependencies
         run: cd backend && npm install
 
-      # ── 从根目录生成 Prisma Client ──────────────────────────────────────────
-      # 根因：root package.json 中安装了 @prisma/client，npm 将其 hoist 到根
+      # ── 从根目录生成 Prisma Client ───────────────────────────────────────────────
+      # 原因：root package.json 中安装了 @prisma/client，npm 会 hoist 到
       # node_modules/@prisma/client。backend/lib/db.js 中的 require('@prisma/client')
-      # 因此解析到根目录的包，该包查找根 node_modules/.prisma/client（引擎二进制）。
-      # 必须从根目录执行 prisma generate，才能将引擎写入根 node_modules/.prisma/client/，
+      # 因包被提升，最终找根目录的模块，因此引擎必须生成到 node_modules/.prisma/client/，
       # 否则会报 "@prisma/client did not initialize yet"。
       - name: Generate Prisma Client (root)
         run: npx prisma generate --schema=backend/prisma/schema.prisma
@@ -82,7 +81,7 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 从 backend 目录生成 Prisma Client（backend/lib/db.js 优先使用 backend/node_modules 下的）──
+      # ── 从 backend 目录生成 Prisma Client（backend/lib/db.js 依赖 backend/node_modules 下的）
       - name: Generate Prisma Client (backend)
         run: npx prisma generate --schema=prisma/schema.prisma
         working-directory: backend
@@ -90,8 +89,8 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 推送 schema 到 SQLite 数据库（建表）────────────────────────────────
-      # --skip-generate 避免重复生成，仅建表
+      # ── 推送 schema 到 SQLite 数据库（非破坏性）───────────────────────────────────
+      # --skip-generate 跳过重复生成，减少耗时
       - name: Push Prisma schema to database
         run: npx prisma db push --schema=backend/prisma/schema.prisma --skip-generate
         env:
@@ -99,15 +98,51 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 安装 Playwright 浏览器（仅 Chromium）───────────────────────────────
+      # ── 安装 Playwright 浏览器（只用 Chromium）──────────────────────────────────
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      # ── 依赖安全扫描 ─────────────────────────────────────────────────────
+      # ── 代码安全质量检查（本地使用）────────────────────────────────────────────────
       - name: Audit backend dependencies
         run: npm audit --audit-level=high --production --prefix backend || true
 
-      # ── 启动后端服务器（本地测试用）──────────────────────────────────────────
+      # ── Vendor CDN assets (browser firewall workaround) ──────────────────────────
+      # The Playwright Chromium browser runs behind a CI firewall that blocks external
+      # CDN hosts (cdn.jsdelivr.net, cdn.socket.io, cdn.tailwindcss.com).
+      # Without Alpine.js loading, [x-cloak] on <body> keeps the entire app invisible,
+      # making every gotoTab() call time out.
+      #
+      # Fix: download assets using the Actions runner (which CAN reach the internet,
+      # before the per-job firewall activates) and patch HTML files to use local paths.
+      - name: Vendor CDN assets (browser firewall workaround)
+        run: |
+          mkdir -p js/vendor
+
+          # Alpine.js CSP build — CRITICAL: without this [x-cloak] hides the entire app
+          curl -fsSL "https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js" \
+            -o js/vendor/alpinejs-csp.min.js
+          echo "✅ Alpine.js CSP vendored ($(wc -c < js/vendor/alpinejs-csp.min.js) bytes)"
+
+          # Socket.IO client — needed for real-time features
+          curl -fsSL "https://cdn.socket.io/4.7.5/socket.io.min.js" \
+            -o js/vendor/socket.io.min.js
+          echo "✅ Socket.IO vendored ($(wc -c < js/vendor/socket.io.min.js) bytes)"
+
+          # Tailwind shim — prevents 'tailwind is not defined' JS errors when CDN is blocked
+          echo 'window.tailwind={config:function(c){return c;}};' > js/vendor/tailwind-shim.js
+
+          # Patch HTML files to replace CDN URLs with local vendor paths
+          for f in index.html www/index.html; do
+            [ -f "$f" ] || continue
+            sed -i \
+              -e 's|https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js|/js/vendor/alpinejs-csp.min.js|g' \
+              -e 's|https://cdn.socket.io/4.7.5/socket.io.min.js|/js/vendor/socket.io.min.js|g' \
+              -e 's|<script src="https://cdn.tailwindcss.com"></script>|<script src="/js/vendor/tailwind-shim.js"></script>|g' \
+              "$f"
+            echo "✅ Patched $f"
+          done
+
+      # ── 启动后端服务器（本地使用）───────────────────────────────────────────────
       - name: Start backend server
         run: cd backend && node db/seed-prisma.js && node app.js &
         env:
@@ -123,11 +158,11 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 等待服务器就绪 ────────────────────────────────────────────────────
+      # ── 等待服务就绪（稳定后再验证）────────────────────────────────────────────────
       - name: Wait for backend to be ready
         run: npx wait-on http://localhost:8080/api/health --timeout 30000
 
-      # ── 校验种子数据已真正就绪（非空）───────────────────────────────────────
+      # ── 验证种子数据（确保数据完整，稳定性）──────────────────────────────────────────
       - name: Verify seeded API data
         run: |
           check_non_empty_array() {
@@ -154,13 +189,12 @@ jobs:
         env:
           BASE_URL: http://localhost:8080
 
-      # ── 在 API 测试前重新生成 Prisma Client 并同步引擎到根目录 ──────────────
-      # 修复根因：schema 的 output = "../node_modules/.prisma/client" 始终相对于
-      # backend/prisma/ 解析，因此 prisma generate 只写入 backend/node_modules/.prisma/client。
-      # 但 @prisma/client 被 npm hoist 到根 node_modules/@prisma/client，
-      # 它查找引擎二进制的位置是根 node_modules/.prisma/client（从未被填充）。
-      # Jest globalSetup 子进程中的 require('@prisma/client') 因此报初始化错误。
-      # 解决方案：生成后将 backend/node_modules/.prisma/client/ 的内容复制到根位置。
+      # ── 在 API 测试前重新生成 Prisma Client ──────────────────────────────────────
+      # 原因：schema 的 output = "../node_modules/.prisma/client" 相对于
+      # backend/prisma/ 解析，Zug5 prisma generate 后引擎写入 backend/node_modules/.prisma/client/。
+      # 顶层 @prisma/client 经 npm hoist 到根目录 node_modules/@prisma/client，
+      # 两处引擎路径不同的引擎版本会导致 "@prisma/client did not initialize yet"。
+      # 修复方案：生成后把 backend/node_modules/.prisma/client/ 的引擎制品同步到根目录。
       - name: Re-generate Prisma Client before API tests
         run: |
           # Generate from root (writes engine to root node_modules/.prisma/client if no custom output)
@@ -175,7 +209,7 @@ jobs:
             cp -r backend/node_modules/.prisma/client/. node_modules/.prisma/client/
             echo "✅ Prisma engine artifacts synced to root node_modules/.prisma/client/"
           else
-            echo "⚠️ backend/node_modules/.prisma/client not found — root generate should suffice"
+            echo "⚠️ backend/node_modules/.prisma/client not found – root generate should suffice"
           fi
           ls node_modules/.prisma/client/ | head -20
         env:
@@ -183,7 +217,7 @@ jobs:
           PRISMA_TELEMETRY_INFORMATION: ""
           DATABASE_URL: "file:/tmp/ci.db"
 
-      # ── 运行 API 集成测试（旧版 + 新版 jest/supertest）─────────────────────
+      # ── 运行 API 测试（旧版 + 新版 jest/supertest）──────────────────────────────
       - name: Run API tests
         run: npm run test:api
         env:
@@ -197,13 +231,13 @@ jobs:
           CHECKPOINT_DISABLE: "1"
           PRISMA_TELEMETRY_INFORMATION: ""
 
-      # ── 运行 Playwright E2E 测试 ─────────────────────────────────────────────
+      # ── 运行 Playwright E2E 测试 ────────────────────────────────────────────────
       - name: Run Playwright E2E tests
         run: npm run test:e2e
         env:
           BASE_URL: http://localhost:8080
 
-      # ── 上传测试报告（无论成功失败都保留）──────────────────────────────────
+      # ── 上传测试结果（失败时保留截图/报告方便排查）────────────────────────────────
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
@@ -213,7 +247,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      # ── 上传失败截图 ─────────────────────────────────────────────────────
+      # ── 上传测试截图 ──────────────────────────────────────────────────────────────
       - name: Upload test screenshots
         uses: actions/upload-artifact@v4
         if: always()
