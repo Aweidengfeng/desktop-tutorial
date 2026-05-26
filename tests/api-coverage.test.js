@@ -1233,6 +1233,8 @@ describe('十八、远征队活动 /api/expeditions', () => {
       .send({ participants: 1 });
     expect(orderRes.status).toBe(200);
     expect(orderRes.body.status).toBe('pending_payment');
+    expect(orderRes.body).toHaveProperty('id');
+    expect(orderRes.body).toHaveProperty('order_no');
 
     const cancelled = db.prepare(`
       SELECT status FROM expedition_orders

@@ -1153,7 +1153,9 @@ router.post('/expeditions/:id/approve', adminWriteLimiter, adminAuth, async (req
           });
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[admin/expeditions/approve] 通知失败:', e.message);
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

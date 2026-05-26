@@ -143,6 +143,19 @@ async function cleanupExpiredPendingOrders(expeditionId) {
   return expiredSlots;
 }
 
+function getExpeditionLockQuery() {
+  // SQLite 不支持 FOR UPDATE；PostgreSQL 需要它来降低并发超卖风险。
+  const provider = String(process.env.DATABASE_PROVIDER || '');
+  const databaseUrl = String(process.env.DATABASE_URL || '');
+  const useRowLock = provider === 'postgresql' || (!provider && !databaseUrl.startsWith('file:'));
+  return `
+    SELECT id, title, base_price, commission_rate, max_participants, current_participants,
+           group_discount, status
+    FROM expeditions
+    WHERE id = ?${useRowLock ? ' FOR UPDATE' : ''}
+  `;
+}
+
 // ── 订单相关路由（放在 /:id 之前，防止 'orders' 被当作 id 解析）────
 
 // GET /api/expeditions/orders/my — 我的订单
@@ -594,16 +607,7 @@ router.post('/:id/order', orderLimiter, auth, async (req, res) => {
 
     const order = await prisma.$transaction(async (tx) => {
       // 1. 加行锁查询团期（防止并发超额）
-      const provider = String(process.env.DATABASE_PROVIDER || '');
-      const databaseUrl = String(process.env.DATABASE_URL || '');
-      const useRowLock = provider === 'postgresql' || (!provider && !databaseUrl.startsWith('file:'));
-      const [expedition] = await tx.$queryRawUnsafe(
-        `SELECT id, title, base_price, commission_rate, max_participants, current_participants,
-                group_discount, status
-         FROM expeditions
-         WHERE id = ?${useRowLock ? ' FOR UPDATE' : ''}`,
-        expId,
-      );
+      const [expedition] = await tx.$queryRawUnsafe(getExpeditionLockQuery(), expId);
       if (!expedition) throw { status: 404, message: '远征不存在或暂未开放报名' };
       if (expedition.status !== 'published') throw { status: 404, message: '远征不存在或暂未开放报名' };
 

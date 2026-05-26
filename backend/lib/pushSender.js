@@ -103,7 +103,10 @@ function ensureInit() {
 
 async function sendPushToUser(userId, payload) {
   const numericUserId = Number(userId);
-  if (!Number.isFinite(numericUserId)) return;
+  if (!Number.isFinite(numericUserId)) {
+    console.warn('[Push] 跳过用户推送：无效 userId', userId);
+    return;
+  }
   try {
     const prisma = require('../db/prisma');
     const tokens = await prisma.$queryRawUnsafe(
