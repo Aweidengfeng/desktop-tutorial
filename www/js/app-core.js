@@ -1613,6 +1613,7 @@ function alpineLink() {
       if (this.selectedTeam?.id && this._locationSocket && this.selectedTeam.id !== team?.id) {
         this._locationSocket.emit('leave-expedition', this.selectedTeam.id);
       }
+      this.teamDetailTab = 'info';
       this.selectedTeam = team;
       this.showTeamDetail = true;
       this.initExpeditionMap(team && team.id ? team.id : null);
@@ -1624,6 +1625,7 @@ function alpineLink() {
       this.stopExpeditionLocationPolling();
       this.locationConnectionMode = 'none';
       this.showTeamDetail = false;
+      this.teamDetailTab = 'info';
     },
     initExpeditionMap(expeditionId) {
       this.initLocationSocket(expeditionId);
@@ -3053,10 +3055,11 @@ function alpineLink() {
       else if (action === 'membership') { this.openMembership(); }
       else { this.showToast('即将推出'); }
     },
-    async openAchievements() {
+    async openAchievements(forceRefresh = false) {
       if (!this.requireAuth() || !this.currentUser) return;
-      this.achievementsList = [];
       this.showAchievementsModal = true;
+      if (!forceRefresh && this.achievementsList.length > 0) return;
+      this.achievementsList = [];
       this.achievementsLoading = true;
       try {
         const res = await fetch(`/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
@@ -3064,14 +3067,25 @@ function alpineLink() {
       } catch(e) {}
       this.achievementsLoading = false;
     },
-    async openMembership() {
+    async openMembership(forceRefresh = false) {
       if (!this.requireAuth() || !this.currentUser) return;
-      this.membershipData = null;
       this.showMembershipModal = true;
+      const ttlMs = 5 * 60 * 1000;
+      const cachedAt = this.membershipData && typeof this.membershipData._cachedAt === 'number'
+        ? this.membershipData._cachedAt
+        : 0;
+      const cacheValid = !forceRefresh && this.membershipData !== null && (Date.now() - cachedAt < ttlMs);
+      if (cacheValid) return;
+      this.membershipData = null;
       this.membershipLoading = true;
       try {
         const res = await fetch(`/api/users/${this.currentUser.id}/membership`, { headers: this.getAuthHeaders() });
-        if (res.ok) this.membershipData = await res.json();
+        if (res.ok) {
+          const data = await res.json();
+          this.membershipData = data && typeof data === 'object' && !Array.isArray(data)
+            ? { ...data, _cachedAt: Date.now() }
+            : data;
+        }
       } catch(e) {}
       this.membershipLoading = false;
     },
@@ -3082,11 +3096,19 @@ function alpineLink() {
           if (res.ok) { const u = await res.json(); this.currentUser = u; this.showToast('资料已保存 ✅'); }
           else { this.showToast('保存失败', 'error'); }
         } catch(e) { this.showToast('网络错误', 'error'); }
-      } else if (this.settingsType === 'units' && this.authToken) {
-        try {
-          await fetch('/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ useMetric: this.useMetric, currency: this.currentCurrency }) });
-          this.showToast('单位设置已保存 ✅');
-        } catch(e) {}
+      } else if (this.settingsType === 'units') {
+        if (!this.authToken) {
+          try {
+            localStorage.setItem('summitlink_use_metric', this.useMetric ? '1' : '0');
+            localStorage.setItem('summitlink_currency', this.currentCurrency || 'CNY');
+          } catch(e) {}
+          this.showToast('单位偏好已保存');
+        } else {
+          try {
+            await fetch('/api/auth/settings', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify({ useMetric: this.useMetric, currency: this.currentCurrency }) });
+            this.showToast('单位设置已保存 ✅');
+          } catch(e) {}
+        }
       } else if (this.settingsType === 'notifications' && this.authToken) {
         await this.saveNotifPreferences();
       } else if (this.settingsType === 'privacy' && this.authToken) {
@@ -3473,6 +3495,14 @@ function alpineLink() {
         if (!res.ok) { localStorage.removeItem('summitlink_token'); this.authToken = null; this.currentUser = null; return; }
         const user = await res.json();
         this.currentUser = user;
+        if (user && user.privacy_settings && typeof user.privacy_settings === 'object') {
+          this.privacySettings = {
+            profile_public: typeof user.privacy_settings.profile_public === 'boolean' ? user.privacy_settings.profile_public : this.privacySettings.profile_public,
+            posts_public: typeof user.privacy_settings.posts_public === 'boolean' ? user.privacy_settings.posts_public : this.privacySettings.posts_public,
+            follows_public: typeof user.privacy_settings.follows_public === 'boolean' ? user.privacy_settings.follows_public : this.privacySettings.follows_public,
+            allow_stranger_msg: typeof user.privacy_settings.allow_stranger_msg === 'boolean' ? user.privacy_settings.allow_stranger_msg : this.privacySettings.allow_stranger_msg,
+          };
+        }
         this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
         this.loadGuideStatus();
         this.loadClubStatus();
@@ -4221,17 +4251,30 @@ function alpineLink() {
     },
     async markNotificationRead(n) {
       if (n.is_read) return;
+      const prevIsRead = n.is_read;
+      const prevNotificationCount = this.notificationCount;
+      const prevNotifUnreadCount = this.notifUnreadCount;
+      const prevUnreadList = Array.isArray(this.notifUnreadList) ? [...this.notifUnreadList] : [];
+      const item = this.notifSettingsList.find(x => x.id === n.id);
+      const prevItemIsRead = item ? item.is_read : undefined;
       n.is_read = 1;
       this.notificationCount = Math.max(0, this.notificationCount - 1);
       this.notifUnreadCount = Math.max(0, this.notifUnreadCount - 1);
       // also update in notifSettingsList
-      const item = this.notifSettingsList.find(x => x.id === n.id);
       if (item) item.is_read = 1;
       // also update in notifUnreadList
       this.notifUnreadList = this.notifUnreadList.filter(x => x.id !== n.id);
       try {
-        await fetch('/api/notifications/' + n.id + '/read', { method: 'PUT', headers: this.getAuthHeaders() });
-      } catch(e) {}
+        const res = await fetch('/api/notifications/' + n.id + '/read', { method: 'PUT', headers: this.getAuthHeaders() });
+        if (!res.ok) throw new Error('mark read failed');
+      } catch(e) {
+        n.is_read = prevIsRead;
+        this.notificationCount = prevNotificationCount;
+        this.notifUnreadCount = prevNotifUnreadCount;
+        this.notifUnreadList = prevUnreadList;
+        if (item) item.is_read = prevItemIsRead;
+        this.showToast('标记已读失败，请重试', 'error');
+      }
     },
     async markAllNotificationsRead() {
       this.notifications.forEach(n => { n.is_read = 1; });
@@ -4246,6 +4289,7 @@ function alpineLink() {
     async loadNotifSettingsList() {
       if (!this.authToken) { this.notifSettingsList = []; return; }
       this.notifSettingsLoading = true;
+      this.notifSettingsList = [];
       try {
         const res = await fetch('/api/notifications/settings', { headers: this.getAuthHeaders() });
         if (res.ok) {
