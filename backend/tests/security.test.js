@@ -250,4 +250,16 @@ describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
       expect(content).not.toContain('/npm/alpinejs@');
     }
   });
+
+  test('www 首页应包含 Alpine 加载兜底与本地 fallback 文件', () => {
+    const indexPath = path.join(__dirname, '../../www/index.html');
+    const vendorPath = path.join(__dirname, '../../www/js/vendor/alpine.csp.min.js');
+    const content = fs.readFileSync(indexPath, 'utf8');
+    expect(content).toMatch(/typeof\s+tailwind\s*!==\s*['"]undefined['"]/);
+    expect(content).toMatch(/id\s*=\s*['"]sl-alpine-fallback['"]/);
+    expect(content).toMatch(/src\s*=\s*['"]\/js\/vendor\/alpine\.csp\.min\.js['"]/);
+    expect(content).toMatch(/document\.addEventListener\(\s*['"]alpine:initialized['"]/);
+    expect(content).toMatch(/body\s*&&\s*body\.hasAttribute\(\s*['"]x-cloak['"]\s*\)/);
+    expect(fs.existsSync(vendorPath)).toBe(true);
+  });
 });

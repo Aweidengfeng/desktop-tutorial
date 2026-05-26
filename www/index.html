@@ -6,6 +6,29 @@
   <title>巅峰探索 / SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
+  <script>
+  // Alpine.js CDN 失败时回退到本地副本
+  (function() {
+    var fallbackTimeout = setTimeout(function() {
+      if (window.__slAlpineReady) return;
+      if (document.getElementById('sl-alpine-fallback')) return;
+      console.warn('[SummitLink] Alpine.js CDN 加载失败，尝试备用路径');
+      var s = document.createElement('script');
+      s.id = 'sl-alpine-fallback';
+      s.src = '/js/vendor/alpine.csp.min.js';
+      s.async = false;
+      document.head.appendChild(s);
+    }, 3000);
+
+    function markReady() {
+      window.__slAlpineReady = true;
+      clearTimeout(fallbackTimeout);
+    }
+
+    document.addEventListener('alpine:init', markReady);
+    document.addEventListener('alpine:initialized', markReady);
+  })();
+  </script>
   <!-- Socket.IO client for real-time chat and notifications -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
@@ -48,20 +71,22 @@
   })();
   </script>
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#2b6579',
-            'primary-light': '#3d8a9e',
-            'primary-dark': '#1e4f60',
-          },
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            display: ['Manrope', 'sans-serif'],
+    if (typeof tailwind !== 'undefined') {
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#2b6579',
+              'primary-light': '#3d8a9e',
+              'primary-dark': '#1e4f60',
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Manrope', 'sans-serif'],
+            }
           }
         }
-      }
+      };
     }
   </script>
   <style>
@@ -10202,6 +10227,62 @@ function alpineLink() {
   </div>
 </div>
 
+<script>
+// Alpine.js 加载保障：5 秒未初始化则移除 x-cloak 并显示错误提示
+(function() {
+  var lastErrorDetail = '';
+  var timeout = setTimeout(function() {
+    var body = document.body;
+    if (body && body.hasAttribute('x-cloak')) {
+      body.removeAttribute('x-cloak');
+      body.style.display = '';
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:white;font-family:sans-serif;padding:24px;text-align:center;';
+      errDiv.innerHTML = '<div style="font-size:48px;margin-bottom:16px">⛰️</div><h2 style="font-size:20px;font-weight:bold;margin-bottom:8px">巅峰探索</h2><p style="color:#94a3b8;font-size:14px;margin-bottom:24px">页面加载遇到问题，请检查网络连接后刷新</p><button id="sl-reload-btn" style="background:#2b6579;color:white;border:none;padding:12px 24px;border-radius:12px;font-size:14px;cursor:pointer;">重新加载</button><p style="color:#475569;font-size:12px;margin-top:16px" id="sl-err-detail"></p>';
+      body.appendChild(errDiv);
+      if (lastErrorDetail) {
+        var initialDetail = document.getElementById('sl-err-detail');
+        if (initialDetail) initialDetail.textContent = lastErrorDetail;
+      }
+      var reloadBtn = document.getElementById('sl-reload-btn');
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', function() { location.reload(); });
+      }
+    }
+  }, 5000);
+
+  function clearGuard() {
+    window.__slAlpineReady = true;
+    clearTimeout(timeout);
+  }
+
+  document.addEventListener('alpine:initialized', function() {
+    var body = document.body;
+    if (!body || !body.hasAttribute('x-cloak')) {
+      clearGuard();
+    }
+  });
+
+  window.addEventListener('error', function(e) {
+    var file = 'unknown';
+    if (e.filename) {
+      file = e.filename.split('/').pop() || 'unknown';
+    } else if (e.error && e.error.fileName) {
+      file = e.error.fileName.split('/').pop() || 'unknown';
+    } else if (e.error && e.error.stack) {
+      var stackLine = e.error.stack.split('\n')[0] || '';
+      var stackMatch = stackLine.match(/([A-Za-z0-9_.-]+\.[A-Za-z0-9]+):\d+/);
+      if (stackMatch && stackMatch[1]) file = stackMatch[1];
+    }
+    var line = e.lineno || (e.error && e.error.lineNumber) || '?';
+    var message = (e.message || 'Unknown error') + ' (' + file + ':' + line + ')';
+    lastErrorDetail = message;
+    var detail = document.getElementById('sl-err-detail');
+    if (!detail) return;
+    detail.textContent = message;
+  });
+})();
+</script>
 </body>
 <!-- GDPR Cookie 同意横幅（欧盟/EEA 地区自动显示） -->
 <div id="gdpr-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e293b;color:#f1f5f9;padding:16px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,0.3);">
