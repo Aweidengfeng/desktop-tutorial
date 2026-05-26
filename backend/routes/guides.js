@@ -61,7 +61,7 @@ function isValidUploadUrl(url) {
 router.get('/', async (req, res) => {
   try {
     const guides = await prisma.$queryRaw`
-      SELECT id, name, avatar, flag, nationality, rating, reviews,
+      SELECT id, user_id as userId, name, avatar, flag, nationality, rating, reviews,
              specialty, day_rate as dayRate
       FROM guides WHERE status = 'approved'
       ORDER BY rating DESC

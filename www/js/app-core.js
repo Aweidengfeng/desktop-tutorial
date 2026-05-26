@@ -1429,10 +1429,23 @@ function alpineLink() {
       this.chatInput = '';
     },
     openChatDetail(conv) { this.selectedConversation = conv; this.showChatDetail = true; },
-    async openChatWithUser(name, avatar) {
-      this.activeChatSession = { id: Date.now(), name, avatar, flag: '', type: 'guide', online: false, unread: 0, lastMsg: '', messages: [] };
+    async openChatWithUser(name, avatar, userId) {
+      const session = { id: Date.now(), name, avatar, flag: '', type: 'guide', online: false, unread: 0, lastMsg: '', messages: [], conversationId: null };
+      this.activeChatSession = session;
       this.showChatWindow = true;
       this.currentPage = 'chat';
+      if (userId && this.authToken) {
+        try {
+          const res = await fetch('/api/messages/conversations', {
+            method: 'POST', headers: this.getAuthHeaders(),
+            body: JSON.stringify({ target_user_id: userId }),
+          });
+          if (res.ok) {
+            const conv = await res.json();
+            this.activeChatSession = { ...session, conversationId: conv.id };
+          }
+        } catch(e) {}
+      }
     },
     get filteredConversations() {
       if (!this.activeChatType || this.activeChatType === 'all') return this.conversations;
@@ -1441,7 +1454,7 @@ function alpineLink() {
 
     // Guides
     viewGuideProfile(guide) { this.selectedGuide = guide; this.showGuideDetail = true; },
-    contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar); },
+    contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar, guide.userId || guide.user_id); },
     bookGuideService(guide) { if (!this.requireAuth()) return; this.bookingData.mountain = guide.specialty ? guide.specialty.split('/')[0].trim() : ''; this.bookingData.guide = guide.name; this.showBooking = true; },
     selectGuideDate(date) { this.bookingData.date = date; },
     isGuideDateAvailable(date) { return true; },
@@ -1590,7 +1603,7 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
       this.showGearPublish = false;
     },
-    contactSeller(item) { this.openChatWithUser(item.seller || '卖家', item.sellerAvatar || ''); },
+    contactSeller(item) { this.openChatWithUser(item.seller || '卖家', item.sellerAvatar || '', item.seller_id); },
     getConditionClass(condition) {
       const map = { '全新': 'text-green-400', '九成新': 'text-emerald-400', '八成新': 'text-yellow-400', '七成新': 'text-orange-400' };
       return map[condition] || 'text-slate-400';
@@ -1624,6 +1637,7 @@ function alpineLink() {
       this.locationConnectionMode = 'none';
       this.showTeamDetail = false;
       this.teamDetailTab = 'info';
+      if (this._teamChatPollTimer) { clearInterval(this._teamChatPollTimer); this._teamChatPollTimer = null; }
     },
     initExpeditionMap(expeditionId) {
       this.initLocationSocket(expeditionId);
@@ -2773,6 +2787,12 @@ function alpineLink() {
               this.teamChatMessages[idx].id = data.id;
               this._teamChatLastId = data.id;
             }
+            // C5: Update the matching session entry's lastMsg and time
+            const sessionEntry = this.chatSessions.find(s => s.groupChatId === this.teamChatGroupId);
+            if (sessionEntry) {
+              sessionEntry.lastMsg = text;
+              sessionEntry.time = tempMsg.time;
+            }
           }
         } catch(e) {}
       }
@@ -3788,7 +3808,11 @@ function alpineLink() {
               status: m.sender_id === myId ? (m.is_read ? 'read' : 'sent') : null,
               time: new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
             }));
-            this.activeChatSession.messages.push(...newMsgs);
+            const existingIds = new Set(this.activeChatSession.messages.map(m => m.id).filter(Boolean));
+            const uniqueMsgs = newMsgs.filter(m => !existingIds.has(m.id));
+            if (uniqueMsgs.length > 0) {
+              this.activeChatSession.messages.push(...uniqueMsgs);
+            }
             this._chatLastMsgId = msgs[msgs.length - 1].id;
             const lastIncoming = [...msgs].reverse().find((m) => m.sender_id !== myId);
             if (lastIncoming && this._chatSocket && this._chatSocket.connected) {

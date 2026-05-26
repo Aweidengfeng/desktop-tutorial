@@ -435,6 +435,17 @@ router.post('/:id/review', clubWriteLimiter, auth, async (req, res) => {
       INSERT INTO reviews (target_type, target_id, user_id, user_name, user_avatar, rating, content)
       VALUES ('club', ${id}, ${req.user.id}, ${user ? user.name : ''}, ${user ? user.avatar : ''}, ${rating}, ${content || ''})
     `;
+    // 更新俱乐部评分（取所有评价的平均分）
+    try {
+      const [avgResult] = await prisma.$queryRaw`
+        SELECT AVG(CAST(rating AS REAL)) as avg_rating
+        FROM reviews WHERE target_type = 'club' AND target_id = ${id}
+      `;
+      if (avgResult && avgResult.avg_rating != null) {
+        const newRating = Math.round(Number(avgResult.avg_rating) * 10) / 10;
+        await prisma.$executeRaw`UPDATE clubs SET rating = ${newRating} WHERE id = ${id}`;
+      }
+    } catch(e) {}
     res.json({ success: true, message: '评价已提交' });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) {
