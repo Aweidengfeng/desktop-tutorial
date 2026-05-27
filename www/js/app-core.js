@@ -3721,9 +3721,8 @@ function alpineLink() {
       try {
         const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
         const payload = { ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION };
-        payload.invite_code = inviteCode;
         delete payload.inviteCode;
-        if (!inviteCode) delete payload.invite_code;
+        if (inviteCode) payload.invite_code = inviteCode;
         const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '注册失败', 'error'); return; }
@@ -3794,14 +3793,22 @@ function alpineLink() {
     },
     async copyInviteCode() {
       if (!this.myInviteCode) return;
-      await navigator.clipboard.writeText(this.myInviteCode);
-      this.showToast('邀请码已复制', 'success');
+      try {
+        await navigator.clipboard.writeText(this.myInviteCode);
+        this.showToast('邀请码已复制', 'success');
+      } catch (_) {
+        this.showToast('复制失败，请手动复制邀请码', 'error');
+      }
     },
     async shareInviteLink() {
       if (!this.myInviteCode) return;
       const text = `我在 SummitLink 发现了绝佳的攀登资源！用我的邀请码 ${this.myInviteCode} 注册，你我各得50积分 🏔\n${this.inviteUrl}`;
-      if (navigator.share) await navigator.share({ title: 'SummitLink 邀请', text });
-      else { await navigator.clipboard.writeText(text); this.showToast('邀请链接已复制'); }
+      try {
+        if (navigator.share) await navigator.share({ title: 'SummitLink 邀请', text });
+        else { await navigator.clipboard.writeText(text); this.showToast('邀请链接已复制'); }
+      } catch (_) {
+        this.showToast('分享失败，请稍后重试', 'error');
+      }
     },
     // SMS login
     async sendSmsCode() {

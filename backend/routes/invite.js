@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const { ensureUserInviteCode } = require('../utils/invite');
 
 const router = express.Router();
 
@@ -12,36 +13,6 @@ const inviteReadLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-const INVITE_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-function generateInviteCode() {
-  let code = '';
-  for (let i = 0; i < 6; i += 1) {
-    code += INVITE_CODE_CHARS[Math.floor(Math.random() * INVITE_CODE_CHARS.length)];
-  }
-  return code;
-}
-
-async function ensureUserInviteCode(userId, maxAttempts = 12) {
-  const existingRows = await prisma.$queryRaw`SELECT invite_code FROM users WHERE id = ${userId} LIMIT 1`;
-  const existingCode = existingRows?.[0]?.invite_code;
-  if (existingCode) return existingCode;
-
-  for (let i = 0; i < maxAttempts; i += 1) {
-    const code = generateInviteCode();
-    const conflictRows = await prisma.$queryRaw`SELECT id FROM users WHERE invite_code = ${code} LIMIT 1`;
-    if (Array.isArray(conflictRows) && conflictRows.length) continue;
-    try {
-      await prisma.$executeRaw`UPDATE users SET invite_code = ${code} WHERE id = ${userId}`;
-      return code;
-    } catch (e) {
-      const msg = String(e?.message || '').toLowerCase();
-      if (!msg.includes('unique') && e?.code !== 'P2002') throw e;
-    }
-  }
-  return null;
-}
 
 function maskName(name) {
   const n = String(name || '').trim();
@@ -62,13 +33,13 @@ async function queryInviteStats(userId) {
 
 router.get('/my-code', inviteReadLimiter, auth, async (req, res) => {
   try {
-    const code = await ensureUserInviteCode(req.user.id);
+    const code = await ensureUserInviteCode(prisma, req.user.id);
     if (!code) return res.status(500).json({ error: '邀请码生成失败' });
     const { totalInvited, totalPoints } = await queryInviteStats(req.user.id);
     const appUrl = (process.env.APP_URL || 'https://summitlink.app').replace(/\/$/, '');
     res.json({
       code,
-      inviteUrl: `${appUrl}/register?invite=${encodeURIComponent(code)}`,
+      inviteUrl: `${appUrl}/?invite=${encodeURIComponent(code)}`,
       totalInvited,
       totalPoints,
     });

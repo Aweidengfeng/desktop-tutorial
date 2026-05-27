@@ -9312,9 +9312,8 @@ function alpineLink() {
         const payload = { ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION };
         if (!phone) delete payload.phone;
         if (!email) delete payload.email;
-        payload.invite_code = inviteCode;
         delete payload.inviteCode;
-        if (!inviteCode) delete payload.invite_code;
+        if (inviteCode) payload.invite_code = inviteCode;
         const res = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '注册失败', 'error'); return; }
@@ -9382,7 +9381,9 @@ function alpineLink() {
       try {
         await navigator.clipboard.writeText(this.myInviteCode);
         this.showToast('邀请码已复制', 'success');
-      } catch (_) {}
+      } catch (_) {
+        this.showToast('复制失败，请手动复制邀请码', 'error');
+      }
     },
     async shareInviteLink() {
       if (!this.myInviteCode) return;
@@ -9393,7 +9394,9 @@ function alpineLink() {
           await navigator.clipboard.writeText(text);
           this.showToast('邀请链接已复制');
         }
-      } catch (_) {}
+      } catch (_) {
+        this.showToast('分享失败，请稍后重试', 'error');
+      }
     },
     // SMS login
     async sendSmsCode() {
