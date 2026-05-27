@@ -522,6 +522,19 @@ function alpineLink() {
     sosCountdown: 5,
     sosCountdownTimer: null,
     sosEmergencyPhone: '112',
+    sosLocation: null,
+    sosLocationLoading: false,
+    sosLocationError: null,
+    sosLoading: false,
+    sosStatus: 'pending',
+    sosId: null,
+    sosPeakName: '',
+    sosMessage: '',
+    sosHistory: [],
+    sosSentAt: null,
+    sosPollCountdown: 30,
+    _sosStatusTimer: null,
+    _sosStatusCountdownTimer: null,
     // Phase 2 - Track Recording state
     mapSearchExpanded: false,
     mapSearchQuery: '',
@@ -1505,11 +1518,77 @@ function alpineLink() {
     isGuideDateAvailable(date) { return true; },
 
     // SOS
-    openSOS() { this.showSOS = true; this.sosStep = 0; },
-    sendSOS() { this.sosStep = 1; this.showToast('SOS 已发送！救援正在响应', 'warning'); },
-    cancelSOS() { this.sosImages.forEach(url => URL.revokeObjectURL(url)); this.sosImages = []; this.showSOS = false; this.sosStep = 0; this.cancelSOSCountdown(false); },
-    refreshLocation() { this.showToast('位置已刷新'); },
-    shareLocation() { this.showToast('位置已分享'); },
+    openSOS() {
+      if (this._sosStatusTimer) clearInterval(this._sosStatusTimer);
+      if (this._sosStatusCountdownTimer) clearInterval(this._sosStatusCountdownTimer);
+      this._sosStatusTimer = null;
+      this._sosStatusCountdownTimer = null;
+      this.showSOS = true;
+      this.sosStep = 0;
+      this.sosLocation = null;
+      this.sosLocationError = null;
+      this.sosLoading = false;
+      this.sosStatus = 'pending';
+      this.sosId = null;
+      this.sosSentAt = null;
+      this.sosPeakName = '';
+      this.sosMessage = '';
+      this.refreshLocation();
+      this.loadSosHistory();
+    },
+    cancelSOS() {
+      this.sosImages.forEach(url => URL.revokeObjectURL(url));
+      this.sosImages = [];
+      this.closeSOSPanel();
+      this.cancelSOSCountdown(false);
+    },
+    async refreshLocation() {
+      this.sosLocationError = null;
+      if (!navigator.geolocation) {
+        this.sosLocationError = '您的设备不支持 GPS 定位';
+        return;
+      }
+      this.sosLocationLoading = true;
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude: lat, longitude: lng, altitude, accuracy } = pos.coords;
+          this.sosLocation = { lat, lng, altitude, accuracy };
+          if (altitude === null || altitude === undefined) {
+            try {
+              const r = await fetch(`/api/altitude?lat=${lat}&lng=${lng}`);
+              if (r.ok) {
+                const d = await r.json();
+                this.sosLocation = { ...this.sosLocation, altitude: d.altitude };
+              }
+            } catch (_) {}
+          }
+          this.sosLocationLoading = false;
+        },
+        () => {
+          this.sosLocationError = '无法获取位置，请检查位置权限';
+          this.sosLocationLoading = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    },
+    async shareLocation() {
+      if (!this.sosLocation) {
+        this.showToast('请先获取位置', 'error');
+        return;
+      }
+      const { lat, lng, altitude } = this.sosLocation;
+      const text = `我的位置：https://maps.google.com/?q=${lat},${lng}${altitude ? `\n海拔：${Math.round(altitude)}m` : ''}`;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'SummitLink 位置分享', text });
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(text);
+          this.showToast('位置链接已复制到剪贴板');
+        } else {
+          this.showToast(text, 'info');
+        }
+      } catch (_) {}
+    },
     callEmergency(number) {
       if (!number) return;
       window.location.href = `tel:${String(number).replace(/[^\d+]/g, '')}`;
@@ -4821,7 +4900,11 @@ function alpineLink() {
     async loadRescueContacts() {
       try {
         const res = await fetch('/api/rescue/contacts');
-        if (res.ok) this.rescueContacts = await res.json();
+        if (res.ok) {
+          this.rescueContacts = await res.json();
+          const firstPhone = this.rescueContacts?.[0]?.phone || this.rescueContacts?.[0]?.number;
+          if (firstPhone) this.sosEmergencyPhone = String(firstPhone);
+        }
       } catch(e) {}
     },
     getSosDialNumber() {
@@ -4830,6 +4913,87 @@ function alpineLink() {
       const normalized = raw.toLowerCase().startsWith('tel:') ? raw.slice(4) : raw;
       const sanitized = normalized.replace(/[^\d+]/g, '');
       return sanitized || '112';
+    },
+    closeSOSPanel() {
+      this.showSOS = false;
+      this.sosStep = 0;
+      if (this._sosStatusTimer) clearInterval(this._sosStatusTimer);
+      if (this._sosStatusCountdownTimer) clearInterval(this._sosStatusCountdownTimer);
+      this._sosStatusTimer = null;
+      this._sosStatusCountdownTimer = null;
+      this.showSOSConfirm = false;
+    },
+    getSosStatusLabel(status) {
+      if (status === 'processing') return '已响应';
+      if (status === 'resolved') return '已处理';
+      return '等待响应';
+    },
+    getSosStatusClass(status) {
+      if (status === 'processing') return 'bg-amber-500/20 text-amber-400';
+      if (status === 'resolved') return 'bg-emerald-500/20 text-emerald-400';
+      return 'bg-red-500/20 text-red-400';
+    },
+    async loadSosHistory(updateStatus = false) {
+      if (!this.authToken) {
+        this.sosHistory = [];
+        return [];
+      }
+      try {
+        const r = await fetch('/api/rescue/sos/history', { headers: this.getAuthHeaders() });
+        if (!r.ok) return this.sosHistory;
+        const records = await r.json();
+        this.sosHistory = Array.isArray(records) ? records : [];
+        if (updateStatus) {
+          const latest = this.sosId
+            ? this.sosHistory.find((item) => Number(item.id) === Number(this.sosId))
+            : this.sosHistory[0];
+          if (latest) this.sosStatus = latest.status || 'pending';
+          if (this.sosStatus === 'resolved') {
+            if (this._sosStatusTimer) clearInterval(this._sosStatusTimer);
+            if (this._sosStatusCountdownTimer) clearInterval(this._sosStatusCountdownTimer);
+            this._sosStatusTimer = null;
+            this._sosStatusCountdownTimer = null;
+            this.showToast('救援已完成，您的 SOS 已关闭', 'success');
+          }
+        }
+      } catch (_) {}
+      return this.sosHistory;
+    },
+    async updateSosStatus() {
+      if (!this.authToken) return;
+      try {
+        if (this.sosId) {
+          const r = await fetch('/api/rescue/sos/status/' + this.sosId, { headers: this.getAuthHeaders() });
+          if (r.ok) {
+            const record = await r.json();
+            this.sosStatus = record.status || 'pending';
+            await this.loadSosHistory(false);
+            if (this.sosStatus === 'resolved') {
+              if (this._sosStatusTimer) clearInterval(this._sosStatusTimer);
+              if (this._sosStatusCountdownTimer) clearInterval(this._sosStatusCountdownTimer);
+              this._sosStatusTimer = null;
+              this._sosStatusCountdownTimer = null;
+              this.showToast('救援已完成，您的 SOS 已关闭', 'success');
+            }
+            return;
+          }
+        }
+      } catch (_) {}
+      await this.loadSosHistory(true);
+    },
+    startSosStatusPolling() {
+      if (this._sosStatusTimer) clearInterval(this._sosStatusTimer);
+      if (this._sosStatusCountdownTimer) clearInterval(this._sosStatusCountdownTimer);
+      this.sosStatus = 'pending';
+      this.sosPollCountdown = 30;
+      this.updateSosStatus();
+      this._sosStatusTimer = setInterval(async () => {
+        this.sosPollCountdown = 30;
+        await this.updateSosStatus();
+      }, 30000);
+      this._sosStatusCountdownTimer = setInterval(() => {
+        this.sosPollCountdown = this.sosPollCountdown > 0 ? this.sosPollCountdown - 1 : 0;
+      }, 1000);
     },
     startSOSCountdown() {
       this.cancelSOSCountdown(false);
@@ -4902,7 +5066,58 @@ function alpineLink() {
       this.showToast('SOS 已发送！救援正在响应', 'warning');
     },
     async sendSOS() {
-      this.startSOSCountdown();
+      if (!this.sosLocation && !this.sosPeakName && !this.sosMessage) {
+        this.showToast('请至少填写位置或求救信息', 'error');
+        return;
+      }
+      this.sosLoading = true;
+      const sentAt = new Date().toISOString();
+      try {
+        const [r1, r2] = await Promise.allSettled([
+          fetch('/api/sos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
+            body: JSON.stringify({
+              userId: this.currentUser?.id,
+              lat: this.sosLocation?.lat ?? null,
+              lng: this.sosLocation?.lng ?? null,
+              accuracy: this.sosLocation?.accuracy ?? null,
+              timestamp: sentAt,
+              phone: this.currentUser?.phone,
+            }),
+          }),
+          fetch('/api/rescue/sos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
+            body: JSON.stringify({
+              lat: this.sosLocation?.lat ?? null,
+              lng: this.sosLocation?.lng ?? null,
+              altitude: this.sosLocation?.altitude ?? null,
+              peak_name: this.sosPeakName || null,
+              message: this.sosMessage || null,
+              location: this.sosLocation ? `${this.sosLocation.lat},${this.sosLocation.lng}` : null,
+            }),
+          }),
+        ]);
+        const sosAlertOk = r1.status === 'fulfilled' && r1.value.ok;
+        const sosRecordOk = r2.status === 'fulfilled' && r2.value.ok;
+        if (!sosAlertOk && !sosRecordOk) throw new Error('Both SOS API requests failed');
+        this.sosStep = 1;
+        this.sosSentAt = sentAt;
+        if (r2.status === 'fulfilled' && r2.value.ok) {
+          const d = await r2.value.json().catch(() => null);
+          this.sosId = d?.record?.id || null;
+        } else {
+          this.sosId = null;
+        }
+        await this.loadSosHistory(false);
+        this.showToast('🆘 SOS 已发送！救援团队正在响应', 'warning');
+        this.startSosStatusPolling();
+      } catch(e) {
+        this.showToast('发送失败，请重试或直接拨打救援电话', 'error');
+      } finally {
+        this.sosLoading = false;
+      }
     },
 
     // ─── Customs / 定制攀登 ──────────────────────────────────────────────────

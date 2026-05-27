@@ -15,7 +15,7 @@ process.env.NODE_ENV       = 'test';
 
 const request = require('supertest');
 const { createApp }                             = require('./helpers/testApp');
-const { createAdminToken, authHeader }          = require('./helpers/auth');
+const { createAdminToken, authHeader, createTestUser } = require('./helpers/auth');
 const { clearDbCache }                          = require('./helpers/db');
 
 describe('PR-160 SOS API', () => {
@@ -129,6 +129,42 @@ describe('PR-160 SOS API', () => {
       expect(found).toBeDefined();
       expect(found.lat).toBeCloseTo(1.1);
       expect(found.accuracy).toBeCloseTo(6.5);
+    });
+  });
+
+  describe('GET /api/rescue/sos/status/:id', () => {
+    test('仅允许查询当前用户自己的 SOS 记录', async () => {
+      const db = require('../backend/db/database');
+      const userA = createTestUser(db, { phone: '13900000001' });
+      const userB = createTestUser(db, { phone: '13900000002' });
+      const createRes = await request(app)
+        .post('/api/rescue/sos')
+        .set(authHeader(userA.token))
+        .send({ location: '27.9881,86.9250', peak_name: '珠峰', message: '测试求救' });
+      expect(createRes.status).toBe(200);
+      const ownId = Number(createRes.body?.record?.id);
+      expect(ownId).toBeGreaterThan(0);
+
+      const ownRes = await request(app)
+        .get('/api/rescue/sos/status/' + ownId)
+        .set(authHeader(userA.token));
+      expect(ownRes.status).toBe(200);
+      expect(ownRes.body.id).toBe(ownId);
+      expect(ownRes.body.location).toContain('27.9881');
+
+      const otherRes = await request(app)
+        .get('/api/rescue/sos/status/' + ownId)
+        .set(authHeader(userB.token));
+      expect(otherRes.status).toBe(404);
+    });
+
+    test('无效 id 返回 400', async () => {
+      const db = require('../backend/db/database');
+      const user = createTestUser(db, { phone: '13900000003' });
+      const res = await request(app)
+        .get('/api/rescue/sos/status/not-a-number')
+        .set(authHeader(user.token));
+      expect(res.status).toBe(400);
     });
   });
 });
