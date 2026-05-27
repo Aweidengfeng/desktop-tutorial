@@ -4,6 +4,37 @@
 async function runStartupMigrations(prisma) {
   try {
     if (process.env.DATABASE_PROVIDER === 'postgresql') {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "coupons" (
+          "id" SERIAL PRIMARY KEY,
+          "code" TEXT UNIQUE NOT NULL,
+          "type" TEXT NOT NULL,
+          "value" DOUBLE PRECISION NOT NULL,
+          "min_order_amount" DOUBLE PRECISION DEFAULT 0,
+          "max_discount" DOUBLE PRECISION DEFAULT NULL,
+          "total_quota" INTEGER DEFAULT NULL,
+          "used_count" INTEGER DEFAULT 0,
+          "per_user_limit" INTEGER DEFAULT 1,
+          "applicable_types" TEXT DEFAULT 'all',
+          "expires_at" TIMESTAMPTZ DEFAULT NULL,
+          "created_by" INTEGER,
+          "created_at" TIMESTAMPTZ DEFAULT NOW(),
+          "status" TEXT DEFAULT 'active'
+        )
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "user_coupons" (
+          "id" SERIAL PRIMARY KEY,
+          "user_id" INTEGER NOT NULL,
+          "coupon_id" INTEGER NOT NULL,
+          "status" TEXT DEFAULT 'unused',
+          "order_type" TEXT,
+          "order_id" INTEGER,
+          "used_at" TIMESTAMPTZ,
+          "claimed_at" TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE("user_id", "coupon_id")
+        )
+      `);
       await prisma.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "bio" TEXT`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "invite_code" TEXT`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "invited_by" INTEGER`);
@@ -34,6 +65,37 @@ async function runStartupMigrations(prisma) {
         )
       `);
     } else {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS coupons (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE NOT NULL,
+          type TEXT NOT NULL,
+          value REAL NOT NULL,
+          min_order_amount REAL DEFAULT 0,
+          max_discount REAL DEFAULT NULL,
+          total_quota INTEGER DEFAULT NULL,
+          used_count INTEGER DEFAULT 0,
+          per_user_limit INTEGER DEFAULT 1,
+          applicable_types TEXT DEFAULT 'all',
+          expires_at TEXT DEFAULT NULL,
+          created_by INTEGER,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          status TEXT DEFAULT 'active'
+        )
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS user_coupons (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          coupon_id INTEGER NOT NULL,
+          status TEXT DEFAULT 'unused',
+          order_type TEXT,
+          order_id INTEGER,
+          used_at TEXT,
+          claimed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, coupon_id)
+        )
+      `);
       // SQLite does not support IF NOT EXISTS on ALTER TABLE; use individual try/catch
       for (const sql of [
         'ALTER TABLE "users" ADD COLUMN "bio" TEXT',

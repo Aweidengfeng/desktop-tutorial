@@ -391,6 +391,8 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/invite', require('./routes/invite'));
 app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/location', require('./routes/location'));
+app.use('/api/coupons', require('./routes/coupons'));
+app.use('/api/admin/coupons', require('./routes/coupons'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/admin', require('./routes/admin-messages'));
 app.use('/api/admin', require('./routes/admin'));

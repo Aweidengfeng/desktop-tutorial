@@ -1573,6 +1573,97 @@
         </div>
       </div>
 
+      <!-- ── Coupons ── -->
+      <div x-show="page==='coupons'" class="space-y-4">
+        <div class="glass rounded-2xl p-6">
+          <h2 class="font-bold text-lg mb-4">🎟️ 创建优惠券</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">券码（8位）</label>
+              <input x-model="couponForm.code" placeholder="留空自动生成" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">类型</label>
+              <select x-model="couponForm.type" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                <option value="fixed">固定减免</option>
+                <option value="percent">百分比折扣</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">面值</label>
+              <input x-model.number="couponForm.value" type="number" min="0" step="0.01" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">最低使用金额</label>
+              <input x-model.number="couponForm.min_order_amount" type="number" min="0" step="0.01" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">总发放量</label>
+              <input x-model.number="couponForm.total_quota" type="number" min="1" placeholder="留空=无限" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">每人限领</label>
+              <input x-model.number="couponForm.per_user_limit" type="number" min="1" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">适用范围</label>
+              <select x-model="couponForm.applicable_types" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none">
+                <option value="all">全部</option>
+                <option value="expedition">远征</option>
+                <option value="guide">向导</option>
+                <option value="activity">活动</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 mb-1 block">有效期</label>
+              <input x-model="couponForm.expires_at" type="datetime-local" class="w-full bg-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none" />
+            </div>
+          </div>
+          <button @click="createCoupon()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold">创建优惠券</button>
+        </div>
+
+        <div class="glass rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-bold text-lg">优惠券列表</h2>
+            <button @click="loadCoupons()" class="px-3 py-1.5 glass rounded-xl text-sm">🔄 刷新</button>
+          </div>
+          <div x-show="couponsLoading" class="text-center py-4 text-slate-400">加载中…</div>
+          <table class="w-full text-sm" x-show="!couponsLoading">
+            <thead><tr class="text-slate-400 border-b border-white/10 text-left">
+              <th class="pb-2">券码</th><th class="pb-2">类型</th><th class="pb-2">面值</th><th class="pb-2">已用/总量</th><th class="pb-2">有效期</th><th class="pb-2">状态</th><th class="pb-2">操作</th>
+            </tr></thead>
+            <tbody>
+              <template x-for="c in coupons" :key="c.id">
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                  <td class="py-2 font-mono text-green-400 text-xs" x-text="c.code"></td>
+                  <td class="py-2 text-slate-300" x-text="c.type === 'fixed' ? '固定' : '折扣'"></td>
+                  <td class="py-2 text-slate-300" x-text="c.type === 'fixed' ? ('¥' + c.value) : (Math.round((c.value || 0) * 100) + '%')"></td>
+                  <td class="py-2 text-slate-300" x-text="(c.used_count || 0) + ' / ' + (c.total_quota ?? '∞')"></td>
+                  <td class="py-2 text-slate-400 text-xs" x-text="c.expires_at ? String(c.expires_at).slice(0, 16).replace('T', ' ') : '长期有效'"></td>
+                  <td class="py-2">
+                    <span class="px-2 py-0.5 rounded-full text-xs"
+                          :class="c.status === 'active' ? 'bg-green-500/20 text-green-300' : c.status === 'paused' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-slate-500/20 text-slate-300'"
+                          x-text="c.status"></span>
+                  </td>
+                  <td class="py-2">
+                    <div class="flex gap-1 flex-wrap">
+                      <button x-show="c.status==='active'" @click="updateCouponStatus(c.id, 'pause')" class="px-2 py-1 bg-yellow-700/70 rounded text-xs">暂停</button>
+                      <button x-show="c.status!=='active'" @click="updateCouponStatus(c.id, 'resume')" class="px-2 py-1 bg-emerald-700/70 rounded text-xs">恢复</button>
+                      <button @click="loadCouponStats(c.id)" class="px-2 py-1 bg-blue-700/70 rounded text-xs">统计</button>
+                      <button @click="deleteCoupon(c.id)" class="px-2 py-1 bg-red-700/70 rounded text-xs">删除</button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div x-show="couponStats" class="mt-4 p-3 rounded-xl bg-slate-800/60 text-xs text-slate-300">
+            <p class="text-white font-semibold mb-2">券统计：<span x-text="couponStats.code"></span></p>
+            <p>领取数：<span x-text="couponStats.claimedCount"></span> · 使用数：<span x-text="couponStats.usedCount"></span> · 过期数：<span x-text="couponStats.expiredCount"></span></p>
+          </div>
+        </div>
+      </div>
+
       <!-- ── GMV Reports ── -->
       <div x-show="page==='gmv-reports'" class="glass rounded-2xl p-6">
         <div class="flex items-center justify-between mb-4">
@@ -2126,6 +2217,7 @@
           { id: 'merchant-kyc',    icon: '🔍', label: '商家 KYC 审核' },
           { id: 'platform-routes', icon: '🗺️', label: '路线审核' },
           { id: 'invite-codes',    icon: '🎟️', label: '邀请码管理' },
+          { id: 'coupons',         icon: '🎟️', label: '优惠券管理' },
           { id: 'gmv-reports',     icon: '💹', label: 'GMV 报表' },
           { id: 'commission-config', icon: '⚙️', label: '佣金配置' },
           { id: 'disputes',        icon: '⚖️', label: '争议处理' },
@@ -2299,6 +2391,8 @@
         inviteCodes: [], inviteCodesTotal: 0, inviteCodesLoading: false,
         inviteCodeForm: { region: 'cn', tier: 'seed', count: 1, prefix: '', expiresAt: '', notes: '' },
         generatedCodes: [],
+        coupons: [], couponsLoading: false, couponStats: null,
+        couponForm: { code: '', type: 'fixed', value: '', min_order_amount: '', total_quota: '', per_user_limit: 1, applicable_types: 'all', expires_at: '' },
 
         // GMV Reports
         gmvData: null, gmvLoading: false, gmvRegion: 'all', gmvPeriod: '7d',
@@ -2420,6 +2514,7 @@
           else if (this.page === 'merchant-kyc') this.loadMerchantKyc();
           else if (this.page === 'platform-routes') this.loadPlatformRoutes();
           else if (this.page === 'invite-codes') this.loadInviteCodes();
+          else if (this.page === 'coupons') this.loadCoupons();
           else if (this.page === 'gmv-reports') this.loadGmvReports();
           else if (this.page === 'commission-config') this.loadCommissionRates();
           else if (this.page === 'disputes') this.loadDisputes();
@@ -3152,6 +3247,55 @@
           a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
           a.download = `invite-codes-${Date.now()}.csv`;
           a.click();
+        },
+        async loadCoupons() {
+          this.couponsLoading = true;
+          try {
+            const d = await this.api('GET', '/coupons');
+            this.coupons = d.coupons || [];
+          } catch(e) { this.showToast(e.message, 'error'); } finally { this.couponsLoading = false; }
+        },
+        async createCoupon() {
+          try {
+            await this.api('POST', '/coupons', {
+              ...this.couponForm,
+              code: (this.couponForm.code || '').trim().toUpperCase(),
+              expires_at: this.couponForm.expires_at || null,
+              total_quota: this.couponForm.total_quota || null,
+              min_order_amount: this.couponForm.min_order_amount || 0,
+            });
+            this.showToast('优惠券已创建');
+            this.couponForm = { code: '', type: 'fixed', value: '', min_order_amount: '', total_quota: '', per_user_limit: 1, applicable_types: 'all', expires_at: '' };
+            this.loadCoupons();
+          } catch (e) {
+            this.showToast(e.message, 'error');
+          }
+        },
+        async updateCouponStatus(id, action) {
+          try {
+            await this.api('PATCH', `/coupons/${id}`, { action });
+            this.showToast('优惠券状态已更新');
+            this.loadCoupons();
+          } catch (e) {
+            this.showToast(e.message, 'error');
+          }
+        },
+        async deleteCoupon(id) {
+          if (!confirm('确认删除此优惠券（软删除）？')) return;
+          try {
+            await this.api('DELETE', `/coupons/${id}`);
+            this.showToast('优惠券已删除');
+            this.loadCoupons();
+          } catch (e) {
+            this.showToast(e.message, 'error');
+          }
+        },
+        async loadCouponStats(id) {
+          try {
+            this.couponStats = await this.api('GET', `/coupons/${id}/stats`);
+          } catch (e) {
+            this.showToast(e.message, 'error');
+          }
         },
         async exportAllTracksReport() {
           try {

@@ -487,7 +487,17 @@ function alpineLink() {
     osmSearchDebounceTimer: null,
     showBooking: false,
     showPayment: false,
-    bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '' },
+    bookingData: { mountain: null, date: '', guide: null, guide_id: null, guide_name: '', club_id: null, club_name: '', members: 1, notes: '', coupon_id: null },
+    showCouponsCenter: false,
+    couponClaimCode: '',
+    couponTab: 'unused',
+    myCouponsByStatus: { unused: [], used: [], expired: [] },
+    couponsLoading: false,
+    couponClaimLoading: false,
+    showBookingCouponPanel: false,
+    bookingAvailableCoupons: [],
+    selectedBookingCoupon: null,
+    bookingCouponPreview: null,
     showSOS: false,
     showSOSConfirm: false,
     sosCountdown: 5,
@@ -1309,13 +1319,82 @@ function alpineLink() {
     },
 
     // Booking
-    openBooking(item) { this.bookingData.mountain = item.name || item; this.showBooking = true; },
-    openBookingWithGuide(peak, guide) { this.bookingData.mountain = peak.name; this.bookingData.guide = guide.name; this.showBooking = true; },
+    openBooking(item) {
+      this.bookingData.mountain = item.name || item;
+      this.bookingData.coupon_id = null;
+      this.selectedBookingCoupon = null;
+      this.bookingCouponPreview = null;
+      this.showBookingCouponPanel = false;
+      this.showBooking = true;
+      this.loadBookingCoupons();
+    },
+    openBookingWithGuide(peak, guide) {
+      this.bookingData.mountain = peak.name;
+      this.bookingData.guide = guide.name;
+      this.bookingData.coupon_id = null;
+      this.selectedBookingCoupon = null;
+      this.bookingCouponPreview = null;
+      this.showBookingCouponPanel = false;
+      this.showBooking = true;
+      this.loadBookingCoupons();
+    },
+    getBookingBaseAmount() {
+      return 3000 * (this.bookingData.members || 1);
+    },
+    async loadBookingCoupons() {
+      if (!this.authToken) { this.bookingAvailableCoupons = []; return; }
+      try {
+        const res = await fetch('/api/coupons/my?status=unused', { headers: this.getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        const orderType = 'guide';
+        this.bookingAvailableCoupons = (data.coupons || []).filter((coupon) => {
+          const types = String(coupon.applicable_types || 'all').toLowerCase();
+          if (!types || types === 'all') return true;
+          return types.split(',').map((item) => item.trim()).includes(orderType);
+        });
+      } catch (e) {}
+    },
+    async selectBookingCoupon(coupon) {
+      if (!coupon) {
+        this.selectedBookingCoupon = null;
+        this.bookingData.coupon_id = null;
+        this.bookingCouponPreview = null;
+        return;
+      }
+      const orderAmount = this.getBookingBaseAmount();
+      try {
+        const res = await fetch('/api/coupons/verify', {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({
+            code: coupon.code,
+            order_type: 'guide',
+            order_amount: orderAmount,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.valid) {
+          this.showToast(data.error || data.message || '优惠券不可用', 'error');
+          return;
+        }
+        this.selectedBookingCoupon = coupon;
+        this.bookingData.coupon_id = data.couponId;
+        this.bookingCouponPreview = data;
+      } catch (e) {
+        this.showToast('优惠券校验失败', 'error');
+      }
+    },
+    async recalcBookingCoupon() {
+      if (!this.selectedBookingCoupon) return;
+      await this.selectBookingCoupon(this.selectedBookingCoupon);
+    },
     async submitBooking() {
       if (!this.bookingData.date) { this.showToast('请选择出发日期', 'error'); return; }
       if (!this.requireAuth()) return;
       this.showBooking = false;
-      const deposit = 3000 * (this.bookingData.members || 1);
+      const deposit = this.getBookingBaseAmount();
+      const payAmount = this.bookingCouponPreview?.valid ? Number(this.bookingCouponPreview.finalAmount) : deposit;
       try {
         const body = {
           mountain: this.bookingData.mountain,
@@ -1327,13 +1406,31 @@ function alpineLink() {
           members: this.bookingData.members || 1,
           notes: this.bookingData.notes || '',
           type: this.bookingData.club_id ? 'club' : 'guide',
+          coupon_id: this.bookingData.coupon_id || null,
         };
         const res = await apiFetch('/api/bookings', { method: 'POST', body });
-        if (!res.ok) { const d = await res.json(); this.showToast(d.error || '预约创建失败', 'error'); return; }
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || '预约未保存');
+        }
+        const booking = await res.json().catch(() => null);
         this.showToast('预约已提交，等待向导/俱乐部确认 🎉');
+        if (this.bookingData.coupon_id) {
+          try {
+            await fetch('/api/coupons/use', {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                coupon_id: this.bookingData.coupon_id,
+                order_type: 'guide',
+                order_id: booking?.id || null,
+              }),
+            });
+          } catch (e) {}
+        }
         this.loadUnreadCount();
+        this.openPayment(payAmount);
       } catch(e) { this.showToast('网络错误，预约未保存', 'error'); }
-      this.openPayment(deposit);
     },
 
     async toggleLike(post) {
@@ -1492,7 +1589,17 @@ function alpineLink() {
     // Guides
     viewGuideProfile(guide) { this.selectedGuide = guide; this.showGuideDetail = true; },
     contactGuide(guide) { this.openChatWithUser(guide.name, guide.avatar, guide.userId || guide.user_id); },
-    bookGuideService(guide) { if (!this.requireAuth()) return; this.bookingData.mountain = guide.specialty ? guide.specialty.split('/')[0].trim() : ''; this.bookingData.guide = guide.name; this.showBooking = true; },
+    bookGuideService(guide) {
+      if (!this.requireAuth()) return;
+      this.bookingData.mountain = guide.specialty ? guide.specialty.split('/')[0].trim() : '';
+      this.bookingData.guide = guide.name;
+      this.bookingData.coupon_id = null;
+      this.selectedBookingCoupon = null;
+      this.bookingCouponPreview = null;
+      this.showBookingCouponPanel = false;
+      this.showBooking = true;
+      this.loadBookingCoupons();
+    },
     selectGuideDate(date) { this.bookingData.date = date; },
     isGuideDateAvailable(date) { return true; },
 
@@ -2476,6 +2583,79 @@ function alpineLink() {
       this.loadActivityOrders();
       this.loadGuideServiceOrders();
     },
+    async openCouponsCenter() {
+      if (!this.requireAuth()) return;
+      this.showCouponsCenter = true;
+      this.couponTab = 'unused';
+      await this.loadAllCouponTabs();
+    },
+    closeCouponsCenter() {
+      this.showCouponsCenter = false;
+    },
+    async loadMyCoupons(status = 'unused') {
+      this.couponsLoading = true;
+      try {
+        const res = await fetch(`/api/coupons/my?status=${encodeURIComponent(status)}`, { headers: this.getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        this.myCouponsByStatus[status] = data.coupons || [];
+      } catch (e) {
+      } finally {
+        this.couponsLoading = false;
+      }
+    },
+    async loadAllCouponTabs() {
+      await Promise.all([
+        this.loadMyCoupons('unused'),
+        this.loadMyCoupons('used'),
+        this.loadMyCoupons('expired'),
+      ]);
+    },
+    getCouponDisplayTitle(coupon) {
+      if (coupon.type === 'fixed') return `立减 ¥${Number(coupon.value || 0).toFixed(0)}`;
+      const discount = Math.round((Number(coupon.value) || 0) * 100);
+      return `${discount} 折优惠`;
+    },
+    getCouponScopeText(coupon) {
+      const raw = String(coupon.applicable_types || 'all');
+      if (raw === 'all') return '适用范围：全部订单';
+      return '适用范围：' + raw.split(',').map((item) => {
+        if (item === 'expedition') return '远征';
+        if (item === 'guide') return '向导';
+        if (item === 'activity') return '活动';
+        return item;
+      }).join(' / ');
+    },
+    getCouponCardClass(status) {
+      if (status === 'used') return 'border-slate-500/40 bg-slate-800/70';
+      if (status === 'expired') return 'border-red-500/40 bg-red-900/20';
+      return 'border-emerald-500/40 bg-emerald-900/20';
+    },
+    async claimCoupon() {
+      const code = String(this.couponClaimCode || '').trim().toUpperCase();
+      if (!code) { this.showToast('请输入优惠券码', 'error'); return; }
+      this.couponClaimLoading = true;
+      try {
+        const r = await fetch('/api/coupons/claim', {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ code }),
+        });
+        const d = await r.json();
+        if (r.ok) {
+          this.showToast('🎉 领券成功！', 'success');
+          this.couponClaimCode = '';
+          await this.loadAllCouponTabs();
+          await this.loadBookingCoupons();
+        } else {
+          this.showToast(d.error || '领券失败', 'error');
+        }
+      } catch (e) {
+        this.showToast('领券失败', 'error');
+      } finally {
+        this.couponClaimLoading = false;
+      }
+    },
     async loadMyOrders() {
       if (!this.authToken) return;
       const requestId = (this._loadMyOrdersRequestId || 0) + 1;
@@ -3455,6 +3635,7 @@ function alpineLink() {
       }
       else if (action === 'achievements') { this.openAchievements(); }
       else if (action === 'membership') { this.openMembership(); }
+      else if (action === 'coupons') { this.openCouponsCenter(); }
       else { this.showToast('即将推出'); }
     },
     async openAchievements(forceRefresh = false) {
@@ -4625,7 +4806,12 @@ function alpineLink() {
       this.bookingData.guide = guide;
       this.bookingData.guide_id = guide.id;
       this.bookingData.guide_name = guide.name;
+      this.bookingData.coupon_id = null;
+      this.selectedBookingCoupon = null;
+      this.bookingCouponPreview = null;
+      this.showBookingCouponPanel = false;
       this.showBooking = true;
+      this.loadBookingCoupons();
     },
 
     // Club profile full

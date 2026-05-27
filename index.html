@@ -1042,7 +1042,7 @@
                   <div class="text-slate-400 text-xs mb-1">服务山峰：<span class="text-emerald-400" x-text="guide.servicePeaks || guide.specialty || '多山峰定制'"></span></div>
                   <div class="flex items-center justify-between mt-2">
                     <span class="text-emerald-400 text-sm font-semibold" x-text="guide.priceLabel"></span>
-                    <button @click="showBooking = true; bookingData.guide_id = guide.id; bookingData.guide_name = guide.name"
+                    <button @click="showBooking = true; bookingData.guide_id = guide.id; bookingData.guide_name = guide.name; bookingData.coupon_id = null; selectedBookingCoupon = null; bookingCouponPreview = null; showBookingCouponPanel = false; loadBookingCoupons()"
                       class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1 rounded-lg transition-colors">
                       预约
                     </button>
@@ -1063,7 +1063,7 @@
                   <div class="text-slate-400 text-xs mb-1">攀登山峰：<span class="text-emerald-400" x-text="club.climbingPeaks || club.climbPeak || club.specialty || '多山峰线路'"></span></div>
                   <div class="flex items-center justify-between mt-2">
                     <span class="text-emerald-400 text-sm font-semibold" x-text="club.priceLabel || '价格咨询'"></span>
-                    <button @click="showBooking = true; bookingData.club_id = club.id; bookingData.club_name = club.name"
+                    <button @click="showBooking = true; bookingData.club_id = club.id; bookingData.club_name = club.name; bookingData.coupon_id = null; selectedBookingCoupon = null; bookingCouponPreview = null; showBookingCouponPanel = false; loadBookingCoupons()"
                       class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1 rounded-lg transition-colors">
                       咨询
                     </button>
@@ -1842,6 +1842,16 @@
             <div class="flex-1 text-left">
               <p class="text-white text-sm font-medium">收到的预约</p>
               <p class="text-slate-500 text-xs">向导/俱乐部管理</p>
+            </div>
+            <span class="material-symbols-outlined text-slate-600">chevron_right</span>
+          </button>
+          <button @click="openCouponsCenter()" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5">
+            <div class="w-9 h-9 bg-lime-500/20 rounded-xl flex items-center justify-center">
+              <span class="material-symbols-outlined text-lime-400 text-lg">local_offer</span>
+            </div>
+            <div class="flex-1 text-left">
+              <p class="text-white text-sm font-medium">🎟 优惠券</p>
+              <p class="text-slate-500 text-xs">查看、领取和使用优惠券</p>
             </div>
             <span class="material-symbols-outlined text-slate-600">chevron_right</span>
           </button>
@@ -2806,14 +2816,39 @@
             <div>
               <label class="text-slate-400 text-xs mb-1.5 block">成员人数</label>
               <div class="flex items-center gap-4">
-                <button @click="bookingData.members = Math.max(1, bookingData.members - 1)" class="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-600 transition-colors">-</button>
+                <button @click="bookingData.members = Math.max(1, bookingData.members - 1); recalcBookingCoupon()" class="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-600 transition-colors">-</button>
                 <span class="text-white font-bold text-lg w-8 text-center" x-text="bookingData.members"></span>
-                <button @click="bookingData.members = Math.min(20, bookingData.members + 1)" class="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-600 transition-colors">+</button>
+                <button @click="bookingData.members = Math.min(20, bookingData.members + 1); recalcBookingCoupon()" class="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-white font-bold hover:bg-slate-600 transition-colors">+</button>
               </div>
             </div>
             <div>
               <label class="text-slate-400 text-xs mb-1.5 block">备注</label>
               <textarea x-model="bookingData.notes" rows="3" placeholder="特殊需求或说明..." class="w-full bg-slate-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-600 resize-none"></textarea>
+            </div>
+            <div class="bg-slate-800/50 rounded-xl p-3">
+              <button @click="showBookingCouponPanel=!showBookingCouponPanel" class="w-full flex items-center justify-between text-sm text-white">
+                <span>使用优惠券</span>
+                <span class="material-symbols-outlined text-slate-400" x-text="showBookingCouponPanel ? 'expand_less' : 'expand_more'"></span>
+              </button>
+              <div x-show="showBookingCouponPanel" class="mt-3 space-y-2">
+                <template x-if="bookingAvailableCoupons.length === 0">
+                  <p class="text-xs text-slate-500">暂无可用优惠券</p>
+                </template>
+                <template x-for="coupon in bookingAvailableCoupons" :key="coupon.id">
+                  <button
+                    @click="selectBookingCoupon((selectedBookingCoupon && selectedBookingCoupon.id === coupon.id) ? null : coupon)"
+                    :class="selectedBookingCoupon && selectedBookingCoupon.id === coupon.id ? 'border-primary bg-primary/10' : 'border-slate-700 bg-slate-900/40'"
+                    class="w-full text-left rounded-xl border px-3 py-2 transition-colors">
+                    <p class="text-white text-sm" x-text="getCouponDisplayTitle(coupon)"></p>
+                    <p class="text-slate-400 text-xs mt-1" x-text="getCouponScopeText(coupon)"></p>
+                  </button>
+                </template>
+              </div>
+            </div>
+            <div class="bg-slate-800/50 rounded-xl p-3 text-xs space-y-1">
+              <div class="flex justify-between"><span class="text-slate-400">原价</span><span class="text-white" x-text="'¥' + getBookingBaseAmount()"></span></div>
+              <div class="flex justify-between"><span class="text-slate-400">优惠</span><span class="text-emerald-400" x-text="'-¥' + (bookingCouponPreview?.discountAmount || 0)"></span></div>
+              <div class="flex justify-between border-t border-white/10 pt-1 mt-1"><span class="text-white font-semibold">需支付</span><span class="text-primary-light font-bold" x-text="'¥' + (bookingCouponPreview?.finalAmount || getBookingBaseAmount())"></span></div>
             </div>
           </div>
           <div class="flex gap-3 mt-5">
@@ -5834,6 +5869,47 @@
           </template>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== MY COUPONS MODAL ===== -->
+  <div x-show="showCouponsCenter"
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 translate-y-full"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 translate-y-0"
+       x-transition:leave-end="opacity-0 translate-y-full"
+       class="fixed inset-0 z-[120] flex flex-col bg-slate-900" style="max-width:430px;margin:0 auto;">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-white/10 flex-shrink-0">
+      <button @click="closeCouponsCenter()" class="p-2 rounded-full hover:bg-white/10"><span class="material-symbols-outlined text-slate-300">arrow_back</span></button>
+      <h2 class="text-white font-display font-bold text-lg">🎟 我的优惠券</h2>
+    </div>
+    <div class="p-4 border-b border-white/10">
+      <div class="flex gap-2">
+        <input x-model="couponClaimCode" placeholder="输入优惠券码（8位）" class="flex-1 bg-slate-800 text-white rounded-xl px-3 py-2 text-sm outline-none">
+        <button @click="claimCoupon()" :disabled="couponClaimLoading" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50">领取</button>
+      </div>
+    </div>
+    <div class="flex gap-2 px-4 py-3 border-b border-white/10">
+      <button @click="couponTab='unused';loadMyCoupons('unused')" :class="couponTab==='unused'?'bg-emerald-600/40 text-emerald-200':'bg-slate-800 text-slate-300'" class="flex-1 rounded-lg py-1.5 text-xs">未使用</button>
+      <button @click="couponTab='used';loadMyCoupons('used')" :class="couponTab==='used'?'bg-slate-600/40 text-slate-200':'bg-slate-800 text-slate-300'" class="flex-1 rounded-lg py-1.5 text-xs">已使用</button>
+      <button @click="couponTab='expired';loadMyCoupons('expired')" :class="couponTab==='expired'?'bg-red-600/40 text-red-200':'bg-slate-800 text-slate-300'" class="flex-1 rounded-lg py-1.5 text-xs">已过期</button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4 space-y-3">
+      <div x-show="couponsLoading" class="text-center text-slate-400 py-8">加载中…</div>
+      <template x-for="coupon in (myCouponsByStatus[couponTab] || [])" :key="coupon.id">
+        <div :class="getCouponCardClass(coupon.status)" class="rounded-2xl p-4 border">
+          <div class="flex items-center justify-between">
+            <p class="text-white font-semibold text-sm" x-text="getCouponDisplayTitle(coupon)"></p>
+            <span class="text-xs font-mono text-slate-300" x-text="coupon.code"></span>
+          </div>
+          <p class="text-xs text-slate-300 mt-2" x-text="getCouponScopeText(coupon)"></p>
+          <p class="text-xs text-slate-400 mt-1" x-text="'最低使用金额：¥' + (coupon.min_order_amount || 0)"></p>
+          <p class="text-xs text-slate-400 mt-1" x-text="'有效期：' + (coupon.expires_at ? String(coupon.expires_at).slice(0,10) : '长期有效')"></p>
+        </div>
+      </template>
+      <div x-show="!couponsLoading && (myCouponsByStatus[couponTab] || []).length===0" class="text-center text-slate-500 py-10 text-sm">暂无优惠券</div>
     </div>
   </div>
 
