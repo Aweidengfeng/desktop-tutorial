@@ -678,8 +678,7 @@ function alpineLink() {
     meSection: 'profile',
     // Rescue contacts
     rescueContacts: [],
-    toast: { show: false, message: '', type: '' },
-    _toastTimer: null,
+    toasts: [],
     newComment: '',
     selectedPostComments: [],
     commentsLoading: false,
@@ -859,9 +858,11 @@ function alpineLink() {
 
     // Toast notifications
     showToast(message, type = 'info', duration = 3000) {
-      this.toast = { show: true, message, type };
-      clearTimeout(this._toastTimer);
-      this._toastTimer = setTimeout(() => { this.toast.show = false; }, duration);
+      const id = Date.now() + Math.random();
+      this.toasts.push({ id, message, type });
+      setTimeout(() => {
+        this.toasts = this.toasts.filter((t) => t.id !== id);
+      }, duration);
     },
 
     // Search
