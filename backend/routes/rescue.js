@@ -82,4 +82,56 @@ router.get('/sos/history', auth, async (req, res) => {
   }
 });
 
+// GET /api/rescue/sos/status/:id — 查询单条 SOS 记录状态（需登录，仅本人）
+router.get('/sos/status/:id', auth, async (req, res) => {
+  try {
+    const recordId = Number(req.params.id);
+    if (!Number.isFinite(recordId) || recordId <= 0) {
+      return res.status(400).json({ error: '无效记录ID' });
+    }
+    let records = [];
+    try {
+      records = await prisma.$queryRaw`
+        SELECT id, status, message, location, created_at, timestamp
+        FROM sos_records
+        WHERE id = ${recordId} AND user_id = ${req.user.id}
+        LIMIT 1
+      `;
+    } catch (queryErr) {
+      if (!String(queryErr.message || '').match(/no such column|does not exist/i)) throw queryErr;
+      try {
+        records = await prisma.$queryRaw`
+          SELECT id, status, message, location, timestamp
+          FROM sos_records
+          WHERE id = ${recordId} AND user_id = ${req.user.id}
+          LIMIT 1
+        `;
+      } catch (secondErr) {
+        if (!String(secondErr.message || '').match(/no such column|does not exist/i)) throw secondErr;
+        records = await prisma.$queryRaw`
+          SELECT id, message, location, created_at
+          FROM sos_records
+          WHERE id = ${recordId} AND user_id = ${req.user.id}
+          LIMIT 1
+        `;
+      }
+    }
+    const rawRecord = records[0] || null;
+    const record = rawRecord
+      ? {
+          id: rawRecord.id,
+          status: rawRecord.status || 'pending',
+          message: rawRecord.message || null,
+          location: rawRecord.location || null,
+          created_at: rawRecord.created_at || rawRecord.timestamp || null,
+          timestamp: rawRecord.timestamp || rawRecord.created_at || null,
+        }
+      : null;
+    if (!record) return res.status(404).json({ error: '记录不存在' });
+    res.json(record);
+  } catch (e) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 module.exports = router;
