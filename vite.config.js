@@ -9,7 +9,16 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      output: {
+        manualChunks(id) {
+          if (id.includes('/www/js/modules/weather.js')) return 'weather';
+          if (id.includes('/www/js/modules/commercial.js')) return 'commercial';
+          if (id.includes('/www/js/modules/community.js')) return 'community';
+          return undefined;
+        },
+      },
     },
+    chunkSizeWarningLimit: 150,
     minify: 'terser',
     sourcemap: false,
   },
