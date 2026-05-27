@@ -3038,7 +3038,7 @@ function alpineLink() {
       if (result.provider === 'alipay') {
         const payUrl = result.payUrl || result.payParams?.payUrl || result.payParams?.pagePayUrl;
         if (payUrl) {
-          window.open(payUrl, '_blank', 'noopener');
+          window.open(payUrl, '_blank', 'noopener,noreferrer');
           this.showToast('支付宝支付页已在新窗口打开，完成后点击「我已支付」', 'info', 8000);
           this.pendingAlipayOrderNo = result.orderNo || result.payParams?.outTradeNo || '';
           this.showAlipayConfirm = true;
@@ -3091,7 +3091,10 @@ function alpineLink() {
         if (window.QRCode && this.wechatPayModal.codeUrl) {
           new window.QRCode(container, { text: this.wechatPayModal.codeUrl, width: 160, height: 160 });
         } else {
-          container.innerHTML = '<p class="text-xs text-slate-400 break-all px-2">请在微信中打开支付链接：' + this.wechatPayModal.codeUrl + '</p>';
+          const fallbackText = document.createElement('p');
+          fallbackText.className = 'text-xs text-slate-400 break-all px-2';
+          fallbackText.textContent = `请在微信中打开支付链接：${this.wechatPayModal.codeUrl}`;
+          container.appendChild(fallbackText);
         }
       });
       let remaining = 180;
