@@ -7,6 +7,33 @@ const router = express.Router();
 const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
 
+const PERIOD_DAYS = { '7d': 7, '30d': 30, '90d': 90 };
+
+function formatDateKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function buildDateRange(days) {
+  const dates = [];
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - days + 1);
+  for (let i = 0; i < days; i++) {
+    const current = new Date(start);
+    current.setDate(start.getDate() + i);
+    dates.push(formatDateKey(current));
+  }
+  return dates;
+}
+
+function getCutoffDate(days) {
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - days + 1);
+  return cutoff;
+}
+
 // GET /api/admin/stats/overview — 总览数据
 router.get('/overview', adminAuth, async (req, res) => {
   try {
@@ -162,6 +189,66 @@ router.get('/users', adminAuth, async (req, res) => {
     res.json(trend.map(r => ({ date: r.date, count: Number(r.count) })));
   } catch (e) {
     res.status(500).json({ error: '获取用户增长失败' });
+  }
+});
+
+// GET /api/admin/stats/revenue-trend?period=7d|30d|90d — GMV 趋势
+router.get('/revenue-trend', adminAuth, async (req, res) => {
+  try {
+    const days = PERIOD_DAYS[req.query.period] || 30;
+    const cutoff = getCutoffDate(days);
+    const rows = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date, COALESCE(SUM(total), 0) as value
+      FROM expedition_orders
+      WHERE status = 'paid'
+        AND created_at >= ${cutoff}
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `.catch(() => []);
+    const valueMap = Object.create(null);
+    rows.forEach((row) => {
+      if (row?.date) valueMap[formatDateKey(row.date)] = Number(row.value || 0);
+    });
+    const dates = buildDateRange(days);
+    res.json({ dates, values: dates.map((date) => valueMap[date] || 0), period: req.query.period || '30d' });
+  } catch (e) {
+    res.status(500).json({ error: '获取收入趋势失败' });
+  }
+});
+
+// GET /api/admin/stats/user-trend?period=7d|30d|90d — 用户增长趋势
+router.get('/user-trend', adminAuth, async (req, res) => {
+  try {
+    const days = PERIOD_DAYS[req.query.period] || 30;
+    const cutoff = getCutoffDate(days);
+    const rows = await prisma.$queryRaw`
+      SELECT DATE(created_at) as date, COUNT(*) as count
+      FROM users
+      WHERE created_at >= ${cutoff}
+        AND deleted_at IS NULL
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `.catch(() => []);
+    const [baseRow] = await prisma.$queryRaw`
+      SELECT COUNT(*) as count
+      FROM users
+      WHERE created_at < ${cutoff}
+        AND deleted_at IS NULL
+    `.catch(() => [{ count: 0 }]);
+    const countMap = Object.create(null);
+    rows.forEach((row) => {
+      if (row?.date) countMap[formatDateKey(row.date)] = Number(row.count || 0);
+    });
+    const dates = buildDateRange(days);
+    const newUsers = dates.map((date) => countMap[date] || 0);
+    let running = Number(baseRow?.count || 0);
+    const totalUsers = newUsers.map((count) => {
+      running += count;
+      return running;
+    });
+    res.json({ dates, newUsers, totalUsers, period: req.query.period || '30d' });
+  } catch (e) {
+    res.status(500).json({ error: '获取用户增长趋势失败' });
   }
 });
 

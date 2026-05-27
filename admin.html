@@ -190,6 +190,34 @@
             </div>
           </template>
         </div>
+        <div class="glass rounded-2xl p-6 mt-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold">📈 收入趋势</h3>
+            <select x-model="revenuePeriod" @change="loadRevenueTrend()" class="bg-slate-700 rounded-lg px-3 py-1 text-sm">
+              <option value="7d">近7天</option>
+              <option value="30d">近30天</option>
+              <option value="90d">近90天</option>
+            </select>
+          </div>
+          <div class="relative">
+            <canvas id="revenue-chart" width="800" height="200" class="w-full"></canvas>
+            <div x-show="!revenueTrendLoading && !revenueTrendHasData" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">暂无数据</div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-6 mt-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold">👥 用户增长</h3>
+            <select x-model="userPeriod" @change="loadUserTrend()" class="bg-slate-700 rounded-lg px-3 py-1 text-sm">
+              <option value="7d">近7天</option>
+              <option value="30d">近30天</option>
+              <option value="90d">近90天</option>
+            </select>
+          </div>
+          <div class="relative">
+            <canvas id="user-chart" width="800" height="200" class="w-full"></canvas>
+            <div x-show="!userTrendLoading && !userTrendHasData" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">暂无数据</div>
+          </div>
+        </div>
       </div>
 
       <div x-show="page === 'map-monitor'" class="space-y-4">
@@ -1986,6 +2014,104 @@
   </div>
 
   <script>
+    function drawLineChart(canvasId, labels, datasets, options = {}) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || !canvas.getContext) return;
+      const ctx = canvas.getContext('2d');
+      const { width, height } = canvas;
+      const pad = { top: 20, right: 20, bottom: 40, left: 60 };
+      const chartW = width - pad.left - pad.right;
+      const chartH = height - pad.top - pad.bottom;
+      const safeLabels = Array.isArray(labels) ? labels : [];
+      const safeDatasets = Array.isArray(datasets) ? datasets : [];
+      const allValues = safeDatasets.flatMap((item) => Array.isArray(item.data) ? item.data : []);
+      const hasData = allValues.length > 0 && allValues.some((value) => Number(value) > 0);
+      ctx.clearRect(0, 0, width, height);
+      if (!hasData || safeLabels.length === 0) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(options.emptyText || '暂无数据', width / 2, height / 2);
+        return;
+      }
+      const maxVal = Math.max(...allValues.map((value) => Number(value) || 0), 1);
+      const yStep = maxVal / 5;
+      const pointCount = safeLabels.length;
+      const xStep = pointCount > 1 ? chartW / (pointCount - 1) : 0;
+      const getX = (index) => pointCount > 1 ? (pad.left + xStep * index) : (pad.left + chartW / 2);
+      ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= 5; i++) {
+        const y = pad.top + (chartH * i) / 5;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(width - pad.right, y);
+        ctx.stroke();
+        const value = Math.round(maxVal - yStep * i);
+        ctx.fillText(`${options.yPrefix || ''}${value.toLocaleString()}`, pad.left - 8, y + 4);
+      }
+      ctx.textAlign = 'center';
+      const xTickCount = Math.min(6, safeLabels.length);
+      for (let i = 0; i < xTickCount; i++) {
+        const idx = Math.round((safeLabels.length - 1) * (i / Math.max(xTickCount - 1, 1)));
+        const x = getX(idx);
+        const label = String(safeLabels[idx] || '').slice(5);
+        ctx.fillText(label, x, height - 14);
+      }
+      safeDatasets.forEach((dataset) => {
+        const color = dataset.color || '#3b82f6';
+        const values = (dataset.data || []).map((value) => Number(value) || 0);
+        ctx.beginPath();
+        values.forEach((value, index) => {
+          const x = getX(index);
+          const y = pad.top + chartH - (value / maxVal) * chartH;
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        const firstX = getX(0);
+        const lastX = getX(Math.max(values.length - 1, 0));
+        ctx.lineTo(lastX, pad.top + chartH);
+        ctx.lineTo(firstX, pad.top + chartH);
+        ctx.closePath();
+        ctx.fillStyle = color + '22';
+        ctx.fill();
+      });
+      let tooltip = document.getElementById(`${canvasId}-tooltip`);
+      if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = `${canvasId}-tooltip`;
+        tooltip.style.position = 'fixed';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.display = 'none';
+        tooltip.style.background = 'rgba(15,23,42,0.92)';
+        tooltip.style.border = '1px solid rgba(148,163,184,0.35)';
+        tooltip.style.borderRadius = '8px';
+        tooltip.style.color = '#e2e8f0';
+        tooltip.style.padding = '6px 8px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.zIndex = '9999';
+        document.body.appendChild(tooltip);
+      }
+      canvas.onmousemove = (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) * (width / rect.width);
+        const idx = pointCount <= 1
+          ? 0
+          : Math.round(Math.min(Math.max((x - pad.left) / Math.max(chartW, 1), 0), 1) * (pointCount - 1));
+        const lines = safeDatasets.map((dataset) => `${dataset.label || ''} ${options.yPrefix || ''}${(Number(dataset.data?.[idx]) || 0).toLocaleString()}`);
+        tooltip.innerHTML = `<div>${safeLabels[idx] || ''}</div>${lines.map((line) => `<div>${line}</div>`).join('')}`;
+        tooltip.style.left = `${event.clientX + 12}px`;
+        tooltip.style.top = `${event.clientY + 12}px`;
+        tooltip.style.display = 'block';
+      };
+      canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
+    }
+
     function adminApp() {
       return {
         isLoggedIn: false,
@@ -2032,6 +2158,12 @@
         statsCards: [],
         statsLoading: false,
         paymentsEnabled: false,
+        revenuePeriod: '30d',
+        userPeriod: '30d',
+        revenueTrendLoading: false,
+        userTrendLoading: false,
+        revenueTrendHasData: false,
+        userTrendHasData: false,
 
         // Users
         users: [], usersTotal: 0, usersPage: 1, usersLoading: false, userSearch: '',
@@ -2180,6 +2312,9 @@
         banners: [], bannersLoading: false,
 
         async init() {
+          this.$watch('page', (val) => {
+            if (val === 'stats') this.loadStatsTrends();
+          });
           try {
             const cfg = await fetch('/api/config');
             if (cfg.ok) {
@@ -2192,6 +2327,7 @@
             this.isLoggedIn = true;
             this.lastSeenSosId = Number(localStorage.getItem('admin_last_seen_sos_id') || 0);
             this.loadPage();
+            if (this.page === 'stats') this.loadStatsTrends();
             this.loadSosRecords(1);
             this.pollUnreadCount();
             // Start polling active SOS every 30 seconds
@@ -2238,6 +2374,7 @@
             if (!r.ok) throw new Error(d.error || '登录失败');
             this.isLoggedIn = true;
             this.loadPage();
+            if (this.page === 'stats') this.loadStatsTrends();
             this.pollUnreadCount();
           } catch (e) {
             this.showToast(e.message, 'error');
@@ -2414,6 +2551,45 @@
           } finally {
             this.statsLoading = false;
           }
+        },
+
+        async loadRevenueTrend() {
+          this.revenueTrendLoading = true;
+          try {
+            const d = await this.api('GET', `/stats/revenue-trend?period=${this.revenuePeriod}`);
+            const labels = Array.isArray(d?.dates) ? d.dates : [];
+            const values = Array.isArray(d?.values) ? d.values.map((value) => Number(value) || 0) : [];
+            this.revenueTrendHasData = values.some((value) => value > 0);
+            drawLineChart('revenue-chart', labels, [{ data: values, color: '#22c55e', label: 'GMV' }], { yPrefix: '¥' });
+          } catch (e) {
+            this.revenueTrendHasData = false;
+            drawLineChart('revenue-chart', [], [], { yPrefix: '¥' });
+          } finally {
+            this.revenueTrendLoading = false;
+          }
+        },
+
+        async loadUserTrend() {
+          this.userTrendLoading = true;
+          try {
+            const d = await this.api('GET', `/stats/user-trend?period=${this.userPeriod}`);
+            const labels = Array.isArray(d?.dates) ? d.dates : [];
+            const values = Array.isArray(d?.newUsers) ? d.newUsers.map((value) => Number(value) || 0) : [];
+            this.userTrendHasData = values.some((value) => value > 0);
+            drawLineChart('user-chart', labels, [{ data: values, color: '#3b82f6', label: '新增用户' }]);
+          } catch (e) {
+            this.userTrendHasData = false;
+            drawLineChart('user-chart', [], []);
+          } finally {
+            this.userTrendLoading = false;
+          }
+        },
+
+        loadStatsTrends() {
+          this.$nextTick(() => {
+            this.loadRevenueTrend();
+            this.loadUserTrend();
+          });
         },
 
         async loadUsers(p) {
