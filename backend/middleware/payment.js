@@ -65,13 +65,12 @@ async function createPaymentWithProvider(provider, { orderNo, amount, descriptio
   throw new Error(`不支持的支付提供商: ${resolvedProvider}`);
 }
 
-async function createWechatPayment({ orderNo, amount, description, openid }) {
-  const payParams = await wechatPay.createOrder({
+async function createWechatPayment({ orderNo, amount, description }) {
+  const payParams = await wechatPay.createNativeOrder({
     body: description,
     outTradeNo: orderNo,
     totalFee: amount,
     notifyUrl: process.env.PAYMENT_NOTIFY_URL || 'https://summitlink.com/api/payment/notify/wechat',
-    openid,
   });
   return {
     provider: 'wechat',
