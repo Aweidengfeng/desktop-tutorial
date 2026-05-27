@@ -100,7 +100,10 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(request).then((cached) => cached || fetch(request).then((res) => {
-      if (res && res.ok) caches.open(STATIC_CACHE).then((cache) => cache.put(request, res.clone()));
+      if (res && res.ok) {
+        const cloned = res.clone();
+        caches.open(STATIC_CACHE).then((cache) => cache.put(request, cloned)).catch(() => {});
+      }
       return res;
     })),
   );

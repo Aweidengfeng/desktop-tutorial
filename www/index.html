@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>巅峰探索 / SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
   <link rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -22,7 +22,7 @@
       console.warn('[SummitLink] Alpine.js CDN 加载失败，尝试备用路径');
       var s = document.createElement('script');
       s.id = 'sl-alpine-fallback';
-      s.src = '/js/vendor/alpine.csp.min.js';
+      s.src = '/js/vendor/alpine.min.js';
       s.async = false;
       document.head.appendChild(s);
     }, 3000);
