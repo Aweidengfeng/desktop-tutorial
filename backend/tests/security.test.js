@@ -218,8 +218,8 @@ describe('安全测试 7 — 公共 GET 接口缓存头', () => {
   });
 });
 
-// ── 8. CSP 不包含 unsafe-eval + Alpine 使用 CSP 构建 ─────────────────────────
-describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
+// ── 8. CSP 不包含 unsafe-eval + Alpine/CDN 构建约束 ─────────────────────────
+describe('安全测试 8 — CSP 与 Alpine 构建', () => {
   let app;
 
   beforeAll(() => {
@@ -235,10 +235,9 @@ describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
     expect(appJs).not.toContain("'unsafe-eval'");
   });
 
-  test('入口页面与门户页面应使用 Alpine CSP 构建', () => {
+  test('门户页面应继续使用 Alpine CSP 构建', () => {
     const htmlFiles = [
       '../../index.html',
-      '../../www/index.html',
       '../../admin.html',
       '../../club-portal.html',
       '../../guide-portal.html',
@@ -251,13 +250,19 @@ describe('安全测试 8 — CSP 与 Alpine CSP 构建', () => {
     }
   });
 
+  test('www 首页应使用标准 Alpine 构建（兼容 alpineLink()）', () => {
+    const content = fs.readFileSync(path.join(__dirname, '../../www/index.html'), 'utf8');
+    expect(content).toContain('/npm/alpinejs@3.14.8/dist/cdn.min.js');
+    expect(content).not.toContain('/npm/@alpinejs/csp@');
+  });
+
   test('www 首页应包含 Alpine 加载兜底与本地 fallback 文件', () => {
     const indexPath = path.join(__dirname, '../../www/index.html');
-    const vendorPath = path.join(__dirname, '../../www/js/vendor/alpine.csp.min.js');
+    const vendorPath = path.join(__dirname, '../../www/js/vendor/alpine.min.js');
     const content = fs.readFileSync(indexPath, 'utf8');
     expect(content).toMatch(/typeof\s+tailwind\s*!==\s*['"]undefined['"]/);
     expect(content).toMatch(/id\s*=\s*['"]sl-alpine-fallback['"]/);
-    expect(content).toMatch(/src\s*=\s*['"]\/js\/vendor\/alpine\.csp\.min\.js['"]/);
+    expect(content).toMatch(/src\s*=\s*['"]\/js\/vendor\/alpine\.min\.js['"]/);
     expect(content).toMatch(/document\.addEventListener\(\s*['"]alpine:initialized['"]/);
     expect(content).toMatch(/body\s*&&\s*body\.hasAttribute\(\s*['"]x-cloak['"]\s*\)/);
     expect(fs.existsSync(vendorPath)).toBe(true);

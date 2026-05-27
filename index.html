@@ -358,7 +358,7 @@
                 aria-label="登录"
                 @click="showLogin=true"
                 class="h-10 px-3 rounded-2xl bg-primary text-white text-sm font-semibold hover:bg-primary-light transition-colors">
-          登录
+          <span x-text="t('login')">登录</span>
         </button>
         <!-- 通知铃铛 -->
         <button data-testid="notification-bell" @click="openNotificationPanel()"
@@ -569,7 +569,7 @@
             </button>
             <button @click="currentPage='explore';activeCategory='commercial'" class="flex flex-col items-center gap-1.5 bg-slate-800 hover:bg-slate-700 rounded-2xl p-3 transition-colors">
               <span class="text-2xl">🏔️</span>
-              <span class="text-xs text-slate-300 font-medium text-center leading-tight">商业攀登</span>
+              <span class="text-xs text-slate-300 font-medium text-center leading-tight" x-text="t('explore_category_commercial')">商业攀登</span>
             </button>
           </div>
         </div>
@@ -644,7 +644,7 @@
       <!-- Eight Thousanders -->
       <div class="mb-5">
         <div class="px-4 flex items-center justify-between mb-3">
-          <h3 class="font-display font-bold text-white">八千米巨峰</h3>
+          <h3 class="font-display font-bold text-white" x-text="t('explore_category_8000ers')">八千米巨峰</h3>
           <template x-if="currentPage === 'home'"><button @click="currentPage='explore';activeCategory='8000ers'" class="text-xs text-primary-light">查看全部</button></template>
         </div>
         <div class="flex gap-3 overflow-x-auto scroll-hide px-4 pb-2">
@@ -740,7 +740,7 @@
               <span class="material-symbols-outlined text-slate-400 text-lg">wb_sunny</span>
               <input x-model="weatherSearch" type="text"
                      data-testid="weather-search"
-                     placeholder="搜索全球任意地点天气... / Search weather anywhere..."
+                     :placeholder="t('weather_search_placeholder')"
                      class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500"
                      @keydown.enter="showOsmSuggestions=false;searchWeather()"
                      @input.debounce.500ms="fetchOsmSuggestions(weatherSearch)">
@@ -1029,7 +1029,7 @@
 
           <!-- 向导列表 -->
           <div x-show="commercialView === 'all' || commercialView === 'guide'" class="px-4 space-y-3 mb-6">
-            <h3 class="text-slate-300 text-sm font-semibold mb-2">🧗 专业向导</h3>
+            <h3 class="text-slate-300 text-sm font-semibold mb-2">🧗 <span x-text="t('explore_professional_guides')">专业向导</span></h3>
             <template x-for="guide in getCommercialGuideProducts()" :key="guide.id">
               <div class="bg-slate-800 rounded-xl p-4 flex items-start gap-3">
                 <img :src="guide.avatar || 'https://i.pravatar.cc/150?u=' + guide.id" class="w-12 h-12 rounded-full object-cover flex-shrink-0" />
@@ -1104,7 +1104,7 @@
 
         <!-- Guides Section -->
         <div x-show="activeCategory === 'commercial'" class="mt-4 mb-2">
-          <h3 class="font-display font-bold text-white mb-3">专业向导</h3>
+          <h3 class="font-display font-bold text-white mb-3" x-text="t('explore_professional_guides')">专业向导</h3>
           <div class="space-y-3">
             <template x-for="g in (guides.length ? guides : nearbyGuides)" :key="g.id">
               <div @click="openGuideProfile(g.id, g)" class="glass rounded-2xl p-4 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition-colors">
@@ -1820,7 +1820,7 @@
               <span class="material-symbols-outlined text-amber-400 text-lg">receipt_long</span>
             </div>
             <div class="flex-1 text-left">
-              <p class="text-white text-sm font-medium">我的订单</p>
+              <p class="text-white text-sm font-medium" x-text="t('me_orders')">我的订单</p>
               <p class="text-slate-500 text-xs">查看支付与订单状态</p>
             </div>
             <span class="material-symbols-outlined text-slate-600">chevron_right</span>
@@ -1830,7 +1830,7 @@
               <span class="material-symbols-outlined text-primary-light text-lg">event_available</span>
             </div>
             <div class="flex-1 text-left">
-              <p class="text-white text-sm font-medium">我的预约</p>
+              <p class="text-white text-sm font-medium" x-text="t('me_bookings')">我的预约</p>
               <p class="text-slate-500 text-xs">查看预约状态</p>
             </div>
             <span class="material-symbols-outlined text-slate-600">chevron_right</span>
@@ -1845,7 +1845,7 @@
             </div>
             <span class="material-symbols-outlined text-slate-600">chevron_right</span>
           </button>
-          <template x-for="item in [{icon:'route',name:'我的轨迹',sub:'查看我的轨迹记录',action:'track'},{icon:'groups',name:'我的队伍',sub:'1支队伍',action:'teams'},{icon:'emoji_events',name:'我的成就',sub:'12项成就',action:'achievements'},{icon:'workspace_premium',name:'会员中心',sub:'专业会员',action:'membership'}]" :key="item.name">
+          <template x-for="item in [{icon:'route',name:t('me_tracks'),sub:'查看我的轨迹记录',action:'track'},{icon:'groups',name:'我的队伍',sub:'1支队伍',action:'teams'},{icon:'emoji_events',name:'我的成就',sub:'12项成就',action:'achievements'},{icon:'workspace_premium',name:'会员中心',sub:'专业会员',action:'membership'}]" :key="item.name">
             <button @click="handleMenuAction(item.action)" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
               <div class="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center">
                 <span class="material-symbols-outlined text-primary-light text-lg" x-text="item.icon"></span>
@@ -1861,7 +1861,7 @@
 
         <!-- Settings Menu -->
         <div class="glass rounded-2xl overflow-hidden mb-4">
-          <template x-for="item in [{icon:'straighten',name:'单位设置',type:'units'},{icon:'notifications',name:'消息通知',type:'notifications'},{icon:'lock',name:'隐私设置',type:'privacy'},{icon:'help',name:'帮助与反馈',type:'help'}]" :key="item.name">
+          <template x-for="item in [{icon:'straighten',name:'单位设置',type:'units'},{icon:'notifications',name:'消息通知',type:'notifications'},{icon:'lock',name:'隐私设置',type:'privacy'},{icon:'translate',name:t('language'),type:'language'},{icon:'help',name:'帮助与反馈',type:'help'}]" :key="item.name">
             <button @click="openSettings(item.type)" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0">
               <div class="w-9 h-9 bg-slate-700/50 rounded-xl flex items-center justify-center">
                 <span class="material-symbols-outlined text-slate-400 text-lg" x-text="item.icon"></span>
@@ -2178,7 +2178,7 @@
      class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-5" style="max-width:430px;margin:0 auto;">
   <div class="bg-slate-800 rounded-3xl p-6 w-full">
     <div class="flex items-center justify-between mb-5">
-      <h3 class="font-display font-bold text-xl text-white">创建账号</h3>
+      <h3 class="font-display font-bold text-xl text-white" x-text="t('register')">创建账号</h3>
       <button @click="showRegister=false" class="p-1.5 rounded-full hover:bg-white/10 transition-colors">
         <span class="material-symbols-outlined text-slate-400">close</span>
       </button>
@@ -2206,7 +2206,7 @@
           <span class="text-slate-300 text-xs">我已阅读并同意 <a href="/legal/terms" target="_blank" class="text-primary-light underline">用户协议</a></span>
         </label>
       </div>
-      <button @click="doRegister()" :disabled="!agreedPrivacy || !agreedTerms" :class="(!agreedPrivacy || !agreedTerms) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-light text-white'" class="w-full font-bold py-3.5 rounded-xl transition-colors" data-testid="register-submit">注册</button>
+      <button @click="doRegister()" :disabled="!agreedPrivacy || !agreedTerms" :class="(!agreedPrivacy || !agreedTerms) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-light text-white'" class="w-full font-bold py-3.5 rounded-xl transition-colors" data-testid="register-submit" x-text="t('register')">注册</button>
       <p class="text-center text-slate-400 text-sm">已有账号？<button @click="showRegister=false;showLogin=true" class="text-primary-light font-semibold hover:underline">立即登录</button></p>
     </div>
   </div>
@@ -2447,7 +2447,7 @@
   </div>
 </div>
 
-<!-- Language Picker Modal -->
+<!-- Language Picker Sheet -->
 <div x-show="showLangPicker"
      x-transition:enter="transition ease-out duration-200"
      x-transition:enter-start="opacity-0"
@@ -2459,25 +2459,19 @@
   <div class="absolute inset-0 bg-black/70" @click="showLangPicker=false"></div>
   <div class="relative bottom-sheet bg-slate-900 max-h-[80vh] overflow-y-auto">
     <div class="p-5">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="font-display font-bold text-xl text-white" x-text="t('language')"></h3>
-        <button @click="showLangPicker=false" class="p-1.5 rounded-full hover:bg-white/10">
-          <span class="material-symbols-outlined text-slate-400">close</span>
-        </button>
-      </div>
+      <h3 class="font-display font-bold text-xl text-white text-center mb-5" x-text="t('language_picker_title')">语言 / Language / भाषा</h3>
       <div class="space-y-2">
-        <template x-for="lang in availableLangs" :key="lang.code">
-          <button @click="setLocale(lang.code === 'en' ? 'en' : 'zh-CN', true); showLangPicker=false"
-                  :class="(locale === (lang.code === 'en' ? 'en' : 'zh-CN')) ? 'ring-2 ring-primary bg-primary/10' : 'hover:bg-white/5'"
-                  class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3 transition-all">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl" x-text="lang.flag"></span>
-              <div class="text-left">
-                <p class="text-white font-semibold" x-text="lang.native"></p>
-                <p class="text-slate-400 text-xs" x-text="lang.code"></p>
-              </div>
+        <template x-for="opt in [{code:'zh-CN',label:'中文',sub:'简体中文'},{code:'en',label:'English',sub:'English'},{code:'ne',label:'नेपाली',sub:'Nepali'}]" :key="opt.code">
+          <button @click="setLang(opt.code); showLangPicker=false"
+                  class="w-full flex items-center justify-between px-4 py-3 rounded-xl transition"
+                  :class="lang === opt.code ? 'bg-primary/20 border border-primary' : 'glass hover:bg-white/10'">
+            <div class="text-left">
+              <div class="text-white font-medium" x-text="opt.label"></div>
+              <div class="text-white/50 text-xs" x-text="opt.sub"></div>
             </div>
-            <span x-show="locale === (lang.code === 'en' ? 'en' : 'zh-CN')" class="material-symbols-outlined text-primary-light">check_circle</span>
+            <svg x-show="lang === opt.code" class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+            </svg>
           </button>
         </template>
       </div>
@@ -2823,8 +2817,8 @@
             </div>
           </div>
           <div class="flex gap-3 mt-5">
-            <button @click="showBooking=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">取消</button>
-            <button x-show="paymentsEnabled" @click="submitBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+            <button @click="showBooking=false" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors" x-text="t('cancel')">取消</button>
+            <button x-show="paymentsEnabled" @click="submitBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors" x-text="t('booking_submit')">确认预约</button>
             <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
         </div>
@@ -3029,21 +3023,26 @@
       <div class="relative bottom-sheet bg-slate-900 max-h-[85vh] overflow-y-auto">
         <div class="p-5">
           <div class="flex items-center justify-between mb-5">
-            <h3 class="font-display font-bold text-xl text-white">设置</h3>
+            <h3 class="font-display font-bold text-xl text-white" x-text="t('settings')">设置</h3>
             <button @click="showSettings=false" class="p-1.5 rounded-full hover:bg-white/10">
               <span class="material-symbols-outlined text-slate-400">close</span>
             </button>
           </div>
           <div x-show="settingsType==='language'" class="space-y-3">
-            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">选择语言</h4>
-            <button @click="setLocale('zh-CN', true)" :class="locale==='zh-CN' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
-              <div class="flex items-center gap-3"><span class="text-2xl">🇨🇳</span><div class="text-left"><p class="text-white font-semibold">中文</p><p class="text-slate-400 text-xs">简体中文</p></div></div>
-              <span x-show="locale==='zh-CN'" class="material-symbols-outlined text-primary-light">check_circle</span>
-            </button>
-            <button @click="setLocale('en', true)" :class="locale==='en' ? 'ring-2 ring-primary' : ''" class="w-full flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
-              <div class="flex items-center gap-3"><span class="text-2xl">🇬🇧</span><div class="text-left"><p class="text-white font-semibold">English</p><p class="text-slate-400 text-xs">English (US)</p></div></div>
-              <span x-show="locale==='en'" class="material-symbols-outlined text-primary-light">check_circle</span>
-            </button>
+            <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider" x-text="t('language')">语言</h4>
+            <div class="flex items-center justify-between px-4 py-3 border border-white/10 rounded-xl"
+                 @click="showLangPicker = true" role="button">
+              <div class="flex items-center gap-3">
+                <span class="text-lg">🌐</span>
+                <span class="text-white text-sm" x-text="t('language')">语言</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-white/60 text-sm" x-text="getCurrentLangLabel()"></span>
+                <svg class="w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </div>
+            </div>
           </div>
           <div x-show="settingsType==='units'" class="space-y-4">
             <h4 class="text-slate-400 text-sm font-semibold uppercase tracking-wider">单位设置</h4>
@@ -3196,7 +3195,7 @@
             <span class="material-symbols-outlined text-slate-600 text-5xl">settings</span>
             <p class="text-slate-400 mt-3">设置即将推出</p>
           </div>
-          <button x-show="!['help','notifications'].includes(settingsType)" @click="saveSettings()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5">保存</button>
+          <button x-show="!['help','notifications','language'].includes(settingsType)" @click="saveSettings()" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors mt-5" x-text="t('save')">保存</button>
         </div>
       </div>
     </div>
@@ -5625,7 +5624,7 @@
           <p class="text-slate-500 text-xs text-center">💡 款项托管于平台，服务完成后结算给运营商</p>
           <div class="flex gap-3">
             <button @click="commercialStep=2" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors">← 返回</button>
-            <button x-show="paymentsEnabled" @click="submitCommercialBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors">确认预约</button>
+            <button x-show="paymentsEnabled" @click="submitCommercialBooking()" class="flex-1 bg-primary hover:bg-primary-light text-white font-bold py-3 rounded-xl transition-colors" x-text="t('booking_submit')">确认预约</button>
             <span x-show="!paymentsEnabled" class="flex-1 text-center text-gray-400 text-sm font-medium py-3">即将上线 (Coming Soon)</span>
           </div>
         </div>
