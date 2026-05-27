@@ -136,6 +136,7 @@ function createApp() {
   app.use('/api/payment',      loadRoute('../../backend/routes/payment'));
   app.use('/api/admin/stats',  loadRoute('../../backend/routes/admin-stats'));
   app.use('/api/currency',     loadRoute('../../backend/routes/currency'));
+  app.use('/api/metrics',      loadRoute('../../backend/routes/metrics'));
 
   // 健康检查
   app.get(['/api/health', '/health'], (req, res) => {

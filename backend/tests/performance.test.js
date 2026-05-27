@@ -136,4 +136,23 @@ describe('Phase 5.5 — 性能基准测试', () => {
       expect(elapsed).toBeLessThan(200);
     }
   );
+
+  test('Web Vitals 上报接口 POST /api/metrics/web-vitals — 接收指标日志', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const res = await request(app)
+      .post('/api/metrics/web-vitals')
+      .send({
+        metrics: {
+          LCP: { value: 1800, rating: 'good', ts: Date.now() },
+          CLS: { value: 0.04, rating: 'good', ts: Date.now() },
+        },
+        url: '/summitlink',
+        ts: Date.now(),
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(logSpy).toHaveBeenCalledWith('[metrics]', expect.any(String));
+    logSpy.mockRestore();
+  });
 });
