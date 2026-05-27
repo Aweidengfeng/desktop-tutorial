@@ -413,7 +413,14 @@ function alpineLink() {
     smsCountdown: 0,
     smsTimer: null,
     loginForm: { account: '', phone: '', password: '' },
-    registerForm: { name: '', phone: '', password: '' },
+    registerForm: { name: '', phone: '', password: '', inviteCode: '' },
+    showInviteCodeInput: false,
+    myInviteCode: '',
+    inviteUrl: '',
+    inviteStats: { totalInvited: 0, totalPoints: 0 },
+    inviteRecords: [],
+    inviteRecordsLoading: false,
+    showInviteRecords: false,
     agreedPrivacy: false,
     agreedTerms: false,
     POLICY_VERSION: '2026-04-20',
@@ -3712,7 +3719,12 @@ function alpineLink() {
       if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
-        const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION }) });
+        const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
+        const payload = { ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION };
+        payload.invite_code = inviteCode;
+        delete payload.inviteCode;
+        if (!inviteCode) delete payload.invite_code;
+        const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '注册失败', 'error'); return; }
         this.authToken = data.token;
@@ -3720,9 +3732,11 @@ function alpineLink() {
         localStorage.setItem('summitlink_token', data.token);
         this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
         this.showRegister = false;
-        this.registerForm = { name: '', phone: '', password: '' };
+        this.registerForm = { name: '', phone: '', password: '', inviteCode: '' };
+        this.showInviteCodeInput = false;
         this.agreedPrivacy = false;
         this.agreedTerms = false;
+        this.loadInviteInfo();
         this.showToast('注册成功，欢迎加入 ' + data.user.name + '！');
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
@@ -3749,7 +3763,45 @@ function alpineLink() {
       this.notifUnreadList = [];
       this.notifUnreadCount = 0;
       this.notificationCount = 0;
+      this.myInviteCode = '';
+      this.inviteUrl = '';
+      this.inviteStats = { totalInvited: 0, totalPoints: 0 };
+      this.inviteRecords = [];
+      this.showInviteRecords = false;
       this.showToast('已退出登录');
+    },
+    async loadInviteInfo() {
+      if (!this.authToken) return;
+      try {
+        const d = await fetch('/api/invite/my-code', { headers: this.getAuthHeaders() }).then(r => r.json());
+        if (!d || d.error) return;
+        this.myInviteCode = d.code || '';
+        this.inviteUrl = d.inviteUrl || '';
+        this.inviteStats = { totalInvited: Number(d.totalInvited || 0), totalPoints: Number(d.totalPoints || 0) };
+      } catch (_) {}
+    },
+    async loadInviteRecords() {
+      if (!this.authToken) return;
+      this.inviteRecordsLoading = true;
+      try {
+        const d = await fetch('/api/invite/records', { headers: this.getAuthHeaders() }).then(r => r.json());
+        this.inviteRecords = Array.isArray(d.records) ? d.records : [];
+      } catch (_) {
+        this.inviteRecords = [];
+      } finally {
+        this.inviteRecordsLoading = false;
+      }
+    },
+    async copyInviteCode() {
+      if (!this.myInviteCode) return;
+      await navigator.clipboard.writeText(this.myInviteCode);
+      this.showToast('邀请码已复制', 'success');
+    },
+    async shareInviteLink() {
+      if (!this.myInviteCode) return;
+      const text = `我在 SummitLink 发现了绝佳的攀登资源！用我的邀请码 ${this.myInviteCode} 注册，你我各得50积分 🏔\n${this.inviteUrl}`;
+      if (navigator.share) await navigator.share({ title: 'SummitLink 邀请', text });
+      else { await navigator.clipboard.writeText(text); this.showToast('邀请链接已复制'); }
     },
     // SMS login
     async sendSmsCode() {
@@ -3933,6 +3985,7 @@ function alpineLink() {
       this.loadGuideStatus();
       this.loadClubStatus();
       this.loadUserStats();
+      this.loadInviteInfo();
       this.showToast('登录成功，欢迎 ' + data.user.name + '！');
     },
     requireAuth() {
@@ -3958,6 +4011,7 @@ function alpineLink() {
         this.loadGuideStatus();
         this.loadClubStatus();
         this.loadUserStats();
+        this.loadInviteInfo();
         this.loadPrivacySettings();
         this.loadUnitSettings();
       } catch(e) {}
@@ -5810,9 +5864,9 @@ function alpineLink() {
       this.loadConversations();
       // Load notification count after token verify
       this.$watch('authToken', (val) => {
-        if (val) { this.loadUnreadCount(); this.loadTracks(); this.loadConversations(); this.initChatSocket(); }
+        if (val) { this.loadUnreadCount(); this.loadTracks(); this.loadConversations(); this.initChatSocket(); this.loadInviteInfo(); }
       });
-      if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
+      if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); this.loadInviteInfo(); }
       // Phase 2.3: 页面加载时同步待上传轨迹；网络恢复时也自动触发
       idbGetPendingTracks().then(t => { this.pendingUploadCount = t.length; }).catch(() => {});
       this.syncPendingTracks();
@@ -5859,6 +5913,12 @@ function alpineLink() {
       this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });
       // Handle shared track URL: /summitlink?track=ID
       const urlParams = new URLSearchParams(window.location.search);
+      const inviteCode = (urlParams.get('invite') || '').trim().toUpperCase();
+      if (inviteCode) {
+        this.registerForm.inviteCode = inviteCode;
+        this.showInviteCodeInput = true;
+        this.showRegister = true;
+      }
       const sharedTrackId = urlParams.get('track');
       if (sharedTrackId) {
         this.$nextTick(async () => {

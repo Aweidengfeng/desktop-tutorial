@@ -86,6 +86,7 @@ function createApp() {
   app.use('/api/comments',      loadRoute('../../backend/routes/comments'));
   app.use('/api/clubs',         loadRoute('../../backend/routes/clubs'));
   app.use('/api/notifications', loadRoute('../../backend/routes/notifications'));
+  app.use('/api/invite',        loadRoute('../../backend/routes/invite'));
   app.use('/api/admin',         loadRoute('../../backend/routes/admin-messages'));
   app.use('/api/admin',         loadRoute('../../backend/routes/admin'));
   app.use('/api/expeditions',   loadRoute('../../backend/routes/expeditions'));

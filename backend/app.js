@@ -388,6 +388,7 @@ app.use('/api/badges', require('./routes/badges'));
 app.use('/api/group-chats', require('./routes/groupChats'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/invite', require('./routes/invite'));
 app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/location', require('./routes/location'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
