@@ -8,6 +8,7 @@ const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimits');
 const { encryptPII, decryptPII } = require('../utils/crypto');
+const { INVITE_REWARD_POINTS, normalizeInviteCode, ensureUserInviteCode } = require('../utils/invite');
 
 const POLICY_VERSION = '2026-04-20';
 
@@ -226,6 +227,63 @@ function makeRefreshToken(id) {
   return jwt.sign({ id, type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' });
 }
 
+async function findInviterByCode(inviteCode) {
+  const normalizedCode = normalizeInviteCode(inviteCode);
+  if (!normalizedCode) return null;
+
+  const inviterRows = await prisma.$queryRaw`SELECT id FROM users WHERE invite_code = ${normalizedCode} LIMIT 1`;
+  if (Array.isArray(inviterRows) && inviterRows.length) {
+    return { type: 'user', inviterId: Number(inviterRows[0].id), code: normalizedCode };
+  }
+
+  try {
+    const platformRows = await prisma.$queryRaw`SELECT code FROM invite_codes WHERE code = ${normalizedCode} LIMIT 1`;
+    if (Array.isArray(platformRows) && platformRows.length) {
+      try {
+        await prisma.$executeRaw`UPDATE invite_codes SET used_count = COALESCE(used_count, 0) + 1 WHERE code = ${normalizedCode}`;
+      } catch (_) {}
+      return { type: 'platform', code: normalizedCode };
+    }
+  } catch (e) {
+    const msg = String(e?.message || '').toLowerCase();
+    if (!msg.includes('no such table') && !msg.includes('does not exist')) throw e;
+  }
+
+  return null;
+}
+
+async function processInviteOnRegister(inviteCode, newUserId) {
+  const inviter = await findInviterByCode(inviteCode);
+  if (!inviter || inviter.type !== 'user') return;
+  if (!inviter.inviterId || inviter.inviterId === Number(newUserId)) return;
+
+  await prisma.$executeRaw`UPDATE users SET invited_by = ${inviter.inviterId} WHERE id = ${newUserId}`;
+  await prisma.$executeRaw`
+    INSERT INTO invite_records (inviter_id, invitee_id, invite_code, reward_value)
+    VALUES (${inviter.inviterId}, ${newUserId}, ${inviter.code}, ${INVITE_REWARD_POINTS})
+  `;
+
+  setImmediate(async () => {
+    try {
+      await prisma.$executeRaw`
+        UPDATE users SET invite_reward_points = COALESCE(invite_reward_points, 0) + ${INVITE_REWARD_POINTS}
+        WHERE id = ${inviter.inviterId}
+      `;
+      await prisma.$executeRaw`
+        UPDATE invite_records
+        SET rewarded_at = CURRENT_TIMESTAMP
+        WHERE inviter_id = ${inviter.inviterId} AND invitee_id = ${newUserId}
+      `;
+      await prisma.$executeRaw`
+        INSERT INTO notifications (user_id, type, title, body)
+        VALUES (${inviter.inviterId}, 'invite_reward', '邀请奖励', ${`您邀请的好友已成功注册，获得${INVITE_REWARD_POINTS}积分！`})
+      `;
+    } catch (e) {
+      console.warn('[invite] async reward failed:', e.message);
+    }
+  });
+}
+
 async function safeUser(user) {
   let isGuide = false;
   let isClubAdmin = false;
@@ -315,7 +373,7 @@ async function safeUser(user) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { name, phone, email, password, policyVersion, agreedPrivacy, agreedTerms } = req.body || {};
+    const { name, phone, email, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
     if (!name || !password) {
       return res.status(400).json({ error: '请填写姓名和密码' });
     }
@@ -371,11 +429,14 @@ router.post('/register', registerLimiter, async (req, res) => {
           // username 冲突时自动追加随机后缀重试一次
           const retryUsername = username + '_' + crypto.randomBytes(3).toString('hex');
           user = await prisma.user.create({ data: { ...userData, username: retryUsername } });
-          return res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
         }
-        return res.status(400).json({ error: '注册失败，请稍后重试' });
+        if (!user) return res.status(400).json({ error: '注册失败，请稍后重试' });
       }
       throw e;
+    }
+    try { await ensureUserInviteCode(prisma, user.id); } catch (e) { console.warn('[invite] generate code failed:', e.message); }
+    if (invite_code) {
+      try { await processInviteOnRegister(invite_code, user.id); } catch (e) { console.warn('[invite] process failed:', e.message); }
     }
     res.json({ token: makeToken(user.id), refreshToken: makeRefreshToken(user.id), user: await safeUser(user) });
   } catch (e) {

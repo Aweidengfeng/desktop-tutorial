@@ -77,6 +77,98 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
   });
 });
 
+describe('1.1 邀请码裂变链路', () => {
+  let app;
+  let db;
+  let inviter;
+
+  const waitUntil = async (predicate, timeoutMs = 2500) => {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (predicate()) return true;
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    return false;
+  };
+
+  beforeAll(() => {
+    clearDbCache();
+    app = createApp();
+    db = require('../backend/db/database');
+    inviter = createTestUser(db, { phone: '13900009991', name: '邀请人A' });
+    db.prepare('UPDATE users SET invite_code = ?, invite_reward_points = 0 WHERE id = ?').run('INV001', inviter.id);
+  });
+
+  test('注册支持 invite_code，并记录邀请关系+奖励', async () => {
+    const registerRes = await request(app).post('/api/auth/register').send({
+      name: '被邀请用户',
+      phone: '13900009992',
+      password: 'pass123',
+      invite_code: 'INV001',
+      policyVersion: '2026-04-20',
+      agreedPrivacy: true,
+      agreedTerms: true,
+    });
+    expect(registerRes.status).toBe(200);
+    expect(registerRes.body.token).toBeTruthy();
+
+    const inviteeId = Number(registerRes.body.user?.id);
+    expect(inviteeId).toBeGreaterThan(0);
+    const invitee = db.prepare('SELECT invited_by, invite_code FROM users WHERE id = ?').get(inviteeId);
+    expect(Number(invitee.invited_by)).toBe(inviter.id);
+    expect(String(invitee.invite_code || '')).toHaveLength(6);
+
+    const hasAsyncReward = await waitUntil(() => {
+      const row = db.prepare('SELECT invite_reward_points FROM users WHERE id = ?').get(inviter.id);
+      return Number(row?.invite_reward_points || 0) >= 50;
+    });
+    expect(hasAsyncReward).toBe(true);
+
+    const inviteRecord = db.prepare('SELECT * FROM invite_records WHERE inviter_id = ? AND invitee_id = ?').get(inviter.id, inviteeId);
+    expect(inviteRecord).toBeTruthy();
+    expect(Number(inviteRecord.reward_value)).toBe(50);
+
+    const hasRewardNotif = await waitUntil(() => {
+      const rewardNotif = db.prepare('SELECT * FROM notifications WHERE user_id = ? AND type = ? ORDER BY id DESC LIMIT 1').get(inviter.id, 'invite_reward');
+      return !!rewardNotif;
+    });
+    expect(hasRewardNotif).toBe(true);
+  });
+
+  test('提供 my-code / stats / records 三个用户接口', async () => {
+    const inviteeLogin = await request(app).post('/api/auth/login').send({
+      phone: '13900009992',
+      password: 'pass123',
+    });
+    expect(inviteeLogin.status).toBe(200);
+    const inviteeToken = inviteeLogin.body.token;
+
+    const myCodeRes = await request(app)
+      .get('/api/invite/my-code')
+      .set(authHeader(inviteeToken));
+    expect(myCodeRes.status).toBe(200);
+    expect(myCodeRes.body.code).toMatch(/^[A-Z2-9]{6}$/);
+    expect(myCodeRes.body.inviteUrl).toContain(`invite=${myCodeRes.body.code}`);
+    expect(typeof myCodeRes.body.totalInvited).toBe('number');
+    expect(typeof myCodeRes.body.totalPoints).toBe('number');
+
+    const statsRes = await request(app)
+      .get('/api/invite/stats')
+      .set(authHeader(inviter.token));
+    expect(statsRes.status).toBe(200);
+    expect(statsRes.body.totalInvited).toBeGreaterThanOrEqual(1);
+    expect(statsRes.body.totalPoints).toBeGreaterThanOrEqual(50);
+
+    const recordsRes = await request(app)
+      .get('/api/invite/records')
+      .set(authHeader(inviter.token));
+    expect(recordsRes.status).toBe(200);
+    expect(Array.isArray(recordsRes.body.records)).toBe(true);
+    expect(recordsRes.body.records.length).toBeGreaterThanOrEqual(1);
+    expect(recordsRes.body.records[0].inviteeName).toContain('*');
+  });
+});
+
 // ── 2. AI 助手 gating ─────────────────────────────────────────────────────────
 describe('2. AI 助手 gating /api/assistant', () => {
   test('ENABLE_ASSISTANT 未设置 → 路由不存在，返回 404', async () => {

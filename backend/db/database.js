@@ -263,6 +263,16 @@ if (!existingUserCols.includes('is_admin')) {
 if (!existingUserCols.includes('is_banned')) {
   db.exec('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0');
 }
+if (!existingUserCols.includes('invite_code')) {
+  db.exec('ALTER TABLE users ADD COLUMN invite_code TEXT');
+}
+if (!existingUserCols.includes('invited_by')) {
+  db.exec('ALTER TABLE users ADD COLUMN invited_by INTEGER');
+}
+if (!existingUserCols.includes('invite_reward_points')) {
+  db.exec('ALTER TABLE users ADD COLUMN invite_reward_points INTEGER DEFAULT 0');
+}
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_invite_code_unique ON users(invite_code)');
 
 const existingPostCols = db.pragma('table_info(posts)').map(c => c.name);
 if (!existingPostCols.includes('status')) {
@@ -1553,6 +1563,17 @@ CREATE TABLE IF NOT EXISTS feedback (
   type TEXT DEFAULT 'general',
   content TEXT NOT NULL,
   contact TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS invite_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  inviter_id INTEGER NOT NULL,
+  invitee_id INTEGER NOT NULL,
+  invite_code TEXT NOT NULL,
+  reward_type TEXT DEFAULT 'points',
+  reward_value INTEGER DEFAULT 50,
+  rewarded_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 `);
