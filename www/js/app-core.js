@@ -906,8 +906,8 @@ function alpineLink() {
     async initPerfMonitor() {
       if (this._perfMonitor || typeof PerformanceObserver === 'undefined') return;
       try {
-        const { initPerfMonitor: startPerfMonitor } = await import('./modules/perf.js');
-        this._perfMonitor = startPerfMonitor({
+        const { initPerfMonitor } = await import('./modules/perf.js');
+        this._perfMonitor = initPerfMonitor({
           reportToApi: false,
           debug: location.hostname === 'localhost',
         });

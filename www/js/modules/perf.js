@@ -74,7 +74,9 @@ export function initPerfMonitor(options = {}) {
       try {
         new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
-            const inp = entry.duration || (entry.processingEnd || entry.processingStart || entry.startTime) - entry.startTime;
+            const interactionStart = entry.startTime || 0;
+            const interactionEnd = entry.processingEnd || entry.processingStart || interactionStart;
+            const inp = entry.duration || (interactionEnd - interactionStart);
             report('INP', inp, inp < INP_THRESHOLD ? 'good' : inp < 500 ? 'needs-improvement' : 'poor');
           }
         }).observe({ type: 'event', buffered: true, durationThreshold: 40 });
