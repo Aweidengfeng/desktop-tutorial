@@ -1,6 +1,6 @@
-const STATIC_CACHE = 'summitlink-static-v3';
-const TILE_CACHE = 'summitlink-tiles-v3';
-const API_CACHE = 'summitlink-api-v3';
+const STATIC_CACHE = 'summitlink-static-v4';
+const TILE_CACHE = 'summitlink-tiles-v4';
+const API_CACHE = 'summitlink-api-v4';
 const TILE_MAX = 200;
 const TILE_TTL = 7 * 24 * 60 * 60 * 1000;
 
