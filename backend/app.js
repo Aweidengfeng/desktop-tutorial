@@ -290,6 +290,7 @@ app.use(express.static(rootPath));
 // 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
 // 因此显式映射 `/js` → `<rootPath>/www/js`，避免 404 导致整个 SPA 加载失败。
 app.use('/js', express.static(path.join(rootPath, 'www', 'js')));
+app.use('/i18n', express.static(path.join(rootPath, 'www', 'i18n')));
 
 // 上传文件静态服务（支持 UPLOADS_DIR 环境变量覆盖路径）
 const uploadsPath = process.env.UPLOADS_DIR
