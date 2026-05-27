@@ -219,6 +219,12 @@ const renderMainPage = (req, res) => {
   console.log('📄 文件存在:', fs.existsSync(htmlFile));
   const amapKey = process.env.AMAP_KEY || '';
   const amapSecurityCode = process.env.AMAP_SECURITY_CODE || '';
+  const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+  const escapeHtmlAttr = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
   fs.readFile(htmlFile, 'utf8', (err, html) => {
     if (err) {
       console.error('❌ 读取HTML文件失败:', err);
@@ -236,10 +242,15 @@ const renderMainPage = (req, res) => {
     window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)};
     window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};
     window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};
+    window.__STRIPE_PUBLISHABLE_KEY__ = ${JSON.stringify(stripePublishableKey)};
     window.__AMAP_KEY__ = ${JSON.stringify(amapKey)};
     window.__AMAP_SECURITY_CODE__ = ${JSON.stringify(amapSecurityCode)};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}${appleClientId ? `\n    window.__APPLE_CLIENT_ID__ = ${JSON.stringify(appleClientId)};` : ''}
   </script>`;
     result = result.replace('<head>', injected);
+    result = result.replace(
+      /<meta name="stripe-publishable-key" content="[^"]*">/,
+      `<meta name="stripe-publishable-key" content="${escapeHtmlAttr(stripePublishableKey)}">`
+    );
     // 在 AMap script 标签之前注入安全密钥配置（高德官方要求：必须先于 AMap JS 加载）
     if (amapSecurityCode) {
       const amapSecurityScript = `<script>window._AMapSecurityConfig = { securityJsCode: ${JSON.stringify(amapSecurityCode)} };</script>`;

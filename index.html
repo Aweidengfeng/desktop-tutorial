@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="/js/app-core.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     // Global fallback for i18n t() function until Alpine/app-core loads
     window.t = function(key) { return key; };
@@ -27,6 +28,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <meta name="theme-color" content="#2b6579">
+  <meta name="stripe-publishable-key" content="">
   <meta property="og:title" content="巅峰探索 / SummitLink">
   <meta property="og:description" content="全球高山攀登平台 - 探索、规划、攀登">
   <link rel="manifest" href="/manifest.json">
@@ -2294,6 +2296,42 @@
         确认支付
       </button>
     </div>
+  </div>
+</div>
+
+<!-- 微信支付弹窗 -->
+<div x-show="wechatPayModal.open" class="fixed inset-0 z-[180] flex items-center justify-center bg-black/70" style="max-width:430px;margin:0 auto;">
+  <div class="bg-white rounded-2xl p-6 w-80 text-center">
+    <h3 class="text-lg font-bold mb-2 text-slate-900">微信扫码支付</h3>
+    <p class="text-slate-500 text-sm mb-4">¥<span x-text="wechatPayModal.amount"></span></p>
+    <div id="wechat-qr-container" class="flex justify-center mb-4 min-h-[160px] items-center"></div>
+    <p class="text-xs text-slate-400 mb-4">剩余时间 <span x-text="wechatPayModal.countdown"></span></p>
+    <button @click="confirmWechatPay()" class="w-full bg-green-500 text-white py-2 rounded-xl">已完成支付</button>
+    <button @click="closeWechatPay()" class="w-full mt-2 text-slate-400 text-sm">取消</button>
+  </div>
+</div>
+
+<!-- Stripe 支付弹窗 -->
+<div x-show="stripeModal.open" class="fixed inset-0 z-[190] flex items-center justify-center bg-black/70" style="max-width:430px;margin:0 auto;">
+  <div class="bg-white rounded-2xl p-6 w-96 max-w-[92vw]">
+    <h3 class="text-lg font-bold mb-4 text-slate-900">信用卡支付</h3>
+    <div id="stripe-card-element" class="border rounded-lg p-3 mb-4"></div>
+    <div id="stripe-error" class="text-red-500 text-sm mb-2" x-text="stripeModal.error"></div>
+    <button @click="confirmStripePay()" :disabled="stripeModal.loading" class="w-full bg-indigo-600 text-white py-2 rounded-xl disabled:opacity-60">
+      <span x-show="!stripeModal.loading">确认支付</span>
+      <span x-show="stripeModal.loading">处理中...</span>
+    </button>
+    <button @click="closeStripePay()" class="w-full mt-2 text-slate-400 text-sm">取消</button>
+  </div>
+</div>
+
+<!-- 支付宝支付确认 -->
+<div x-show="showAlipayConfirm" class="fixed inset-0 z-[185] flex items-center justify-center bg-black/70" style="max-width:430px;margin:0 auto;">
+  <div class="bg-white rounded-2xl p-6 w-80 text-center">
+    <h3 class="text-lg font-bold mb-2 text-slate-900">支付宝支付</h3>
+    <p class="text-sm text-slate-500 mb-4">完成支付后点击下方按钮查询状态</p>
+    <button @click="confirmAlipayPaid()" class="w-full bg-blue-600 text-white py-2 rounded-xl">我已支付</button>
+    <button @click="showAlipayConfirm=false" class="w-full mt-2 text-slate-400 text-sm">稍后再说</button>
   </div>
 </div>
 

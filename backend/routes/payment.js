@@ -482,6 +482,50 @@ router.post('/mock-confirm', async (req, res) => {
   res.json({ success: true, orderNo });
 });
 
+// GET /api/payment/query?orderNo=xxx — 查询支付状态
+router.get('/query', auth, async (req, res) => {
+  try {
+    const orderNo = String(req.query.orderNo || '').trim();
+    if (!orderNo) return res.status(400).json({ error: '缺少 orderNo' });
+
+    const [expOrder] = await prisma.$queryRaw`
+      SELECT status FROM expedition_orders WHERE order_no = ${orderNo} AND user_id = ${req.user.id} LIMIT 1
+    `.catch(() => []);
+    if (expOrder) {
+      const status = String(expOrder.status || '');
+      return res.json({ paid: ['paid', 'confirmed'].includes(status), status });
+    }
+
+    const [actOrder] = await prisma.$queryRaw`
+      SELECT status FROM activity_orders WHERE order_no = ${orderNo} AND user_id = ${req.user.id} LIMIT 1
+    `.catch(() => []);
+    if (actOrder) {
+      const status = String(actOrder.status || '');
+      return res.json({ paid: status === 'paid', status });
+    }
+
+    const [guideOrder] = await prisma.$queryRaw`
+      SELECT status FROM guide_service_orders WHERE order_no = ${orderNo} AND user_id = ${req.user.id} LIMIT 1
+    `.catch(() => []);
+    if (guideOrder) {
+      const status = String(guideOrder.status || '');
+      return res.json({ paid: status === 'paid', status });
+    }
+
+    const [paymentOrder] = await prisma.$queryRaw`
+      SELECT status FROM payment_orders WHERE order_no = ${orderNo} AND user_id = ${req.user.id} LIMIT 1
+    `.catch(() => []);
+    if (paymentOrder) {
+      const status = String(paymentOrder.status || '');
+      return res.json({ paid: status === 'paid', status });
+    }
+
+    return res.status(404).json({ error: '订单不存在' });
+  } catch (e) {
+    return res.status(500).json({ error: '查询失败' });
+  }
+});
+
 // POST /api/payment/notify/wechat — 微信支付回调
 router.post('/notify/wechat', express.raw({ type: 'application/json' }), async (req, res) => {
   try {

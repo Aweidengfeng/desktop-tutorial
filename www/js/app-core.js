@@ -596,6 +596,12 @@ function alpineLink() {
     insuranceInquiry: { name: '', phone: '', peak_name: '', departure_date: '' },
     paymentAmount: 0,
     paymentMethod: 'alipay',
+    wechatPayModal: { open: false, codeUrl: '', orderNo: '', amount: 0, countdown: '3:00' },
+    stripeModal: { open: false, clientSecret: '', error: '', loading: false },
+    showAlipayConfirm: false,
+    pendingAlipayOrderNo: '',
+    _wechatPayTimer: null,
+    _stripeCard: null,
     showTrackDetail: false,
     selectedTrackDetail: null,
     featuredClubs: [],
@@ -2385,34 +2391,15 @@ function alpineLink() {
         });
         const bookData = await bookRes.json();
         if (!bookRes.ok) { this.showToast(bookData.error || '支付发起失败', 'error'); return; }
-
-        if (bookData.provider === 'wechat') {
-          // 微信支付唤起
-          if (window.wx && window.wx.chooseWXPay && bookData.payParams && !bookData.payParams.mock) {
-            window.wx.chooseWXPay({
-              ...bookData.payParams,
-              success: () => { this.showToast('支付成功 🎉'); this.loadMyOrders(); },
-              fail: (e) => this.showToast((e && e.errMsg) || '支付取消', 'error'),
-            });
-          } else if (bookData.payParams && bookData.payParams.mock) {
-            this.showToast('支付成功（mock 模式）🎉');
-            this.loadMyOrders();
-          } else {
-            this.showToast('请在微信内打开以完成支付', 'warning');
-          }
-        } else if (bookData.provider === 'stripe') {
-          // Stripe 支付
-          const stripe = await this.ensureStripeLoaded();
-          if (!stripe) { this.showToast('Stripe 支付暂不可用', 'error'); return; }
-          const { error } = await stripe.confirmCardPayment(bookData.clientSecret);
-          if (error) { this.showToast(error.message || '支付失败', 'error'); return; }
-          this.showToast('支付成功 🎉');
-          this.loadMyOrders();
-        } else {
-          // mock 模式
-          this.showToast('支付成功（测试模式）🎉');
-          this.loadMyOrders();
-        }
+        await this.handlePaymentResponse({
+          ...bookData,
+          orderNo: orderNo || bookData.orderNo,
+          payParams: {
+            ...(bookData.payParams || {}),
+            outTradeNo: (bookData.payParams && bookData.payParams.outTradeNo) || orderNo || '',
+            amount: (bookData.payParams && bookData.payParams.amount) || Math.round(Number(this.paymentAmount || 0) * 100),
+          },
+        });
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
     async cancelExpeditionOrder(orderId) {
@@ -3015,48 +3002,237 @@ function alpineLink() {
         }
       } catch(e) { this.showToast('网络错误', 'error'); }
     },
+    async queryPaymentStatus(orderNo) {
+      if (!orderNo) return false;
+      const res = await fetch(`/api/payment/query?orderNo=${encodeURIComponent(orderNo)}`, {
+        headers: this.getAuthHeaders(),
+      });
+      if (!res.ok) return false;
+      const data = await res.json().catch(() => ({}));
+      return !!data.paid;
+    },
+    async handlePaymentResponse(result = {}) {
+      if (!result || !result.provider) {
+        this.showToast('支付发起失败', 'error');
+        return;
+      }
+      if (result.provider === 'mock') {
+        const mockPayUrl = result.payParams && result.payParams.mockPayUrl;
+        if (mockPayUrl) {
+          window.location.href = mockPayUrl;
+          return;
+        }
+        this.showToast('支付成功（测试模式）🎉');
+        await this.onPaymentSuccess();
+        return;
+      }
+      if (result.provider === 'wechat') {
+        const payParams = result.payParams || {};
+        await this.showWechatPayModal({
+          ...payParams,
+          outTradeNo: payParams.outTradeNo || result.orderNo || this.pendingAlipayOrderNo || '',
+          amount: payParams.amount || this.paymentAmount * 100,
+        });
+        return;
+      }
+      if (result.provider === 'alipay') {
+        const payUrl = result.payUrl || result.payParams?.payUrl || result.payParams?.pagePayUrl;
+        if (payUrl) {
+          window.open(payUrl, '_blank', 'noopener');
+          this.showToast('支付宝支付页已在新窗口打开，完成后点击「我已支付」', 'info', 8000);
+          this.pendingAlipayOrderNo = result.orderNo || result.payParams?.outTradeNo || '';
+          this.showAlipayConfirm = true;
+          return;
+        }
+        this.showToast('支付宝支付链接无效', 'error');
+        return;
+      }
+      if (result.provider === 'stripe') {
+        let clientSecret = result.clientSecret;
+        if (!clientSecret && result.payParams?.endpoint && this._pendingOrder?.id) {
+          const rawOrderType = String(result.orderType || this._pendingOrder.order_type || 'expedition').toLowerCase();
+          const orderType = rawOrderType.includes('guide') ? 'guide_service' : (rawOrderType.includes('activity') ? 'activity' : 'expedition');
+          const orderId = Number(this._pendingOrder.id);
+          if (Number.isFinite(orderId) && orderId > 0) {
+            const intentRes = await fetch(result.payParams.endpoint, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({ orderType, orderId }),
+            });
+            if (intentRes.ok) {
+              const intentData = await intentRes.json().catch(() => ({}));
+              clientSecret = intentData.clientSecret || '';
+            }
+          }
+        }
+        if (!clientSecret) {
+          this.showToast('Stripe 支付暂不可用', 'error');
+          return;
+        }
+        await this.showStripeModal(clientSecret);
+        return;
+      }
+      this.showToast('暂不支持该支付方式', 'warning');
+    },
+    async showWechatPayModal(payParams = {}) {
+      const amountFen = Number(payParams.amount || 0);
+      this.closeWechatPay();
+      this.wechatPayModal = {
+        open: true,
+        codeUrl: payParams.codeUrl || '',
+        orderNo: payParams.outTradeNo || '',
+        amount: amountFen > 0 ? (amountFen / 100).toFixed(2) : (Number(this.paymentAmount || 0).toFixed(2)),
+        countdown: '3:00',
+      };
+      this.$nextTick(() => {
+        const container = document.getElementById('wechat-qr-container');
+        if (!container) return;
+        container.innerHTML = '';
+        if (window.QRCode && this.wechatPayModal.codeUrl) {
+          new window.QRCode(container, { text: this.wechatPayModal.codeUrl, width: 160, height: 160 });
+        } else {
+          container.innerHTML = '<p class="text-xs text-slate-400 break-all px-2">请在微信中打开支付链接：' + this.wechatPayModal.codeUrl + '</p>';
+        }
+      });
+      let remaining = 180;
+      this._wechatPayTimer = setInterval(async () => {
+        remaining -= 1;
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        this.wechatPayModal.countdown = `${m}:${String(s).padStart(2, '0')}`;
+        if (remaining <= 0) {
+          this.closeWechatPay();
+          this.showToast('支付超时，请重新发起', 'warning');
+          return;
+        }
+        if (remaining % 3 !== 0 || !this.wechatPayModal.orderNo) return;
+        try {
+          const paid = await this.queryPaymentStatus(this.wechatPayModal.orderNo);
+          if (paid) await this.onPaymentSuccess();
+        } catch (_) {}
+      }, 1000);
+    },
+    closeWechatPay() {
+      if (this._wechatPayTimer) {
+        clearInterval(this._wechatPayTimer);
+        this._wechatPayTimer = null;
+      }
+      this.wechatPayModal = { open: false, codeUrl: '', orderNo: '', amount: 0, countdown: '3:00' };
+    },
+    async confirmWechatPay() {
+      if (!this.wechatPayModal.orderNo) return;
+      const paid = await this.queryPaymentStatus(this.wechatPayModal.orderNo);
+      if (paid) {
+        await this.onPaymentSuccess();
+      } else {
+        this.showToast('暂未检测到支付完成，请稍后重试', 'info');
+      }
+    },
+    async showStripeModal(clientSecret) {
+      this.closeStripePay(false);
+      this.stripeModal = { open: true, clientSecret, error: '', loading: false };
+      try {
+        const stripe = await this.ensureStripeLoaded();
+        if (!stripe) {
+          this.stripeModal.error = 'Stripe SDK 加载失败';
+          return;
+        }
+        const elements = stripe.elements();
+        const card = elements.create('card', { style: { base: { fontSize: '16px' } } });
+        this.$nextTick(() => {
+          try { card.mount('#stripe-card-element'); } catch (_) {}
+        });
+        this._stripeCard = card;
+      } catch (e) {
+        this.stripeModal.error = (e && e.message) ? e.message : 'Stripe 初始化失败';
+      }
+    },
+    closeStripePay(resetState = true) {
+      if (this._stripeCard && typeof this._stripeCard.unmount === 'function') {
+        try { this._stripeCard.unmount(); } catch (_) {}
+      }
+      this._stripeCard = null;
+      if (resetState) this.stripeModal = { open: false, clientSecret: '', error: '', loading: false };
+    },
+    async confirmStripePay() {
+      if (!this.stripeModal.clientSecret || !this._stripeCard || !this.stripeClient) return;
+      this.stripeModal.loading = true;
+      this.stripeModal.error = '';
+      try {
+        const { paymentIntent, error } = await this.stripeClient.confirmCardPayment(
+          this.stripeModal.clientSecret,
+          { payment_method: { card: this._stripeCard } }
+        );
+        if (error) {
+          this.stripeModal.error = error.message || '支付失败';
+          this.stripeModal.loading = false;
+          return;
+        }
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+          await this.onPaymentSuccess();
+          return;
+        }
+        this.stripeModal.error = '支付未完成，请重试';
+      } catch (e) {
+        this.stripeModal.error = (e && e.message) ? e.message : '支付失败';
+      }
+      this.stripeModal.loading = false;
+    },
+    async confirmAlipayPaid() {
+      if (!this.pendingAlipayOrderNo) {
+        this.showAlipayConfirm = false;
+        return;
+      }
+      const paid = await this.queryPaymentStatus(this.pendingAlipayOrderNo);
+      if (paid) {
+        await this.onPaymentSuccess();
+      } else {
+        this.showToast('暂未检测到支付完成，请稍后重试', 'info');
+      }
+    },
+    async onPaymentSuccess() {
+      this.closeWechatPay();
+      this.closeStripePay();
+      this.showAlipayConfirm = false;
+      this.pendingAlipayOrderNo = '';
+      this.showPayment = false;
+      if (this._pendingOrder) {
+        this._pendingOrder.status = '已托管';
+        this._pendingOrder = null;
+      }
+      this.showToast('支付成功！', 'success');
+      await this.loadMyOrders();
+      await this.loadActivityOrders();
+      await this.loadGuideServiceOrders();
+      this.currentPage = 'me';
+      this.meSection = 'orders';
+    },
     async confirmPayment() {
       try {
-        // 调用 /api/payment/create-intent（后端挂载路径为 /api/payment，单数）
-        const res = await fetch('/api/payment/create-intent', {
+        const pendingOrder = this._pendingOrder || {};
+        const orderId = pendingOrder.id || pendingOrder.order_no || `tmp_${Date.now()}`;
+        const orderType = String(pendingOrder.order_type || 'expedition').toLowerCase();
+        const res = await fetch('/api/payment/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(this.getAuthHeaders() || {}) },
-          body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }),
+          body: JSON.stringify({
+            order_type: orderType,
+            order_id: orderId,
+            amount: this.paymentAmount,
+            method: this.paymentMethod,
+            description: pendingOrder.title || 'SummitLink 订单',
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           this.showToast(data.error || data.message || '支付暂不可用，请稍后再试', 'error');
           return;
         }
-        if (data.demo) {
-          this.showToast('支付暂不可用，请稍后再试', 'error');
-          return;
-        }
-        if (!data.clientSecret || !window.Stripe || !this.stripePublishableKey) {
-          this.showToast('支付暂不可用，请稍后再试', 'error');
-          return;
-        }
-        const stripe = window.Stripe(this.stripePublishableKey);
-        if (!stripe) {
-          this.showToast('支付暂不可用，请稍后再试', 'error');
-          return;
-        }
-        const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret);
-        if (error || !paymentIntent || paymentIntent.status !== 'succeeded') {
-          this.showToast((error && error.message) || '支付暂不可用，请稍后再试', 'error');
-          return;
-        }
+        this.showPayment = false;
+        await this.handlePaymentResponse({ ...data, orderType });
       } catch(e) {
-        this.showToast('支付暂不可用，请稍后再试', 'error');
-        return;
+        this.showToast((e && e.message) || '支付暂不可用，请稍后再试', 'error');
       }
-      // Update pending order status to "已托管"
-      if (this._pendingOrder) {
-        this._pendingOrder.status = '已托管';
-        this._pendingOrder = null;
-      }
-      this.showPayment = false;
-      this.showToast('支付成功！款项已托管平台，服务完成后结算 🎉');
     },
     async submitGuideApply() {
       if (!this.guideApplyForm.name || !this.guideApplyForm.cert) {
@@ -5245,6 +5421,8 @@ function alpineLink() {
     },
 
     async init() {
+      const metaStripeKey = (document.querySelector('meta[name="stripe-publishable-key"]')?.content || '').trim();
+      if (metaStripeKey) this.stripePublishableKey = metaStripeKey;
       await this.loadLocalePack(this.locale);
       this.applySystemTheme();
       if (window.matchMedia) {
@@ -5379,7 +5557,9 @@ function alpineLink() {
         if (!res.ok) return;
         const data = await res.json();
         this.paymentsEnabled = !!data.paymentsEnabled;
-        this.stripePublishableKey = (data.stripePublishableKey || '').trim();
+        this.stripePublishableKey = (data.stripePublishableKey || '').trim()
+          || (document.querySelector('meta[name="stripe-publishable-key"]')?.content || '').trim()
+          || (window.__STRIPE_PUBLISHABLE_KEY__ || '').trim();
         this.sosEmergencyPhone = String(data.emergencyPhone || '112').trim();
       } catch (e) {}
     },
