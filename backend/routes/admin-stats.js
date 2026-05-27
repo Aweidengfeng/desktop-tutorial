@@ -27,6 +27,13 @@ function buildDateRange(days) {
   return dates;
 }
 
+function getCutoffDate(days) {
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - days + 1);
+  return cutoff;
+}
+
 // GET /api/admin/stats/overview — 总览数据
 router.get('/overview', adminAuth, async (req, res) => {
   try {
@@ -189,7 +196,7 @@ router.get('/users', adminAuth, async (req, res) => {
 router.get('/revenue-trend', adminAuth, async (req, res) => {
   try {
     const days = PERIOD_DAYS[req.query.period] || 30;
-    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const cutoff = getCutoffDate(days);
     const rows = await prisma.$queryRaw`
       SELECT DATE(created_at) as date, COALESCE(SUM(total), 0) as value
       FROM expedition_orders
@@ -213,7 +220,7 @@ router.get('/revenue-trend', adminAuth, async (req, res) => {
 router.get('/user-trend', adminAuth, async (req, res) => {
   try {
     const days = PERIOD_DAYS[req.query.period] || 30;
-    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
+    const cutoff = getCutoffDate(days);
     const rows = await prisma.$queryRaw`
       SELECT DATE(created_at) as date, COUNT(*) as count
       FROM users
