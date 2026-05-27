@@ -70,14 +70,16 @@ export function initPerfMonitor(options = {}) {
       }).observe({ type: 'paint', buffered: true });
     } catch (e) {}
 
-    try {
-      new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          const inp = entry.processingStart - entry.startTime;
-          report('INP', inp, inp < INP_THRESHOLD ? 'good' : inp < 500 ? 'needs-improvement' : 'poor');
-        }
-      }).observe({ type: 'event', buffered: true, durationThreshold: 40 });
-    } catch (e) {}
+    if (PerformanceObserver.supportedEntryTypes?.includes('event')) {
+      try {
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            const inp = entry.duration || (entry.processingEnd || entry.processingStart || entry.startTime) - entry.startTime;
+            report('INP', inp, inp < INP_THRESHOLD ? 'good' : inp < 500 ? 'needs-improvement' : 'poor');
+          }
+        }).observe({ type: 'event', buffered: true, durationThreshold: 40 });
+      } catch (e) {}
+    }
   }
 
   window.addEventListener('load', () => {
