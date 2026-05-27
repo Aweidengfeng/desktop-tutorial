@@ -1884,6 +1884,9 @@ function alpineLink() {
         chat: 'chat',
         me: 'me',
       };
+      this.closeWechatPay();
+      this.closeStripePay();
+      this.showAlipayConfirm = false;
       this.currentPage = pageMap[tabId] || 'home';
     },
 
@@ -3324,6 +3327,9 @@ function alpineLink() {
         this.showToast('🗺️ 轨迹录制功能 Phase 2 即将上线，敬请期待', 'info');
         return;
       }
+      this.closeWechatPay();
+      this.closeStripePay();
+      this.showAlipayConfirm = false;
       this.currentPage = id;
     },
     viewImage(url) { window.open(url, '_blank'); },
