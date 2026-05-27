@@ -2419,7 +2419,7 @@
   <div class="absolute inset-0 bg-black/70" @click="showLangPicker=false"></div>
   <div class="relative bottom-sheet bg-slate-900 max-h-[80vh] overflow-y-auto">
     <div class="p-5">
-      <h3 class="font-display font-bold text-xl text-white text-center mb-5">语言 / Language / भाषा</h3>
+      <h3 class="font-display font-bold text-xl text-white text-center mb-5" x-text="t('language_picker_title')">语言 / Language / भाषा</h3>
       <div class="space-y-2">
         <template x-for="opt in [{code:'zh-CN',label:'中文',sub:'简体中文'},{code:'en',label:'English',sub:'English'},{code:'ne',label:'नेपाली',sub:'Nepali'}]" :key="opt.code">
           <button @click="setLang(opt.code); showLangPicker=false"

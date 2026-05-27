@@ -483,7 +483,6 @@ function alpineLink() {
     currentLang: 'zh',
     locale: localStorage.getItem('sl_lang') || localStorage.getItem('locale') || 'zh-CN',
     _i18nCache: {},
-    i18nMessages: {},
     showLangPicker: false,
     showSearch: false,
     searchQuery: '',
@@ -740,6 +739,13 @@ function alpineLink() {
     worldPeaks: [],
     climbingSpots: [],
     categories: [
+      { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
+      { id: 'continental', name: '七大洲最高峰', icon: 'public' },
+      { id: 'world', name: '世界经典', icon: 'travel_explore' },
+      { id: 'alpine', name: '技术攀登', icon: 'terrain' },
+      { id: 'commercial', name: '商业攀登', icon: 'groups' },
+    ],
+    _baseCategories: [
       { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
       { id: 'continental', name: '七大洲最高峰', icon: 'public' },
       { id: 'world', name: '世界经典', icon: 'travel_explore' },
@@ -3198,7 +3204,10 @@ function alpineLink() {
         if (next.startsWith('zh')) return 'zh-CN';
         return '';
       };
-      const saved = normalizeLang(localStorage.getItem('sl_lang') || localStorage.getItem('locale'));
+      const savedNew = localStorage.getItem('sl_lang');
+      const savedLegacy = localStorage.getItem('locale');
+      const saved = normalizeLang(savedNew || savedLegacy);
+      if (!savedNew && savedLegacy) localStorage.removeItem('locale');
       if (saved) {
         await this.setLang(saved);
         return;
@@ -3208,7 +3217,7 @@ function alpineLink() {
     },
     async setLang(langCode) {
       const nextLang = ['zh-CN', 'en', 'ne'].includes(langCode) ? langCode : 'zh-CN';
-      if (!this._i18nCache['zh-CN']) {
+      if (nextLang !== 'zh-CN' && !this._i18nCache['zh-CN']) {
         try {
           const zhRes = await fetch('/i18n/zh-CN.json');
           this._i18nCache['zh-CN'] = zhRes.ok ? (await zhRes.json()) : {};
@@ -3228,9 +3237,7 @@ function alpineLink() {
       this.lang = nextLang;
       this.locale = nextLang;
       this.currentLang = nextLang.startsWith('en') ? 'en' : nextLang.startsWith('ne') ? 'ne' : 'zh';
-      this.i18nMessages = this._i18nCache[nextLang] || {};
       localStorage.setItem('sl_lang', nextLang);
-      localStorage.setItem('locale', nextLang);
       document.documentElement.lang = nextLang;
       if (nextLang === 'ne') {
         if (!document.getElementById('sl-devanagari-font')) {
@@ -3253,7 +3260,7 @@ function alpineLink() {
         { id: 'chat', icon: 'chat_bubble', name: this.t('nav_messages') },
         { id: 'me', icon: 'person', name: this.t('nav_me') },
       ];
-      this.categories = this.categories.map((category) => {
+      this.categories = this._baseCategories.map((category) => {
         const keyMap = {
           '8000ers': 'explore_category_8000ers',
           continental: 'explore_category_continental',
@@ -3262,7 +3269,7 @@ function alpineLink() {
           commercial: 'explore_category_commercial',
         };
         const nextName = keyMap[category.id] ? this.t(keyMap[category.id]) : category.name;
-        return nextName === keyMap[category.id] ? category : { ...category, name: nextName };
+        return keyMap[category.id] ? { ...category, name: nextName } : category;
       });
     },
     async setLocale(nextLocale, shouldPersist = false) {
