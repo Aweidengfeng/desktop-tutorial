@@ -9,7 +9,15 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
       },
+      output: {
+        manualChunks: {
+          weather: ['./www/js/modules/weather.js'],
+          commercial: ['./www/js/modules/commercial.js'],
+          community: ['./www/js/modules/community.js'],
+        },
+      },
     },
+    chunkSizeWarningLimit: 150,
     minify: 'terser',
     sourcemap: false,
   },
