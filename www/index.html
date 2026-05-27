@@ -190,8 +190,8 @@
     /* Text shadow for readability on images */
     .text-shadow { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
     /* Screen reader only — visually hidden but accessible */
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
-    .sr-only.focus\:not-sr-only:focus, .focus\:not-sr-only:focus { position: fixed; width: auto; height: auto; padding: 0.5rem 1rem; margin: 0; overflow: visible; clip: auto; white-space: normal; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border-width: 0; }
+    .sr-only.focus\:not-sr-only:focus, .focus\:not-sr-only:focus { position: fixed; width: auto; height: auto; padding: 0.5rem 1rem; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
   </style>
   <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
   <script>
@@ -244,7 +244,7 @@
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
 <!-- 无障碍：跳过导航链接 -->
 <a href="#main-content"
-   class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:shadow-lg">
+   class="sr-only focus:not-sr-only focus:top-4 focus:left-4 focus:z-[999] focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:shadow-lg">
   跳过导航，直接到主要内容
 </a>
 <!-- 无障碍：屏幕阅读器动态通知区域 -->
@@ -324,7 +324,7 @@
       <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
         <span class="material-symbols-outlined text-slate-400 text-lg" aria-hidden="true">search</span>
         <label for="main-search" class="sr-only">搜索山峰、向导、俱乐部</label>
-        <input id="main-search" x-model="searchQuery" @input.debounce.300ms="globalSearch(searchQuery)" type="search" placeholder="搜索山峰、向导、俱乐部、动态..." aria-label="搜索山峰、向导、俱乐部" class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
+        <input id="main-search" x-model="searchQuery" @input.debounce.300ms="globalSearch(searchQuery)" type="search" placeholder="搜索山峰、向导、俱乐部、动态..." class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
         <button @click="showSearch=false;searchQuery='';searchResults=[]" class="text-slate-400 hover:text-white" aria-label="关闭搜索">
           <span class="material-symbols-outlined text-lg" aria-hidden="true">close</span>
         </button>
@@ -6831,7 +6831,8 @@ function alpineLink() {
       // 同步更新 live region，供屏幕阅读器朗读
       const announcer = document.getElementById('a11y-announcer');
       if (announcer) {
-        announcer.textContent = '';
+        // 先清空再设置，确保相同消息也能触发 screen reader 播报
+        announcer.textContent = '\u00A0'; // non-breaking space as placeholder
         requestAnimationFrame(() => { announcer.textContent = message; });
       }
     },
