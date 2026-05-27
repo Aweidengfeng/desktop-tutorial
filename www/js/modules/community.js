@@ -25,7 +25,10 @@ export function registerCommunityModule(app) {
       post.isLiked = !wasLiked;
       post.likes += post.isLiked ? 1 : -1;
       try {
-        const res = await apiFetch('/api/posts/' + post.id + '/like', { method: 'POST' });
+        const res = await fetch('/api/posts/' + post.id + '/like', {
+          method: 'POST',
+          headers: this.getAuthHeaders(),
+        });
         if (res.ok) {
           const data = await res.json();
           post.isLiked = data.liked;
@@ -57,9 +60,10 @@ export function registerCommunityModule(app) {
           const uploaded = await this.uploadImages(blobImages);
           imageUrls = [...imageUrls.filter(u => !u.startsWith('blob:')), ...uploaded];
         }
-        const res = await apiFetch('/api/posts', {
+        const res = await fetch('/api/posts', {
           method: 'POST',
-          body: { content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl, category: this.newPost.category || 'post' },
+          headers: this.getAuthHeaders(),
+          body: JSON.stringify({ content: this.newPost.content, location: this.newPost.location, images: imageUrls, image: imageUrls[0] || null, video_url: videoUrl, category: this.newPost.category || 'post' }),
         });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || '发布失败', 'error'); return; }

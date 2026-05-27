@@ -39,7 +39,7 @@ export function registerWeatherModule(app) {
       this.osmLastRequestTime = Date.now();
       try {
         const q = encodeURIComponent(name.trim());
-        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(url, {
@@ -67,7 +67,7 @@ export function registerWeatherModule(app) {
       this.osmSuggestionsLoading = true;
       try {
         const q = encodeURIComponent(name.trim());
-        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1&email=gaoshanyindi%40github.example.com`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1`;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(url, {

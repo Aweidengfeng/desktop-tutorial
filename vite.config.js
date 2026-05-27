@@ -10,10 +10,11 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
       },
       output: {
-        manualChunks: {
-          weather: ['./www/js/modules/weather.js'],
-          commercial: ['./www/js/modules/commercial.js'],
-          community: ['./www/js/modules/community.js'],
+        manualChunks(id) {
+          if (id.includes('/www/js/modules/weather.js')) return 'weather';
+          if (id.includes('/www/js/modules/commercial.js')) return 'commercial';
+          if (id.includes('/www/js/modules/community.js')) return 'community';
+          return undefined;
         },
       },
     },

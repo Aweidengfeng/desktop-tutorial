@@ -2,6 +2,7 @@
  * 注册 / 登录流程基础验证
  */
 const { test, expect } = require('@playwright/test');
+const { loginAsTestUser } = require('./helpers/navigation');
 
 test.describe('登录注册流程', () => {
   test('点击登录按钮应弹出登录弹窗', async ({ page }) => {
@@ -31,7 +32,6 @@ test.describe('登录注册流程', () => {
   });
 
   test('正确凭证登录后「我的」Tab 应可见用户信息', async ({ page }) => {
-    const { loginAsTestUser } = require('./helpers/navigation');
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
     const loginBtn = page.locator('button:visible:has-text("登录"), button:visible:has-text("注册"), [data-action="login"]').first();

@@ -1890,7 +1890,10 @@ function alpineLink() {
             this._weatherModuleLoaded = true;
             return true;
           })
-          .catch(() => false);
+          .catch((e) => {
+            console.warn('[module] weather load failed:', e && e.message ? e.message : e);
+            return false;
+          });
       }
       return this._weatherModuleLoading;
     },
@@ -1904,7 +1907,10 @@ function alpineLink() {
             this._commercialModuleLoaded = true;
             return true;
           })
-          .catch(() => false);
+          .catch((e) => {
+            console.warn('[module] commercial load failed:', e && e.message ? e.message : e);
+            return false;
+          });
       }
       return this._commercialModuleLoading;
     },
@@ -1918,7 +1924,10 @@ function alpineLink() {
             this._communityModuleLoaded = true;
             return true;
           })
-          .catch(() => false);
+          .catch((e) => {
+            console.warn('[module] community load failed:', e && e.message ? e.message : e);
+            return false;
+          });
       }
       return this._communityModuleLoading;
     },
@@ -1936,6 +1945,7 @@ function alpineLink() {
       if (tabId === 'discover') {
         await this.ensureCommunityModule();
         if (typeof this.loadPosts === 'function' && this.communityPosts.length === 0) {
+          this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
         }
       }
       if (tabId === 'me' && this.currentUser) {
