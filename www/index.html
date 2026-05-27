@@ -189,6 +189,9 @@
     .skeleton { animation: shimmer 1.5s ease-in-out infinite; background: #334155; border-radius: 8px; }
     /* Text shadow for readability on images */
     .text-shadow { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+    /* Screen reader only — visually hidden but accessible */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border-width: 0; }
+    .sr-only.focus\:not-sr-only:focus, .focus\:not-sr-only:focus { position: fixed; width: auto; height: auto; padding: 0.5rem 1rem; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
   </style>
   <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
   <script>
@@ -239,6 +242,13 @@
   </script>
 </head>
 <body class="font-sans text-white min-h-screen" x-data="alpineLink()" x-cloak>
+<!-- 无障碍：跳过导航链接 -->
+<a href="#main-content"
+   class="sr-only focus:not-sr-only focus:top-4 focus:left-4 focus:z-[999] focus:px-4 focus:py-2 focus:bg-primary focus:text-white focus:rounded-lg focus:shadow-lg">
+  跳过导航，直接到主要内容
+</a>
+<!-- 无障碍：屏幕阅读器动态通知区域 -->
+<div id="a11y-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 <div class="app-container relative min-h-screen overflow-hidden" :class="darkMode ? 'bg-slate-900' : 'bg-slate-50'">
   <div id="offline-banner" style="display:none" class="fixed top-0 left-0 right-0 z-[260] bg-amber-500 text-slate-900 text-center text-xs font-semibold py-2">
     离线模式 — 数据可能不是最新
@@ -282,14 +292,14 @@
         <span class="font-display font-bold text-lg text-white">巅峰探索</span>
       </div>
       <div class="flex items-center gap-1">
-        <button @click="toggleDarkMode()" class="p-2 rounded-full hover:bg-white/10 transition-colors" :title="darkMode ? '切换至浅色模式' : '切换至深色模式'"><span x-text="darkMode ? '☀️' : '🌙'" class="text-lg leading-none"></span></button>
-        <button @click="showSearch = !showSearch" class="p-2 rounded-full hover:bg-white/10 transition-colors">
-          <span class="material-symbols-outlined text-slate-300 text-xl">search</span>
+        <button @click="toggleDarkMode()" class="p-2 rounded-full hover:bg-white/10 transition-colors" :aria-label="darkMode ? '切换至浅色模式' : '切换至深色模式'" :title="darkMode ? '切换至浅色模式' : '切换至深色模式'"><span x-text="darkMode ? '☀️' : '🌙'" class="text-lg leading-none" aria-hidden="true"></span></button>
+        <button @click="showSearch = !showSearch" class="p-2 rounded-full hover:bg-white/10 transition-colors" aria-label="搜索">
+          <span class="material-symbols-outlined text-slate-300 text-xl" aria-hidden="true">search</span>
         </button>
         <template x-if="currentUser">
-          <button @click="openNotificationCenter()" class="relative p-2 rounded-full hover:bg-white/10 transition-colors">
-            <span class="material-symbols-outlined text-slate-300 text-xl">notifications</span>
-            <span x-show="notificationCount > 0" class="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold px-0.5" x-text="notificationCount > 99 ? '99+' : notificationCount"></span>
+          <button @click="openNotificationCenter()" class="relative p-2 rounded-full hover:bg-white/10 transition-colors" aria-label="通知中心">
+            <span class="material-symbols-outlined text-slate-300 text-xl" aria-hidden="true">notifications</span>
+            <span x-show="notificationCount > 0" class="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold px-0.5" x-text="notificationCount > 99 ? '99+' : notificationCount" :aria-label="'通知 ' + notificationCount + ' 条'"></span>
           </button>
         </template>
         <template x-if="!currentUser">
@@ -312,10 +322,11 @@
          x-transition:leave-end="opacity-0 -translate-y-2"
          class="px-4 pb-3">
       <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2">
-        <span class="material-symbols-outlined text-slate-400 text-lg">search</span>
-        <input x-model="searchQuery" @input.debounce.300ms="globalSearch(searchQuery)" type="text" placeholder="搜索山峰、向导、俱乐部、动态..." class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
-        <button @click="showSearch=false;searchQuery='';searchResults=[]" class="text-slate-400 hover:text-white">
-          <span class="material-symbols-outlined text-lg">close</span>
+        <span class="material-symbols-outlined text-slate-400 text-lg" aria-hidden="true">search</span>
+        <label for="main-search" class="sr-only">搜索山峰、向导、俱乐部</label>
+        <input id="main-search" x-model="searchQuery" @input.debounce.300ms="globalSearch(searchQuery)" type="search" placeholder="搜索山峰、向导、俱乐部、动态..." class="bg-transparent flex-1 text-white text-sm outline-none placeholder-slate-500">
+        <button @click="showSearch=false;searchQuery='';searchResults=[]" class="text-slate-400 hover:text-white" aria-label="关闭搜索">
+          <span class="material-symbols-outlined text-lg" aria-hidden="true">close</span>
         </button>
       </div>
       <!-- 搜索结果面板 -->
@@ -412,7 +423,7 @@
   </header>
 
   <!-- MAIN CONTENT -->
-  <main class="pt-16 pb-20 min-h-screen">
+  <main id="main-content" class="pt-16 pb-20 min-h-screen">
 
     <!-- HOME PAGE -->
     <section x-show="currentPage === 'home'"
@@ -2288,29 +2299,32 @@
      x-transition:leave="transition ease-in duration-150"
      x-transition:leave-start="opacity-100 scale-100"
      x-transition:leave-end="opacity-0 scale-95"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="login-dialog-title"
      class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-5" style="max-width:430px;margin:0 auto;">
   <div class="bg-slate-800 rounded-3xl p-6 w-full">
     <div class="flex items-center justify-between mb-5">
-      <h3 class="font-display font-bold text-xl text-white">登录账号</h3>
-      <button @click="showLogin=false" class="p-1.5 rounded-full hover:bg-white/10 transition-colors">
-        <span class="material-symbols-outlined text-slate-400">close</span>
+      <h3 id="login-dialog-title" class="font-display font-bold text-xl text-white">登录账号</h3>
+      <button @click="showLogin=false" class="p-1.5 rounded-full hover:bg-white/10 transition-colors" aria-label="关闭登录弹窗">
+        <span class="material-symbols-outlined text-slate-400" aria-hidden="true">close</span>
       </button>
     </div>
     <!-- Login Type Tabs -->
-    <div class="flex bg-slate-700 rounded-xl p-1 mb-4">
-      <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">密码登录</button>
-      <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">短信验证码</button>
-      <button @click="loginType='email'" :class="loginType==='email' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">邮箱验证码</button>
+    <div class="flex bg-slate-700 rounded-xl p-1 mb-4" role="tablist" aria-label="登录方式">
+      <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" role="tab" :aria-selected="loginType==='password'">密码登录</button>
+      <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" role="tab" :aria-selected="loginType==='sms'">短信验证码</button>
+      <button @click="loginType='email'" :class="loginType==='email' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" role="tab" :aria-selected="loginType==='email'">邮箱验证码</button>
     </div>
     <!-- Password Login -->
     <div x-show="loginType==='password'" class="space-y-4">
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号 / 邮箱</label>
-        <input x-model="loginForm.phone" type="text" placeholder="手机号或邮箱地址" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label for="login-phone" class="text-slate-400 text-xs mb-1.5 block">手机号 / 邮箱</label>
+        <input id="login-phone" x-model="loginForm.phone" type="text" placeholder="手机号或邮箱地址" aria-required="true" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
-        <input x-model="loginForm.password" type="password" placeholder="请输入密码" @keydown.enter="doLogin()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label for="login-password" class="text-slate-400 text-xs mb-1.5 block">密码</label>
+        <input id="login-password" x-model="loginForm.password" type="password" placeholder="请输入密码" aria-required="true" @keydown.enter="doLogin()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <button @click="doLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
@@ -2391,30 +2405,33 @@
      x-transition:leave="transition ease-in duration-150"
      x-transition:leave-start="opacity-100 scale-100"
      x-transition:leave-end="opacity-0 scale-95"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="register-dialog-title"
      class="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-5" style="max-width:430px;margin:0 auto;">
   <div class="bg-slate-800 rounded-3xl p-6 w-full">
     <div class="flex items-center justify-between mb-5">
-      <h3 class="font-display font-bold text-xl text-white">创建账号</h3>
-      <button @click="showRegister=false" class="p-1.5 rounded-full hover:bg-white/10 transition-colors">
-        <span class="material-symbols-outlined text-slate-400">close</span>
+      <h3 id="register-dialog-title" class="font-display font-bold text-xl text-white">创建账号</h3>
+      <button @click="showRegister=false" class="p-1.5 rounded-full hover:bg-white/10 transition-colors" aria-label="关闭注册弹窗">
+        <span class="material-symbols-outlined text-slate-400" aria-hidden="true">close</span>
       </button>
     </div>
     <div class="space-y-4">
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">姓名</label>
-        <input x-model="registerForm.name" type="text" placeholder="请输入您的姓名" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label for="register-name" class="text-slate-400 text-xs mb-1.5 block">姓名</label>
+        <input id="register-name" x-model="registerForm.name" type="text" placeholder="请输入您的姓名" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号 <span class="text-slate-500">（可选，填手机号或邮箱其一即可）</span></label>
-        <input x-model="registerForm.phone" type="tel" placeholder="中国大陆格式或国际 +区号格式" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label for="register-phone" class="text-slate-400 text-xs mb-1.5 block">手机号 <span class="text-slate-500">（可选，填手机号或邮箱其一即可）</span></label>
+        <input id="register-phone" x-model="registerForm.phone" type="tel" placeholder="中国大陆格式或国际 +区号格式" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">邮箱 <span class="text-slate-500">（可选）</span></label>
-        <input x-model="registerForm.email" type="email" placeholder="全球用户推荐使用邮箱注册" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label for="register-email" class="text-slate-400 text-xs mb-1.5 block">邮箱 <span class="text-slate-500">（可选）</span></label>
+        <input id="register-email" x-model="registerForm.email" type="email" placeholder="全球用户推荐使用邮箱注册" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
-        <input x-model="registerForm.password" type="password" placeholder="设置密码（至少6位）" @keydown.enter="doRegister()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label for="register-password" class="text-slate-400 text-xs mb-1.5 block">密码</label>
+        <input id="register-password" x-model="registerForm.password" type="password" placeholder="设置密码（至少6位）" @keydown.enter="doRegister()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div class="space-y-2">
         <label class="flex items-start gap-2 cursor-pointer" data-testid="privacy-checkbox-label">
@@ -6245,16 +6262,20 @@
   </div>
 
   <!-- FIXED BOTTOM NAV -->
-  <nav class="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10" style="max-width:430px;margin:0 auto;">
+  <nav class="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10" style="max-width:430px;margin:0 auto;" aria-label="主导航" role="tablist">
     <div class="flex items-center justify-around px-2 py-2">
       <template x-for="tab in navTabs" :key="tab.id">
         <button @click="handleTabClick(tab.id === 'discover' ? 'explore' : tab.id)"
                 :data-tab="tab.id === 'discover' ? 'explore' : tab.id"
+                role="tab"
+                :aria-selected="isPrimaryTabActive(tab.id)"
+                :aria-label="tab.name"
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all"
                 :class="isPrimaryTabActive(tab.id) ? 'bg-primary/20 text-primary-light' : 'text-slate-500 hover:text-slate-300'">
           <span class="material-symbols-outlined text-2xl"
                 :class="isPrimaryTabActive(tab.id) ? 'filled' : ''"
-                x-text="tab.icon"></span>
+                x-text="tab.icon"
+                aria-hidden="true"></span>
           <span class="text-xs font-medium" x-text="tab.name"></span>
         </button>
       </template>
@@ -6792,6 +6813,13 @@ function alpineLink() {
       const id = Date.now();
       this.toasts.push({ id, message, type });
       setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, 3000);
+      // 同步更新 live region，供屏幕阅读器朗读
+      const announcer = document.getElementById('a11y-announcer');
+      if (announcer) {
+        // 先清空再设置，确保相同消息也能触发 screen reader 播报
+        announcer.textContent = '\u00A0'; // non-breaking space as placeholder
+        requestAnimationFrame(() => { announcer.textContent = message; });
+      }
     },
 
     // 深色/浅色模式切换
@@ -10742,6 +10770,17 @@ function alpineLink() {
           } catch(e) {}
         });
       }
+      // 无障碍：全局键盘 Escape 关闭弹窗
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (this.showSearch) { this.showSearch = false; return; }
+          if (this.showLogin) { this.showLogin = false; return; }
+          if (this.showRegister) { this.showRegister = false; return; }
+          if (this.showMyOrders) { this.showMyOrders = false; return; }
+          if (this.showPayment) { this.showPayment = false; return; }
+          if (this.showLightbox) { this.showLightbox = false; return; }
+        }
+      });
     },
   };
 }
