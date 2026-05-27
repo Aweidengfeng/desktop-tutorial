@@ -679,6 +679,7 @@ function alpineLink() {
     // Rescue contacts
     rescueContacts: [],
     toasts: [],
+    _toastIdCounter: 0,
     newComment: '',
     selectedPostComments: [],
     commentsLoading: false,
@@ -858,7 +859,7 @@ function alpineLink() {
 
     // Toast notifications
     showToast(message, type = 'info', duration = 3000) {
-      const id = Date.now() + Math.random();
+      const id = ++this._toastIdCounter;
       this.toasts.push({ id, message, type });
       setTimeout(() => {
         this.toasts = this.toasts.filter((t) => t.id !== id);
