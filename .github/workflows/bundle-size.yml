@@ -1,0 +1,80 @@
+name: Bundle Size Check
+
+on:
+  pull_request:
+    paths:
+      - 'www/**'
+      - 'src/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - '.github/workflows/bundle-size.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build:vite
+        continue-on-error: true
+
+      - name: Analyze bundle size
+        shell: bash
+        run: |
+          echo "## 📦 Bundle Size Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -d dist ]; then
+            echo "| File | Size | Gzipped |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|------|------|---------|" >> "$GITHUB_STEP_SUMMARY"
+            find dist \( -name "*.js" -o -name "*.css" \) | sort | while read -r f; do
+              size=$(du -sh "$f" | cut -f1)
+              gz=$(gzip -c "$f" | wc -c | awk '{printf "%.1fKB", $1/1024}')
+              name=$(basename "$f")
+              echo "| $name | $size | $gz |" >> "$GITHUB_STEP_SUMMARY"
+            done
+          else
+            echo "### www/js 直接引用模式（非 Vite 构建）" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| File | Size | Gzipped |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|------|------|---------|" >> "$GITHUB_STEP_SUMMARY"
+            for f in www/js/app-core.js www/js/modules/*.js; do
+              if [ -f "$f" ]; then
+                size=$(du -sh "$f" | cut -f1)
+                gz=$(gzip -c "$f" | wc -c | awk '{printf "%.1fKB", $1/1024}')
+                name=$(echo "$f" | sed 's|www/js/||')
+                echo "| $name | $size | $gz |" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+          fi
+
+      - name: Check app-core.js size limit
+        shell: bash
+        run: |
+          if [ -f www/js/app-core.js ]; then
+            SIZE=$(wc -c < www/js/app-core.js)
+            LIMIT=307200
+            HUMAN_SIZE=$(awk "BEGIN {printf \"%.1fKB\", $SIZE/1024}")
+            if [ "$SIZE" -gt "$LIMIT" ]; then
+              echo "❌ app-core.js (${HUMAN_SIZE}) exceeds 300KB limit"
+              echo "Consider splitting more code into lazy-loaded modules"
+              exit 1
+            else
+              echo "✅ app-core.js size OK: ${HUMAN_SIZE} / 300KB limit"
+            fi
+          fi

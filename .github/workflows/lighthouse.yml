@@ -1,0 +1,53 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'www/**'
+      - 'backend/**'
+      - '.github/workflows/lighthouse.yml'
+      - 'lighthouserc.js'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup backend database
+        run: |
+          cd backend && npm install
+          DATABASE_URL="file:/tmp/lhci.db" npx prisma generate --schema=prisma/schema.prisma
+          DATABASE_URL="file:/tmp/lhci.db" npx prisma db push --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: file:/tmp/lhci.db
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          lhci autorun
+        env:
+          DATABASE_URL: file:/tmp/lhci.db
+          JWT_SECRET: lhci-test-secret
+          NODE_ENV: test
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

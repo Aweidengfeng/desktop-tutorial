@@ -896,6 +896,41 @@ function alpineLink() {
       }, duration);
     },
 
+    initErrorHandling() {
+      if (this._errorHandlingInitialized || typeof window === 'undefined') return;
+      this._errorHandlingInitialized = true;
+
+      window.addEventListener('unhandledrejection', (e) => {
+        console.error('[App] Unhandled rejection:', e.reason);
+        const reasonMessage = String(e.reason?.message || '').toLowerCase();
+        if (reasonMessage.includes('fetch') || e.reason?.name === 'NetworkError') {
+          this.showToast('网络连接失败，请检查网络后重试', 'error');
+        }
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+      });
+
+      window.addEventListener('error', (e) => {
+        console.error('[App] Global error:', e.message, e.filename, e.lineno);
+        if (
+          e.message?.includes('Failed to fetch dynamically imported module')
+          || e.message?.includes('Importing a module script failed')
+        ) {
+          this.showToast('功能模块加载失败，请刷新重试', 'error');
+        }
+      });
+    },
+
+    async initPerfMonitor() {
+      if (this._perfMonitor || typeof PerformanceObserver === 'undefined') return;
+      try {
+        const { initPerfMonitor } = await import('./modules/perf.js');
+        this._perfMonitor = initPerfMonitor({
+          reportToApi: false,
+          debug: location.hostname === 'localhost',
+        });
+      } catch (e) {}
+    },
+
     // Search
     async globalSearch(query) {
       this.searchQuery = query;
@@ -6007,6 +6042,8 @@ function alpineLink() {
       const metaStripeKey = (document.querySelector('meta[name="stripe-publishable-key"]')?.content || '').trim();
       if (metaStripeKey) this.stripePublishableKey = metaStripeKey;
       await this.initLang();
+      this.initErrorHandling();
+      await this.initPerfMonitor();
       this.applySystemTheme();
       if (window.matchMedia) {
         const media = window.matchMedia('(prefers-color-scheme: dark)');

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0
 and this project follows [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
 ## [Unreleased]
+### Added - PR-322
+- 新增 Lighthouse CI 配置（`lighthouserc.js`）与 `.github/workflows/lighthouse.yml`，在 PR 中自动采集 `/summitlink` 的性能/无障碍/SEO 指标
+- 新增 `.github/workflows/bundle-size.yml`，输出前端构建产物与 `www/js/app-core.js` 体积报告
+- 新增 `www/js/modules/perf.js`、`www/js/modules/api-client.js` 与 `docs/performance.md`，补齐 Core Web Vitals 采集、统一请求工具和性能手册
+
+### Changed - PR-322
+- `www/js/app-core.js` 增加全局错误处理与性能监控初始化，提升懒加载失败和网络异常时的韧性提示
+- 后端新增 `/api/metrics/web-vitals` 路由，允许后续接入客户端性能指标收集
+
 ### Added - PR-42
 - E2E 测试：支付/提现/GDPR/地图流程（`tests/e2e/payment.spec.js` / `withdrawal.spec.js` / `gdpr.spec.js` / `map.spec.js`）
 - 管理员统计看板：`GET /api/admin/stats/revenue?period=7d|30d|90d`、`/users`、`/withdrawals`、`/sos` 时间序列接口
