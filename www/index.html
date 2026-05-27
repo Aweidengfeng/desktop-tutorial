@@ -195,6 +195,8 @@
   (function(){
     // 全局兜底错误捕获（Sentry 未启用时也记录，便于排查）
     window.onerror = function(msg, src, line, col, err) {
+      // 跨域脚本错误无法获取详情，忽略重复输出
+      if (msg === 'Script error.' && line === 0) return;
       if (window.__sentryInitialized && window.Sentry) {
         window.Sentry.captureException(err || new Error(String(msg)));
       } else {
@@ -9055,7 +9057,7 @@ function alpineLink() {
       this.achievementsLoading = true;
       try {
         const res = await fetch(`${API_BASE}/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
-        if (res.ok) this.achievementsList = await res.json();
+        if (res.ok) this.achievementsList = (await res.json() || []).map(a => ({ distance: 0, elevation: 0, seconds: 0, peakName: '', ...a }));
       } catch(e) {}
       this.achievementsLoading = false;
     },

@@ -3132,7 +3132,7 @@ function alpineLink() {
       this.achievementsLoading = true;
       try {
         const res = await fetch(`/api/users/${this.currentUser.id}/achievements`, { headers: this.getAuthHeaders() });
-        if (res.ok) this.achievementsList = await res.json();
+        if (res.ok) this.achievementsList = (await res.json() || []).map(a => ({ distance: 0, elevation: 0, seconds: 0, peakName: '', ...a }));
       } catch(e) {}
       this.achievementsLoading = false;
     },
