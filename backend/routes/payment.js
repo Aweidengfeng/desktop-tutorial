@@ -68,6 +68,7 @@ if (paymentsFeatureDisabled || stripeDisabled) {
     ['get', '/stripe-stats'],
     ['get', '/provider'],
     ['post', '/create'],
+    ['get', '/query'],
     ['get', '/mock-pay'],
     ['post', '/mock-confirm'],
     ['post', '/notify/wechat'],

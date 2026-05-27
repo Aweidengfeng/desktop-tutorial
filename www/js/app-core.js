@@ -3070,6 +3070,9 @@ function alpineLink() {
               const intentData = await intentRes.json().catch(() => ({}));
               clientSecret = intentData.clientSecret || '';
             }
+          } else {
+            this.showToast('Stripe 支付需要有效订单ID，请刷新后重试', 'error');
+            return;
           }
         }
         if (!clientSecret) {
@@ -3106,6 +3109,10 @@ function alpineLink() {
       });
       let remaining = 180;
       this._wechatPayTimer = setInterval(async () => {
+        if (!this.wechatPayModal || !this.wechatPayModal.open) {
+          this.closeWechatPay();
+          return;
+        }
         remaining -= 1;
         const m = Math.floor(remaining / 60);
         const s = remaining % 60;
@@ -3220,6 +3227,13 @@ function alpineLink() {
     async confirmPayment() {
       try {
         const pendingOrder = this._pendingOrder || {};
+        if (String(this.paymentMethod || '').toLowerCase() === 'stripe') {
+          const numericOrderId = Number(pendingOrder.id);
+          if (!Number.isInteger(numericOrderId) || numericOrderId <= 0) {
+            this.showToast('Stripe 支付需要有效订单ID，请返回订单页重试', 'error');
+            return;
+          }
+        }
         const orderId = pendingOrder.id || pendingOrder.order_no || `tmp_${Date.now()}`;
         const orderType = String(pendingOrder.order_type || 'expedition').toLowerCase();
         const res = await fetch('/api/payment/create', {
