@@ -727,3 +727,133 @@ describe('14. GET /api/config payments gating', () => {
     expect(res.body.stripePublishableKey).toBe('pk_test_visible_when_enabled');
   });
 });
+
+// ── 15. 优惠券系统 ─────────────────────────────────────────────────────────────
+describe('15. coupons API', () => {
+  let app;
+  let db;
+  let adminToken;
+  let user;
+  let seq = 0;
+
+  function uniqueCode(prefix = 'CP') {
+    seq += 1;
+    return `${prefix}${String(Date.now() + seq).slice(-6)}`.toUpperCase();
+  }
+
+  beforeEach(() => {
+    clearDbCache();
+    app = createApp();
+    db = require('../backend/db/database');
+    adminToken = createAdminToken();
+    user = createTestUser(db, { phone: `139${String(Date.now()).slice(-8)}` });
+  });
+
+  test('用户可领取、校验并核销固定优惠券', async () => {
+    const code = uniqueCode('FX');
+    const createRes = await request(app)
+      .post('/api/admin/coupons')
+      .set(authHeader(adminToken))
+      .send({ code, type: 'fixed', value: 50, min_order_amount: 300, applicable_types: 'guide' });
+    expect(createRes.status).toBe(200);
+
+    const claimRes = await request(app)
+      .post('/api/coupons/claim')
+      .set(authHeader(user.token))
+      .send({ code: code.toLowerCase() });
+    expect(claimRes.status).toBe(200);
+
+    const verifyRes = await request(app)
+      .post('/api/coupons/verify')
+      .set(authHeader(user.token))
+      .send({ code, order_type: 'guide', order_amount: 400 });
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.discountAmount).toBe(50);
+    expect(verifyRes.body.finalAmount).toBe(350);
+
+    const useRes = await request(app)
+      .post('/api/coupons/use')
+      .set(authHeader(user.token))
+      .send({ coupon_id: verifyRes.body.couponId, order_type: 'guide', order_id: 123 });
+    expect(useRes.status).toBe(200);
+
+    const myUsedRes = await request(app)
+      .get('/api/coupons/my?status=used')
+      .set(authHeader(user.token));
+    expect(myUsedRes.status).toBe(200);
+    expect(myUsedRes.body.coupons.some((item) => item.coupon_id === verifyRes.body.couponId && item.status === 'used')).toBe(true);
+  });
+
+  test('百分比券支持最低金额和减免上限', async () => {
+    const code = uniqueCode('PC');
+    await request(app)
+      .post('/api/admin/coupons')
+      .set(authHeader(adminToken))
+      .send({ code, type: 'percent', value: 0.8, min_order_amount: 500, max_discount: 120, applicable_types: 'activity' });
+
+    await request(app)
+      .post('/api/coupons/claim')
+      .set(authHeader(user.token))
+      .send({ code });
+
+    const lowAmountRes = await request(app)
+      .post('/api/coupons/verify')
+      .set(authHeader(user.token))
+      .send({ code, order_type: 'activity', order_amount: 300 });
+    expect(lowAmountRes.status).toBe(400);
+
+    const mediumAmountRes = await request(app)
+      .post('/api/coupons/verify')
+      .set(authHeader(user.token))
+      .send({ code, order_type: 'activity', order_amount: 500 });
+    expect(mediumAmountRes.status).toBe(200);
+    expect(mediumAmountRes.body.discountAmount).toBe(100);
+    expect(mediumAmountRes.body.finalAmount).toBe(400);
+
+    const verifyRes = await request(app)
+      .post('/api/coupons/verify')
+      .set(authHeader(user.token))
+      .send({ code, order_type: 'activity', order_amount: 1000 });
+    expect(verifyRes.status).toBe(200);
+    expect(verifyRes.body.discountAmount).toBe(120);
+    expect(verifyRes.body.finalAmount).toBe(880);
+  });
+
+  test('管理员可查看统计、暂停和软删除优惠券', async () => {
+    const code = uniqueCode('AD');
+    const createRes = await request(app)
+      .post('/api/admin/coupons')
+      .set(authHeader(adminToken))
+      .send({ code, type: 'fixed', value: 30 });
+    expect(createRes.status).toBe(200);
+    const couponId = createRes.body.coupon.id;
+
+    await request(app)
+      .post('/api/coupons/claim')
+      .set(authHeader(user.token))
+      .send({ code });
+    await request(app)
+      .post('/api/coupons/use')
+      .set(authHeader(user.token))
+      .send({ coupon_id: couponId, order_type: 'guide', order_id: 101 });
+
+    const statsRes = await request(app)
+      .get(`/api/admin/coupons/${couponId}/stats`)
+      .set(authHeader(adminToken));
+    expect(statsRes.status).toBe(200);
+    expect(statsRes.body.claimedCount).toBeGreaterThanOrEqual(1);
+    expect(statsRes.body.usedCount).toBeGreaterThanOrEqual(1);
+
+    const pauseRes = await request(app)
+      .patch(`/api/admin/coupons/${couponId}`)
+      .set(authHeader(adminToken))
+      .send({ action: 'pause' });
+    expect(pauseRes.status).toBe(200);
+    expect(pauseRes.body.coupon.status).toBe('paused');
+
+    const deleteRes = await request(app)
+      .delete(`/api/admin/coupons/${couponId}`)
+      .set(authHeader(adminToken));
+    expect(deleteRes.status).toBe(200);
+  });
+});

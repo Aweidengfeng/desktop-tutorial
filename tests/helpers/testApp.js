@@ -119,6 +119,8 @@ function createApp() {
   app.use('/api/sos',                 loadRoute('../../backend/routes/sos'));
   app.use('/api/insurance',           loadRoute('../../backend/routes/insurance'));
   app.use('/api/location-share',      loadRoute('../../backend/routes/locationShare'));
+  app.use('/api/coupons',             loadRoute('../../backend/routes/coupons'));
+  app.use('/api/admin/coupons',       loadRoute('../../backend/routes/coupons'));
   app.use('/api/altitude',            loadRoute('../../backend/routes/altitude'));
   app.use('/api/articles',            loadRoute('../../backend/routes/articles'));
   app.use('/api/orders',              loadRoute('../../backend/routes/orders'));
