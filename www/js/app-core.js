@@ -479,9 +479,10 @@ function alpineLink() {
       { id: 'articles', name: '攻略' },
       { id: 'clubs', name: '俱乐部' },
     ],
+    lang: 'zh-CN',
     currentLang: 'zh',
-    locale: localStorage.getItem('locale') || 'zh-CN',
-    i18nMessages: {},
+    locale: localStorage.getItem('sl_lang') || localStorage.getItem('locale') || 'zh-CN',
+    _i18nCache: {},
     showLangPicker: false,
     showSearch: false,
     searchQuery: '',
@@ -707,15 +708,9 @@ function alpineLink() {
     selectedPostComments: [],
     commentsLoading: false,
     availableLangs: [
-      { code: 'zh', native: '简体中文', flag: '🇨🇳' },
-      { code: 'en', native: 'English', flag: '🇬🇧' },
-      { code: 'zh-TW', native: '繁體中文', flag: '🇹🇼' },
-      { code: 'ja', native: '日本語', flag: '🇯🇵' },
-      { code: 'ne', native: 'नेपाली', flag: '🇳🇵' },
-      { code: 'hi', native: 'हिन्दी', flag: '🇮🇳' },
-      { code: 'fr', native: 'Français', flag: '🇫🇷' },
-      { code: 'it', native: 'Italiano', flag: '🇮🇹' },
-      { code: 'es', native: 'Español', flag: '🇪🇸' },
+      { code: 'zh-CN', native: '中文', sub: '简体中文' },
+      { code: 'en', native: 'English', sub: 'English' },
+      { code: 'ne', native: 'नेपाली', sub: 'Nepali' },
     ],
     translations: {
       zh: { app_name: '巅峰探索', summit: '峰顶', search: '搜索', language: '语言', home: '首页', explore: '探索', community: '社区', track: '轨迹', gear: '装备', me: '我的', booking: '预约', submit: '提交', cancel: '取消', close: '关闭', save: '保存', confirm: '确认', back: '返回', edit: '编辑', delete: '删除', share: '分享', like: '点赞', comment: '评论', follow: '关注', login: '登录', logout: '退出', settings: '设置', sos: 'SOS 紧急救援', loading: '加载中...', success: '成功', error: '错误', weather: '天气', altitude: '海拔', difficulty: '难度', country: '国家', price: '价格', date: '日期', guide: '向导', members: '成员', notes: '备注', send_sos: '发送 SOS', book_now: '立即预约', peak_detail: '山峰详情', booking_title: '预约攀登' },
@@ -729,9 +724,14 @@ function alpineLink() {
       es: { app_name: 'SummitLink', summit: 'Cima', search: 'Buscar', language: 'Idioma', home: 'Inicio', explore: 'Explorar', community: 'Comunidad', track: 'Ruta', gear: 'Equipo', me: 'Yo', booking: 'Reserva', submit: 'Enviar', cancel: 'Cancelar', close: 'Cerrar', save: 'Guardar', confirm: 'Confirmar', back: 'Atrás', edit: 'Editar', delete: 'Eliminar', share: 'Compartir', like: 'Me gusta', comment: 'Comentar', follow: 'Seguir', login: 'Iniciar sesión', logout: 'Cerrar sesión', settings: 'Configuración', sos: 'SOS Emergencia', loading: 'Cargando...', success: 'Éxito', error: 'Error', weather: 'Clima', altitude: 'Altitud', difficulty: 'Dificultad', country: 'País', price: 'Precio', date: 'Fecha', guide: 'Guía', members: 'Miembros', notes: 'Notas', send_sos: 'Enviar SOS', book_now: 'Reservar ahora', peak_detail: 'Detalle del pico', booking_title: 'Reservar escalada' },
     },
     t(key) {
-      if (this.i18nMessages && this.i18nMessages[key]) return this.i18nMessages[key];
-      const lang = this.translations[this.currentLang] || this.translations.zh;
-      return lang[key] || this.translations.zh[key] || key;
+      return this._i18nCache?.[this.lang]?.[key]
+        || this._i18nCache?.['zh-CN']?.[key]
+        || key;
+    },
+    getCurrentLangLabel() {
+      if (this.lang === 'en') return 'English';
+      if (this.lang === 'ne') return 'नेपाली';
+      return '中文';
     },
     nearbyGuides: [],
     eightThousanders: [],
@@ -739,6 +739,13 @@ function alpineLink() {
     worldPeaks: [],
     climbingSpots: [],
     categories: [
+      { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
+      { id: 'continental', name: '七大洲最高峰', icon: 'public' },
+      { id: 'world', name: '世界经典', icon: 'travel_explore' },
+      { id: 'alpine', name: '技术攀登', icon: 'terrain' },
+      { id: 'commercial', name: '商业攀登', icon: 'groups' },
+    ],
+    _baseCategories: [
       { id: '8000ers', name: '八千米巨峰', icon: 'landscape' },
       { id: 'continental', name: '七大洲最高峰', icon: 'public' },
       { id: 'world', name: '世界经典', icon: 'travel_explore' },
@@ -1826,7 +1833,7 @@ function alpineLink() {
       const tab = this.resolvePrimaryTab(this.currentPage);
       const titleMap = {
         expedition: this.t('nav_expedition'),
-        discover: this.t('nav_discover'),
+        discover: this.t('nav_explore'),
         chat: this.t('nav_messages'),
         me: this.t('nav_me'),
       };
@@ -3185,39 +3192,89 @@ function alpineLink() {
           await fetch('/api/auth/privacy', { method: 'PUT', headers: this.getAuthHeaders(), body: JSON.stringify(this.privacySettings) });
           this.showToast('隐私设置已保存 ✅');
         } catch(e) { this.showToast('网络错误', 'error'); }
-      } else if (this.settingsType === 'language') {
-        await this.setLocale(this.currentLang === 'en' ? 'en' : 'zh-CN', true);
       }
       this.showSettings = false;
     },
-    async loadLocalePack(forceLocale) {
-      const target = forceLocale || this.locale || 'zh-CN';
-      try {
-        const res = await fetch(`/www/i18n/${target}.json`);
-        if (!res.ok) throw new Error('load locale failed');
-        const messages = await res.json();
-        this.i18nMessages = messages || {};
-        this.locale = target;
-        this.currentLang = target.startsWith('en') ? 'en' : 'zh';
-      } catch (e) {
-        this.i18nMessages = {};
-        this.locale = 'zh-CN';
+    async initLang() {
+      const normalizeLang = (raw) => {
+        if (!raw) return '';
+        const next = String(raw).toLowerCase();
+        if (next.startsWith('ne')) return 'ne';
+        if (next.startsWith('en')) return 'en';
+        if (next.startsWith('zh')) return 'zh-CN';
+        return '';
+      };
+      const savedNew = localStorage.getItem('sl_lang');
+      const savedLegacy = localStorage.getItem('locale');
+      const saved = normalizeLang(savedNew || savedLegacy);
+      if (!savedNew && savedLegacy) localStorage.removeItem('locale');
+      if (saved) {
+        await this.setLang(saved);
+        return;
+      }
+      const sys = normalizeLang(navigator.language || 'zh-CN') || 'zh-CN';
+      await this.setLang(sys);
+    },
+    async setLang(langCode) {
+      const nextLang = ['zh-CN', 'en', 'ne'].includes(langCode) ? langCode : 'zh-CN';
+      if (nextLang !== 'zh-CN' && !this._i18nCache['zh-CN']) {
+        try {
+          const zhRes = await fetch('/i18n/zh-CN.json');
+          this._i18nCache['zh-CN'] = zhRes.ok ? (await zhRes.json()) : {};
+        } catch (e) {
+          this._i18nCache['zh-CN'] = {};
+        }
+      }
+      if (!this._i18nCache[nextLang]) {
+        try {
+          const res = await fetch(`/i18n/${nextLang}.json`);
+          this._i18nCache[nextLang] = res.ok ? (await res.json()) : {};
+        } catch (e) {
+          console.warn('[i18n] failed to load', nextLang, e);
+          this._i18nCache[nextLang] = {};
+        }
+      }
+      this.lang = nextLang;
+      this.locale = nextLang;
+      this.currentLang = nextLang.startsWith('en') ? 'en' : nextLang.startsWith('ne') ? 'ne' : 'zh';
+      localStorage.setItem('sl_lang', nextLang);
+      document.documentElement.lang = nextLang;
+      if (nextLang === 'ne') {
+        if (!document.getElementById('sl-devanagari-font')) {
+          const link = document.createElement('link');
+          link.id = 'sl-devanagari-font';
+          link.rel = 'stylesheet';
+          link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600&display=swap';
+          document.head.appendChild(link);
+        }
+        if (document.body) document.body.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
+      } else if (document.body) {
+        document.body.style.fontFamily = '';
       }
       this.refreshLocalizedUi();
     },
     refreshLocalizedUi() {
       this.navTabs = [
         { id: 'expedition', icon: 'explore', name: this.t('nav_expedition') },
-        { id: 'discover', icon: 'groups', name: this.t('nav_discover') },
+        { id: 'discover', icon: 'groups', name: this.t('nav_explore') },
         { id: 'chat', icon: 'chat_bubble', name: this.t('nav_messages') },
         { id: 'me', icon: 'person', name: this.t('nav_me') },
       ];
+      this.categories = this._baseCategories.map((category) => {
+        const keyMap = {
+          '8000ers': 'explore_category_8000ers',
+          continental: 'explore_category_continental',
+          world: 'explore_category_world',
+          alpine: 'explore_category_alpine',
+          commercial: 'explore_category_commercial',
+        };
+        const nextName = keyMap[category.id] ? this.t(keyMap[category.id]) : category.name;
+        return keyMap[category.id] ? { ...category, name: nextName } : category;
+      });
     },
     async setLocale(nextLocale, shouldPersist = false) {
-      this.locale = nextLocale || 'zh-CN';
-      this.currentLang = this.locale.startsWith('en') ? 'en' : 'zh';
-      if (shouldPersist) localStorage.setItem('locale', this.locale);
-      await this.loadLocalePack(this.locale);
+      await this.setLang(nextLocale || 'zh-CN');
+      if (!shouldPersist) localStorage.removeItem('sl_lang');
     },
     async exportMyData() {
       if (!this.requireAuth()) return;
@@ -5245,7 +5302,7 @@ function alpineLink() {
     },
 
     async init() {
-      await this.loadLocalePack(this.locale);
+      await this.initLang();
       this.applySystemTheme();
       if (window.matchMedia) {
         const media = window.matchMedia('(prefers-color-scheme: dark)');
