@@ -6,6 +6,8 @@
   <title>巅峰探索 / SummitLink</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/csp@3.14.8/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
   // Alpine.js CDN 失败时回退到本地副本
   (function() {
@@ -1806,6 +1808,93 @@
               <p class="text-xl font-bold text-white" x-text="userProfile.following"></p>
               <p class="text-xs text-slate-400">关注</p>
             </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-4 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-display font-bold text-white">攀登履历</h3>
+              <p class="text-xs text-slate-400">轨迹统计、地图可视化与海拔剖面</p>
+            </div>
+            <button @click="myProfileTab='history'; loadClimbingHistory()" class="text-xs font-semibold text-primary-light hover:text-white transition-colors">刷新</button>
+          </div>
+          <div class="flex bg-slate-800 rounded-xl p-1 mb-4">
+            <button @click="myProfileTab='overview'" :class="myProfileTab==='overview' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">总览</button>
+            <button @click="myProfileTab='history'; loadClimbingHistory()" :class="myProfileTab==='history' ? 'bg-primary text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all">攀登履历</button>
+          </div>
+
+          <div x-show="myProfileTab==='overview'" class="bg-slate-800/70 rounded-2xl p-4">
+            <p class="text-white text-sm font-semibold mb-1">你的历史攀登已接入履历中心</p>
+            <p class="text-slate-400 text-xs leading-relaxed">切换到「攀登履历」即可查看 4 项统计数字、轨迹详情地图、海拔剖面，以及 GPX 下载与手动登顶记录入口。</p>
+          </div>
+
+          <div x-show="myProfileTab==='history'" class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-slate-800/80 rounded-2xl p-3">
+                <p class="text-xs text-slate-400 mb-1">🏔 登顶次数</p>
+                <p class="text-xl font-bold text-white" x-text="formatTrackMetric(getClimbingHistoryStats().expeditionCount)"></p>
+              </div>
+              <div class="bg-slate-800/80 rounded-2xl p-3">
+                <p class="text-xs text-slate-400 mb-1">📏 总里程</p>
+                <p class="text-xl font-bold text-white" x-text="formatTrackMetric(getClimbingHistoryStats().totalKm, 1, ' km')"></p>
+              </div>
+              <div class="bg-slate-800/80 rounded-2xl p-3">
+                <p class="text-xs text-slate-400 mb-1">⬆️ 总海拔增益</p>
+                <p class="text-xl font-bold text-white" x-text="formatTrackMetric(getClimbingHistoryStats().elevationGain, 0, ' m')"></p>
+              </div>
+              <div class="bg-slate-800/80 rounded-2xl p-3">
+                <p class="text-xs text-slate-400 mb-1">📅 攀登天数</p>
+                <p class="text-xl font-bold text-white" x-text="formatTrackMetric(getClimbingHistoryStats().climbingDays)"></p>
+              </div>
+            </div>
+
+            <div x-show="tracksLoading" class="py-10 text-center text-slate-400 text-sm">正在加载攀登记录...</div>
+
+            <div x-show="!tracksLoading && tracks.length === 0" class="bg-slate-800/60 rounded-2xl px-4 py-8 text-center text-slate-400">
+              <div class="text-3xl mb-2">🗺️</div>
+              <p class="text-sm">还没有攀登记录，完成一次攀登后轨迹将自动出现这里</p>
+            </div>
+
+            <div x-show="!tracksLoading && tracks.length > 0" class="space-y-3">
+              <template x-for="track in tracks" :key="'history-track-' + track.id">
+                <div class="bg-slate-800/70 rounded-2xl p-4 border border-white/5">
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="min-w-0">
+                      <p class="text-white text-base font-semibold truncate" x-text="track.peak_name || '未命名山峰'"></p>
+                      <p class="text-slate-300 text-sm truncate" x-text="track.name || ((track.peak_name || '轨迹') + ' 记录')"></p>
+                    </div>
+                    <span x-show="track.weather" class="shrink-0 text-[11px] px-2 py-1 rounded-full bg-sky-500/15 text-sky-300" x-text="track.weather"></span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                    <div class="bg-slate-900/40 rounded-xl px-3 py-2">
+                      <p class="text-slate-500 mb-1">攀登日期</p>
+                      <p x-text="formatTrackDate(track.date)"></p>
+                    </div>
+                    <div class="bg-slate-900/40 rounded-xl px-3 py-2">
+                      <p class="text-slate-500 mb-1">距离</p>
+                      <p x-text="formatTrackMetric(getTrackDistanceKm(track), 1, ' km')"></p>
+                    </div>
+                    <div class="bg-slate-900/40 rounded-xl px-3 py-2">
+                      <p class="text-slate-500 mb-1">海拔增益</p>
+                      <p x-text="formatTrackMetric(getTrackElevationGain(track), 0, ' m')"></p>
+                    </div>
+                    <div class="bg-slate-900/40 rounded-xl px-3 py-2">
+                      <p class="text-slate-500 mb-1">轨迹类型</p>
+                      <p x-text="track.is_manual ? '手动记录' : 'GPS 轨迹'"></p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2 mt-3">
+                    <button @click.stop="openTrackDetail(track)" class="flex-1 py-2.5 rounded-xl bg-primary hover:bg-primary-light text-white text-sm font-semibold transition-colors">查看详情</button>
+                    <button @click.stop="downloadTrackGPX(track)" class="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-sm font-semibold transition-colors">下载 GPX</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <button @click="showManualSummitModal=true" class="w-full flex items-center justify-center gap-2 bg-amber-600/80 hover:bg-amber-500 text-white font-semibold py-3 rounded-2xl transition-colors">
+              <span class="material-symbols-outlined text-base">add</span>手动记录登顶
+            </button>
           </div>
         </div>
 
@@ -3660,7 +3749,7 @@
             </div>
             <!-- 证明照片上传 -->
             <div>
-              <label class="text-slate-400 text-xs mb-1 block">证明照片 * (至少1张)</label>
+              <label class="text-slate-400 text-xs mb-1 block">证明照片 * (至少1张，最多3张)</label>
               <div class="flex flex-wrap gap-2 mb-2">
                 <template x-for="(url, i) in manualSummit.proof_images" :key="i">
                   <div class="relative">
@@ -3873,7 +3962,7 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          class="fixed inset-0 z-[100] flex flex-col justify-end" style="max-width:430px;margin:0 auto;">
-      <div class="absolute inset-0 bg-black/70" @click="showTrackDetail=false"></div>
+      <div class="absolute inset-0 bg-black/70" @click="closeTrackDetail()"></div>
       <div class="relative bottom-sheet bg-slate-900 max-h-[88vh] overflow-y-auto">
         <template x-if="selectedTrackDetail">
           <div>
@@ -3881,7 +3970,7 @@
             <div class="relative h-48">
               <img :src="selectedTrackDetail.image || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800'" class="w-full h-full object-cover">
               <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-              <button @click="showTrackDetail=false" class="absolute top-4 right-4 p-2 bg-black/50 rounded-full">
+              <button @click="closeTrackDetail()" class="absolute top-4 right-4 p-2 bg-black/50 rounded-full">
                 <span class="material-symbols-outlined text-white text-lg">close</span>
               </button>
               <div class="absolute bottom-4 left-4">
@@ -3891,9 +3980,10 @@
             </div>
             <!-- Stats Grid -->
             <div class="p-4">
-              <!-- 轨迹地图（有 points 时渲染） -->
               <template x-if="selectedTrackDetail && selectedTrackDetail.points && selectedTrackDetail.points.length > 1">
-                <div id="track-detail-map" class="w-full rounded-2xl mb-4 overflow-hidden" style="height:200px;" x-init="$nextTick(()=>renderTrackDetailMap(selectedTrackDetail))"></div>
+                <div class="mb-4">
+                  <div id="track-detail-map" class="w-full rounded-2xl overflow-hidden border border-white/10" style="height:300px;" x-init="$nextTick(() => { renderTrackDetailMap(selectedTrackDetail); renderTrackElevationProfile(selectedTrackDetail); })"></div>
+                </div>
               </template>
               <div class="grid grid-cols-3 gap-3 mb-4">
                 <div class="glass rounded-xl p-3 text-center">
@@ -3909,6 +3999,17 @@
                   <p class="text-xs text-slate-400 mt-0.5">用时</p>
                 </div>
               </div>
+              <template x-if="selectedTrackDetail && selectedTrackDetail.points && selectedTrackDetail.points.length > 1">
+                <div class="glass rounded-xl p-4 mb-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-white font-semibold text-sm">海拔剖面</h4>
+                    <p class="text-xs text-slate-400" x-text="trackProfileHover ? (trackProfileHover.distanceLabel + ' · ' + trackProfileHover.elevationLabel) : '悬停查看距离与海拔'"></p>
+                  </div>
+                  <canvas id="track-elevation-canvas" class="w-full rounded-xl bg-slate-950/60" style="height:180px;"
+                          @mousemove="updateTrackProfileHover($event)"
+                          @mouseleave="clearTrackProfileHover()"></canvas>
+                </div>
+              </template>
               <!-- Elevation Details -->
               <div class="glass rounded-xl p-4 mb-4" x-show="selectedTrackDetail.max_elevation || selectedTrackDetail.start_elevation">
                 <h4 class="text-white font-semibold mb-3 text-sm">海拔信息</h4>
@@ -3936,6 +4037,14 @@
               <div x-show="selectedTrackDetail.notes" class="glass rounded-xl p-4 mb-4">
                 <h4 class="text-white font-semibold mb-1 text-sm">备注</h4>
                 <p class="text-slate-300 text-sm leading-relaxed" x-text="selectedTrackDetail.notes"></p>
+              </div>
+              <div x-show="selectedTrackDetail.proof_images && selectedTrackDetail.proof_images.length" class="glass rounded-xl p-4 mb-4">
+                <h4 class="text-white font-semibold mb-3 text-sm">证明图片</h4>
+                <div class="grid grid-cols-3 gap-2">
+                  <template x-for="(img, idx) in (selectedTrackDetail.proof_images || [])" :key="'proof-'+idx">
+                    <img :src="img" class="w-full h-20 rounded-xl object-cover cursor-pointer" @click="viewImage(img)">
+                  </template>
+                </div>
               </div>
               <!-- 轨迹激励 -->
               <div class="glass rounded-xl p-4 mb-4">
@@ -6222,6 +6331,7 @@ function alpineLink() {
   return {
     currentPage: 'home',
     currentUser: null,
+    userStats: { expeditionCount: null, totalKm: null, elevationGain: null, climbingDays: null, trackCount: 0 },
     authToken: localStorage.getItem('summitlink_token') || null,
     showLogin: false,
     showRegister: false,
@@ -6418,6 +6528,8 @@ function alpineLink() {
     paymentMethod: 'alipay',
     showTrackDetail: false,
     selectedTrackDetail: null,
+    trackProfileHover: null,
+    _trackDetailLeafletMap: null,
     featuredClubs: [],
     popularPeaksWeather: [
       { name: '珠穆朗玛峰', nameEn: 'Mt. Everest', altitude: 8849, temp: -28, wind: 45, humidity: 32, condition: '晴', conditionIcon: '☀️' },
@@ -6565,10 +6677,9 @@ function alpineLink() {
       { id: 2, name: '张磊（向导）', avatar: 'https://i.pravatar.cc/150?u=zhang', type: 'guide', lastMsg: '明天我们6点出发', time: '09:15', unread: 2, messages: [] },
       { id: 3, name: '珠峰2025队', avatar: 'https://i.pravatar.cc/150?u=team', type: 'team', lastMsg: '装备检查完毕', time: '昨天', unread: 5, messages: [] },
     ],
-    tracks: [
-      { id: 1, name: '珠峰大本营徒步', date: '2024-03-15', distance: 45.2, elevation: 2300, duration: '5天', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400' },
-      { id: 2, name: 'K2 BC 线路', date: '2024-07-20', distance: 62.8, elevation: 3800, duration: '8天', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400' },
-    ],
+    tracks: [],
+    tracksLoading: false,
+    myProfileTab: 'history',
     teams: [
       { id: 1, name: '珠峰突击队2025', peak: '珠穆朗玛峰', date: '2025-05-01', level: '专业级', spots: 2, totalSpots: 6, leader: '张磊', leaderAvatar: 'https://i.pravatar.cc/150?u=zhang' },
       { id: 2, name: '马特洪峰探险团', peak: '马特洪峰', date: '2025-08-15', level: '中级', spots: 3, totalSpots: 4, leader: '李明', leaderAvatar: 'https://i.pravatar.cc/150?u=li' },
@@ -7526,23 +7637,244 @@ function alpineLink() {
       });
     },
 
-    // 在轨迹详情弹窗里渲染带 Polyline 的地图（WGS84 → GCJ-02）
+    getTrackDistanceKm(track) {
+      return Number(track?.distance_km ?? track?.distance ?? 0) || 0;
+    },
+    getTrackElevationGain(track) {
+      return Number(track?.elevation_gain ?? track?.elevation ?? 0) || 0;
+    },
+    formatTrackDate(value) {
+      if (!value) return '--';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? String(value).slice(0, 10) : date.toLocaleDateString('zh-CN');
+    },
+    formatTrackMetric(value, digits = 0, suffix = '') {
+      const num = Number(value);
+      const safe = Number.isFinite(num) ? num : 0;
+      return `${safe.toFixed(digits)}${suffix}`;
+    },
+    getTrackFallbackStats() {
+      const list = Array.isArray(this.tracks) ? this.tracks : [];
+      const climbingDays = new Set(list.map(track => String(track?.date || '').slice(0, 10)).filter(Boolean)).size;
+      return {
+        totalKm: list.reduce((sum, track) => sum + this.getTrackDistanceKm(track), 0),
+        elevationGain: list.reduce((sum, track) => sum + this.getTrackElevationGain(track), 0),
+        climbingDays,
+        trackCount: list.length,
+      };
+    },
+    getClimbingHistoryStats() {
+      const fallback = this.getTrackFallbackStats();
+      const hasTracks = fallback.trackCount > 0;
+      const pickMetric = (value, computed) => {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return computed;
+        if (hasTracks && num === 0 && computed > 0) return computed;
+        return num;
+      };
+      return {
+        expeditionCount: Number(this.userStats?.expeditionCount || 0),
+        totalKm: pickMetric(this.userStats?.totalKm, fallback.totalKm),
+        elevationGain: pickMetric(this.userStats?.elevationGain, fallback.elevationGain),
+        climbingDays: pickMetric(this.userStats?.climbingDays, fallback.climbingDays),
+        trackCount: fallback.trackCount,
+      };
+    },
+    closeTrackDetail() {
+      this.showTrackDetail = false;
+      this.trackProfileHover = null;
+      if (this._trackDetailLeafletMap) {
+        this._trackDetailLeafletMap.remove();
+        this._trackDetailLeafletMap = null;
+      }
+    },
+    getTrackSegmentColor(ele) {
+      const altitude = Number(ele) || 0;
+      if (altitude > 7000) return '#ef4444';
+      if (altitude >= 6000) return '#eab308';
+      if (altitude >= 4000) return '#22c55e';
+      return '#3b82f6';
+    },
+    getTrackPointDistanceKm(start, end) {
+      if (!start || !end) return 0;
+      const lat1 = Number(start.lat) * Math.PI / 180;
+      const lat2 = Number(end.lat) * Math.PI / 180;
+      const dLat = lat2 - lat1;
+      const dLng = (Number(end.lng) - Number(start.lng)) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+      return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    },
+    getTrackProfileSamples(track) {
+      if (!track || !Array.isArray(track.points) || track.points.length < 2) return [];
+      if (Array.isArray(track._profileSamples) && track._profileSamples.length === track.points.length) return track._profileSamples;
+      let cumulative = 0;
+      let lastElevation = Number(track.start_elevation ?? track.elevation ?? track.elevation_gain ?? 0) || 0;
+      track._profileSamples = track.points.map((point, index) => {
+        if (index > 0) cumulative += this.getTrackPointDistanceKm(track.points[index - 1], point);
+        const ele = Number(point?.ele);
+        if (Number.isFinite(ele)) lastElevation = ele;
+        return {
+          index,
+          distance: cumulative,
+          elevation: lastElevation,
+        };
+      });
+      return track._profileSamples;
+    },
     renderTrackDetailMap(track) {
-      if (typeof AMap === 'undefined' || !track || !track.points || track.points.length < 2) return;
+      if (typeof L === 'undefined' || !track || !Array.isArray(track.points) || track.points.length < 2) return;
       try {
         const mapEl = document.getElementById('track-detail-map');
         if (!mapEl) return;
-        const center = [track.points[0].lng, track.points[0].lat];
-        const detailMap = new AMap.Map('track-detail-map', { zoom: 13, center, mapStyle: 'amap://styles/dark' });
-        AMap.convertFrom(track.points.map(p => [p.lng, p.lat]), 'gps', (status, result) => {
-          const rawPoints = track.points.map(p => new AMap.LngLat(p.lng, p.lat));
-          const path = status === 'complete' ? result.locations : rawPoints;
-          new AMap.Polyline({ path, strokeColor: '#3d8a9e', strokeWeight: 4, map: detailMap });
-          new AMap.Marker({ position: path[0], map: detailMap, label: { content: '起点', offset: new AMap.Pixel(-10, -30) } });
-          new AMap.Marker({ position: path[path.length - 1], map: detailMap, label: { content: '终点', offset: new AMap.Pixel(-10, -30) } });
-          detailMap.setFitView();
+        if (this._trackDetailLeafletMap) {
+          this._trackDetailLeafletMap.remove();
+          this._trackDetailLeafletMap = null;
+        }
+        const normalizedPoints = track.points
+          .map(point => [Number(point.lat), Number(point.lng)])
+          .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng));
+        if (normalizedPoints.length < 2) return;
+        const map = L.map(mapEl, { zoomControl: true, attributionControl: true });
+        this._trackDetailLeafletMap = map;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+        for (let i = 1; i < track.points.length; i++) {
+          const prev = track.points[i - 1];
+          const next = track.points[i];
+          const latLngs = [
+            [Number(prev.lat), Number(prev.lng)],
+            [Number(next.lat), Number(next.lng)],
+          ];
+          if (!latLngs.every(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng))) continue;
+          L.polyline(latLngs, {
+            color: this.getTrackSegmentColor(next.ele ?? prev.ele),
+            weight: 5,
+            opacity: 0.95,
+            lineCap: 'round',
+          }).addTo(map);
+        }
+        const startIcon = L.divIcon({
+          className: 'track-marker track-marker-start',
+          html: '<div style="font-size:20px;line-height:1">📍</div>',
+          iconSize: [24, 24],
+          iconAnchor: [12, 24],
         });
+        const endIcon = L.divIcon({
+          className: 'track-marker track-marker-end',
+          html: '<div style="font-size:20px;line-height:1">🏁</div>',
+          iconSize: [24, 24],
+          iconAnchor: [12, 24],
+        });
+        L.marker(normalizedPoints[0], { icon: startIcon }).addTo(map);
+        L.marker(normalizedPoints[normalizedPoints.length - 1], { icon: endIcon }).addTo(map);
+        map.fitBounds(normalizedPoints, { padding: [24, 24] });
+        setTimeout(() => map.invalidateSize(), 80);
       } catch(e) {}
+    },
+    renderTrackElevationProfile(track) {
+      const canvas = document.getElementById('track-elevation-canvas');
+      if (!canvas || !track) return;
+      const samples = this.getTrackProfileSamples(track);
+      if (samples.length < 2) return;
+      const width = Math.max(Math.round(canvas.clientWidth || 320), 320);
+      const height = 180;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const padding = { left: 40, right: 12, top: 16, bottom: 28 };
+      const maxDistance = Math.max(samples[samples.length - 1].distance, this.getTrackDistanceKm(track), 0.1);
+      let minElevation = Math.min(...samples.map(sample => sample.elevation));
+      let maxElevation = Math.max(...samples.map(sample => sample.elevation));
+      if (minElevation === maxElevation) {
+        minElevation -= 20;
+        maxElevation += 20;
+      }
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+      const xFor = distance => padding.left + (distance / maxDistance) * plotWidth;
+      const yFor = elevation => padding.top + (1 - ((elevation - minElevation) / (maxElevation - minElevation))) * plotHeight;
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, height - padding.bottom);
+      ctx.lineTo(width - padding.right, height - padding.bottom);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
+      ctx.font = '11px Inter, sans-serif';
+      ctx.fillText(`${Math.round(maxElevation)}m`, 6, padding.top + 4);
+      ctx.fillText(`${Math.round(minElevation)}m`, 6, height - padding.bottom);
+      ctx.fillText(`${maxDistance.toFixed(1)}km`, width - padding.right - 32, height - 8);
+      const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.45)');
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
+      ctx.beginPath();
+      samples.forEach((sample, index) => {
+        const x = xFor(sample.distance);
+        const y = yFor(sample.elevation);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.lineTo(xFor(samples[samples.length - 1].distance), height - padding.bottom);
+      ctx.lineTo(xFor(samples[0].distance), height - padding.bottom);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.beginPath();
+      samples.forEach((sample, index) => {
+        const x = xFor(sample.distance);
+        const y = yFor(sample.elevation);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (this.trackProfileHover && this.trackProfileHover.index < samples.length) {
+        const sample = samples[this.trackProfileHover.index];
+        const x = xFor(sample.distance);
+        const y = yFor(sample.elevation);
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = '#f8fafc';
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+    updateTrackProfileHover(event) {
+      if (!this.selectedTrackDetail) return;
+      const samples = this.getTrackProfileSamples(this.selectedTrackDetail);
+      if (samples.length < 2) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const distanceRatio = Math.max(0, Math.min(1, x / Math.max(rect.width, 1)));
+      const maxDistance = Math.max(samples[samples.length - 1].distance, this.getTrackDistanceKm(this.selectedTrackDetail), 0.1);
+      const targetDistance = distanceRatio * maxDistance;
+      let nearest = samples[0];
+      for (const sample of samples) {
+        if (Math.abs(sample.distance - targetDistance) < Math.abs(nearest.distance - targetDistance)) nearest = sample;
+      }
+      this.trackProfileHover = {
+        index: nearest.index,
+        distanceLabel: `${nearest.distance.toFixed(1)} km`,
+        elevationLabel: `${Math.round(nearest.elevation)} m`,
+      };
+      this.renderTrackElevationProfile(this.selectedTrackDetail);
+    },
+    clearTrackProfileHover() {
+      this.trackProfileHover = null;
+      if (this.selectedTrackDetail) this.renderTrackElevationProfile(this.selectedTrackDetail);
     },
 
     // Track Recording with AMap
@@ -8353,6 +8685,7 @@ function alpineLink() {
     async openTrackDetail(track) {
       this.selectedTrackDetail = track;
       this.showTrackDetail = true;
+      this.trackProfileHover = null;
       const claimedKey = 'track_pts_claimed_' + (track.id || track.name);
       if (localStorage.getItem(claimedKey)) track._pointsClaimed = true;
       if (this.authToken && track.id) {
@@ -8364,6 +8697,10 @@ function alpineLink() {
           }
         } catch(e) {}
       }
+      this.$nextTick(() => {
+        this.renderTrackDetailMap(this.selectedTrackDetail);
+        this.renderTrackElevationProfile(this.selectedTrackDetail);
+      });
     },
     shareTrack(track) {
       const trackId = track.id ? ('?track=' + track.id) : '';
@@ -8380,13 +8717,15 @@ function alpineLink() {
     async downloadTrackGPX(track) {
       if (!track || !track.id) { this.showToast('无法下载：轨迹数据不完整', 'error'); return; }
       try {
-        const res = await fetch(API_BASE + '/api/tracks/' + track.id + '/export?format=gpx');
+        const res = await fetch(API_BASE + '/api/tracks/' + track.id + '/export?format=gpx', { headers: this.getAuthHeaders() });
         if (!res.ok) { this.showToast('GPX 下载失败', 'error'); return; }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = (track.name || 'track') + '.gpx';
+        const peakName = String(track.peak_name || track.name || 'track').replace(/[\\/:*?"<>|]/g, '-');
+        const trackDate = String(track.date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+        a.download = `${peakName}-${trackDate}.gpx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -8847,6 +9186,8 @@ function alpineLink() {
     doLogout() {
       this.authToken = null;
       this.currentUser = null;
+      this.userStats = { expeditionCount: null, totalKm: null, elevationGain: null, climbingDays: null, trackCount: 0 };
+      this.tracks = [];
       localStorage.removeItem('summitlink_token');
       this.userProfile = { name: '山行者', username: '@summiteer', avatar: 'https://i.pravatar.cc/150?u=user1', level: '专业攀登者', summits: 12, expeditions: 8, followers: 1280, following: 340 };
       this.showToast('已退出登录');
@@ -9001,6 +9342,7 @@ function alpineLink() {
       this.showToast('登录成功，欢迎 ' + data.user.name + '！');
       // Initialize Socket.IO for real-time features
       this._initSocket(data.token);
+      this.loadClimbingHistory();
     },
     _initSocket(token) {
       if (typeof io === 'undefined') return;
@@ -9065,6 +9407,7 @@ function alpineLink() {
         const user = await res.json();
         this.currentUser = user;
         this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
+        this.loadClimbingHistory();
       } catch(e) {}
     },
 
@@ -9233,21 +9576,36 @@ function alpineLink() {
         this.weather = { ...data, condition: 'partly_cloudy' };
       } catch(e) {}
     },
+    async loadUserStats() {
+      if (!this.authToken || !this.currentUser?.id) return;
+      try {
+        let res = await fetch(`${API_BASE}/api/users/${this.currentUser.id}/stats`, { headers: this.getAuthHeaders() });
+        if (!res.ok) res = await fetch(`${API_BASE}/api/users/me/stats`, { headers: this.getAuthHeaders() });
+        if (!res.ok) return;
+        const data = await res.json();
+        this.userStats = { ...this.userStats, ...data };
+      } catch(e) {}
+    },
+    async loadClimbingHistory() {
+      if (!this.authToken) return;
+      await Promise.all([this.loadTracks(), this.loadUserStats()]);
+    },
     async loadTracks() {
       if (!this.authToken) return;
+      this.tracksLoading = true;
       try {
-        const res = await fetch(API_BASE + '/api/tracks', { headers: this.getAuthHeaders() });
+        let res = await fetch(API_BASE + '/api/tracks/my', { headers: this.getAuthHeaders() });
         if (!res.ok) {
-          // Fallback to /my for backward compat
-          const res2 = await fetch(API_BASE + '/api/tracks/my', { headers: this.getAuthHeaders() });
-          if (!res2.ok) return;
-          const data2 = await res2.json();
-          if (data2.length > 0) this.tracks = data2;
-          return;
+          res = await fetch(API_BASE + '/api/tracks', { headers: this.getAuthHeaders() });
+          if (!res.ok) return;
         }
         const data = await res.json();
-        if (data.length > 0) this.tracks = data;
-      } catch(e) {}
+        this.tracks = Array.isArray(data) ? data : [];
+      } catch(e) {
+        this.tracks = [];
+      } finally {
+        this.tracksLoading = false;
+      }
     },
 
     // Comments
@@ -9474,9 +9832,16 @@ function alpineLink() {
     // 手动登顶证明照片选择
     handleManualSummitImageSelect(event) {
       const files = Array.from(event.target.files || []);
-      files.forEach(f => {
+      const remain = Math.max(0, 3 - this.manualSummit.proof_images.length);
+      if (remain === 0) {
+        this.showToast('最多上传 3 张证明图片', 'error');
+        event.target.value = '';
+        return;
+      }
+      files.slice(0, remain).forEach(f => {
         if (f.type.startsWith('image/')) this.manualSummit.proof_images.push(URL.createObjectURL(f));
       });
+      if (files.length > remain) this.showToast('最多上传 3 张证明图片', 'info');
       event.target.value = '';
     },
 
@@ -9507,7 +9872,7 @@ function alpineLink() {
           this.showToast('登顶记录已提交 🏔️');
           this.showManualSummitModal = false;
           this.manualSummit = { peak_name: '', date: '', altitude: '', notes: '', proof_images: [] };
-          this.loadTracks();
+          await this.loadClimbingHistory();
         } else {
           this.showToast(data.error || '提交失败', 'error');
         }
@@ -10153,9 +10518,9 @@ function alpineLink() {
       this.loadConversations();
       // Load notification count after token verify
       this.$watch('authToken', (val) => {
-        if (val) { this.loadUnreadCount(); this.loadTracks(); }
+        if (val) { this.loadUnreadCount(); this.loadClimbingHistory(); }
       });
-      if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); }
+      if (this.authToken) { this.loadUnreadCount(); this.loadClimbingHistory(); }
       // Initialize socket.io if user is already logged in
       if (this.authToken) {
         this._initSocket(this.authToken);
