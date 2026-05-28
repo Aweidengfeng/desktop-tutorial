@@ -73,9 +73,19 @@ function validateImageFiles(files) {
 }
 // ─────────────────────────────────────────────────────────────────────────
 
+const _safeLsGet = (key, fallback = null) => {
+  try {
+    const v = localStorage.getItem(key);
+    if (v === null) return fallback;
+    try { return JSON.parse(v); } catch (_) { return v; }
+  } catch (_) {
+    return fallback;
+  }
+};
+
 // ─── API Fetch 封装：统一处理 401 过期跳转（Phase 0.5）─────────────────────
 async function apiFetch(url, options = {}) {
-  const token = localStorage.getItem('summitlink_token');
+  const token = _safeLsGet('summitlink_token', null);
   const headers = {
     ...(options.headers || {}),
   };
@@ -113,7 +123,7 @@ async function apiFetch(url, options = {}) {
   }
   // 401 — 尝试用 refreshToken 换新 accessToken，然后重试一次
   if (res.status === 401 && !options._refreshed) {
-    const refreshToken = localStorage.getItem('summitlink_refresh_token');
+    const refreshToken = _safeLsGet('summitlink_refresh_token', null);
     if (refreshToken) {
       try {
         const refreshRes = await fetch('/api/auth/refresh', {
@@ -382,12 +392,12 @@ function loadLeaflet() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function alpineLink() {
-  const savedMapLayer = localStorage.getItem(MAP_LAYER_STORAGE_KEY);
+  const savedMapLayer = _safeLsGet(MAP_LAYER_STORAGE_KEY, null);
   const activeMapLayer = MAP_LAYER_OPTIONS.some(layer => layer.key === savedMapLayer) ? savedMapLayer : 'standard';
   return {
     currentPage: 'home',
     currentUser: null,
-    authToken: localStorage.getItem('summitlink_token') || null,
+    authToken: _safeLsGet('summitlink_token', null),
     paymentsEnabled: false,
     stripePublishableKey: '',
     stripeClient: null,
@@ -452,7 +462,7 @@ function alpineLink() {
     ],
     lang: 'zh-CN',
     currentLang: 'zh',
-    locale: localStorage.getItem('sl_lang') || localStorage.getItem('locale') || 'zh-CN',
+    locale: _safeLsGet('sl_lang', null) || _safeLsGet('locale', null) || 'zh-CN',
     _i18nCache: {},
     showLangPicker: false,
     showSearch: false,
@@ -710,6 +720,8 @@ function alpineLink() {
     rescueContacts: [],
     toasts: [],
     _toastIdCounter: 0,
+    _initError: false,
+    _initErrorMsg: '',
     newComment: '',
     selectedPostComments: [],
     commentsLoading: false,
@@ -3746,8 +3758,8 @@ function alpineLink() {
         if (next.startsWith('zh')) return 'zh-CN';
         return '';
       };
-      const savedNew = localStorage.getItem('sl_lang');
-      const savedLegacy = localStorage.getItem('locale');
+      const savedNew = _safeLsGet('sl_lang', null);
+      const savedLegacy = _safeLsGet('locale', null);
       const saved = normalizeLang(savedNew || savedLegacy);
       if (!savedNew && savedLegacy) localStorage.removeItem('locale');
       if (saved) {
@@ -6039,143 +6051,149 @@ function alpineLink() {
     },
 
     async init() {
-      const metaStripeKey = (document.querySelector('meta[name="stripe-publishable-key"]')?.content || '').trim();
-      if (metaStripeKey) this.stripePublishableKey = metaStripeKey;
-      await this.initLang();
-      this.initErrorHandling();
-      await this.initPerfMonitor();
-      this.applySystemTheme();
-      if (window.matchMedia) {
-        const media = window.matchMedia('(prefers-color-scheme: dark)');
-        const onThemeChange = () => this.applySystemTheme();
-        if (media.addEventListener) media.addEventListener('change', onThemeChange);
-        else if (media.addListener) media.addListener(onThemeChange);
-      }
-      await this.refreshBiometricAvailability();
-      // Auto-rotate hero carousel every 5 seconds
-      setInterval(() => {
-        this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
-      }, 5000);
-      // 监听 JWT 过期事件，统一提示并跳转登录（Phase 0.5）
-      const onSessionExpired = () => {
-        this.showToast('登录已过期，请重新登录', 'warning');
-        this.authToken = null;
-        this.currentUser = null;
-        this.showLogin = true;
-      };
-      window.addEventListener('summitlink:session-expired', onSessionExpired);
-      if (typeof this.$cleanup === 'function') {
-        this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
-      }
-      await this.loadPublicConfig();
-      if (this.paymentsEnabled) {
-        try {
-          await this.ensureStripeLoaded();
-        } catch (e) {
-          console.warn('[payments] Stripe SDK load skipped:', e && e.message ? e.message : e);
+      try {
+        const metaStripeKey = (document.querySelector('meta[name="stripe-publishable-key"]')?.content || '').trim();
+        if (metaStripeKey) this.stripePublishableKey = metaStripeKey;
+        await this.initLang();
+        this.initErrorHandling();
+        await this.initPerfMonitor();
+        this.applySystemTheme();
+        if (window.matchMedia) {
+          const media = window.matchMedia('(prefers-color-scheme: dark)');
+          const onThemeChange = () => this.applySystemTheme();
+          if (media.addEventListener) media.addEventListener('change', onThemeChange);
+          else if (media.addListener) media.addListener(onThemeChange);
         }
-      }
-      // Initialize public tracks
-      this.filteredPublicTracks = this.publicTracks;
-      // Verify token and load initial data
-      this.verifyToken();
-      this.loadPeaks('8000ers');
-      this.loadGuides();
-      this.loadTeams();
-      this.loadGear('buy');
-      this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
-      this.loadWeather();
-      this.loadClubs();
-      this.loadFeaturedClubs();
-      this.loadExpeditions();
-      this.loadBanners();
-      this.loadPopularPeaksWeather();
-      this.loadRescueContacts();
-      this.loadConversations();
-      // Load notification count after token verify
-      this.$watch('authToken', (val) => {
-        if (val) { this.loadUnreadCount(); this.loadTracks(); this.loadConversations(); this.initChatSocket(); this.loadInviteInfo(); }
-      });
-      if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); this.loadInviteInfo(); }
-      // Phase 2.3: 页面加载时同步待上传轨迹；网络恢复时也自动触发
-      idbGetPendingTracks().then(t => { this.pendingUploadCount = t.length; }).catch(() => {});
-      this.syncPendingTracks();
-      window.addEventListener('online', () => this.syncPendingTracks());
-      window.addEventListener('online', () => { this.isOffline = false; });
-      window.addEventListener('offline', () => { this.isOffline = true; });
-      // Phase 2.5: 检测地图引擎，Mapbox 时懒加载 SDK
-      detectMapProvider().then(cfg => {
-        if (cfg.provider === 'mapbox' && cfg.token) {
-          loadMapboxGL(cfg.token).catch(() => {});
-        } else if (cfg.provider === 'osm') {
-          window.__osmTileUrl = cfg.tileUrl;
-          window.__osmAttribution = cfg.attribution;
-          console.warn('[map] MAPBOX_TOKEN not configured, falling back to OSM. Configure MAPBOX_TOKEN in Railway Variables before 5/15 launch.');
-          loadLeaflet().catch(() => {});
+        await this.refreshBiometricAvailability();
+        // Auto-rotate hero carousel every 5 seconds
+        setInterval(() => {
+          this.heroSlide = (this.heroSlide + 1) % this.heroSlides.length;
+        }, 5000);
+        // 监听 JWT 过期事件，统一提示并跳转登录（Phase 0.5）
+        const onSessionExpired = () => {
+          this.showToast('登录已过期，请重新登录', 'warning');
+          this.authToken = null;
+          this.currentUser = null;
+          this.showLogin = true;
+        };
+        window.addEventListener('summitlink:session-expired', onSessionExpired);
+        if (typeof this.$cleanup === 'function') {
+          this.$cleanup(() => window.removeEventListener('summitlink:session-expired', onSessionExpired));
         }
-      });
-      // Watch gearMode changes to reload gear (reset category first to avoid double-call)
-      this.$watch('gearMode', (val) => {
-        if (this.gearCategory !== '全部') {
-          this.gearCategory = '全部'; // triggers gearCategory watch → loadGear
-        } else {
-          this.loadGear(val); // category unchanged, load manually
-        }
-      });
-      // Watch gearCategory changes to reload gear
-      this.$watch('gearCategory', (val) => this.loadGear(this.gearMode, val));
-      // Watch activeCategory changes to reload peaks
-      this.$watch('activeCategory', (val) => {
-        if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
-        if (val === 'commercial') {
-          this.loadGuides();
-          this.loadClubs();
-          this.loadCommercialData();
-        }
-      });
-      // 初始化时主动加载默认分类数据
-      this.loadPeaks(this.activeCategory);
-      // Watch activeChatType to load articles when articles tab is selected
-      this.$watch('activeChatType', (val) => {
-        if (val === 'articles' && this.articles.length === 0) this.loadArticles();
-      });
-      // Watch communityPosts to sync filteredCommunityPosts
-      this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });
-      // Handle shared track URL: /summitlink?track=ID
-      const urlParams = new URLSearchParams(window.location.search);
-      const inviteCode = (urlParams.get('invite') || '').trim().toUpperCase();
-      if (inviteCode) {
-        this.registerForm.inviteCode = inviteCode;
-        this.showInviteCodeInput = true;
-        this.showRegister = true;
-      }
-      const sharedTrackId = urlParams.get('track');
-      if (sharedTrackId) {
-        this.$nextTick(async () => {
+        await this.loadPublicConfig();
+        if (this.paymentsEnabled) {
           try {
-            const res = await fetch('/api/tracks/' + sharedTrackId);
-            if (res.ok) {
-              const track = await res.json();
-              this.currentPage = 'home';
-              await this.$nextTick();
-              this.openTrackDetail(track);
-            }
-          } catch(e) {}
+            await this.ensureStripeLoaded();
+          } catch (e) {
+            console.warn('[payments] Stripe SDK load skipped:', e && e.message ? e.message : e);
+          }
+        }
+        // Initialize public tracks
+        this.filteredPublicTracks = this.publicTracks;
+        // Verify token and load initial data
+        this.verifyToken();
+        this.loadPeaks('8000ers');
+        this.loadGuides();
+        this.loadTeams();
+        this.loadGear('buy');
+        this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
+        this.loadWeather();
+        this.loadClubs();
+        this.loadFeaturedClubs();
+        this.loadExpeditions();
+        this.loadBanners();
+        this.loadPopularPeaksWeather();
+        this.loadRescueContacts();
+        this.loadConversations();
+        // Load notification count after token verify
+        this.$watch('authToken', (val) => {
+          if (val) { this.loadUnreadCount(); this.loadTracks(); this.loadConversations(); this.initChatSocket(); this.loadInviteInfo(); }
         });
-      }
-      // Handle payment result URL: /summitlink?payment=success&orderId=xxx
-      const paymentResult = urlParams.get('payment');
-      if (paymentResult === 'success') {
-        const payOrderId = urlParams.get('orderId');
-        this.$nextTick(() => {
-          this.showToast('支付成功！订单' + (payOrderId ? ' #' + payOrderId : '') + ' 已完成 🎉');
-          // 自动刷新预约列表
-          if (this.authToken) {
-            setTimeout(() => { try { this.loadMyOrders(); } catch(_) {} }, 500);
+        if (this.authToken) { this.loadUnreadCount(); this.loadTracks(); this.loadInviteInfo(); }
+        // Phase 2.3: 页面加载时同步待上传轨迹；网络恢复时也自动触发
+        idbGetPendingTracks().then(t => { this.pendingUploadCount = t.length; }).catch(() => {});
+        this.syncPendingTracks();
+        window.addEventListener('online', () => this.syncPendingTracks());
+        window.addEventListener('online', () => { this.isOffline = false; });
+        window.addEventListener('offline', () => { this.isOffline = true; });
+        // Phase 2.5: 检测地图引擎，Mapbox 时懒加载 SDK
+        detectMapProvider().then(cfg => {
+          if (cfg.provider === 'mapbox' && cfg.token) {
+            loadMapboxGL(cfg.token).catch(() => {});
+          } else if (cfg.provider === 'osm') {
+            window.__osmTileUrl = cfg.tileUrl;
+            window.__osmAttribution = cfg.attribution;
+            console.warn('[map] MAPBOX_TOKEN not configured, falling back to OSM. Configure MAPBOX_TOKEN in Railway Variables before 5/15 launch.');
+            loadLeaflet().catch(() => {});
           }
         });
+        // Watch gearMode changes to reload gear (reset category first to avoid double-call)
+        this.$watch('gearMode', (val) => {
+          if (this.gearCategory !== '全部') {
+            this.gearCategory = '全部'; // triggers gearCategory watch → loadGear
+          } else {
+            this.loadGear(val); // category unchanged, load manually
+          }
+        });
+        // Watch gearCategory changes to reload gear
+        this.$watch('gearCategory', (val) => this.loadGear(this.gearMode, val));
+        // Watch activeCategory changes to reload peaks
+        this.$watch('activeCategory', (val) => {
+          if (['8000ers','continental','world','alpine'].includes(val)) this.loadPeaks(val);
+          if (val === 'commercial') {
+            this.loadGuides();
+            this.loadClubs();
+            this.loadCommercialData();
+          }
+        });
+        // 初始化时主动加载默认分类数据
+        this.loadPeaks(this.activeCategory);
+        // Watch activeChatType to load articles when articles tab is selected
+        this.$watch('activeChatType', (val) => {
+          if (val === 'articles' && this.articles.length === 0) this.loadArticles();
+        });
+        // Watch communityPosts to sync filteredCommunityPosts
+        this.$watch('communityPosts', (val) => { this.filteredCommunityPosts = val; });
+        // Handle shared track URL: /summitlink?track=ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteCode = (urlParams.get('invite') || '').trim().toUpperCase();
+        if (inviteCode) {
+          this.registerForm.inviteCode = inviteCode;
+          this.showInviteCodeInput = true;
+          this.showRegister = true;
+        }
+        const sharedTrackId = urlParams.get('track');
+        if (sharedTrackId) {
+          this.$nextTick(async () => {
+            try {
+              const res = await fetch('/api/tracks/' + sharedTrackId);
+              if (res.ok) {
+                const track = await res.json();
+                this.currentPage = 'home';
+                await this.$nextTick();
+                this.openTrackDetail(track);
+              }
+            } catch(e) {}
+          });
+        }
+        // Handle payment result URL: /summitlink?payment=success&orderId=xxx
+        const paymentResult = urlParams.get('payment');
+        if (paymentResult === 'success') {
+          const payOrderId = urlParams.get('orderId');
+          this.$nextTick(() => {
+            this.showToast('支付成功！订单' + (payOrderId ? ' #' + payOrderId : '') + ' 已完成 🎉');
+            // 自动刷新预约列表
+            if (this.authToken) {
+              setTimeout(() => { try { this.loadMyOrders(); } catch(_) {} }, 500);
+            }
+          });
+        }
+        this.initPushNotifications();
+      } catch (err) {
+        console.error('[SummitLink] init() 崩溃：', err);
+        this._initError = true;
+        this._initErrorMsg = (err && err.message) ? err.message : String(err);
       }
-      this.initPushNotifications();
     },
     async loadPublicConfig() {
       try {
