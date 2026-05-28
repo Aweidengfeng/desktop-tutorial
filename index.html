@@ -23,6 +23,8 @@
     function markReady() {
       window.__slAlpineReady = true;
       clearTimeout(fallbackTimeout);
+      document.removeEventListener('alpine:init', markReady);
+      document.removeEventListener('alpine:initialized', markReady);
     }
 
     document.addEventListener('alpine:init', markReady);
@@ -334,7 +336,10 @@
              'bg-red-900/95 border-red-600/30': t.type === 'error',
              'bg-amber-900/95 border-amber-600/30': t.type === 'warning'
            }"
-           class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl text-sm text-white max-w-[85vw] min-w-[200px] pointer-events-auto">
+           class="flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl text-sm text-white max-w-[85vw] min-w-[200px] pointer-events-auto"
+           role="alert"
+           aria-live="polite"
+           aria-atomic="true">
         <span x-text="t.type === 'error' ? '❌' : t.type === 'success' ? '✅' : t.type === 'warning' ? '⚠️' : 'ℹ️'" class="text-base shrink-0" aria-hidden="true"></span>
         <span x-text="t.message" class="leading-snug"></span>
       </div>
