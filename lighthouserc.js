@@ -1,10 +1,14 @@
 module.exports = {
   ci: {
     collect: {
-      url: ['http://localhost:3000/summitlink'],
+      url: ['http://localhost:3000/'],
       startServerCommand: 'npm start',
       startServerReadyPattern: 'listening on port',
+      startServerReadyTimeout: 30000, // allow up to 30 s for npm start to be ready in CI
       numberOfRuns: 2,
+      settings: {
+        chromeFlags: '--no-sandbox --disable-gpu',
+      },
     },
     assert: {
       preset: 'lighthouse:recommended',
