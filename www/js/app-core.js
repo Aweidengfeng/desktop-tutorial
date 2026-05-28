@@ -584,6 +584,9 @@ function alpineLink() {
     _weatherModuleLoaded: false,
     _commercialModuleLoaded: false,
     _communityModuleLoaded: false,
+    _weatherModuleFailed: false,
+    _commercialModuleFailed: false,
+    _communityModuleFailed: false,
     _weatherModuleLoading: null,
     _commercialModuleLoading: null,
     _communityModuleLoading: null,
@@ -2152,6 +2155,7 @@ function alpineLink() {
           })
           .catch((e) => {
             console.warn('[module] weather load failed:', e && e.message ? e.message : e);
+            this._weatherModuleFailed = true;
             return false;
           });
       }
@@ -2169,6 +2173,7 @@ function alpineLink() {
           })
           .catch((e) => {
             console.warn('[module] commercial load failed:', e && e.message ? e.message : e);
+            this._commercialModuleFailed = true;
             return false;
           });
       }
@@ -2186,6 +2191,7 @@ function alpineLink() {
           })
           .catch((e) => {
             console.warn('[module] community load failed:', e && e.message ? e.message : e);
+            this._communityModuleFailed = true;
             return false;
           });
       }
@@ -2201,9 +2207,18 @@ function alpineLink() {
       if (tabId === 'explore' || tabId === 'discover') {
         await this.ensureWeatherModule();
         await this.ensureCommercialModule();
+        if (this._weatherModuleFailed || this._commercialModuleFailed) {
+          this.showToast('部分功能加载失败，请刷新页面重试', 'warning');
+          this._weatherModuleFailed = false;
+          this._commercialModuleFailed = false;
+        }
       }
       if (tabId === 'discover') {
         await this.ensureCommunityModule();
+        if (this._communityModuleFailed) {
+          this.showToast('社区功能加载失败，请刷新页面重试', 'warning');
+          this._communityModuleFailed = false;
+        }
         if (typeof this.loadPosts === 'function' && this.communityPosts.length === 0) {
           this.loadPosts().then(() => { this.filteredCommunityPosts = this.communityPosts; });
         }
