@@ -83,6 +83,13 @@ const _safeLsGet = (key, fallback = null) => {
   }
 };
 
+const _fetchWithTimeout = (url, options = {}, timeoutMs = 15000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+};
+
 // ─── API Fetch 封装：统一处理 401 过期跳转（Phase 0.5）─────────────────────
 async function apiFetch(url, options = {}) {
   const token = _safeLsGet('summitlink_token', null);
@@ -721,6 +728,7 @@ function alpineLink() {
     rescueContacts: [],
     toasts: [],
     _toastIdCounter: 0,
+    _homeDataLoadedOnce: false,
     _initError: false,
     _initErrorMsg: '',
     newComment: '',
@@ -4346,12 +4354,24 @@ function alpineLink() {
     },
     async loadGuides() {
       try {
-        const res = await fetch('/api/guides');
+        const res = await _fetchWithTimeout('/api/guides');
         if (!res.ok) return;
         const data = await res.json();
-        this.nearbyGuides = data.map(g => ({ ...g, tag: g.rating >= 4.8 ? '🏅 认证精英' : '' }));
-        this.guides = data;
-      } catch(e) {}
+        const list = Array.isArray(data) ? data : [];
+        this.nearbyGuides = list.map(g => ({ ...g, tag: g.rating >= 4.8 ? '🏅 认证精英' : '' }));
+        this.guides = list;
+        this._homeDataLoadedOnce = true;
+      } catch(e) {
+        if (e && e.name === 'AbortError') {
+          this.showToast('网络超时，请检查网络连接', 'warning');
+        } else {
+          console.warn('[SummitLink] 数据加载失败:', e && e.message ? e.message : e);
+          if (!this._homeDataLoadedOnce) this.showToast('数据加载失败，请下拉刷新', 'error');
+        }
+        if (!Array.isArray(this.expeditionCards)) this.expeditionCards = [];
+        if (!Array.isArray(this.nearbyGuides)) this.nearbyGuides = [];
+        if (!Array.isArray(this.featuredClubs)) this.featuredClubs = [];
+      }
     },
     async loadTeams() {
       this.teamsLoading = true;
@@ -5600,23 +5620,39 @@ function alpineLink() {
     // ─── Featured Clubs (Problem 1) ─────────────────────────────────────────
     async loadFeaturedClubs() {
       try {
-        const res = await fetch('/api/clubs/featured');
+        const res = await _fetchWithTimeout('/api/clubs/featured');
         if (res.ok) {
           const data = await res.json();
-          if (data.length > 0) {
-            this.featuredClubs = data.map(c => ({
+          const list = Array.isArray(data) ? data : [];
+          if (list.length > 0) {
+            this.featuredClubs = list.map(c => ({
               ...c,
               cover: c.cover || 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=400',
               verified: !!c.verified,
             }));
+          } else {
+            this.featuredClubs = [];
           }
+          this._homeDataLoadedOnce = true;
+        } else {
+          this.featuredClubs = [];
         }
-      } catch(e) {}
+      } catch(e) {
+        if (e && e.name === 'AbortError') {
+          this.showToast('网络超时，请检查网络连接', 'warning');
+        } else {
+          console.warn('[SummitLink] 数据加载失败:', e && e.message ? e.message : e);
+          if (!this._homeDataLoadedOnce) this.showToast('数据加载失败，请下拉刷新', 'error');
+        }
+        if (!Array.isArray(this.expeditionCards)) this.expeditionCards = [];
+        if (!Array.isArray(this.nearbyGuides)) this.nearbyGuides = [];
+        if (!Array.isArray(this.featuredClubs)) this.featuredClubs = [];
+      }
     },
 
     async loadExpeditions() {
       try {
-        const res = await fetch('/api/expeditions?status=published&limit=6');
+        const res = await _fetchWithTimeout('/api/expeditions?status=published&limit=6');
         if (res.ok) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : (Array.isArray(data?.expeditions) ? data.expeditions : []);
@@ -5634,10 +5670,22 @@ function alpineLink() {
           } else {
             this.expeditions = [];
           }
+          this._homeDataLoadedOnce = true;
         } else {
           this.expeditions = [];
         }
-      } catch(e) { this.expeditions = []; }
+      } catch(e) {
+        if (e && e.name === 'AbortError') {
+          this.showToast('网络超时，请检查网络连接', 'warning');
+        } else {
+          console.warn('[SummitLink] 数据加载失败:', e && e.message ? e.message : e);
+          if (!this._homeDataLoadedOnce) this.showToast('数据加载失败，请下拉刷新', 'error');
+        }
+        this.expeditions = [];
+        if (!Array.isArray(this.expeditionCards)) this.expeditionCards = [];
+        if (!Array.isArray(this.nearbyGuides)) this.nearbyGuides = [];
+        if (!Array.isArray(this.featuredClubs)) this.featuredClubs = [];
+      }
     },
 
     // ─── Commercial Data: Load real guides, clubs, and expedition associations ──
