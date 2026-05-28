@@ -193,7 +193,7 @@
     .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border-width: 0; }
     .sr-only.focus\:not-sr-only:focus, .focus\:not-sr-only:focus { position: fixed; width: auto; height: auto; padding: 0.5rem 1rem; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
   </style>
-  <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN__ 由后端注入，未配置时不加载）-->
+  <!-- Sentry 前端错误监控（条件加载：window.__SENTRY_DSN 由后端注入，未配置时不加载）-->
   <script>
   (function(){
     // 全局兜底错误捕获（Sentry 未启用时也记录，便于排查）
@@ -214,13 +214,14 @@
       }
     });
     // 仅当后端注入了有效 DSN 时才加载 Sentry SDK
-    if (window.__SENTRY_DSN__) {
+    const _sentryDsn = window.__SENTRY_DSN;
+    if (_sentryDsn) {
       var s = document.createElement('script');
       s.src = 'https://browser.sentry-cdn.com/7.120.4/bundle.min.js';
       s.crossOrigin = 'anonymous';
       s.onload = function() {
         try {
-          Sentry.init({ dsn: window.__SENTRY_DSN__, tracesSampleRate: 0.1 });
+          Sentry.init({ dsn: _sentryDsn, tracesSampleRate: 0.1 });
           window.__sentryInitialized = true;
         } catch(e) { console.warn('[SummitLink] Sentry 初始化失败:', e); }
       };
@@ -10992,6 +10993,7 @@ function alpineLink() {
   });
 })();
 </script>
+<!-- 本页已内联定义 alpineLink()，不要再加载会覆盖 window.alpineLink 的外部实现 -->
 </body>
 <!-- GDPR Cookie 同意横幅（欧盟/EEA 地区自动显示） -->
 <div id="gdpr-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e293b;color:#f1f5f9;padding:16px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,0.3);">
