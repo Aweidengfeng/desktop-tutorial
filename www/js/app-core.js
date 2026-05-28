@@ -398,6 +398,7 @@ function alpineLink() {
     currentPage: 'home',
     currentUser: null,
     authToken: _safeLsGet('summitlink_token', null),
+    _wasLoggedIn: false,
     paymentsEnabled: false,
     stripePublishableKey: '',
     stripeClient: null,
@@ -3968,34 +3969,40 @@ function alpineLink() {
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
     },
     doLogout() {
-      this.authToken = null;
-      this.currentUser = null;
-      localStorage.removeItem('summitlink_token');
-      localStorage.removeItem('summitlink_refresh_token');
-      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-        const SecureStorage = window.Capacitor?.Plugins?.SecureStorage || window.Capacitor?.Plugins?.SecureStoragePlugin;
-        if (SecureStorage && SecureStorage.remove) SecureStorage.remove({ key: 'summitlink_token' }).catch(() => {});
+      try {
+        this.authToken = null;
+        this.currentUser = null;
+        this._wasLoggedIn = false;
+        try { localStorage.removeItem('summitlink_token'); } catch(_) {}
+        try { localStorage.removeItem('summitlink_refresh_token'); } catch(_) {}
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+          const SecureStorage = window.Capacitor?.Plugins?.SecureStorage || window.Capacitor?.Plugins?.SecureStoragePlugin;
+          if (SecureStorage && SecureStorage.remove) SecureStorage.remove({ key: 'summitlink_token' }).catch(() => {});
+        }
+        this.userProfile = { name: '', username: '', avatar: '', level: '', summits: 0, expeditions: 0, followers: 0, following: 0 };
+        this.userStats = { expeditionCount: null, totalKm: null, climbingDays: null };
+        this.expeditionOrders = [];
+        this.activityOrders = [];
+        this.guideServiceOrders = [];
+        this.myBookings = [];
+        this.incomingBookings = [];
+        this.achievementsList = [];
+        this.membershipData = null;
+        this.privacySettings = { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false };
+        this.notifPreferences = { order_updates: true, booking_updates: true, activity_reminders: true, system_notices: true, marketing: false };
+        this.notifUnreadList = [];
+        this.notifUnreadCount = 0;
+        this.notificationCount = 0;
+        this.myInviteCode = '';
+        this.inviteUrl = '';
+        this.inviteStats = { totalInvited: 0, totalPoints: 0 };
+        this.inviteRecords = [];
+        this.showInviteRecords = false;
+        this.currentPage = 'home';
+        this.showToast('已退出登录');
+      } catch (err) {
+        console.error('[SummitLink] logout error:', err);
       }
-      this.userProfile = { name: '', username: '', avatar: '', level: '', summits: 0, expeditions: 0, followers: 0, following: 0 };
-      this.userStats = { expeditionCount: null, totalKm: null, climbingDays: null };
-      this.expeditionOrders = [];
-      this.activityOrders = [];
-      this.guideServiceOrders = [];
-      this.myBookings = [];
-      this.incomingBookings = [];
-      this.achievementsList = [];
-      this.membershipData = null;
-      this.privacySettings = { profile_public: true, posts_public: true, follows_public: true, allow_stranger_msg: false };
-      this.notifPreferences = { order_updates: true, booking_updates: true, activity_reminders: true, system_notices: true, marketing: false };
-      this.notifUnreadList = [];
-      this.notifUnreadCount = 0;
-      this.notificationCount = 0;
-      this.myInviteCode = '';
-      this.inviteUrl = '';
-      this.inviteStats = { totalInvited: 0, totalPoints: 0 };
-      this.inviteRecords = [];
-      this.showInviteRecords = false;
-      this.showToast('已退出登录');
     },
     async loadInviteInfo() {
       if (!this.authToken) return;
@@ -4204,6 +4211,7 @@ function alpineLink() {
     },
     _handleLoginSuccess(data) {
       this.authToken = data.token;
+      this._wasLoggedIn = true;
       if (data.refreshToken) localStorage.setItem('summitlink_refresh_token', data.refreshToken);
       this.currentUser = data.user;
       localStorage.setItem('summitlink_token', data.token);
@@ -6071,9 +6079,12 @@ function alpineLink() {
         }, 5000);
         // 监听 JWT 过期事件，统一提示并跳转登录（Phase 0.5）
         const onSessionExpired = () => {
-          this.showToast('登录已过期，请重新登录', 'warning');
           this.authToken = null;
           this.currentUser = null;
+          if (this._wasLoggedIn) {
+            this._wasLoggedIn = false;
+            this.showToast('登录已过期，请重新登录', 'warning');
+          }
           this.showLogin = true;
         };
         window.addEventListener('summitlink:session-expired', onSessionExpired);
@@ -6091,6 +6102,7 @@ function alpineLink() {
         // Initialize public tracks
         this.filteredPublicTracks = this.publicTracks;
         // Verify token and load initial data
+        if (this.authToken) { this._wasLoggedIn = true; }
         this.verifyToken();
         this.loadPeaks('8000ers');
         this.loadGuides();
