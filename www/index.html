@@ -429,7 +429,7 @@
   <main id="main-content" class="pt-16 pb-20 min-h-screen">
 
     <!-- HOME PAGE -->
-    <section x-show="currentPage === 'home'"
+    <section x-show="currentPage === 'home'" data-testid="home-section"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
@@ -721,7 +721,7 @@
     </section>
 
     <!-- EXPLORE PAGE -->
-    <section x-show="currentPage === 'explore'"
+    <section x-show="currentPage === 'explore'" data-testid="explore-section"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
@@ -1218,7 +1218,7 @@
     </section>
 
     <!-- COMMUNITY PAGE -->
-    <section x-show="currentPage === 'community'"
+    <section x-show="currentPage === 'community'" data-testid="community-section"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
@@ -1620,7 +1620,7 @@
         </div>
       </div>
     </section>
-    <section x-show="currentPage === 'chat'"
+    <section x-show="currentPage === 'chat'" data-testid="chat-section"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
@@ -1777,7 +1777,7 @@
     </section>
 
     <!-- ME PAGE (intentionally unclosed before settings modal) -->
-    <section x-show="currentPage === 'me'"
+    <section x-show="currentPage === 'me'" data-testid="me-section"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100">
