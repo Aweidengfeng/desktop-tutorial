@@ -1013,15 +1013,15 @@ router.post('/apple', loginLimiter, async (req, res) => {
 // 若已配置 GOOGLE_CLIENT_ID，则验证 Google ID token；否则使用 mock 模式（仅开发/测试）
 router.post('/google', loginLimiter, async (req, res) => {
   try {
-    const { idToken } = req.body || {};
-    if (!idToken) return res.status(400).json({ error: '缺少 idToken 参数' });
+    const { idToken, accessToken } = req.body || {};
+    if (!idToken && !accessToken) return res.status(400).json({ error: '缺少 idToken 或 accessToken 参数' });
 
     let googleSub = null;
     let googleEmail = null;
     let googleName = null;
     let googleAvatar = null;
 
-    if (googleOAuthClient) {
+    if (idToken && googleOAuthClient) {
       // 真实 Google ID token 验证
       const payload = await verifyGoogleToken(idToken);
       if (!payload) return res.status(401).json({ error: 'Google ID token 验证失败，请重新登录' });
@@ -1029,10 +1029,30 @@ router.post('/google', loginLimiter, async (req, res) => {
       googleEmail = payload.email;
       googleName = payload.name;
       googleAvatar = payload.picture;
-    } else {
+      console.log('[Google] ID token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
+    } else if (accessToken) {
+      try {
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + accessToken },
+        });
+        if (!userInfoRes.ok) return res.status(401).json({ error: 'Google access_token 无效' });
+        const userInfo = await userInfoRes.json();
+        if (!userInfo.sub) return res.status(401).json({ error: 'Google 用户信息获取失败' });
+        googleSub = userInfo.sub;
+        googleEmail = userInfo.email;
+        googleName = userInfo.name;
+        googleAvatar = userInfo.picture;
+        console.log('[Google] access_token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
+      } catch (e) {
+        console.error('[Google] userinfo 请求失败:', e.message);
+        return res.status(401).json({ error: 'Google 登录验证失败' });
+      }
+    } else if (idToken && !googleOAuthClient) {
       // Mock 模式：开发/测试专用（每次调用创建一个新的随机 sub；如需持久化测试账号，请配置 GOOGLE_CLIENT_ID）
       googleSub = 'google_mock_' + crypto.randomBytes(12).toString('hex');
       console.warn('[Google] 使用 mock 模式，配置 GOOGLE_CLIENT_ID 启用真实验证');
+    } else {
+      return res.status(401).json({ error: 'Google 登录未配置' });
     }
 
     // 查找已绑定此 Google 账号的用户
