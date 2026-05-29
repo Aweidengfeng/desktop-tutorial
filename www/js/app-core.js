@@ -4201,9 +4201,11 @@ function alpineLink() {
         }
         const credential = await new Promise((resolve, reject) => {
           let settled = false;
+          const timeoutId = setTimeout(() => settle(reject, new Error('Google 登录超时，请重试')), 60000);
           const settle = (fn, value) => {
             if (settled) return;
             settled = true;
+            clearTimeout(timeoutId);
             fn(value);
           };
 
@@ -4242,7 +4244,6 @@ function alpineLink() {
             }
           });
 
-          setTimeout(() => settle(reject, new Error('Google 登录超时，请重试')), 60000);
         });
         const body = typeof credential === 'string'
           ? { idToken: credential }
