@@ -1,12 +1,10 @@
-const STATIC_CACHE = 'summitlink-static-v4';
-const TILE_CACHE = 'summitlink-tiles-v4';
-const API_CACHE = 'summitlink-api-v4';
+const STATIC_CACHE = 'summitlink-static-v5';
+const TILE_CACHE = 'summitlink-tiles-v5';
+const API_CACHE = 'summitlink-api-v5';
 const TILE_MAX = 200;
 const TILE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 const PRECACHE = [
-  '/',
-  '/index.html',
   '/www/js/app-core.js',
   '/www/js/currency.js',
   '/js/app-core.js',
@@ -82,6 +80,7 @@ async function staleWhileRevalidateApi(request) {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  if (request.mode === 'navigate' || request.destination === 'document') return;
   const url = new URL(request.url);
 
   if (isTile(request.url)) {

@@ -235,6 +235,12 @@ describe('安全测试 8 — CSP 与 Alpine 构建', () => {
     expect(appJs).toContain("'unsafe-eval'");
   });
 
+  test('后端 CSP connectSrc 包含 cdnjs（允许 SW 动态加载二维码脚本）', () => {
+    const appJs = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+    expect(appJs).toContain('connectSrc');
+    expect(appJs).toContain('https://cdnjs.cloudflare.com');
+  });
+
   test('门户页面应继续使用 Alpine CSP 构建', () => {
     const htmlFiles = [
       '../../index.html',
@@ -266,5 +272,30 @@ describe('安全测试 8 — CSP 与 Alpine 构建', () => {
     expect(content).toMatch(/document\.addEventListener\(\s*['"]alpine:initialized['"]/);
     expect(content).toMatch(/body\s*&&\s*body\.hasAttribute\(\s*['"]x-cloak['"]\s*\)/);
     expect(fs.existsSync(vendorPath)).toBe(true);
+  });
+
+  test('根首页 Sentry 加载失败时应静默降级', () => {
+    const content = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
+    expect(content).toMatch(/try\s*\{[\s\S]*browser\.sentry-cdn\.com\/8\.0\.0\/browser\.min\.js[\s\S]*\}\s*catch\s*\(e\)\s*\{\s*\}/);
+    expect(content).toMatch(/script\.onerror\s*=\s*function\s*\(\)\s*\{\s*\}/);
+  });
+
+  test('Service Worker 不预缓存 HTML 且跳过 navigate/document 请求', () => {
+    for (const file of ['../../sw.js', '../../www/sw.js']) {
+      const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
+      expect(content).toContain("request.mode === 'navigate'");
+      expect(content).toContain("request.destination === 'document'");
+      const precacheSection = content.match(/const PRECACHE = \[([\s\S]*?)\];/);
+      expect(precacheSection && precacheSection[1]).not.toContain("'/index.html'");
+      expect(precacheSection && precacheSection[1]).not.toContain("'/'");
+    }
+  });
+
+  test('manifest 图标路径应指向已打包目录', () => {
+    for (const file of ['../../manifest.json', '../../www/manifest.json']) {
+      const content = fs.readFileSync(path.join(__dirname, file), 'utf8');
+      expect(content).toContain('/assets/icon/icon.svg');
+      expect(content).not.toContain('/icons/icon-192.svg');
+    }
   });
 });
