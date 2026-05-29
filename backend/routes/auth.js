@@ -1058,7 +1058,7 @@ router.post('/google', loginLimiter, async (req, res) => {
         const userInfo = await userInfoRes.json();
         if (!userInfo.sub) return res.status(401).json({ error: 'Google 用户信息获取失败' });
         googleSub = userInfo.sub;
-        const emailVerified = userInfo.email_verified === true || userInfo.email_verified === 'true';
+        const emailVerified = userInfo.email_verified === true;
         googleEmail = emailVerified ? userInfo.email : null;
         googleName = userInfo.name;
         googleAvatar = userInfo.picture;
