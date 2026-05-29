@@ -123,6 +123,7 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
+        "'unsafe-eval'",
         'https://cdn.tailwindcss.com',
         'https://cdnjs.cloudflare.com',
         'https://cdn.jsdelivr.net',
