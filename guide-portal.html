@@ -209,13 +209,13 @@
       <div class="absolute left-4 top-4 glass rounded-2xl px-4 py-3">
         <p class="text-xs text-slate-300">当前轨迹</p>
         <p class="text-sm font-semibold text-white" x-text="guideTrackName"></p>
-        <p class="text-xs mt-1" :class="guideTourState === 'running' ? 'text-emerald-400' : guideTourState === 'paused' ? 'text-amber-400' : 'text-slate-400'" x-text="guideTourState === 'running' ? '● 导览进行中' : guideTourState === 'paused' ? '⏸ 已暂停' : guideTourState === 'ended' ? '✓ 已结束' : '待开始'"></p>
+        <p class="text-xs mt-1" :class="guideTourStatusClass()" x-text="guideTourStatusText()"></p>
       </div>
 
       <div class="absolute left-1/2 -translate-x-1/2 top-4 flex gap-3">
-        <button @click="guideStartTour()" :disabled="guideTourLoading" :class="guideTourState === 'running' ? 'opacity-50' : ''" class="w-14 h-14 rounded-full bg-emerald-500 text-white text-xl shadow-xl disabled:opacity-40">▶</button>
-        <button @click="guidePauseTour()" :disabled="guideTourLoading" :class="guideTourState !== 'running' ? 'opacity-50' : ''" class="w-14 h-14 rounded-full bg-amber-500 text-white text-xl shadow-xl disabled:opacity-40">⏸</button>
-        <button @click="guideEndTour()" :disabled="guideTourLoading" :class="guideTourState === 'ended' ? 'opacity-50' : ''" class="w-14 h-14 rounded-full bg-rose-600 text-white text-xl shadow-xl disabled:opacity-40">⏹</button>
+        <button @click="guideStartTour()" :disabled="guideTourLoading" :class="guideTourBtnClass('start')" class="w-14 h-14 rounded-full bg-emerald-500 text-white text-xl shadow-xl disabled:opacity-40">▶</button>
+        <button @click="guidePauseTour()" :disabled="guideTourLoading" :class="guideTourBtnClass('pause')" class="w-14 h-14 rounded-full bg-amber-500 text-white text-xl shadow-xl disabled:opacity-40">⏸</button>
+        <button @click="guideEndTour()" :disabled="guideTourLoading" :class="guideTourBtnClass('end')" class="w-14 h-14 rounded-full bg-rose-600 text-white text-xl shadow-xl disabled:opacity-40">⏹</button>
       </div>
 
       <button @click="startGuideSOSCountdown()" class="absolute right-4 top-4 w-14 h-14 rounded-full bg-red-600 text-white font-bold shadow-2xl">SOS</button>
@@ -592,7 +592,7 @@
             <p class="font-semibold text-yellow-400 mb-1">🎉 冷启动优惠</p>
             <p>首批认证向导享受 <strong class="text-white">6折年费</strong>，前3个月 <strong class="text-white">零抽成</strong>。名额有限！</p>
             <p class="mt-1 text-slate-400">选择的等级年费：
-              <strong class="text-green-400" x-text="'¥' + (certLevels.guide[applyForm.certLevel]?.yearFee || 299)"></strong>
+              <strong class="text-green-400" x-text="'¥' + getApplyLevelYearFee()"></strong>
             </p>
           </div>
           <button type="submit" :disabled="applyLoading || uploadingFiles"
@@ -612,11 +612,11 @@
         <div class="glass-dark rounded-xl p-4 mb-6 text-left space-y-2">
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">认证等级</span>
-            <span class="text-white font-semibold" x-text="(certStatus.guide?.cert_level || 'basic').toUpperCase()"></span>
+            <span class="text-white font-semibold" x-text="getCurrentGuideCertLevel().toUpperCase()"></span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">入驻年费</span>
-            <span class="text-green-400 font-bold" x-text="'¥' + (certLevels.guide?.[certStatus.guide?.cert_level]?.yearFee || 299)"></span>
+            <span class="text-green-400 font-bold" x-text="'¥' + getCurrentGuideYearFee()"></span>
           </div>
         </div>
         <button @click="payListingFee()" :disabled="payLoading"
@@ -1007,6 +1007,44 @@
       locationInterval: null,
       teamInterval: null,
       commercialStatus: null,
+
+      guideTourStatusClass() {
+        if (this.guideTourState === 'running') return 'text-emerald-400';
+        if (this.guideTourState === 'paused') return 'text-amber-400';
+        return 'text-slate-400';
+      },
+
+      guideTourStatusText() {
+        if (this.guideTourState === 'running') return '● 导览进行中';
+        if (this.guideTourState === 'paused') return '⏸ 已暂停';
+        if (this.guideTourState === 'ended') return '✓ 已结束';
+        return '待开始';
+      },
+
+      guideTourBtnClass(action) {
+        if (action === 'start' && this.guideTourState === 'running') return 'opacity-50';
+        if (action === 'pause' && this.guideTourState !== 'running') return 'opacity-50';
+        if (action === 'end' && this.guideTourState === 'ended') return 'opacity-50';
+        return '';
+      },
+
+      getApplyLevelYearFee() {
+        const levels = (this.certLevels && this.certLevels.guide) ? this.certLevels.guide : {};
+        const levelKey = (this.applyForm && this.applyForm.certLevel) ? this.applyForm.certLevel : 'basic';
+        const level = levels[levelKey];
+        return (level && level.yearFee) || 299;
+      },
+
+      getCurrentGuideCertLevel() {
+        if (this.certStatus && this.certStatus.guide && this.certStatus.guide.cert_level) return this.certStatus.guide.cert_level;
+        return 'basic';
+      },
+
+      getCurrentGuideYearFee() {
+        const levels = (this.certLevels && this.certLevels.guide) ? this.certLevels.guide : {};
+        const level = levels[this.getCurrentGuideCertLevel()];
+        return (level && level.yearFee) || 299;
+      },
 
       selectGuideTab(nextPage) {
         this.page = nextPage;

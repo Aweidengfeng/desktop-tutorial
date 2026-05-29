@@ -2362,7 +2362,7 @@
       <button @click="loginType='email'" :class="loginType==='email' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" role="tab" :aria-selected="loginType==='email'">邮箱验证码</button>
     </div>
     <!-- Password Login -->
-    <div x-show="loginType==='password'" class="space-y-4">
+    <form x-show="loginType==='password'" @submit.prevent="doLogin()" autocomplete="on" class="space-y-4">
       <div>
         <label for="login-phone" class="text-slate-400 text-xs mb-1.5 block">手机号 / 邮箱</label>
         <input id="login-phone" x-model="loginForm.phone" type="text" placeholder="手机号或邮箱地址" aria-required="true" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
@@ -2371,11 +2371,11 @@
         <label for="login-password" class="text-slate-400 text-xs mb-1.5 block">密码</label>
         <input id="login-password" x-model="loginForm.password" type="password" placeholder="请输入密码" aria-required="true" @keydown.enter="doLogin()" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
-      <button @click="doLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+      <button type="submit" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
         <span x-text="loginLoading ? '登录中…' : '登录'"></span>
       </button>
-    </div>
+    </form>
     <!-- SMS Login -->
     <div x-show="loginType==='sms'" class="space-y-4">
       <div>
@@ -2461,7 +2461,7 @@
         <span class="material-symbols-outlined text-slate-400" aria-hidden="true">close</span>
       </button>
     </div>
-    <div class="space-y-4">
+    <form @submit.prevent="doRegister()" autocomplete="on" class="space-y-4">
       <div>
         <label for="register-name" class="text-slate-400 text-xs mb-1.5 block">姓名</label>
         <input id="register-name" x-model="registerForm.name" type="text" placeholder="请输入您的姓名" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
@@ -2500,9 +2500,9 @@
         和
         <a href="/legal/privacy" target="_blank" class="text-sky-400 hover:text-sky-300 underline">隐私政策</a>
       </p>
-      <button @click="doRegister()" :disabled="!agreedPrivacy || !agreedTerms" :class="(!agreedPrivacy || !agreedTerms) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-light text-white'" class="w-full font-bold py-3.5 rounded-xl transition-colors" data-testid="register-submit">注册</button>
+      <button type="submit" :disabled="!agreedPrivacy || !agreedTerms" :class="(!agreedPrivacy || !agreedTerms) ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-light text-white'" class="w-full font-bold py-3.5 rounded-xl transition-colors" data-testid="register-submit">注册</button>
       <p class="text-center text-slate-400 text-sm">已有账号？<button @click="showRegister=false;showLogin=true" class="text-primary-light font-semibold hover:underline">立即登录</button></p>
-    </div>
+    </form>
   </div>
 </div>
 

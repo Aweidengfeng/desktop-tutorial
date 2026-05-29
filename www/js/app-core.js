@@ -3968,7 +3968,7 @@ function alpineLink() {
       }
     },
     async doRegister() {
-      if (!/^(\+?\d{7,15}|1[3-9]\d{9})$/.test(this.registerForm.phone)) { this.showToast('手机号格式不正确', 'error'); return; }
+      if (!/^(1[3-9]\d{9}|\+[1-9]\d{6,14})$/.test(this.registerForm.phone)) { this.showToast('请输入正确的手机号（中国大陆格式或+区号国际格式）', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
         const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
