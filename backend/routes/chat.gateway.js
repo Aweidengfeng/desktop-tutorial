@@ -90,8 +90,11 @@ function bindLocationEvents(socket) {
 }
 
 function initChatGateway(server) {
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : '*';
   const io = new Server(server, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: { origin: corsOrigins, methods: ['GET', 'POST'], credentials: true },
     pingInterval: 25000,
     pingTimeout: 5000,
   });
@@ -130,10 +133,12 @@ function initChatGateway(server) {
         const msg = (await prisma.$queryRaw`SELECT * FROM messages WHERE id = ${Number(newMsgId)}`)[0];
         await prisma.$executeRaw`UPDATE conversations SET updated_at = CURRENT_TIMESTAMP, last_msg_at = CURRENT_TIMESTAMP WHERE id = ${conv_id}`;
         io.to(`conv:${conv_id}`).emit('chat:message', msg);
+        console.log('[chat] 私聊消息落库成功, msg_id:', newMsgId, 'conv:', conv_id, 'uid:', uid);
         if (isSOS) {
           io.emit('sos:alert', { userId: uid, conv_id, content, msg_id: msg.id });
         }
       } catch (e) {
+        console.error('[chat] 私聊消息落库失败, conv:', conv_id, 'uid:', uid, '错误:', e && e.message ? e.message : e);
         socket.emit('chat:error', { error: 'db_error' });
       }
     });
