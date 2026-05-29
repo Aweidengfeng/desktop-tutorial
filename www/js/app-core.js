@@ -4227,6 +4227,7 @@ function alpineLink() {
               if (settled || oauthRequested) return;
               try {
                 oauthRequested = true;
+                if (settled) return;
                 const tokenClient = window.google.accounts.oauth2.initTokenClient({
                   client_id: window.__GOOGLE_CLIENT_ID__,
                   scope: 'openid email profile',
