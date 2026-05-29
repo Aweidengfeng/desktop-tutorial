@@ -149,6 +149,7 @@ app.use(helmet({
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       connectSrc: [
         "'self'",
+        'https://cdnjs.cloudflare.com',
         'https://cdn.tailwindcss.com',
         'https://cdn.jsdelivr.net',
         'https://fonts.googleapis.com',

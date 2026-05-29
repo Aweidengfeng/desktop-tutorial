@@ -222,27 +222,30 @@
     // 仅当后端注入了有效 DSN 时才加载 Sentry SDK
     var dsn = (window.__SENTRY_DSN || '').trim();
     if (!dsn) return;
-    var script = document.createElement('script');
-    script.src = 'https://browser.sentry-cdn.com/8.0.0/browser.min.js';
-    script.crossOrigin = 'anonymous';
-    script.onload = function() {
-      if (window.Sentry) {
-        Sentry.init({
-          dsn: dsn,
-          environment: window.__ENV || 'production',
-          tracesSampleRate: 0.1,
-          integrations: function(defaultIntegrations) {
-            return (defaultIntegrations || []).filter(function(integration) {
-              var name = String((integration && integration.name) || '').toLowerCase();
-              return name.indexOf('replay') === -1 && name.indexOf('feedback') === -1 && name.indexOf('widget') === -1;
-            });
-          },
-          ignoreErrors: ['ResizeObserver loop', 'ChunkLoadError'],
-        });
-        window.__sentryInitialized = true;
-      }
-    };
-    document.head.appendChild(script);
+    try {
+      var script = document.createElement('script');
+      script.src = 'https://browser.sentry-cdn.com/8.0.0/browser.min.js';
+      script.crossOrigin = 'anonymous';
+      script.onerror = function() {};
+      script.onload = function() {
+        if (window.Sentry) {
+          Sentry.init({
+            dsn: dsn,
+            environment: window.__ENV || 'production',
+            tracesSampleRate: 0.1,
+            integrations: function(defaultIntegrations) {
+              return (defaultIntegrations || []).filter(function(integration) {
+                var name = String((integration && integration.name) || '').toLowerCase();
+                return name.indexOf('replay') === -1 && name.indexOf('feedback') === -1 && name.indexOf('widget') === -1;
+              });
+            },
+            ignoreErrors: ['ResizeObserver loop', 'ChunkLoadError'],
+          });
+          window.__sentryInitialized = true;
+        }
+      };
+      document.head.appendChild(script);
+    } catch (e) {}
   })();
   </script>
   <!-- Phase 2.6: 早期主题检测，防止浅色模式闪烁 -->
