@@ -19,6 +19,8 @@
     var fallbackTimeout = setTimeout(function() {
       if (window.__slAlpineReady) return;
       if (document.getElementById('sl-alpine-fallback')) return;
+      var body = document.body;
+      if (body && !body.hasAttribute('x-cloak')) return; // Alpine 已初始化（x-cloak 已移除）
       console.warn('[SummitLink] Alpine.js CDN 加载失败，尝试备用路径');
       var s = document.createElement('script');
       s.id = 'sl-alpine-fallback';
