@@ -276,7 +276,7 @@ describe('安全测试 8 — CSP 与 Alpine 构建', () => {
 
   test('根首页 Sentry 加载失败时应静默降级', () => {
     const content = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
-    expect(content).toMatch(/try\s*\{[\s\S]*browser\.sentry-cdn\.com\/8\.0\.0\/browser\.min\.js[\s\S]*\}\s*catch\s*\(e\)\s*\{\s*\}/);
+    expect(content).toMatch(/try\s*\{[\s\S]*?browser\.sentry-cdn\.com\/8\.0\.0\/browser\.min\.js[\s\S]*?\}\s*catch\s*\(e\)\s*\{\s*\}/);
     expect(content).toMatch(/script\.onerror\s*=\s*function\s*\(\)\s*\{\s*\}/);
   });
 
