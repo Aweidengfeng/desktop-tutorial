@@ -92,6 +92,9 @@ const _fetchWithTimeout = (url, options = {}, timeoutMs = 15000) => {
 
 // ─── API Fetch 封装：统一处理 401 过期跳转（Phase 0.5）─────────────────────
 async function apiFetch(url, options = {}) {
+  // 安卓 Capacitor 端通过 window.__API_BASE__ 指向真实后端地址
+  const apiBase = (window.__API_BASE__ || '').replace(/\/$/, '');
+  const fullUrl = url.startsWith('http') ? url : apiBase + url;
   const token = _safeLsGet('summitlink_token', null);
   const headers = {
     ...(options.headers || {}),
@@ -106,7 +109,7 @@ async function apiFetch(url, options = {}) {
   }
   let res;
   try {
-    res = await fetch(url, { ...options, headers, credentials: 'include' });
+    res = await fetch(fullUrl, { ...options, headers, credentials: 'include' });
   } catch (e) {
     // 网络错误（断网/超时）
     throw new Error('网络连接失败，请检查网络后重试');
@@ -4624,9 +4627,16 @@ function alpineLink() {
     },
     initChatSocket() {
       if (!this.authToken || !window.io || this._chatSocket) return;
-      this._chatSocket = window.io('/', {
+      const apiBase = (window.__API_BASE__ || '').replace(/\/$/, '');
+      this._chatSocket = window.io(apiBase || '/', {
         auth: { token: this.authToken },
         transports: ['polling', 'websocket'],
+        reconnectionDelay: 3000,
+        reconnectionDelayMax: 30000,
+        timeout: 10000,
+      });
+      this._chatSocket.on('connect_error', (err) => {
+        console.warn('[chat] Socket 连接失败:', err && err.message ? err.message : err);
       });
       this._chatSocket.on('connect', () => {
         if (this.activeChatSession?.conversationId) {
