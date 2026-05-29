@@ -1029,7 +1029,7 @@ router.post('/google', loginLimiter, async (req, res) => {
       googleEmail = payload.email;
       googleName = payload.name;
       googleAvatar = payload.picture;
-      console.log('[Google] ID token 验证成功, sub:', googleSub?.slice(0, 8) + '***');
+      console.log('[Google] ID token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
     } else if (accessToken) {
       try {
         const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -1042,7 +1042,7 @@ router.post('/google', loginLimiter, async (req, res) => {
         googleEmail = userInfo.email;
         googleName = userInfo.name;
         googleAvatar = userInfo.picture;
-        console.log('[Google] access_token 验证成功, sub:', googleSub?.slice(0, 8) + '***');
+        console.log('[Google] access_token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
       } catch (e) {
         console.error('[Google] userinfo 请求失败:', e.message);
         return res.status(401).json({ error: 'Google 登录验证失败' });
