@@ -4200,39 +4200,60 @@ function alpineLink() {
           });
         }
         const credential = await new Promise((resolve, reject) => {
+          let settled = false;
+          const settle = (fn, value) => {
+            if (settled) return;
+            settled = true;
+            fn(value);
+          };
+
           window.google.accounts.id.initialize({
             client_id: window.__GOOGLE_CLIENT_ID__,
             callback: (response) => {
-              if (response && response.credential) resolve(response.credential);
-              else reject(new Error('未获取到 Google credential'));
+              if (response && response.credential) settle(resolve, response.credential);
+              else settle(reject, new Error('未获取到 Google credential'));
             },
-            cancel_on_tap_outside: true,
+            cancel_on_tap_outside: false,
           });
+
           window.google.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              // One Tap 不可用时，使用 OAuth2 access token 流
+            const notDisplayed = notification && typeof notification.isNotDisplayed === 'function' && notification.isNotDisplayed();
+            const skipped = notification && typeof notification.isSkippedMoment === 'function' && notification.isSkippedMoment();
+            const dismissed = notification && typeof notification.isDismissedMoment === 'function' && notification.isDismissedMoment();
+            if (notDisplayed || skipped || dismissed) {
+              if (settled) return;
               try {
                 const tokenClient = window.google.accounts.oauth2.initTokenClient({
                   client_id: window.__GOOGLE_CLIENT_ID__,
                   scope: 'openid email profile',
                   callback: (tokenResponse) => {
-                    if (tokenResponse && tokenResponse.access_token) resolve(tokenResponse.access_token);
-                    else reject(new Error('Google 授权失败'));
+                    if (!tokenResponse || tokenResponse.error || !tokenResponse.access_token) {
+                      settle(reject, new Error((tokenResponse && tokenResponse.error) || 'Google 授权失败'));
+                      return;
+                    }
+                    settle(resolve, { accessToken: tokenResponse.access_token });
                   },
-                  error_callback: (err) => reject(new Error((err && err.message) || 'Google 授权错误')),
+                  error_callback: (err) => settle(reject, new Error((err && err.message) || 'Google 授权错误')),
                 });
                 tokenClient.requestAccessToken({ prompt: 'select_account' });
-              } catch (e) { reject(e); }
+              } catch (e) {
+                settle(reject, e);
+              }
             }
           });
+
+          setTimeout(() => settle(reject, new Error('Google 登录超时，请重试')), 60000);
         });
-        const res = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: credential }) });
+        const body = typeof credential === 'string'
+          ? { idToken: credential }
+          : { accessToken: credential.accessToken };
+        const res = await apiFetch('/api/auth/google', { method: 'POST', body });
         const data = await res.json();
         if (!res.ok) { this.showToast(data.error || 'Google 登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
       } catch(e) {
         console.error('[google login]', e);
-        this.showToast('Google 登录失败，请重试', 'error');
+        this.showToast(e.message || 'Google 登录失败，请重试', 'error');
       }
     },
     _handleLoginSuccess(data) {
