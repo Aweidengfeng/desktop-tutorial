@@ -4201,6 +4201,7 @@ function alpineLink() {
         }
         const credential = await new Promise((resolve, reject) => {
           let settled = false;
+          let oauthRequested = false;
           const timeoutId = setTimeout(() => settle(reject, new Error('Google 登录超时，请重试')), 60000);
           const settle = (fn, value) => {
             if (settled) return;
@@ -4223,8 +4224,9 @@ function alpineLink() {
             const skipped = notification && typeof notification.isSkippedMoment === 'function' && notification.isSkippedMoment();
             const dismissed = notification && typeof notification.isDismissedMoment === 'function' && notification.isDismissedMoment();
             if (notDisplayed || skipped || dismissed) {
-              if (settled) return;
+              if (settled || oauthRequested) return;
               try {
+                oauthRequested = true;
                 const tokenClient = window.google.accounts.oauth2.initTokenClient({
                   client_id: window.__GOOGLE_CLIENT_ID__,
                   scope: 'openid email profile',
@@ -4250,7 +4252,6 @@ function alpineLink() {
           : { accessToken: credential.accessToken };
         const res = await apiFetch('/api/auth/google', { method: 'POST', body });
         const data = await res.json();
-        if (!res.ok) { this.showToast(data.error || 'Google 登录失败', 'error'); return; }
         this._handleLoginSuccess(data);
       } catch(e) {
         console.error('[google login]', e);

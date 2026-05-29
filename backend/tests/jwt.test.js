@@ -45,6 +45,38 @@ describe('Phase 5.3 — JWT 过期全链路测试', () => {
     createTestDb();
   });
 
+  describe('Google accessToken 登录校验', () => {
+    beforeEach(() => {
+      clearDbCache();
+      jest.restoreAllMocks();
+      delete process.env.GOOGLE_CLIENT_ID;
+    });
+
+    test('未配置 GOOGLE_CLIENT_ID 时拒绝 accessToken 登录', async () => {
+      const app = createApp();
+      const res = await request(app).post('/api/auth/google').send({ accessToken: 'test-token' });
+
+      expect(res.status).toBe(503);
+      expect(res.body.error).toBe('Google 登录未配置');
+    });
+
+    test('tokeninfo 的受众不匹配时拒绝 accessToken 登录', async () => {
+      process.env.GOOGLE_CLIENT_ID = 'expected-client-id';
+      const fetchSpy = jest.spyOn(global, 'fetch')
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ aud: 'different-client-id' }),
+        });
+
+      const app = createApp();
+      const res = await request(app).post('/api/auth/google').send({ accessToken: 'test-token' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe('Google access_token 受众不匹配');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // ─── 场景 1：已过期的 JWT → 401 ────────────────────────────────
   test('1. 已过期 JWT 请求受保护接口 → 401', async () => {
     const expiredToken = makeExpiredToken();

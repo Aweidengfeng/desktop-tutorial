@@ -1010,7 +1010,9 @@ router.post('/apple', loginLimiter, async (req, res) => {
 });
 
 // POST /api/auth/google — Google 登录
-// 若已配置 GOOGLE_CLIENT_ID，则验证 Google ID token；否则使用 mock 模式（仅开发/测试）
+// 支持两种模式：
+// 1) idToken：若已配置 GOOGLE_CLIENT_ID 则做真实验证；未配置时仅在开发/测试走 mock 模式
+// 2) accessToken：始终要求配置 GOOGLE_CLIENT_ID，并验证 token 受众（aud/azp）后再拉取 userinfo
 router.post('/google', loginLimiter, async (req, res) => {
   try {
     const { idToken, accessToken } = req.body || {};
@@ -1021,17 +1023,34 @@ router.post('/google', loginLimiter, async (req, res) => {
     let googleName = null;
     let googleAvatar = null;
 
-    if (idToken && googleOAuthClient) {
-      // 真实 Google ID token 验证
-      const payload = await verifyGoogleToken(idToken);
-      if (!payload) return res.status(401).json({ error: 'Google ID token 验证失败，请重新登录' });
-      googleSub = payload.sub;
-      googleEmail = payload.email;
-      googleName = payload.name;
-      googleAvatar = payload.picture;
-      console.log('[Google] ID token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
+    if (idToken) {
+      if (googleOAuthClient) {
+        // 真实 Google ID token 验证
+        const payload = await verifyGoogleToken(idToken);
+        if (!payload) return res.status(401).json({ error: 'Google ID token 验证失败，请重新登录' });
+        googleSub = payload.sub;
+        googleEmail = payload.email;
+        googleName = payload.name;
+        googleAvatar = payload.picture;
+        console.log('[Google] ID token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
+      } else {
+        // Mock 模式：开发/测试专用（每次调用创建一个新的随机 sub；如需持久化测试账号，请配置 GOOGLE_CLIENT_ID）
+        googleSub = 'google_mock_' + crypto.randomBytes(12).toString('hex');
+        console.warn('[Google] 使用 mock 模式，配置 GOOGLE_CLIENT_ID 启用真实验证');
+      }
     } else if (accessToken) {
+      if (!process.env.GOOGLE_CLIENT_ID) {
+        return res.status(503).json({ error: 'Google 登录未配置' });
+      }
       try {
+        const tokenInfoRes = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(accessToken));
+        if (!tokenInfoRes.ok) return res.status(401).json({ error: 'Google access_token 无效' });
+        const tokenInfo = await tokenInfoRes.json();
+        const audience = tokenInfo?.azp || tokenInfo?.aud;
+        if (!audience || audience !== process.env.GOOGLE_CLIENT_ID) {
+          return res.status(401).json({ error: 'Google access_token 受众不匹配' });
+        }
+
         const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: { Authorization: 'Bearer ' + accessToken },
         });
@@ -1039,7 +1058,8 @@ router.post('/google', loginLimiter, async (req, res) => {
         const userInfo = await userInfoRes.json();
         if (!userInfo.sub) return res.status(401).json({ error: 'Google 用户信息获取失败' });
         googleSub = userInfo.sub;
-        googleEmail = userInfo.email;
+        const emailVerified = userInfo.email_verified === true;
+        googleEmail = emailVerified ? userInfo.email : null;
         googleName = userInfo.name;
         googleAvatar = userInfo.picture;
         console.log('[Google] access_token 验证成功, sub:', (googleSub?.slice(0, 8) ?? 'unknown') + '***');
@@ -1047,12 +1067,6 @@ router.post('/google', loginLimiter, async (req, res) => {
         console.error('[Google] userinfo 请求失败:', e.message);
         return res.status(401).json({ error: 'Google 登录验证失败' });
       }
-    } else if (idToken && !googleOAuthClient) {
-      // Mock 模式：开发/测试专用（每次调用创建一个新的随机 sub；如需持久化测试账号，请配置 GOOGLE_CLIENT_ID）
-      googleSub = 'google_mock_' + crypto.randomBytes(12).toString('hex');
-      console.warn('[Google] 使用 mock 模式，配置 GOOGLE_CLIENT_ID 启用真实验证');
-    } else {
-      return res.status(401).json({ error: 'Google 登录未配置' });
     }
 
     // 查找已绑定此 Google 账号的用户
