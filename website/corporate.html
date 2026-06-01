@@ -3,33 +3,658 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Corporate Partnerships | SummitLink</title>
-  <meta name="description" content="Partner with the world's leading mountaineering platform." />
+  <title>Corporate & Investment | SummitLink</title>
+  <meta name="description" content="SummitLink is building scalable global infrastructure for mountaineering. Partner with us as an investor, sponsor, or strategic partner." />
+  <meta property="og:title" content="Corporate & Investment | SummitLink" />
+  <meta property="og:description" content="Investor-grade partnership page for SummitLink's global expedition platform." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="./corporate.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
   <style>
-    body { background:#080f1c; color:#fff; }
-    .hero-corp { padding:9rem 1rem 5rem; background:linear-gradient(140deg, rgba(8,15,28,.95), rgba(8,15,28,.75)), url('https://images.unsplash.com/photo-1517825738774-7de9363ef735?w=1920&q=80') center/cover; }
-    .title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(2.2rem,4.6vw,4.2rem); }
-    .section-title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(1.8rem,3vw,3rem); }
-    .muted { color:rgba(255,255,255,.68); }
+    :root {
+      --bg: #080f1c;
+      --glacier: #4FACFE;
+      --gold: #F5A623;
+      --glass: rgba(255, 255, 255, 0.06);
+    }
+
+    body {
+      background: var(--bg);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .corp-section {
+      padding-top: clamp(5rem, 8vw, 7.2rem);
+      padding-bottom: clamp(5rem, 8vw, 7.2rem);
+    }
+
+    .corp-hero {
+      min-height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      isolation: isolate;
+      background: url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80') center/cover no-repeat;
+    }
+
+    .corp-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(140deg, rgba(8, 15, 28, 0.92), rgba(8, 15, 28, 0.68));
+      z-index: -1;
+    }
+
+    .hero-title,
+    .section-title {
+      font-family: 'Sora', sans-serif;
+      font-weight: 900;
+      line-height: 1.05;
+    }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 6vw, 5.2rem);
+      max-width: 980px;
+      margin: 1rem 0 1rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.9rem, 3.6vw, 3.4rem);
+      margin-bottom: 0.8rem;
+    }
+
+    .section-sub {
+      color: rgba(255, 255, 255, 0.72);
+      max-width: 920px;
+      margin-bottom: 2rem;
+    }
+
+    .hero-sub {
+      max-width: 800px;
+      font-size: clamp(1rem, 1.6vw, 1.28rem);
+      color: rgba(255, 255, 255, 0.84);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.8rem;
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: 999px;
+      padding: 0.78rem 1.15rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--glacier);
+      color: #e6f3ff;
+      transform: translateY(-1px);
+    }
+
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .stat-value {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(2.1rem, 4.2vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1;
+      margin-bottom: 0.6rem;
+    }
+
+    .ecosystem-stage {
+      position: relative;
+      min-height: 640px;
+      margin-top: 1.8rem;
+    }
+
+    .ecosystem-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: radial-gradient(circle at 35% 35%, rgba(79, 172, 254, 0.42), rgba(12, 24, 44, 0.94));
+      border: 1px solid rgba(79, 172, 254, 0.72);
+      box-shadow: 0 0 55px rgba(79, 172, 254, 0.35);
+      z-index: 2;
+    }
+
+    .eco-node {
+      position: absolute;
+      width: min(300px, calc(100% - 2rem));
+      padding: 1.2rem;
+      z-index: 2;
+    }
+
+    .eco-left {
+      left: 0;
+      top: 52%;
+      transform: translateY(-50%);
+    }
+
+    .eco-top {
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+    }
+
+    .eco-right {
+      right: 0;
+      top: 52%;
+      transform: translateY(-50%);
+    }
+
+    .eco-line {
+      position: absolute;
+      height: 2px;
+      background-image: repeating-linear-gradient(90deg, rgba(79, 172, 254, 0.9) 0 10px, rgba(255, 255, 255, 0.2) 10px 18px);
+      animation: dashFlow 2.8s linear infinite;
+      transform-origin: left center;
+      z-index: 1;
+    }
+
+    .eco-line-left {
+      width: 200px;
+      left: calc(50% - 180px);
+      top: 50%;
+      transform: rotate(180deg);
+    }
+
+    .eco-line-top {
+      width: 168px;
+      left: 50%;
+      top: calc(50% - 106px);
+      transform: rotate(-90deg);
+    }
+
+    .eco-line-right {
+      width: 200px;
+      left: 50%;
+      top: 50%;
+      transform: rotate(0deg);
+    }
+
+    @keyframes dashFlow {
+      from {
+        background-position: 0 0;
+      }
+      to {
+        background-position: 80px 0;
+      }
+    }
+
+    .tier-card {
+      border-width: 2px;
+      border-style: solid;
+    }
+
+    .tier-bronze {
+      border-color: rgba(79, 172, 254, 0.8);
+    }
+
+    .tier-silver {
+      border-color: rgba(233, 237, 245, 0.86);
+      transform: scale(1.02);
+    }
+
+    .tier-gold {
+      border-color: rgba(245, 166, 35, 0.95);
+      box-shadow: 0 0 36px rgba(245, 166, 35, 0.22);
+      transform: scale(1.04);
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 1.4rem;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 0.35rem;
+      top: 0.35rem;
+      bottom: 0.35rem;
+      width: 2px;
+      background: linear-gradient(180deg, var(--glacier), var(--gold));
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.1rem;
+      padding-left: 1rem;
+      color: rgba(255, 255, 255, 0.84);
+    }
+
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -0.1rem;
+      top: 0.35rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--glacier);
+      box-shadow: 0 0 0 5px rgba(79, 172, 254, 0.16);
+    }
+
+    .mountain-silhouette {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mountain-silhouette::before,
+    .mountain-silhouette::after {
+      content: "";
+      position: absolute;
+      bottom: -44px;
+      width: 55%;
+      height: 170px;
+      background: linear-gradient(180deg, rgba(79, 172, 254, 0.2), rgba(8, 15, 28, 0.94));
+      transform: skewY(-16deg);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .mountain-silhouette::before {
+      left: -8%;
+    }
+
+    .mountain-silhouette::after {
+      right: -8%;
+      transform: skewY(16deg);
+    }
+
+    .mountain-silhouette > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 1024px) {
+      .ecosystem-stage {
+        min-height: 760px;
+      }
+
+      .eco-left,
+      .eco-right,
+      .eco-top {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+      }
+
+      .eco-top {
+        top: 0;
+      }
+
+      .eco-left {
+        top: 66%;
+      }
+
+      .eco-right {
+        top: 83%;
+      }
+
+      .ecosystem-center {
+        top: 44%;
+      }
+
+      .eco-line-left,
+      .eco-line-right,
+      .eco-line-top {
+        left: 50%;
+        width: 2px;
+        height: 86px;
+        background-image: repeating-linear-gradient(180deg, rgba(79, 172, 254, 0.9) 0 10px, rgba(255, 255, 255, 0.2) 10px 18px);
+      }
+
+      .eco-line-left {
+        top: calc(44% + 110px);
+        transform: translateX(-50%) rotate(0deg);
+      }
+
+      .eco-line-top {
+        top: calc(44% - 190px);
+        transform: translateX(-50%) rotate(0deg);
+      }
+
+      .eco-line-right {
+        top: calc(44% + 250px);
+        transform: translateX(-50%) rotate(0deg);
+      }
+
+      .tier-silver,
+      .tier-gold {
+        transform: none;
+      }
+    }
   </style>
 </head>
 <body data-page="corporate">
-  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">▲ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="#partnership-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
+  <nav class="site-nav" aria-label="Primary Navigation">
+    <div class="nav-shell">
+      <div class="flex items-center justify-between gap-4">
+        <a href="./index.html" class="brand-font text-lg font-bold">▲ SummitLink</a>
+        <div class="nav-links items-center gap-1 md:flex">
+          <a class="nav-link" data-nav="home" href="./index.html">Home</a>
+          <a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a>
+          <a class="nav-link" data-nav="guides" href="./guides.html">Guides</a>
+          <a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a>
+          <a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a>
+          <a class="nav-link" data-nav="contact" href="./contact.html">Contact</a>
+        </div>
+        <div class="flex items-center gap-2">
+          <a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a>
+          <button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button>
+        </div>
+      </div>
+      <div class="mobile-menu" data-mobile-menu>
+        <a class="nav-link block" href="./index.html">Home</a>
+        <a class="nav-link block" href="./seven-summits.html">Seven Summits</a>
+        <a class="nav-link block" href="./guides.html">Guides</a>
+        <a class="nav-link block" href="./peaks.html">Peaks</a>
+        <a class="nav-link block" href="./corporate.html">Corporate</a>
+        <a class="nav-link block" href="./contact.html">Contact</a>
+      </div>
+    </div>
+  </nav>
 
-  <header class="hero-corp"><div class="section-wrap pt-0 pb-0"><h1 class="title mb-4">Partner with the World's Leading Mountaineering Platform</h1><p class="text-xl muted max-w-4xl">Reach the world's most passionate, high-value outdoor community through SummitLink.</p></div></header>
+  <header class="corp-hero" aria-label="Corporate Hero">
+    <div class="section-wrap">
+      <span class="badge" data-reveal>CORPORATE &amp; INVESTMENT</span>
+      <h1 class="hero-title" data-reveal>Partner with the World's Leading Mountaineering Platform</h1>
+      <p class="hero-sub" data-reveal>SummitLink is building the global infrastructure for mountaineering. Join us as an investor, sponsor, or strategic partner.</p>
+      <div class="hero-actions" data-reveal>
+        <a class="btn-primary" href="#investment-form">Investment Inquiry</a>
+        <a class="btn-outline" href="#sponsorship-packages">Sponsorship Packages</a>
+        <a class="btn-outline" href="#strategic-partnerships">Strategic Partnership</a>
+      </div>
+    </div>
+  </header>
 
   <main>
-    <section class="section-wrap"><h2 class="section-title mb-6">Partnership Models</h2><div class="grid-auto"><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">🎯 Expedition Sponsorship</h3><p class="muted">Brand your equipment, apparel, and media across Seven Summits expeditions. Global media coverage.</p></article><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">🏢 Corporate Leadership Programs</h3><p class="muted">Send your leadership team on structured high-altitude expeditions. Build resilience. Bond teams.</p></article><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">🤝 Platform Partnership</h3><p class="muted">Integrate your outdoor products or services into the SummitLink ecosystem.</p></article><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">📈 Investment Opportunity</h3><p class="muted">Join us at the ground floor of global mountaineering infrastructure.</p></article></div></section>
+    <section class="section-wrap corp-section">
+      <h2 class="section-title" data-reveal>Why SummitLink?</h2>
+      <p class="section-sub" data-reveal>We are not organizing climbing events. We are building the operating system for global mountaineering.</p>
+      <div class="grid-cards">
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">🌍 Global Infrastructure</h3><p class="section-sub mb-0">SummitLink connects climbers, certified guides, expedition operators, and partners across every major mountaineering region worldwide.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">📈 Proven Demand</h3><p class="section-sub mb-0">The global outdoor adventure tourism market exceeds $50B and is growing at 12% annually, driven by rising aspirational travel.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">🏗️ First-Mover Advantage</h3><p class="section-sub mb-0">No unified platform exists for professional mountaineering coordination. SummitLink is defining the category.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">🔗 Network Effects</h3><p class="section-sub mb-0">Every guide, climber, and operator who joins the platform increases value for every other participant — a classic network effect business.</p></article>
+      </div>
+    </section>
 
-    <section class="section-wrap section-tight" id="partnership-form"><h2 class="section-title mb-6">Contact Form</h2><div class="glass-panel p-6"><form data-api="/api/partnerships" class="space-y-4"><div class="grid md:grid-cols-2 gap-4"><div><label class="form-label" for="companyName">Company Name</label><input class="form-input" id="companyName" name="companyName" required></div><div><label class="form-label" for="contactPerson">Contact Person</label><input class="form-input" id="contactPerson" name="contactPerson" required></div><div><label class="form-label" for="partnerEmail">Email</label><input class="form-input" id="partnerEmail" name="email" type="email" required></div><div><label class="form-label" for="partnershipType">Partnership Type</label><select class="form-select" id="partnershipType" name="partnershipType"><option>Expedition Sponsorship</option><option>Corporate Leadership Programs</option><option>Platform Partnership</option><option>Investment Opportunity</option></select></div></div><div><label class="form-label" for="message">Message</label><textarea class="form-textarea" id="message" name="message" required></textarea></div><div class="hidden" data-form-message></div><button class="btn-primary" type="submit">Submit Inquiry</button></form><p class="form-success hidden mt-4" data-form-success-panel></p></div></section>
+    <section class="section-wrap corp-section">
+      <h2 class="section-title" data-reveal>A Massive, Underserved Market</h2>
+      <p class="section-sub" data-reveal>Global mountaineering sits at the intersection of adventure tourism, professional services, and technology — all growing fast.</p>
+      <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <article class="glass-card p-7 text-center" data-reveal>
+          <p class="stat-value"><span>$</span><span data-counter-target="50" data-counter-suffix="B+">0</span></p>
+          <p class="section-sub mb-0">Global outdoor adventure tourism market</p>
+        </article>
+        <article class="glass-card p-7 text-center" data-reveal>
+          <p class="stat-value"><span data-counter-target="300" data-counter-suffix="M+">0</span></p>
+          <p class="section-sub mb-0">Active outdoor enthusiasts worldwide</p>
+        </article>
+        <article class="glass-card p-7 text-center" data-reveal>
+          <p class="stat-value"><span data-counter-target="14000" data-counter-suffix="+">0</span></p>
+          <p class="section-sub mb-0">Certified mountain guides globally with no unified platform</p>
+        </article>
+      </div>
+      <p class="section-sub mb-0" data-reveal>High-altitude mountaineering alone represents a multi-billion dollar segment, with Everest permit revenue exceeding $5M annually from Nepal alone. The total addressable market for expedition coordination, guide services, equipment sponsorship, and corporate adventure programs is estimated at $8–12B globally.</p>
+    </section>
+
+    <section class="section-wrap corp-section">
+      <h2 class="section-title" data-reveal>The SummitLink Ecosystem</h2>
+      <p class="section-sub" data-reveal>A three-sided marketplace connecting demand, supply, and capital.</p>
+      <div class="ecosystem-stage" data-reveal>
+        <span class="eco-line eco-line-left" aria-hidden="true"></span>
+        <span class="eco-line eco-line-top" aria-hidden="true"></span>
+        <span class="eco-line eco-line-right" aria-hidden="true"></span>
+
+        <article class="glass-card eco-node eco-left">
+          <h3 class="text-xl font-bold mb-2">🧗 Climbers</h3>
+          <p class="section-sub mb-0">Demand Side — 300M+ aspirational climbers seeking guided expedition experiences</p>
+        </article>
+
+        <article class="glass-card eco-node eco-top">
+          <h3 class="text-xl font-bold mb-2">🧭 Guides &amp; Operators</h3>
+          <p class="section-sub mb-0">Supply Side — 14,000+ certified guides and expedition companies</p>
+        </article>
+
+        <article class="glass-card eco-node eco-right">
+          <h3 class="text-xl font-bold mb-2">🤝 Partners &amp; Sponsors</h3>
+          <p class="section-sub mb-0">Capital Side — Brands, investors, and corporate programs</p>
+        </article>
+
+        <div class="ecosystem-center">
+          <span class="text-3xl mb-1">▲</span>
+          <strong class="text-2xl">SummitLink</strong>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4 mt-8">
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">Climbers → SummitLink</h3><p class="section-sub mb-0">Pay for expedition access, guide matching, safety infrastructure</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">Guides → SummitLink</h3><p class="section-sub mb-0">Pay subscription, receive premium bookings and global visibility</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">Partners → SummitLink</h3><p class="section-sub mb-0">Pay for sponsorship, brand exposure, corporate programs</p></article>
+      </div>
+    </section>
+
+    <section class="section-wrap corp-section">
+      <h2 class="section-title" data-reveal>Built to Scale</h2>
+      <p class="section-sub" data-reveal>Multiple compounding revenue streams across the expedition lifecycle.</p>
+      <div class="grid-cards">
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-2">💰 Expedition Commissions</h3><p class="section-sub mb-2">15–20% commission on every guided expedition booked through the platform.</p><p class="font-semibold text-[#F5A623]">Scales with transaction volume</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-2">📊 Guide &amp; Operator SaaS</h3><p class="section-sub mb-2">Monthly subscription fees for guides and operators accessing booking, scheduling, and client management tools.</p><p class="font-semibold text-[#F5A623]">Recurring revenue</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-2">🏢 Corporate Programs</h3><p class="section-sub mb-2">Enterprise packages for companies sponsoring expeditions or sending leadership teams on structured high-altitude programs.</p><p class="font-semibold text-[#F5A623]">High-margin contracts</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-2">🎯 Sponsorship &amp; Media</h3><p class="section-sub mb-2">Brand integration across Seven Summits Challenge expeditions, generating global content and media exposure.</p><p class="font-semibold text-[#F5A623]">Premium positioning</p></article>
+      </div>
+    </section>
+
+    <section class="section-wrap corp-section" id="investment-form">
+      <h2 class="section-title" data-reveal>Join Us at the Ground Floor</h2>
+      <p class="section-sub" data-reveal>SummitLink is raising capital to accelerate global guide network expansion, platform development, and the 2027 Seven Summits expedition program.</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mb-8">
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">🌐 Guide Network Expansion</h3><p class="section-sub mb-0">Onboard and certify 500+ guides across Asia, Europe, and the Americas by end of 2026.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">📱 Platform &amp; App Development</h3><p class="section-sub mb-0">Launch full iOS/Android application with real-time expedition tracking, booking, and safety features.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">🏔️ Seven Summits 2027</h3><p class="section-sub mb-0">Fund the inaugural cohort of 20 selected climbers across all 7 continents.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-lg font-bold mb-2">🤝 Partnership Development</h3><p class="section-sub mb-0">Establish regional partnerships with national mountaineering federations and major equipment brands.</p></article>
+      </div>
+
+      <div class="glass-card p-6 md:p-8" data-reveal>
+        <h3 class="text-2xl font-black mb-2">Interested in Investing?</h3>
+        <p class="section-sub">We welcome conversations with venture investors, family offices, strategic partners, and high-net-worth individuals who share our belief in the future of global adventure infrastructure.</p>
+        <form data-api="/api/partnerships" class="space-y-4" aria-label="Investment inquiry form">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="form-label" for="investorName">Name</label>
+              <input class="form-input" id="investorName" name="name" type="text" autocomplete="name" required />
+            </div>
+            <div>
+              <label class="form-label" for="investorCompany">Company</label>
+              <input class="form-input" id="investorCompany" name="company" type="text" autocomplete="organization" required />
+            </div>
+            <div>
+              <label class="form-label" for="investorEmail">Email</label>
+              <input class="form-input" id="investorEmail" name="email" type="email" autocomplete="email" required />
+            </div>
+            <div>
+              <label class="form-label" for="investmentType">Investment Type</label>
+              <select class="form-select" id="investmentType" name="investmentType" required>
+                <option value="">Select investment type</option>
+                <option>Venture Capital</option>
+                <option>Strategic Investment</option>
+                <option>Family Office</option>
+                <option>Individual</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label" for="investmentMessage">Message</label>
+            <textarea class="form-textarea" id="investmentMessage" name="message" required></textarea>
+          </div>
+          <div class="hidden" data-form-message></div>
+          <button class="btn-primary" type="submit" style="background:#F5A623;border-color:#F5A623;color:#111827;">Send Investment Inquiry</button>
+        </form>
+        <p class="form-success hidden mt-4" data-form-success-panel></p>
+      </div>
+    </section>
+
+    <section class="section-wrap corp-section" id="sponsorship-packages">
+      <h2 class="section-title" data-reveal>Sponsorship Packages</h2>
+      <p class="section-sub" data-reveal>Put your brand at the summit of the world's most ambitious mountaineering platform.</p>
+      <div class="grid lg:grid-cols-3 gap-4 items-stretch">
+        <article class="glass-card tier-card tier-bronze p-6" data-reveal>
+          <h3 class="text-2xl font-black mb-4">🥉 Expedition Partner</h3>
+          <ul class="space-y-2 text-white/85 mb-5">
+            <li>• Logo on expedition materials</li>
+            <li>• Social media mentions</li>
+            <li>• Post-expedition content package</li>
+            <li>• Access to climber community</li>
+          </ul>
+          <a class="btn-outline" href="./contact.html">Contact for Pricing</a>
+        </article>
+
+        <article class="glass-card tier-card tier-silver p-7" data-reveal>
+          <h3 class="text-2xl font-black mb-4">🥈 Summit Sponsor</h3>
+          <ul class="space-y-2 text-white/85 mb-5">
+            <li>• Everything in Expedition Partner</li>
+            <li>• Branded equipment on Seven Summits Challenge</li>
+            <li>• Dedicated brand story content</li>
+            <li>• Expedition documentary participation</li>
+            <li>• Speaking slot at SummitLink events</li>
+          </ul>
+          <a class="btn-outline" href="./contact.html">Contact for Pricing</a>
+        </article>
+
+        <article class="glass-card tier-card tier-gold p-8" data-reveal>
+          <h3 class="text-2xl font-black mb-4">🥇 Title Sponsor</h3>
+          <ul class="space-y-2 text-white/90 mb-5">
+            <li>• Everything in Summit Sponsor</li>
+            <li>• Title naming rights on flagship program</li>
+            <li>• Global media coverage integration</li>
+            <li>• Board observer seat</li>
+            <li>• First right of refusal on future programs</li>
+            <li>• Custom activation opportunities</li>
+          </ul>
+          <a class="btn-primary" href="./contact.html" style="background:#F5A623;border-color:#F5A623;color:#111827;">Contact for Pricing</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section-wrap corp-section">
+      <h2 class="section-title" data-reveal>Platform at a Glance</h2>
+      <p class="section-sub" data-reveal>Numbers that reflect where we are — and where we're going.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <article class="glass-card p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="7">0</span></p><p class="section-sub mb-0">Continents covered</p></article>
+        <article class="glass-card p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="500" data-counter-suffix="+">0</span></p><p class="section-sub mb-0">Mountain peaks in database</p></article>
+        <article class="glass-card p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="20">0</span></p><p class="section-sub mb-0">Seven Summits Challenge spots (2026 cohort)</p></article>
+        <article class="glass-card p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="2027">0</span></p><p class="section-sub mb-0">First expedition year</p></article>
+        <article class="glass-card p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="50" data-counter-suffix="+">0</span></p><p class="section-sub mb-0">Countries represented</p></article>
+        <article class="glass-card p-6 text-center" data-reveal><p class="stat-value"><span>$</span><span data-counter-target="50" data-counter-suffix="B+">0</span></p><p class="section-sub mb-0">Target market size</p></article>
+      </div>
+    </section>
+
+    <section class="section-wrap corp-section" id="strategic-partnerships">
+      <h2 class="section-title" data-reveal>Strategic Partnership Opportunities</h2>
+      <div class="grid-cards mt-6">
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">🏬 Equipment &amp; Gear Brands</h3><p class="section-sub mb-0">Co-develop SummitLink-endorsed gear lines. Reach the highest-performing outdoor athletes on earth.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">🏥 Insurance &amp; Safety</h3><p class="section-sub mb-0">Become the exclusive expedition insurance provider for all SummitLink-coordinated climbs.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">🌐 Travel &amp; Logistics</h3><p class="section-sub mb-0">Preferred logistics partner for permits, transport, and base camp services across all programs.</p></article>
+        <article class="glass-card p-6" data-reveal><h3 class="text-xl font-bold mb-3">📡 Technology Partners</h3><p class="section-sub mb-0">Integrate your technology into the SummitLink platform — satellite communication, weather data, health monitoring.</p></article>
+      </div>
+    </section>
+
+    <section class="section-wrap corp-section">
+      <h2 class="section-title" data-reveal>Where We're Going</h2>
+      <p class="section-sub" data-reveal>SummitLink's 5-year vision: become the Bloomberg Terminal of global mountaineering.</p>
+      <div class="glass-card p-6" data-reveal>
+        <div class="timeline">
+          <div class="timeline-item"><strong>2026</strong> — Launch Seven Summits Challenge. Onboard 500+ guides. Release mobile app beta.</div>
+          <div class="timeline-item"><strong>2027</strong> — First expedition cohort completes all 7 summits. Series A funding. Expand to 14 Eight-Thousanders program.</div>
+          <div class="timeline-item"><strong>2028</strong> — 10,000+ active climbers on platform. Corporate program revenue exceeds guide commissions.</div>
+          <div class="timeline-item"><strong>2029</strong> — Explorer's Grand Slam program launch (14 × 8000m + poles). Expand to trekking and multi-day adventure market.</div>
+          <div class="timeline-item mb-0"><strong>2030</strong> — IPO readiness. Dominant global platform for professional mountaineering. $500M+ GMV.</div>
+        </div>
+      </div>
+      <p class="text-2xl font-black mt-8 max-w-5xl" data-reveal>"Every great expedition begins with a single connection. SummitLink is that connection — for every climber, on every mountain, in every corner of the world."</p>
+    </section>
+
+    <section class="section-wrap corp-section mountain-silhouette">
+      <h2 class="section-title" data-reveal>Ready to Partner?</h2>
+      <p class="section-sub" data-reveal>Whether you're an investor, sponsor, or strategic partner — we want to hear from you.</p>
+      <div class="grid md:grid-cols-3 gap-4 mt-6">
+        <article class="glass-card p-6" data-reveal>
+          <h3 class="text-xl font-bold mb-2">📧 Investment Inquiries</h3>
+          <p class="section-sub mb-4">vxbf8352@gmail.com</p>
+          <a class="btn-outline" href="mailto:vxbf8352@gmail.com">Send Email</a>
+        </article>
+        <article class="glass-card p-6" data-reveal>
+          <h3 class="text-xl font-bold mb-2">🤝 Partnership &amp; Sponsorship</h3>
+          <p class="section-sub mb-4">Connect with the SummitLink team to build custom partnerships.</p>
+          <a class="btn-outline" href="./contact.html">Contact Us</a>
+        </article>
+        <article class="glass-card p-6" data-reveal>
+          <h3 class="text-xl font-bold mb-2">🏔️ Seven Summits Challenge</h3>
+          <p class="section-sub mb-4">For climbers and organizations seeking to join the flagship program.</p>
+          <a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a>
+        </article>
+      </div>
+    </section>
   </main>
 
-  <footer class="site-footer"><div class="section-wrap section-tight"><div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10"><div><p class="brand-font text-xl font-bold">▲ SummitLink / 峰会链接</p><p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p></div></div><div class="footer-grid py-8"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./index.html">Home</a><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 末登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
+  <footer class="site-footer">
+    <div class="section-wrap section-tight">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10">
+        <div>
+          <p class="brand-font text-xl font-bold">▲ SummitLink / 峰会链接</p>
+          <p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p>
+        </div>
+      </div>
+      <div class="footer-grid py-8">
+        <div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./index.html">Home</a><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a></div>
+        <div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./corporate.html">Corporate</a></div>
+        <div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div>
+        <div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div>
+      </div>
+      <p class="utility-muted text-sm">© 2024–2026 末登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p>
+    </div>
+  </footer>
+
   <script src="./js/site.js"></script>
 </body>
 </html>
