@@ -15,6 +15,487 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    .app-showcase-note {
+      font-size: 0.95rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #8fbfff;
+    }
+
+    .phone-mock {
+      width: min(100%, 220px);
+      height: 420px;
+      margin: 0 auto;
+      padding: 12px;
+      background: #0d1117;
+      border-radius: 36px;
+      border: 2px solid rgba(79, 172, 254, 0.3);
+      box-shadow: 0 0 40px rgba(79, 172, 254, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .phone-screen {
+      height: 100%;
+      border-radius: 28px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #0f1724 0%, #0b1220 100%);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      color: #fff;
+    }
+
+    .phone-notch {
+      width: 80px;
+      height: 20px;
+      background: #0d1117;
+      border-radius: 0 0 12px 12px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+      flex-shrink: 0;
+    }
+
+    .phone-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.55rem 1rem 0.35rem;
+      font-size: 0.7rem;
+      color: #cbd5e1;
+      letter-spacing: 0.04em;
+    }
+
+    .phone-status strong {
+      color: #f8fafc;
+      font-size: 0.72rem;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.35rem;
+    }
+
+    .signal-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 12px;
+    }
+
+    .signal-bars span {
+      width: 3px;
+      border-radius: 999px;
+      background: #f8fafc;
+      display: block;
+    }
+
+    .signal-bars span:nth-child(1) { height: 4px; opacity: 0.55; }
+    .signal-bars span:nth-child(2) { height: 6px; opacity: 0.7; }
+    .signal-bars span:nth-child(3) { height: 8px; opacity: 0.85; }
+    .signal-bars span:nth-child(4) { height: 10px; }
+
+    .battery-icon {
+      width: 21px;
+      height: 10px;
+      border: 1.5px solid rgba(248, 250, 252, 0.85);
+      border-radius: 3px;
+      position: relative;
+    }
+
+    .battery-icon::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: 2px;
+      width: 2px;
+      height: 4px;
+      background: rgba(248, 250, 252, 0.85);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .battery-icon::before {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      width: 72%;
+      border-radius: 1.5px;
+      background: linear-gradient(90deg, #4facfe, #93c5fd);
+    }
+
+    .phone-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 1rem;
+      background: rgba(255, 255, 255, 0.04);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .phone-topbar h3 {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .phone-topbar span,
+    .tab-icon,
+    .live-dot,
+    .weather-chip span {
+      flex-shrink: 0;
+    }
+
+    .phone-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.85rem;
+      min-height: 0;
+    }
+
+    .app-search {
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      padding: 0.72rem 0.95rem;
+      color: #cbd5e1;
+      font-size: 0.74rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .map-card,
+    .info-card,
+    .guide-card,
+    .safety-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(14px);
+    }
+
+    .route-map {
+      flex: 1;
+      min-height: 120px;
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(160deg, rgba(79, 172, 254, 0.2), rgba(26, 39, 68, 0.96)),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 24px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 24px),
+        linear-gradient(180deg, #173860 0%, #1a2744 60%, #0f1724 100%);
+    }
+
+    .route-map::before,
+    .route-map::after {
+      content: '';
+      position: absolute;
+      inset: auto auto 12px -10px;
+      width: 160px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      filter: blur(2px);
+      transform: rotate(-10deg);
+    }
+
+    .route-map::after {
+      inset: 18px -24px auto auto;
+      width: 120px;
+      height: 48px;
+      transform: rotate(14deg);
+    }
+
+    .map-pin,
+    .summit-pin {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      color: #f8fafc;
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-shadow: 0 2px 10px rgba(15, 23, 36, 0.85);
+    }
+
+    .map-pin::before,
+    .summit-pin::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15);
+    }
+
+    .summit-pin::before {
+      content: '★';
+      width: auto;
+      height: auto;
+      background: transparent;
+      box-shadow: none;
+      font-size: 0.95rem;
+      line-height: 1;
+      color: #fde68a;
+    }
+
+    .info-card {
+      border-radius: 20px;
+      padding: 0.9rem;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .info-card strong,
+    .guide-card strong,
+    .safety-card strong {
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    .info-meta,
+    .guide-meta,
+    .safety-meta,
+    .weather-row {
+      color: #94a3b8;
+      font-size: 0.7rem;
+      line-height: 1.4;
+    }
+
+    .progress-track {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-track::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      width: 78%;
+      background: linear-gradient(90deg, #4facfe, #93c5fd);
+      border-radius: inherit;
+    }
+
+    .progress-label {
+      font-size: 0.68rem;
+      color: #dbeafe;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .guide-list {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .guide-card {
+      border-radius: 22px;
+      padding: 0.9rem;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .guide-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .guide-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(79, 172, 254, 0.95), rgba(191, 219, 254, 0.55));
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+      color: #0f1724;
+      box-shadow: 0 8px 24px rgba(79, 172, 254, 0.22);
+    }
+
+    .guide-rating {
+      color: #fde68a;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .book-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      padding: 0.48rem 0.8rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #4facfe, #60a5fa);
+      color: #eff6ff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      box-shadow: 0 10px 24px rgba(79, 172, 254, 0.24);
+    }
+
+    .live-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      color: #dcfce7;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.16);
+    }
+
+    .tracking-map {
+      min-height: 112px;
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(79,172,254,0.18), transparent 28%),
+        linear-gradient(160deg, #173860 0%, #1a2744 55%, #0f1724 100%);
+    }
+
+    .tracking-map::before,
+    .tracking-map::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+    }
+
+    .tracking-map::before {
+      width: 130px;
+      height: 38px;
+      top: 12px;
+      right: -18px;
+      transform: rotate(-18deg);
+    }
+
+    .tracking-map::after {
+      width: 110px;
+      height: 32px;
+      bottom: 10px;
+      left: -14px;
+      transform: rotate(12deg);
+    }
+
+    .trail {
+      position: absolute;
+      height: 4px;
+      border-radius: 999px;
+      background: #fb923c;
+      box-shadow: 0 0 18px rgba(251, 146, 60, 0.35);
+    }
+
+    .trail-1 { width: 54px; top: 78px; left: 24px; transform: rotate(18deg); }
+    .trail-2 { width: 48px; top: 64px; left: 70px; transform: rotate(-24deg); }
+    .trail-3 { width: 44px; top: 82px; left: 108px; transform: rotate(26deg); }
+
+    .tracker-dot,
+    .waypoint-dot {
+      position: absolute;
+      border-radius: 999px;
+    }
+
+    .waypoint-dot {
+      width: 8px;
+      height: 8px;
+      background: #e2e8f0;
+      box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.14);
+    }
+
+    .tracker-dot {
+      width: 12px;
+      height: 12px;
+      background: #ef4444;
+      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16);
+    }
+
+    .sos-button {
+      width: 88px;
+      height: 88px;
+      border-radius: 999px;
+      margin: 0 auto;
+      background: radial-gradient(circle at 30% 30%, #f87171, #ef4444 60%, #991b1b 100%);
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #fff;
+      box-shadow: 0 18px 40px rgba(239, 68, 68, 0.35), inset 0 2px 8px rgba(255,255,255,0.15);
+    }
+
+    .sos-caption {
+      text-align: center;
+      display: grid;
+      gap: 0.2rem;
+      margin-top: -0.15rem;
+    }
+
+    .weather-row {
+      display: flex;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      color: #dbeafe;
+    }
+
+    .tabbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.35rem;
+      padding: 0.75rem 0.8rem 0.9rem;
+      background: rgba(255, 255, 255, 0.04);
+      border-top: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    .tab-item {
+      display: grid;
+      gap: 0.2rem;
+      justify-items: center;
+      color: #64748b;
+      font-size: 0.62rem;
+      font-weight: 600;
+    }
+
+    .tab-item.active {
+      color: #4facfe;
+    }
+
+    .tab-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 1rem;
+    }
+
+    .tab-item.active .tab-icon {
+      background: rgba(79, 172, 254, 0.16);
+      box-shadow: inset 0 0 0 1px rgba(79, 172, 254, 0.25);
+    }
+  </style>
 </head>
 <body data-page="home">
   <nav class="site-nav" aria-label="Primary Navigation">
@@ -123,11 +604,128 @@
 
     <section class="section-wrap">
       <h2 class="text-3xl md:text-5xl font-black mb-2" data-reveal>Mobile App — Coming Soon</h2>
+      <p class="app-showcase-note mb-2" data-reveal>峰会链接 · SummitLink</p>
       <p class="utility-muted mb-8" data-reveal>Available on iOS and Android.</p>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="phone-mock" data-reveal><div class="phone-inner">Route Planner</div></div>
-        <div class="phone-mock" data-reveal><div class="phone-inner">Guide Match</div></div>
-        <div class="phone-mock" data-reveal><div class="phone-inner">Safety Center</div></div>
+        <div class="phone-mock" data-reveal>
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="phone-status">
+              <strong>9:41 AM</strong>
+              <div class="status-icons">
+                <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+                <div class="battery-icon"></div>
+              </div>
+            </div>
+            <div class="phone-topbar"><h3>Route Planner</h3><span>🗺️</span></div>
+            <div class="phone-body">
+              <div class="app-search">🔍 Search peaks...</div>
+              <div class="route-map map-card">
+                <div class="map-pin" style="top: 54%; left: 18%;"><span>C1</span></div>
+                <div class="map-pin" style="top: 43%; left: 43%;"><span>C2</span></div>
+                <div class="summit-pin" style="top: 22%; right: 17%;"><span>Summit</span></div>
+              </div>
+              <div class="info-card">
+                <strong>Mount Everest</strong>
+                <div class="info-meta">8,849m · Asia</div>
+                <div class="progress-track"></div>
+                <div class="progress-label"><span>Success window</span><span>78%</span></div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab-item active"><span class="tab-icon">🗺️</span><span>Route</span></div>
+              <div class="tab-item"><span class="tab-icon">📋</span><span>Plan</span></div>
+              <div class="tab-item"><span class="tab-icon">👥</span><span>Team</span></div>
+              <div class="tab-item"><span class="tab-icon">⚙️</span><span>More</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-mock" data-reveal>
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="phone-status">
+              <strong>9:41 AM</strong>
+              <div class="status-icons">
+                <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+                <div class="battery-icon"></div>
+              </div>
+            </div>
+            <div class="phone-topbar"><h3>Find Your Guide</h3><span>🧗</span></div>
+            <div class="phone-body">
+              <div class="guide-list">
+                <div class="guide-card">
+                  <div class="guide-row">
+                    <div class="guide-avatar">👤</div>
+                    <div>
+                      <strong>Zhang Wei</strong>
+                      <div class="guide-rating">⭐ 4.9</div>
+                    </div>
+                  </div>
+                  <div class="guide-meta">Everest Expert</div>
+                  <div class="guide-meta">🇨🇳 China · $280/day</div>
+                  <span class="book-button">Book Now</span>
+                </div>
+                <div class="guide-card" style="padding-top: 0.8rem; padding-bottom: 0.8rem;">
+                  <div class="guide-row">
+                    <div class="guide-avatar" style="background: linear-gradient(135deg, rgba(251,191,36,0.9), rgba(147,197,253,0.55));">👤</div>
+                    <div>
+                      <strong>Carlos M.</strong>
+                      <div class="guide-rating">⭐ 4.8</div>
+                    </div>
+                  </div>
+                  <div class="guide-meta">Denali Specialist</div>
+                  <div class="guide-meta">🇺🇸 USA · $320/day</div>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab-item"><span class="tab-icon">🔍</span><span>Search</span></div>
+              <div class="tab-item active"><span class="tab-icon">🧗</span><span>Guides</span></div>
+              <div class="tab-item"><span class="tab-icon">❤️</span><span>Saved</span></div>
+              <div class="tab-item"><span class="tab-icon">👤</span><span>Me</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-mock" data-reveal>
+          <div class="phone-screen">
+            <div class="phone-notch"></div>
+            <div class="phone-status">
+              <strong>9:41 AM</strong>
+              <div class="status-icons">
+                <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
+                <div class="battery-icon"></div>
+              </div>
+            </div>
+            <div class="phone-topbar"><h3>Safety Center</h3><span>🛡️</span></div>
+            <div class="phone-body">
+              <div class="live-row"><span class="live-dot"></span><span>Live Tracking</span></div>
+              <div class="tracking-map map-card">
+                <div class="trail trail-1"></div>
+                <div class="trail trail-2"></div>
+                <div class="trail trail-3"></div>
+                <div class="waypoint-dot" style="top: 86px; left: 22px;"></div>
+                <div class="waypoint-dot" style="top: 56px; left: 74px;"></div>
+                <div class="tracker-dot" style="top: 72px; left: 148px;"></div>
+              </div>
+              <div class="sos-caption">
+                <div class="sos-button">SOS</div>
+                <strong>Emergency</strong>
+                <div class="safety-meta">Hold 3s to activate</div>
+              </div>
+              <div class="safety-card" style="border-radius: 20px; padding: 0.9rem; display: grid; gap: 0.35rem;">
+                <strong>📍 Camp 2</strong>
+                <div class="safety-meta">Alt: 6,400m</div>
+                <div class="weather-row"><span>❄️ -18°C</span><span>💨 45km/h</span></div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab-item"><span class="tab-icon">📍</span><span>Track</span></div>
+              <div class="tab-item active"><span class="tab-icon">🛡️</span><span>Safety</span></div>
+              <div class="tab-item"><span class="tab-icon">📞</span><span>Call</span></div>
+              <div class="tab-item"><span class="tab-icon">⚙️</span><span>Setup</span></div>
+            </div>
+          </div>
+        </div>
       </div>
       <button class="btn-secondary" data-notify-open>Notify Me When Available</button>
     </section>
@@ -145,7 +743,7 @@
       <h2 class="text-3xl md:text-5xl font-black mb-4" data-reveal>About SummitLink</h2>
       <p class="utility-muted max-w-4xl" data-reveal>SummitLink was founded with a single belief: that the world's mountains should be accessible to every passionate climber, regardless of where they come from. We are building the infrastructure for global mountaineering — connecting climbers with certified guides, expedition operators, sponsors, and fellow adventurers.</p>
       <div class="grid-auto mt-6">
-        <div class="glass-panel p-5" data-reveal>🇨🇳 未登峰（北京）科技有限公司 — Beijing, China</div>
+        <div class="glass-panel p-5" data-reveal>🇨🇳 末登峰（北京）科技有限公司 — Beijing, China</div>
         <div class="glass-panel p-5" data-reveal>🇺🇸 UNSUMMIT TECHNOLOGY LIMITED — United States</div>
       </div>
     </section>
@@ -165,7 +763,7 @@
         <div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div>
         <div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div>
       </div>
-      <p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p>
+      <p class="utility-muted text-sm">© 2024–2026 末登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p>
     </div>
   </footer>
 
