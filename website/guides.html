@@ -1,95 +1,93 @@
-<!DOCTYPE html>
-<!-- 向导专属落地页：资质展示、收益说明、认证流程与成功案例 -->
-<html lang="en" class="scroll-smooth">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SummitLink · Guides</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Become a Guide | SummitLink</title>
+  <meta name="description" content="Join SummitLink's premier mountain guide network and reach climbers worldwide." />
+  <meta property="og:title" content="Become a Guide | SummitLink" />
+  <meta property="og:description" content="Apply to become a certified guide on SummitLink." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/guides.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
-  </script>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body data-page="guides" data-page-title="titles.guides" class="bg-space font-sans text-white antialiased">
-  <div data-site-header></div>
-  <main class="pt-28">
-    <section class="relative overflow-hidden px-4 py-16">
-      <div class="particles" data-particles="30"></div>
-      <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-        <div class="space-y-6" data-reveal>
-          <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="guides.heroEyebrow"></span>
-          <h1 class="font-display text-5xl font-black leading-none md:text-7xl" data-i18n="guides.heroTitle"></h1>
-          <p class="max-w-2xl text-lg leading-8 text-white/65" data-i18n="guides.heroBody"></p>
-          <div class="flex flex-wrap gap-4">
-            <a href="./apply.html#guide" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="guides.primary"></a>
-            <a href="#calculator" class="rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-white/80" data-i18n="guides.secondary"></a>
-          </div>
-        </div>
-        <div class="glass-panel rounded-[2rem] p-6" id="calculator" data-reveal>
-          <h2 class="text-3xl font-black" data-i18n="guides.calcTitle"></h2>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="guides.calcBody"></p>
-          <div class="mt-6 grid gap-4 sm:grid-cols-2">
-            <label class="text-sm text-white/60"><span data-i18n="guides.dailyRate"></span>
-              <input type="number" class="form-input mt-2" value="650" min="0" step="10" data-guide-rate />
-            </label>
-            <label class="text-sm text-white/60"><span data-i18n="guides.annualDays"></span>
-              <input type="number" class="form-input mt-2" value="120" min="0" step="1" data-guide-days />
-            </label>
-          </div>
-          <div class="mt-6 rounded-[1.6rem] border border-white/10 bg-black/20 p-5">
-            <div class="text-xs uppercase tracking-[0.28em] text-white/40" data-i18n="guides.expectedIncome"></div>
-            <div class="mt-3 flex items-end gap-3"><span class="metric-value text-5xl font-black text-sky-300">$</span><span class="metric-value text-5xl font-black text-sky-300" data-guide-income>0</span></div>
-            <div class="mt-3 text-sm text-white/55" data-i18n="common.calcIncomeLabel"></div>
-          </div>
-        </div>
+<body data-page="guides">
+  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="#guide-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
+
+  <header class="hero">
+    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=1920&q=80');"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-title" data-reveal>Join the World's Premier Mountain Guide Network</h1>
+      <p class="hero-subtitle" data-reveal>Connect with climbers worldwide. Build your reputation. Grow your business.</p>
+      <a class="btn-primary" href="#guide-form">Apply to Become a Guide</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section-wrap">
+      <h2 class="text-3xl md:text-5xl font-black mb-8" data-reveal>Guide Benefits</h2>
+      <div class="grid-auto">
+        <article class="glass-panel p-6" data-reveal><h3 class="font-bold text-xl">🌐 Global Visibility</h3><p class="utility-muted">Your profile seen by climbers in 50+ countries.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="font-bold text-xl">💳 Secure Payments</h3><p class="utility-muted">Transparent booking and payment management.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="font-bold text-xl">📈 Business Tools</h3><p class="utility-muted">Manage bookings, clients, and schedules in one place.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="font-bold text-xl">⭐ Verified Badge</h3><p class="utility-muted">Stand out with SummitLink certification.</p></article>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-16">
-      <h2 class="mb-8 font-display text-4xl font-black" data-i18n="guides.flowTitle" data-reveal></h2>
-      <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal><div class="text-sm text-sky-300">01</div><p class="mt-4 text-sm leading-7 text-white/70" data-i18n="guides.flow1"></p></article>
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal><div class="text-sm text-sky-300">02</div><p class="mt-4 text-sm leading-7 text-white/70" data-i18n="guides.flow2"></p></article>
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal><div class="text-sm text-sky-300">03</div><p class="mt-4 text-sm leading-7 text-white/70" data-i18n="guides.flow3"></p></article>
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal><div class="text-sm text-sky-300">04</div><p class="mt-4 text-sm leading-7 text-white/70" data-i18n="guides.flow4"></p></article>
+    <section class="section-wrap section-tight">
+      <div class="glass-panel p-6" data-reveal>
+        <h2 class="text-3xl font-black mb-3">Requirements</h2>
+        <ul class="list-disc pl-5 utility-muted space-y-1">
+          <li>Professional mountaineering certifications (UIAGM/IFMGA preferred)</li>
+          <li>Minimum 3 years guiding experience</li>
+          <li>Strong safety record</li>
+          <li>English or Chinese communication ability</li>
+          <li>Commitment to client safety above all</li>
+        </ul>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-16">
-      <h2 class="mb-8 font-display text-4xl font-black" data-i18n="guides.casesTitle" data-reveal></h2>
-      <div class="grid gap-6 lg:grid-cols-3">
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="text-sm text-white/50" data-i18n="guides.case1Meta"></div>
-          <h3 class="mt-4 text-2xl font-bold" data-i18n="guides.case1Name"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="guides.case1Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="text-sm text-white/50" data-i18n="guides.case2Meta"></div>
-          <h3 class="mt-4 text-2xl font-bold" data-i18n="guides.case2Name"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="guides.case2Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="text-sm text-white/50" data-i18n="guides.case3Meta"></div>
-          <h3 class="mt-4 text-2xl font-bold" data-i18n="guides.case3Name"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="guides.case3Body"></p>
-        </article>
-      </div>
-    </section>
-
-    <section class="mx-auto max-w-7xl px-4 pb-8 pt-12">
-      <div class="glass-panel rounded-[2rem] p-8 text-center" data-reveal>
-        <h2 class="font-display text-4xl font-black" data-i18n="guides.ctaTitle"></h2>
-        <p class="mx-auto mt-4 max-w-3xl text-lg leading-8 text-white/65" data-i18n="guides.ctaBody"></p>
-        <a href="./apply.html#guide" class="mt-8 inline-flex rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="guides.ctaButton"></a>
+    <section class="section-wrap" id="guide-form">
+      <h2 class="text-3xl md:text-5xl font-black mb-6" data-reveal>Guide Application Form</h2>
+      <div class="glass-panel p-5 md:p-8" data-reveal>
+        <form data-api="/api/applications/guide" class="space-y-4">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div><label class="form-label" for="name">Full Name</label><input id="name" name="name" class="form-input" required /></div>
+            <div><label class="form-label" for="country">Country</label><input id="country" name="country" class="form-input" required /></div>
+            <div><label class="form-label" for="years">Years of Experience</label><input id="years" name="yearsExperience" type="number" class="form-input" required /></div>
+            <div><label class="form-label" for="languages">Languages Spoken</label><input id="languages" name="languages" class="form-input" required /></div>
+            <div><label class="form-label" for="email">Email</label><input id="email" name="email" type="email" class="form-input" required /></div>
+            <div><label class="form-label" for="phone">Phone / WhatsApp</label><input id="phone" name="phone" class="form-input" required /></div>
+          </div>
+          <div><label class="form-label" for="certifications">Certifications</label><textarea id="certifications" name="certifications" class="form-textarea" required></textarea></div>
+          <div><label class="form-label" for="specialties">Specialties</label>
+            <div class="grid md:grid-cols-3 gap-2 utility-muted">
+              <label><input type="checkbox" name="specialties" value="High Altitude" /> High Altitude</label>
+              <label><input type="checkbox" name="specialties" value="Alpine" /> Alpine</label>
+              <label><input type="checkbox" name="specialties" value="Rock Climbing" /> Rock Climbing</label>
+              <label><input type="checkbox" name="specialties" value="Trekking" /> Trekking</label>
+              <label><input type="checkbox" name="specialties" value="Ice Climbing" /> Ice Climbing</label>
+            </div>
+          </div>
+          <div><label class="form-label" for="peaksGuided">Peaks Guided</label><textarea id="peaksGuided" name="peaksGuided" class="form-textarea"></textarea></div>
+          <div><label class="form-label" for="socialProfiles">Instagram / Social Profiles</label><input id="socialProfiles" name="socialProfiles" class="form-input" /></div>
+          <div><label class="form-label" for="bio">Brief Bio</label><textarea id="bio" name="bio" class="form-textarea" required></textarea></div>
+          <div class="hidden" data-form-message></div>
+          <button class="btn-primary" type="submit">Submit Guide Application</button>
+        </form>
+        <p class="form-success hidden mt-4" data-form-success-panel></p>
       </div>
     </section>
   </main>
-  <div data-site-footer></div>
-  <script type="module" src="./js/main.js"></script>
+
+  <footer class="site-footer"><div class="section-wrap section-tight"><div class="footer-grid py-4"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="#guide-form">Become a Guide</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
+
+  <script src="./js/site.js"></script>
 </body>
 </html>

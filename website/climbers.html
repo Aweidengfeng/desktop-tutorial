@@ -1,120 +1,69 @@
-<!DOCTYPE html>
-<!-- 攀登者专属落地页：发现山峰、寻找向导、预约远征、记录轨迹 -->
-<html lang="en" class="scroll-smooth">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SummitLink · Climbers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>For Climbers | SummitLink</title>
+  <meta name="description" content="SummitLink helps climbers discover expeditions, match with guides, and stay safe." />
+  <meta property="og:title" content="For Climbers | SummitLink" />
+  <meta property="og:description" content="Your mountain journey starts here with SummitLink." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/climbers.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
-  </script>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body data-page="climbers" data-page-title="titles.climbers" class="bg-space font-sans text-white antialiased">
-  <div data-site-header></div>
-  <main class="pt-28">
-    <section class="relative overflow-hidden px-4 py-16">
-      <div class="particles" data-particles="32"></div>
-      <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div class="space-y-6" data-reveal>
-          <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="climbers.heroEyebrow"></span>
-          <h1 class="font-display text-5xl font-black leading-none md:text-7xl" data-i18n="climbers.heroTitle"></h1>
-          <p class="max-w-2xl text-lg leading-8 text-white/65" data-i18n="climbers.heroBody"></p>
-          <div class="flex flex-wrap gap-4">
-            <a href="./guides.html" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="climbers.primary"></a>
-            <a href="./peaks.html" class="rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-white/80" data-i18n="climbers.secondary"></a>
-          </div>
-        </div>
-        <div class="glass-panel rounded-[2rem] p-6" data-reveal>
-          <div class="grid gap-4 sm:grid-cols-3">
-            <div class="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-              <div class="metric-value text-3xl text-sky-300">14+</div>
-              <div class="mt-2 text-xs text-white/60" data-i18n="home.stats1"></div>
-            </div>
-            <div class="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-              <div class="metric-value text-3xl text-sky-300">1:1</div>
-              <div class="mt-2 text-xs text-white/60" data-i18n="home.feature2Title"></div>
-            </div>
-            <div class="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-              <div class="metric-value text-3xl text-sky-300">24/7</div>
-              <div class="mt-2 text-xs text-white/60" data-i18n="home.feature6Title"></div>
-            </div>
-          </div>
-          <div class="mt-6 rounded-[1.6rem] border border-white/10 bg-black/20 p-5 text-sm leading-7 text-white/65" data-i18n="climbers.routeTitle"></div>
-        </div>
+<body data-page="climbers">
+  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
+
+  <header class="hero">
+    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&q=80');"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">Your Mountain Journey Starts Here</h1>
+      <p class="hero-subtitle">Discover expeditions, match with certified guides, build teams, and climb safer with SummitLink.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="section-wrap">
+      <div class="grid md:grid-cols-2 gap-6 items-center mb-8" data-reveal>
+        <img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80" alt="Discover expeditions" class="rounded-2xl" />
+        <div><h2 class="text-3xl font-black mb-2">Discover Expeditions</h2><p class="utility-muted">Find routes and peaks aligned with your goals, timeline, and altitude experience.</p></div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 items-center mb-8" data-reveal>
+        <div><h2 class="text-3xl font-black mb-2">Match with Guides</h2><p class="utility-muted">Connect with vetted, certified professionals who know your mountain and safety needs.</p></div>
+        <img src="https://images.unsplash.com/photo-1521334884684-d80222895322?w=900&q=80" alt="Match with guides" class="rounded-2xl" />
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 items-center mb-8" data-reveal>
+        <img src="https://images.unsplash.com/photo-1476610182048-b716b8518aae?w=900&q=80" alt="Join teams" class="rounded-2xl" />
+        <div><h2 class="text-3xl font-black mb-2">Join Teams</h2><p class="utility-muted">Find climbing partners with compatible skill level, schedule, and expedition objectives.</p></div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 items-center" data-reveal>
+        <div><h2 class="text-3xl font-black mb-2">Track Safety</h2><p class="utility-muted">Use safety checkpoints, real-time location sharing, and SOS-first planning tools.</p></div>
+        <img src="https://images.unsplash.com/photo-1464822759844-d150ad6d1d27?w=900&q=80" alt="Track safety" class="rounded-2xl" />
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-16">
-      <h2 class="mb-8 font-display text-4xl font-black" data-i18n="climbers.gridTitle" data-reveal></h2>
-      <div class="grid gap-6 md:grid-cols-3">
-        <article class="glass-panel halo-card rounded-[1.7rem] p-6" data-reveal>
-          <h3 class="text-2xl font-bold" data-i18n="climbers.grid1Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="climbers.grid1Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.7rem] p-6" data-reveal>
-          <h3 class="text-2xl font-bold" data-i18n="climbers.grid2Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="climbers.grid2Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.7rem] p-6" data-reveal>
-          <h3 class="text-2xl font-bold" data-i18n="climbers.grid3Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="climbers.grid3Body"></p>
-        </article>
+    <section class="section-wrap section-tight">
+      <h2 class="text-3xl md:text-5xl font-black mb-2">Mobile App — Coming Soon</h2>
+      <p class="utility-muted mb-6">Available on iOS and Android.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        <div class="phone-mock" data-reveal><div class="phone-inner">Expedition Feed</div></div>
+        <div class="phone-mock" data-reveal><div class="phone-inner">Guide Profiles</div></div>
+        <div class="phone-mock" data-reveal><div class="phone-inner">SOS Toolkit</div></div>
       </div>
-    </section>
-
-    <section class="mx-auto max-w-7xl px-4 py-16">
-      <h2 class="mb-8 font-display text-4xl font-black" data-i18n="climbers.expeditionTitle" data-reveal></h2>
-      <div class="grid gap-6 lg:grid-cols-3">
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal>
-          <div class="placeholder-summit"></div>
-          <h3 class="mt-5 text-2xl font-bold" data-i18n="climbers.expedition1Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="climbers.expedition1Body"></p>
-        </article>
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal>
-          <div class="placeholder-summit"></div>
-          <h3 class="mt-5 text-2xl font-bold" data-i18n="climbers.expedition2Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="climbers.expedition2Body"></p>
-        </article>
-        <article class="glass-panel rounded-[1.7rem] p-6" data-reveal>
-          <div class="placeholder-summit"></div>
-          <h3 class="mt-5 text-2xl font-bold" data-i18n="climbers.expedition3Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="climbers.expedition3Body"></p>
-        </article>
-      </div>
-    </section>
-
-    <section class="mx-auto max-w-7xl px-4 py-16">
-      <div class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <article class="glass-panel rounded-[1.8rem] p-6" data-reveal>
-          <h2 class="font-display text-4xl font-black" data-i18n="climbers.routeTitle"></h2>
-          <div class="mt-6 space-y-4 text-sm leading-7 text-white/70">
-            <p data-i18n="climbers.route1"></p>
-            <p data-i18n="climbers.route2"></p>
-            <p data-i18n="climbers.route3"></p>
-          </div>
-        </article>
-        <article class="glass-panel rounded-[1.8rem] p-6" data-reveal>
-          <p class="text-xl font-semibold leading-9 text-white/85" data-i18n="climbers.quote"></p>
-          <p class="mt-6 text-sm text-white/55" data-i18n="climbers.quoteName"></p>
-        </article>
-      </div>
-    </section>
-
-    <section class="mx-auto max-w-7xl px-4 pb-8 pt-12">
-      <div class="glass-panel rounded-[2rem] p-8 text-center" data-reveal>
-        <h2 class="font-display text-4xl font-black" data-i18n="climbers.ctaTitle"></h2>
-        <p class="mx-auto mt-4 max-w-3xl text-lg leading-8 text-white/65" data-i18n="climbers.ctaBody"></p>
-        <a href="./apply.html#corporate" class="mt-8 inline-flex rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="climbers.ctaButton"></a>
-      </div>
+      <button class="btn-secondary" data-notify-open>Notify Me</button>
     </section>
   </main>
-  <div data-site-footer></div>
-  <script type="module" src="./js/main.js"></script>
+
+  <footer class="site-footer"><div class="section-wrap section-tight"><div class="footer-grid py-4"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./guides.html#guide-form">Become a Guide</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
+
+  <div class="modal-root" data-notify-modal aria-hidden="true"><div class="modal-card glass-panel"><div class="flex items-center justify-between mb-3"><h2 class="text-2xl font-black">Notify Me</h2><button class="btn-ghost" data-notify-close aria-label="Close">Close</button></div><p class="utility-muted mb-3">Mobile App Coming Soon. Leave your email for launch updates.</p><form><label class="form-label" for="notify-email">Email</label><input id="notify-email" name="email" type="email" required class="form-input" /><button class="btn-primary mt-3" type="submit">Notify Me</button></form><p class="form-success hidden mt-3" data-notify-result></p></div></div>
+
+  <script src="./js/site.js"></script>
 </body>
 </html>

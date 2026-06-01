@@ -1,200 +1,187 @@
-<!DOCTYPE html>
-<!-- 官网首页：三视角入口与全球山峰展示 -->
-<html lang="en" class="scroll-smooth">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SummitLink · Official Site</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SummitLink | Climb Higher. Connect Globally.</title>
+  <meta name="description" content="SummitLink is the global platform connecting climbers, certified guides, expedition operators, and sponsors." />
+  <meta property="og:title" content="SummitLink | Climb Higher. Connect Globally." />
+  <meta property="og:description" content="Join the 2026 Seven Summits Global Challenge and connect with the world's mountaineering community." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/index.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            display: ['Sora', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace']
-          },
-          colors: {
-            space: '#0A0A0F',
-            glacier: '#4FACFE',
-            ridge: '#F5A623'
-          }
-        }
-      }
-    };
-  </script>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body data-page="home" data-page-title="titles.home" class="bg-space font-sans text-white antialiased">
-  <div data-site-header></div>
+<body data-page="home">
+  <nav class="site-nav" aria-label="Primary Navigation">
+    <div class="nav-shell">
+      <div class="flex items-center justify-between gap-4">
+        <a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a>
+        <div class="nav-links items-center gap-1 md:flex">
+          <a class="nav-link" data-nav="home" href="./index.html">Home</a>
+          <a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a>
+          <a class="nav-link" data-nav="guides" href="./guides.html">Guides</a>
+          <a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a>
+          <a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a>
+          <a class="nav-link" data-nav="contact" href="./contact.html">Contact</a>
+        </div>
+        <div class="flex items-center gap-2">
+          <a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a>
+          <button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button>
+        </div>
+      </div>
+      <div class="mobile-menu" data-mobile-menu>
+        <a class="nav-link block" href="./index.html">Home</a>
+        <a class="nav-link block" href="./seven-summits.html">Seven Summits</a>
+        <a class="nav-link block" href="./guides.html">Guides</a>
+        <a class="nav-link block" href="./peaks.html">Peaks</a>
+        <a class="nav-link block" href="./corporate.html">Corporate</a>
+        <a class="nav-link block" href="./contact.html">Contact</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero" aria-label="Hero">
+    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80');"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-title" data-reveal>Climb Higher. Connect Globally.</h1>
+      <p class="hero-subtitle" data-reveal>The global platform connecting climbers, certified mountain guides, and expedition partners.</p>
+      <div class="flex flex-wrap gap-3" data-reveal>
+        <a class="btn-primary" href="./seven-summits.html">Apply for Seven Summits Challenge</a>
+        <a class="btn-ghost" href="./guides.html">Become a Guide</a>
+      </div>
+    </div>
+    <div class="scroll-indicator" aria-hidden="true">↓</div>
+  </header>
 
   <main>
-    <section class="relative isolate flex min-h-screen items-center overflow-hidden px-4 pt-28">
-      <div class="particles" data-particles="42"></div>
-      <div class="hero-ridges parallax-layer" data-parallax="0.08"></div>
-      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(79,172,254,0.18),transparent_30%)]"></div>
-      <div class="mx-auto grid w-full max-w-7xl gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-        <div class="relative z-10 space-y-8" data-reveal>
-          <span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-white/60" data-i18n="home.heroEyebrow"></span>
-          <div class="space-y-6">
-            <h1 class="max-w-5xl font-display text-5xl font-black leading-none text-white sm:text-7xl lg:text-8xl xl:text-9xl" data-i18n="home.heroTitle"></h1>
-            <p class="max-w-2xl text-lg leading-8 text-white/70 sm:text-xl" data-i18n="home.heroSubtitle"></p>
-          </div>
-          <div class="flex flex-wrap gap-4">
-            <a href="./climbers.html" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_0_40px_rgba(79,172,254,0.4)] transition hover:-translate-y-0.5" data-i18n="home.heroPrimary"></a>
-            <a href="./peaks.html" class="rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/5" data-i18n="home.heroSecondary"></a>
-          </div>
+    <section class="section-wrap">
+      <h2 class="text-3xl md:text-5xl font-black mb-3" data-reveal>Why SummitLink Exists</h2>
+      <p class="utility-muted mb-8" data-reveal>We exist to make global mountaineering safer, more connected, and more inclusive.</p>
+      <div class="grid-auto">
+        <article class="glass-panel p-6" data-reveal>
+          <p class="text-3xl mb-2">🌍</p>
+          <h3 class="text-xl font-bold mb-2">Global Connection</h3>
+          <p class="utility-muted">Breaking geographical, language, and economic barriers for climbers worldwide.</p>
+        </article>
+        <article class="glass-panel p-6" data-reveal>
+          <p class="text-3xl mb-2">🏔️</p>
+          <h3 class="text-xl font-bold mb-2">Safe Expeditions</h3>
+          <p class="utility-muted">Connecting climbers with certified, vetted mountain guides for every adventure.</p>
+        </article>
+        <article class="glass-panel p-6" data-reveal>
+          <p class="text-3xl mb-2">🤝</p>
+          <h3 class="text-xl font-bold mb-2">Shared Growth</h3>
+          <p class="utility-muted">Building a community where knowledge, routes, and success are shared openly.</p>
+        </article>
+      </div>
+      <p class="quote-bg mt-10" aria-hidden="true">Every summit begins with a single connection.</p>
+    </section>
+
+    <section class="section-wrap section-tight">
+      <div class="glass-panel p-7 md:p-10" style="background-image:linear-gradient(140deg, rgba(8,15,28,.94), rgba(28,35,51,.85)), url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1400&q=80'); background-size:cover;" data-reveal>
+        <h2 class="text-3xl md:text-4xl font-black mb-2">2026 Seven Summits Global Challenge</h2>
+        <p class="utility-muted mb-4">20 selected climbers. 7 continents. Fully supported expeditions.</p>
+        <div class="flex flex-wrap gap-2 mb-5">
+          <span class="timeline-pill">Applications Open Jul 1</span>
+          <span class="timeline-pill">Close Oct 15, 2026</span>
+          <span class="timeline-pill">Announcement Nov 11, 2026</span>
+          <span class="timeline-pill">Expeditions 2027</span>
         </div>
-        <div class="relative z-10" data-reveal>
-          <div class="glass-panel rounded-[2rem] p-6 halo-card">
-            <div class="mb-5 flex flex-wrap gap-3">
-              <button type="button" class="tab-button rounded-full px-4 py-2 text-sm font-medium text-white/80 gradient-chip" data-hero-tab="climbers" data-i18n="home.tabClimbers"></button>
-              <button type="button" class="tab-button rounded-full px-4 py-2 text-sm font-medium text-white/80 gradient-chip" data-hero-tab="guides" data-i18n="home.tabGuides"></button>
-              <button type="button" class="tab-button rounded-full px-4 py-2 text-sm font-medium text-white/80 gradient-chip" data-hero-tab="corporate" data-i18n="home.tabCorporate"></button>
-            </div>
-            <div class="space-y-5">
-              <article data-hero-panel="climbers" class="space-y-5">
-                <h2 class="text-3xl font-black" data-i18n="home.panelClimbersTitle"></h2>
-                <p class="text-sm leading-7 text-white/65" data-i18n="home.panelClimbersBody"></p>
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-sky-300">14+</div><div class="mt-2 text-xs text-white/55" data-i18n="home.stats1"></div></div>
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-sky-300">500+</div><div class="mt-2 text-xs text-white/55" data-i18n="home.stats2"></div></div>
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-sky-300">10k+</div><div class="mt-2 text-xs text-white/55" data-i18n="home.stats4"></div></div>
-                </div>
-              </article>
-              <article data-hero-panel="guides" class="hidden space-y-5">
-                <h2 class="text-3xl font-black" data-i18n="home.panelGuidesTitle"></h2>
-                <p class="text-sm leading-7 text-white/65" data-i18n="home.panelGuidesBody"></p>
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-amber-300">4</div><div class="mt-2 text-xs text-white/55" data-i18n="guides.flowTitle"></div></div>
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-amber-300">3</div><div class="mt-2 text-xs text-white/55" data-i18n="guides.casesTitle"></div></div>
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-amber-300">USD</div><div class="mt-2 text-xs text-white/55" data-i18n="guides.expectedIncome"></div></div>
-                </div>
-              </article>
-              <article data-hero-panel="corporate" class="hidden space-y-5">
-                <h2 class="text-3xl font-black" data-i18n="home.panelCorporateTitle"></h2>
-                <p class="text-sm leading-7 text-white/65" data-i18n="home.panelCorporateBody"></p>
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-emerald-300">3</div><div class="mt-2 text-xs text-white/55" data-i18n="corporate.tableTitle"></div></div>
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-emerald-300">6</div><div class="mt-2 text-xs text-white/55" data-i18n="corporate.logosTitle"></div></div>
-                  <div class="rounded-2xl border border-white/10 bg-white/5 p-4"><div class="metric-value text-xl text-emerald-300">24/7</div><div class="mt-2 text-xs text-white/55" data-i18n="common.requestQuote"></div></div>
-                </div>
-              </article>
-            </div>
-          </div>
+        <div class="flex flex-wrap items-center gap-4">
+          <a class="btn-primary" href="./seven-summits.html">Apply Now — Free Entry</a>
+          <strong data-days-until-close aria-live="polite"></strong>
         </div>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-20">
-      <div class="mb-10 max-w-3xl" data-reveal>
-        <h2 class="font-display text-4xl font-black md:text-5xl" data-i18n="home.featureTitle"></h2>
-        <p class="mt-4 text-lg leading-8 text-white/65" data-i18n="home.featureBody"></p>
-      </div>
-      <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="mb-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-400/60 to-cyan-300/20 p-3"><svg viewBox="0 0 24 24" class="h-full w-full" fill="none"><path d="M3 18L9 8L14 13L18 6L21 18" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <h3 class="text-2xl font-bold" data-i18n="home.feature1Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="home.feature1Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="mb-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-400/60 to-rose-300/20 p-3"><svg viewBox="0 0 24 24" class="h-full w-full" fill="none"><path d="M12 3L19 7V12C19 16.4 16.1 20.5 12 21C7.9 20.5 5 16.4 5 12V7L12 3Z" stroke="white" stroke-width="1.5"/></svg></div>
-          <h3 class="text-2xl font-bold" data-i18n="home.feature2Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="home.feature2Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="mb-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400/60 to-lime-300/20 p-3"><svg viewBox="0 0 24 24" class="h-full w-full" fill="none"><path d="M4 7H20M4 12H20M4 17H14" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
-          <h3 class="text-2xl font-bold" data-i18n="home.feature3Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="home.feature3Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="mb-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-fuchsia-400/60 to-violet-300/20 p-3"><svg viewBox="0 0 24 24" class="h-full w-full" fill="none"><path d="M4 17L8 13L11 16L19 8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <h3 class="text-2xl font-bold" data-i18n="home.feature4Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="home.feature4Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="mb-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-400/60 to-indigo-300/20 p-3"><svg viewBox="0 0 24 24" class="h-full w-full" fill="none"><path d="M6 9C6 6.79 7.79 5 10 5H14C16.21 5 18 6.79 18 9C18 10.54 17.13 11.87 15.86 12.54L14 13.5V16" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="19" r="1" fill="white"/></svg></div>
-          <h3 class="text-2xl font-bold" data-i18n="home.feature5Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="home.feature5Body"></p>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="mb-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-400/60 to-emerald-300/20 p-3"><svg viewBox="0 0 24 24" class="h-full w-full" fill="none"><path d="M7 8H17M7 12H13M7 16H11" stroke="white" stroke-width="1.5" stroke-linecap="round"/><rect x="4" y="4" width="16" height="16" rx="4" stroke="white" stroke-width="1.5"/></svg></div>
-          <h3 class="text-2xl font-bold" data-i18n="home.feature6Title"></h3>
-          <p class="mt-3 text-sm leading-7 text-white/65" data-i18n="home.feature6Body"></p>
-        </article>
+    <section class="section-wrap">
+      <h2 class="text-3xl md:text-5xl font-black mb-8" data-reveal>Everything a Climber Needs</h2>
+      <div class="grid-auto">
+        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🗺️ Route Planning</h3><p class="utility-muted">Discover and plan routes on 500+ peaks worldwide.</p></article>
+        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🧗 Guide Matching</h3><p class="utility-muted">Connect with certified guides who know your mountain.</p></article>
+        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">⛅ Weather Intelligence</h3><p class="utility-muted">Real-time summit forecasts and condition reports.</p></article>
+        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">👥 Team Building</h3><p class="utility-muted">Find climbing partners who match your skill and schedule.</p></article>
+        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🛡️ Safety First</h3><p class="utility-muted">Emergency SOS, route tracking, and safety protocols.</p></article>
+        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🏆 Summit Log</h3><p class="utility-muted">Record every peak, share your journey, inspire others.</p></article>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-10">
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article class="glass-panel rounded-[1.6rem] p-6" data-reveal>
-          <div class="metric-value text-4xl font-bold text-sky-300" data-count="14" data-suffix="+">0</div>
-          <p class="mt-3 text-sm text-white/60" data-i18n="home.stats1"></p>
-        </article>
-        <article class="glass-panel rounded-[1.6rem] p-6" data-reveal>
-          <div class="metric-value text-4xl font-bold text-sky-300" data-count="500" data-suffix="+">0</div>
-          <p class="mt-3 text-sm text-white/60" data-i18n="home.stats2"></p>
-        </article>
-        <article class="glass-panel rounded-[1.6rem] p-6" data-reveal>
-          <div class="metric-value text-4xl font-bold text-sky-300" data-count="50" data-suffix="+">0</div>
-          <p class="mt-3 text-sm text-white/60" data-i18n="home.stats3"></p>
-        </article>
-        <article class="glass-panel rounded-[1.6rem] p-6" data-reveal>
-          <div class="metric-value text-4xl font-bold text-sky-300" data-count="10000" data-suffix="+">0</div>
-          <p class="mt-3 text-sm text-white/60" data-i18n="home.stats4"></p>
-        </article>
+    <section class="section-wrap section-tight">
+      <h2 class="text-3xl md:text-5xl font-black mb-8" data-reveal>Who Is SummitLink For</h2>
+      <div class="grid-auto">
+        <article class="glass-panel p-6 transition hover:-translate-y-1" data-reveal><h3 class="text-xl font-bold mb-2">Climbers</h3><p class="utility-muted">From first-time trekkers to seasoned alpinists. Find your next adventure.</p></article>
+        <article class="glass-panel p-6 transition hover:-translate-y-1" data-reveal><h3 class="text-xl font-bold mb-2">Mountain Guides</h3><p class="utility-muted">Grow your client base. Get global visibility. Earn more.</p></article>
+        <article class="glass-panel p-6 transition hover:-translate-y-1" data-reveal><h3 class="text-xl font-bold mb-2">Expedition Operators & Sponsors</h3><p class="utility-muted">Reach the world's most passionate outdoor community.</p></article>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-20">
-      <div class="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between" data-reveal>
-        <div class="max-w-2xl">
-          <h2 class="font-display text-4xl font-black md:text-5xl" data-i18n="home.previewTitle"></h2>
-          <p class="mt-4 text-lg leading-8 text-white/65" data-i18n="home.previewBody"></p>
-        </div>
-        <a href="./peaks.html" class="rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/5" data-i18n="home.previewCta"></a>
+    <section class="section-wrap">
+      <h2 class="text-3xl md:text-5xl font-black mb-2" data-reveal>Mobile App — Coming Soon</h2>
+      <p class="utility-muted mb-8" data-reveal>Available on iOS and Android.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="phone-mock" data-reveal><div class="phone-inner">Route Planner</div></div>
+        <div class="phone-mock" data-reveal><div class="phone-inner">Guide Match</div></div>
+        <div class="phone-mock" data-reveal><div class="phone-inner">Safety Center</div></div>
       </div>
-      <div class="grid gap-6 lg:grid-cols-3">
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="placeholder-summit"></div>
-          <div class="mt-5 flex items-center justify-between">
-            <div>
-              <h3 class="text-2xl font-bold">珠穆朗玛峰</h3>
-              <p class="text-sm text-white/55">Mount Everest</p>
-            </div>
-            <span class="rounded-full bg-sky-400/10 px-3 py-1 text-xs text-sky-300">8848.86m</span>
-          </div>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="placeholder-summit"></div>
-          <div class="mt-5 flex items-center justify-between">
-            <div>
-              <h3 class="text-2xl font-bold">K2</h3>
-              <p class="text-sm text-white/55">Chhogori</p>
-            </div>
-            <span class="rounded-full bg-amber-400/10 px-3 py-1 text-xs text-amber-300">8611m</span>
-          </div>
-        </article>
-        <article class="glass-panel halo-card rounded-[1.75rem] p-6" data-reveal>
-          <div class="placeholder-summit"></div>
-          <div class="mt-5 flex items-center justify-between">
-            <div>
-              <h3 class="text-2xl font-bold">安纳普尔纳 I</h3>
-              <p class="text-sm text-white/55">Annapurna I</p>
-            </div>
-            <span class="rounded-full bg-rose-400/10 px-3 py-1 text-xs text-rose-300">8091m</span>
-          </div>
-        </article>
+      <button class="btn-secondary" data-notify-open>Notify Me When Available</button>
+    </section>
+
+    <section class="section-wrap section-tight">
+      <div class="grid-auto">
+        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="500" data-counter-suffix="+">0</p><p class="utility-muted">Peaks in Database</p></article>
+        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="50" data-counter-suffix="+">0</p><p class="utility-muted">Countries Represented</p></article>
+        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="20">0</p><p class="utility-muted">Seven Summits Challenge Spots</p></article>
+        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="2027">0</p><p class="utility-muted">First Expeditions</p></article>
+      </div>
+    </section>
+
+    <section class="section-wrap">
+      <h2 class="text-3xl md:text-5xl font-black mb-4" data-reveal>About SummitLink</h2>
+      <p class="utility-muted max-w-4xl" data-reveal>SummitLink was founded with a single belief: that the world's mountains should be accessible to every passionate climber, regardless of where they come from. We are building the infrastructure for global mountaineering — connecting climbers with certified guides, expedition operators, sponsors, and fellow adventurers.</p>
+      <div class="grid-auto mt-6">
+        <div class="glass-panel p-5" data-reveal>🇨🇳 未登峰（北京）科技有限公司 — Beijing, China</div>
+        <div class="glass-panel p-5" data-reveal>🇺🇸 UNSUMMIT TECHNOLOGY LIMITED — United States</div>
       </div>
     </section>
   </main>
 
-  <div data-site-footer></div>
-  <script type="module" src="./js/main.js"></script>
+  <footer class="site-footer">
+    <div class="section-wrap section-tight">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10">
+        <div>
+          <p class="brand-font text-xl font-bold">⛰ SummitLink / 峰会链接</p>
+          <p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p>
+        </div>
+      </div>
+      <div class="footer-grid py-8">
+        <div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div>
+        <div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./guides.html#guide-form">Become a Guide</a></div>
+        <div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div>
+        <div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div>
+      </div>
+      <p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <div class="modal-root" data-notify-modal aria-hidden="true">
+    <div class="modal-card glass-panel">
+      <div class="flex items-center justify-between mb-3"><h2 class="text-2xl font-black">Notify Me</h2><button class="btn-ghost" data-notify-close aria-label="Close">Close</button></div>
+      <p class="utility-muted mb-3">Mobile App Coming Soon. Leave your email for launch updates.</p>
+      <form>
+        <label class="form-label" for="notify-email">Email</label>
+        <input id="notify-email" name="email" type="email" required class="form-input" />
+        <button class="btn-primary mt-3" type="submit">Notify Me</button>
+      </form>
+      <p class="form-success hidden mt-3" data-notify-result></p>
+    </div>
+  </div>
+
+  <script src="./js/site.js"></script>
 </body>
 </html>

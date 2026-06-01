@@ -1,49 +1,55 @@
-<!DOCTYPE html>
-<!-- 全球山峰数据库展示页：8000m 巨峰横向轮播与关键指标 -->
-<html lang="en" class="scroll-smooth">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SummitLink · Peaks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Explore Peaks | SummitLink</title>
+  <meta name="description" content="Explore SummitLink's mountain directory with the Seven Summits and other legendary peaks." />
+  <meta property="og:title" content="Explore Peaks | SummitLink" />
+  <meta property="og:description" content="Browse the world's greatest peaks and prepare your next expedition." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/peaks.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
-  </script>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body data-page="peaks" data-page-title="titles.peaks" class="bg-space font-sans text-white antialiased">
-  <div data-site-header></div>
-  <main class="pt-28">
-    <section class="mx-auto max-w-7xl px-4 py-16" data-reveal>
-      <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="peaks.heroEyebrow"></span>
-      <h1 class="mt-6 font-display text-5xl font-black leading-none md:text-7xl" data-i18n="peaks.heroTitle"></h1>
-      <p class="mt-6 max-w-3xl text-lg leading-8 text-white/65" data-i18n="peaks.heroBody"></p>
+<body data-page="peaks">
+  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
+
+  <main class="pt-24">
+    <section class="section-wrap section-tight">
+      <h1 class="hero-title">Explore the World's Greatest Peaks</h1>
+      <div class="grid md:grid-cols-[2fr,1fr] gap-3 mt-6">
+        <input class="form-input" aria-label="Search by mountain name" placeholder="Search by name" />
+        <select class="form-select" aria-label="Filter by continent"><option>Filter by continent</option><option>Asia</option><option>Europe</option><option>Africa</option><option>North America</option><option>South America</option><option>Oceania</option><option>Antarctica</option></select>
+      </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 pb-8">
-      <div class="peaks-strip">
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">珠穆朗玛峰</h2><p class="text-sm text-white/50">Mount Everest</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8848.86m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 68%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">K2</h2><p class="text-sm text-white/50">Chhogori</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8611m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 44%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">干城章嘉</h2><p class="text-sm text-white/50">Kangchenjunga</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8586m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 40%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">洛子峰</h2><p class="text-sm text-white/50">Lhotse</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8516m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 52%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">马卡鲁</h2><p class="text-sm text-white/50">Makalu</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8485m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 38%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">卓奥友峰</h2><p class="text-sm text-white/50">Cho Oyu</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8188m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 71%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">道拉吉里 I</h2><p class="text-sm text-white/50">Dhaulagiri I</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8167m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 49%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">马纳斯鲁</h2><p class="text-sm text-white/50">Manaslu</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8163m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 63%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">南迦帕尔巴特</h2><p class="text-sm text-white/50">Nanga Parbat</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8126m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 36%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">安纳普尔纳 I</h2><p class="text-sm text-white/50">Annapurna I</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8091m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.extreme"></span></p><p><span data-i18n="peaks.successRate"></span> · 32%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">迦舒布鲁姆 I</h2><p class="text-sm text-white/50">Gasherbrum I</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8080m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 42%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">布洛阿特峰</h2><p class="text-sm text-white/50">Broad Peak</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8051m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.high"></span></p><p><span data-i18n="peaks.successRate"></span> · 46%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">加舒尔布鲁姆 II</h2><p class="text-sm text-white/50">Gasherbrum II</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8035m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 58%</p></div></article>
-        <article class="glass-panel rounded-[1.8rem] p-6"><div class="placeholder-summit"></div><h2 class="mt-5 text-2xl font-bold">希夏邦马</h2><p class="text-sm text-white/50">Shishapangma</p><div class="mt-4 grid gap-2 text-sm text-white/70"><p><span data-i18n="peaks.altitude"></span> · 8027m</p><p><span data-i18n="peaks.difficulty"></span> · <span data-i18n="peaks.advanced"></span></p><p><span data-i18n="peaks.successRate"></span> · 69%</p></div></article>
+    <section class="section-wrap section-tight">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1486911278844-a81c5267e227?w=900&q=80" alt="Mount Everest"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Mount Everest</h2><p class="utility-muted">8,849m · China/Nepal</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1493244040629-496f6d136cc3?w=900&q=80" alt="Kilimanjaro"/><div class="p-4"><span class="badge">Africa</span><h2 class="font-bold text-xl mt-2">Kilimanjaro</h2><p class="utility-muted">5,895m · Tanzania</p><p>Difficulty: Moderate</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1546587348-d12660c30c50?w=900&q=80" alt="Denali"/><div class="p-4"><span class="badge">North America</span><h2 class="font-bold text-xl mt-2">Denali</h2><p class="utility-muted">6,190m · USA (Alaska)</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1527333656061-ca7f93f33f5e?w=900&q=80" alt="Aconcagua"/><div class="p-4"><span class="badge">South America</span><h2 class="font-bold text-xl mt-2">Aconcagua</h2><p class="utility-muted">6,961m · Argentina</p><p>Difficulty: Hard</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1516589091380-5d6017f5f5a9?w=900&q=80" alt="Vinson Massif"/><div class="p-4"><span class="badge">Antarctica</span><h2 class="font-bold text-xl mt-2">Vinson Massif</h2><p class="utility-muted">4,892m · Antarctica</p><p>Difficulty: Hard</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1693572623645-97653f2f7fd6?w=900&q=80" alt="Mount Elbrus"/><div class="p-4"><span class="badge">Europe</span><h2 class="font-bold text-xl mt-2">Mount Elbrus</h2><p class="utility-muted">5,642m · Russia</p><p>Difficulty: Moderate</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1476610182048-b716b8518aae?w=900&q=80" alt="Puncak Jaya"/><div class="p-4"><span class="badge">Oceania</span><h2 class="font-bold text-xl mt-2">Puncak Jaya</h2><p class="utility-muted">4,884m · Indonesia</p><p>Difficulty: Hard</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1515859005217-8a1f08870f59?w=900&q=80" alt="K2"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">K2</h2><p class="utility-muted">8,611m · Pakistan/China</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1574958269340-fa927503f3dd?w=900&q=80" alt="Kangchenjunga"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Kangchenjunga</h2><p class="utility-muted">8,586m · Nepal/India</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80" alt="Lhotse"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Lhotse</h2><p class="utility-muted">8,516m · Nepal</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80" alt="Makalu"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Makalu</h2><p class="utility-muted">8,485m · Nepal</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1482192505345-5655af888cc4?w=900&q=80" alt="Cho Oyu"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Cho Oyu</h2><p class="utility-muted">8,188m · Nepal/China</p><p>Difficulty: Hard</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1472396961693-142e6e269027?w=900&q=80" alt="Dhaulagiri"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Dhaulagiri</h2><p class="utility-muted">8,167m · Nepal</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
+        <article class="glass-panel overflow-hidden" data-reveal><img src="https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=900&q=80" alt="Manaslu"/><div class="p-4"><span class="badge">Asia</span><h2 class="font-bold text-xl mt-2">Manaslu</h2><p class="utility-muted">8,163m · Nepal</p><p>Difficulty: Extreme</p><a href="#" class="text-sky-300">Learn More</a></div></article>
       </div>
     </section>
   </main>
-  <div data-site-footer></div>
-  <script type="module" src="./js/main.js"></script>
+
+  <footer class="site-footer"><div class="section-wrap section-tight"><div class="footer-grid py-4"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./guides.html#guide-form">Become a Guide</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
+
+  <script src="./js/site.js"></script>
 </body>
 </html>
