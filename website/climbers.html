@@ -3,67 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>For Climbers | SummitLink</title>
-  <meta name="description" content="SummitLink helps climbers discover expeditions, match with guides, and stay safe." />
-  <meta property="og:title" content="For Climbers | SummitLink" />
-  <meta property="og:description" content="Your mountain journey starts here with SummitLink." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/climbers.html" />
-  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
+  <title>Climbers | SummitLink</title>
+  <meta name="description" content="Your mountain journey starts here with SummitLink." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    body { background:#080f1c; color:#fff; }
+    .hero-climbers { min-height:72vh; display:flex; align-items:center; background:linear-gradient(140deg, rgba(8,15,28,.92), rgba(8,15,28,.66)), url('https://images.unsplash.com/photo-1464822759844-d150ad6d1d04?w=1920&q=80') center/cover; }
+    .title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(2.3rem,4.8vw,4.5rem); }
+    .section-title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(1.8rem,3vw,3rem); }
+    .muted { color:rgba(255,255,255,.68); }
+  </style>
 </head>
 <body data-page="climbers">
-  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
+  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">▲ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
 
-  <header class="hero">
-    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=1920&q=80');"></div>
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <h1 class="hero-title">Your Mountain Journey Starts Here</h1>
-      <p class="hero-subtitle">Discover expeditions, match with certified guides, build teams, and climb safer with SummitLink.</p>
-    </div>
-  </header>
+  <header class="hero-climbers"><div class="section-wrap"><h1 class="title mb-4">Your Mountain Journey Starts Here</h1><p class="text-xl muted max-w-4xl">Connect with certified guides, plan your expedition, and join a global community of climbers.</p></div></header>
 
   <main>
-    <section class="section-wrap">
-      <div class="grid md:grid-cols-2 gap-6 items-center mb-8" data-reveal>
-        <img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80" alt="Discover expeditions" class="rounded-2xl" />
-        <div><h2 class="text-3xl font-black mb-2">Discover Expeditions</h2><p class="utility-muted">Find routes and peaks aligned with your goals, timeline, and altitude experience.</p></div>
-      </div>
-      <div class="grid md:grid-cols-2 gap-6 items-center mb-8" data-reveal>
-        <div><h2 class="text-3xl font-black mb-2">Match with Guides</h2><p class="utility-muted">Connect with vetted, certified professionals who know your mountain and safety needs.</p></div>
-        <img src="https://images.unsplash.com/photo-1521334884684-d80222895322?w=900&q=80" alt="Match with guides" class="rounded-2xl" />
-      </div>
-      <div class="grid md:grid-cols-2 gap-6 items-center mb-8" data-reveal>
-        <img src="https://images.unsplash.com/photo-1476610182048-b716b8518aae?w=900&q=80" alt="Join teams" class="rounded-2xl" />
-        <div><h2 class="text-3xl font-black mb-2">Join Teams</h2><p class="utility-muted">Find climbing partners with compatible skill level, schedule, and expedition objectives.</p></div>
-      </div>
-      <div class="grid md:grid-cols-2 gap-6 items-center" data-reveal>
-        <div><h2 class="text-3xl font-black mb-2">Track Safety</h2><p class="utility-muted">Use safety checkpoints, real-time location sharing, and SOS-first planning tools.</p></div>
-        <img src="https://images.unsplash.com/photo-1464822759844-d150ad6d1d27?w=900&q=80" alt="Track safety" class="rounded-2xl" />
-      </div>
-    </section>
+    <section class="section-wrap"><h2 class="section-title mb-6">Designed for ambitious climbers</h2><div class="grid-auto"><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">Certified Guide Matching</h3><p class="muted">Match with trusted SummitLink-verified guides for every terrain and altitude level.</p></article><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">Expedition Planning Stack</h3><p class="muted">Coordinate permits, logistics, and schedule in one system built for global climbs.</p></article><article class="glass-panel p-6"><h3 class="text-xl font-bold mb-2">Summit Journey Tracking</h3><p class="muted">Track your climbs, milestones, and progression toward Seven Summits completion.</p></article></div></section>
 
-    <section class="section-wrap section-tight">
-      <h2 class="text-3xl md:text-5xl font-black mb-2">Mobile App — Coming Soon</h2>
-      <p class="utility-muted mb-6">Available on iOS and Android.</p>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-        <div class="phone-mock" data-reveal><div class="phone-inner">Expedition Feed</div></div>
-        <div class="phone-mock" data-reveal><div class="phone-inner">Guide Profiles</div></div>
-        <div class="phone-mock" data-reveal><div class="phone-inner">SOS Toolkit</div></div>
-      </div>
-      <button class="btn-secondary" data-notify-open>Notify Me</button>
-    </section>
+    <section class="section-wrap section-tight"><div class="glass-panel p-7 md:p-10" style="background-image:linear-gradient(130deg, rgba(8,15,28,.94), rgba(8,15,28,.76)), url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1400&q=80'); background-size:cover;"><h2 class="section-title text-4xl mb-3">Ready for your next expedition?</h2><p class="muted mb-5">Apply for the Seven Summits Challenge or start with a guided expedition tailored to your experience.</p><div class="flex flex-wrap gap-3"><a class="btn-primary" href="./seven-summits.html#apply-form">Apply for Seven Summits</a><a class="btn-ghost" href="./peaks.html">Explore Peaks</a></div></div></section>
   </main>
 
-  <footer class="site-footer"><div class="section-wrap section-tight"><div class="footer-grid py-4"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./guides.html#guide-form">Become a Guide</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
-
-  <div class="modal-root" data-notify-modal aria-hidden="true"><div class="modal-card glass-panel"><div class="flex items-center justify-between mb-3"><h2 class="text-2xl font-black">Notify Me</h2><button class="btn-ghost" data-notify-close aria-label="Close">Close</button></div><p class="utility-muted mb-3">Mobile App Coming Soon. Leave your email for launch updates.</p><form><label class="form-label" for="notify-email">Email</label><input id="notify-email" name="email" type="email" required class="form-input" /><button class="btn-primary mt-3" type="submit">Notify Me</button></form><p class="form-success hidden mt-3" data-notify-result></p></div></div>
-
+  <footer class="site-footer"><div class="section-wrap section-tight"><div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10"><div><p class="brand-font text-xl font-bold">▲ SummitLink / 峰会链接</p><p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p></div></div><div class="footer-grid py-8"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./index.html">Home</a><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 末登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
   <script src="./js/site.js"></script>
 </body>
 </html>
