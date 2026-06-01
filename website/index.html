@@ -3,505 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SummitLink | Climb Higher. Connect Globally.</title>
-  <meta name="description" content="SummitLink is the global platform connecting climbers, certified guides, expedition operators, and sponsors." />
-  <meta property="og:title" content="SummitLink | Climb Higher. Connect Globally." />
-  <meta property="og:description" content="Join the 2026 Seven Summits Global Challenge and connect with the world's mountaineering community." />
+  <title>SummitLink | Global Mountaineering Infrastructure</title>
+  <meta name="description" content="SummitLink is building the global infrastructure for mountaineering and high-altitude expeditions." />
+  <meta property="og:title" content="SummitLink | Global Mountaineering Infrastructure" />
+  <meta property="og:description" content="Investor-grade global platform connecting climbers, guides, operators, and partners." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/index.html" />
-  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
+  <meta property="og:url" content="./index.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
   <style>
-    .app-showcase-note {
-      font-size: 0.95rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #8fbfff;
-    }
-
-    .phone-mock {
-      width: min(100%, 220px);
-      height: 420px;
-      margin: 0 auto;
-      padding: 12px;
-      background: #0d1117;
-      border-radius: 36px;
-      border: 2px solid rgba(79, 172, 254, 0.3);
-      box-shadow: 0 0 40px rgba(79, 172, 254, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .phone-screen {
-      height: 100%;
-      border-radius: 28px;
-      overflow: hidden;
-      background: linear-gradient(180deg, #0f1724 0%, #0b1220 100%);
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      color: #fff;
-    }
-
-    .phone-notch {
-      width: 80px;
-      height: 20px;
-      background: #0d1117;
-      border-radius: 0 0 12px 12px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
-      flex-shrink: 0;
-    }
-
-    .phone-status {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.55rem 1rem 0.35rem;
-      font-size: 0.7rem;
-      color: #cbd5e1;
-      letter-spacing: 0.04em;
-    }
-
-    .phone-status strong {
-      color: #f8fafc;
-      font-size: 0.72rem;
-    }
-
-    .status-icons {
-      display: flex;
-      align-items: flex-end;
-      gap: 0.35rem;
-    }
-
-    .signal-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 2px;
-      height: 12px;
-    }
-
-    .signal-bars span {
-      width: 3px;
-      border-radius: 999px;
-      background: #f8fafc;
-      display: block;
-    }
-
-    .signal-bars span:nth-child(1) { height: 4px; opacity: 0.55; }
-    .signal-bars span:nth-child(2) { height: 6px; opacity: 0.7; }
-    .signal-bars span:nth-child(3) { height: 8px; opacity: 0.85; }
-    .signal-bars span:nth-child(4) { height: 10px; }
-
-    .battery-icon {
-      width: 21px;
-      height: 10px;
-      border: 1.5px solid rgba(248, 250, 252, 0.85);
-      border-radius: 3px;
-      position: relative;
-    }
-
-    .battery-icon::after {
-      content: '';
-      position: absolute;
-      right: -3px;
-      top: 2px;
-      width: 2px;
-      height: 4px;
-      background: rgba(248, 250, 252, 0.85);
-      border-radius: 0 2px 2px 0;
-    }
-
-    .battery-icon::before {
-      content: '';
-      position: absolute;
-      inset: 1px;
-      width: 72%;
-      border-radius: 1.5px;
-      background: linear-gradient(90deg, #4facfe, #93c5fd);
-    }
-
-    .phone-topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.8rem 1rem;
-      background: rgba(255, 255, 255, 0.04);
-      border-top: 1px solid rgba(255, 255, 255, 0.04);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.03);
-    }
-
-    .phone-topbar h3 {
-      margin: 0;
-      font-size: 0.92rem;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-    }
-
-    .phone-topbar span,
-    .tab-icon,
-    .live-dot,
-    .weather-chip span {
-      flex-shrink: 0;
-    }
-
-    .phone-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      padding: 0.85rem;
-      min-height: 0;
-    }
-
-    .app-search {
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      padding: 0.72rem 0.95rem;
-      color: #cbd5e1;
-      font-size: 0.74rem;
-      backdrop-filter: blur(12px);
-    }
-
-    .map-card,
-    .info-card,
-    .guide-card,
-    .safety-card {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(14px);
-    }
-
-    .route-map {
-      flex: 1;
-      min-height: 120px;
-      border-radius: 22px;
-      position: relative;
-      overflow: hidden;
-      background:
-        linear-gradient(160deg, rgba(79, 172, 254, 0.2), rgba(26, 39, 68, 0.96)),
-        repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 24px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 24px),
-        linear-gradient(180deg, #173860 0%, #1a2744 60%, #0f1724 100%);
-    }
-
-    .route-map::before,
-    .route-map::after {
-      content: '';
-      position: absolute;
-      inset: auto auto 12px -10px;
-      width: 160px;
-      height: 60px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 50%;
-      filter: blur(2px);
-      transform: rotate(-10deg);
-    }
-
-    .route-map::after {
-      inset: 18px -24px auto auto;
-      width: 120px;
-      height: 48px;
-      transform: rotate(14deg);
-    }
-
-    .map-pin,
-    .summit-pin {
-      position: absolute;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.2rem;
-      color: #f8fafc;
-      font-size: 0.62rem;
-      font-weight: 600;
-      text-shadow: 0 2px 10px rgba(15, 23, 36, 0.85);
-    }
-
-    .map-pin::before,
-    .summit-pin::before {
-      content: '';
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15);
-    }
-
-    .summit-pin::before {
-      content: '★';
-      width: auto;
-      height: auto;
-      background: transparent;
-      box-shadow: none;
-      font-size: 0.95rem;
-      line-height: 1;
-      color: #fde68a;
-    }
-
-    .info-card {
-      border-radius: 20px;
-      padding: 0.9rem;
-      display: grid;
-      gap: 0.45rem;
-    }
-
-    .info-card strong,
-    .guide-card strong,
-    .safety-card strong {
-      font-size: 0.9rem;
-      color: #fff;
-    }
-
-    .info-meta,
-    .guide-meta,
-    .safety-meta,
-    .weather-row {
-      color: #94a3b8;
-      font-size: 0.7rem;
-      line-height: 1.4;
-    }
-
-    .progress-track {
-      height: 8px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .progress-track::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      width: 78%;
-      background: linear-gradient(90deg, #4facfe, #93c5fd);
-      border-radius: inherit;
-    }
-
-    .progress-label {
-      font-size: 0.68rem;
-      color: #dbeafe;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .guide-list {
-      display: grid;
-      gap: 0.7rem;
-    }
-
-    .guide-card {
-      border-radius: 22px;
-      padding: 0.9rem;
-      display: grid;
-      gap: 0.5rem;
-    }
-
-    .guide-row {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-    }
-
-    .guide-avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, rgba(79, 172, 254, 0.95), rgba(191, 219, 254, 0.55));
-      display: grid;
-      place-items: center;
-      font-size: 1rem;
-      color: #0f1724;
-      box-shadow: 0 8px 24px rgba(79, 172, 254, 0.22);
-    }
-
-    .guide-rating {
-      color: #fde68a;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
-
-    .book-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: fit-content;
-      padding: 0.48rem 0.8rem;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #4facfe, #60a5fa);
-      color: #eff6ff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      box-shadow: 0 10px 24px rgba(79, 172, 254, 0.24);
-    }
-
-    .live-row {
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      color: #dcfce7;
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .live-dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: #22c55e;
-      box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.16);
-    }
-
-    .tracking-map {
-      min-height: 112px;
-      border-radius: 22px;
-      position: relative;
-      overflow: hidden;
-      background:
-        radial-gradient(circle at 20% 30%, rgba(79,172,254,0.18), transparent 28%),
-        linear-gradient(160deg, #173860 0%, #1a2744 55%, #0f1724 100%);
-    }
-
-    .tracking-map::before,
-    .tracking-map::after {
-      content: '';
-      position: absolute;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 999px;
-    }
-
-    .tracking-map::before {
-      width: 130px;
-      height: 38px;
-      top: 12px;
-      right: -18px;
-      transform: rotate(-18deg);
-    }
-
-    .tracking-map::after {
-      width: 110px;
-      height: 32px;
-      bottom: 10px;
-      left: -14px;
-      transform: rotate(12deg);
-    }
-
-    .trail {
-      position: absolute;
-      height: 4px;
-      border-radius: 999px;
-      background: #fb923c;
-      box-shadow: 0 0 18px rgba(251, 146, 60, 0.35);
-    }
-
-    .trail-1 { width: 54px; top: 78px; left: 24px; transform: rotate(18deg); }
-    .trail-2 { width: 48px; top: 64px; left: 70px; transform: rotate(-24deg); }
-    .trail-3 { width: 44px; top: 82px; left: 108px; transform: rotate(26deg); }
-
-    .tracker-dot,
-    .waypoint-dot {
-      position: absolute;
-      border-radius: 999px;
-    }
-
-    .waypoint-dot {
-      width: 8px;
-      height: 8px;
-      background: #e2e8f0;
-      box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.14);
-    }
-
-    .tracker-dot {
-      width: 12px;
-      height: 12px;
-      background: #ef4444;
-      box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16);
-    }
-
-    .sos-button {
-      width: 88px;
-      height: 88px;
-      border-radius: 999px;
-      margin: 0 auto;
-      background: radial-gradient(circle at 30% 30%, #f87171, #ef4444 60%, #991b1b 100%);
-      display: grid;
-      place-items: center;
-      font-size: 1.2rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      color: #fff;
-      box-shadow: 0 18px 40px rgba(239, 68, 68, 0.35), inset 0 2px 8px rgba(255,255,255,0.15);
-    }
-
-    .sos-caption {
-      text-align: center;
-      display: grid;
-      gap: 0.2rem;
-      margin-top: -0.15rem;
-    }
-
-    .weather-row {
-      display: flex;
-      gap: 0.65rem;
-      flex-wrap: wrap;
-      color: #dbeafe;
-    }
-
-    .tabbar {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 0.35rem;
-      padding: 0.75rem 0.8rem 0.9rem;
-      background: rgba(255, 255, 255, 0.04);
-      border-top: 1px solid rgba(148, 163, 184, 0.16);
-    }
-
-    .tab-item {
-      display: grid;
-      gap: 0.2rem;
-      justify-items: center;
-      color: #64748b;
-      font-size: 0.62rem;
-      font-weight: 600;
-    }
-
-    .tab-item.active {
-      color: #4facfe;
-    }
-
-    .tab-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      background: rgba(255, 255, 255, 0.03);
-      font-size: 1rem;
-    }
-
-    .tab-item.active .tab-icon {
-      background: rgba(79, 172, 254, 0.16);
-      box-shadow: inset 0 0 0 1px rgba(79, 172, 254, 0.25);
-    }
+    body { background:#080f1c; color:#fff; }
+    .hero-v3 { min-height:100vh; position:relative; display:flex; align-items:center; }
+    .hero-v3::before { content:""; position:absolute; inset:0; background:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80') center/cover no-repeat; }
+    .hero-v3::after { content:""; position:absolute; inset:0; background:linear-gradient(120deg, rgba(6,10,18,.82), rgba(6,10,18,.62)); }
+    .hero-inner { position:relative; z-index:2; width:min(1200px,100%); margin:0 auto; padding:8rem 1rem 5rem; }
+    .hero-kicker { display:inline-flex; padding:.45rem .9rem; border-radius:999px; border:1px solid rgba(79,172,254,.65); color:#d8ebff; background:rgba(79,172,254,.18); font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; }
+    .hero-title-v3 { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(2.8rem,6vw,5.6rem); line-height:1.02; margin:1.2rem 0 1rem; animation:fadeUp .75s ease both; }
+    .hero-sub { max-width:760px; color:rgba(255,255,255,.82); font-size:clamp(1rem,1.6vw,1.32rem); }
+    .btn-row { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1.8rem; }
+    .btn-outline { display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.7); border-radius:24px; padding:.78rem 1.1rem; font-weight:700; }
+    .metric-float { position:absolute; right:1rem; bottom:2rem; z-index:2; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:1rem 1.2rem; backdrop-filter:blur(10px); }
+    .metric-float p { margin:0; font-weight:700; }
+    .scroll-tip { position:absolute; left:50%; bottom:1.2rem; transform:translateX(-50%); z-index:2; color:rgba(255,255,255,.85); font-size:1.4rem; }
+    .section-wrap { padding-top:6rem; padding-bottom:6rem; }
+    .glass-panel { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14); }
+    .section-title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(2rem,4vw,3.5rem); line-height:1.1; margin-bottom:.9rem; }
+    .section-sub { color:rgba(255,255,255,.66); max-width:860px; }
+    .timeline-list { position:relative; margin:1.25rem 0; padding-left:1.8rem; }
+    .timeline-list::before { content:""; position:absolute; left:.47rem; top:.3rem; bottom:.3rem; width:2px; background:linear-gradient(#4FACFE,#F5A623); }
+    .timeline-list li { margin-bottom:1rem; color:rgba(255,255,255,.85); }
+    .timeline-list li::marker { color:#4FACFE; }
+    .continents-map { position:relative; min-height:360px; border-radius:20px; background:radial-gradient(circle at 25% 25%, rgba(79,172,254,.18), rgba(8,15,28,.95)); border:1px solid rgba(79,172,254,.28); overflow:hidden; }
+    .continents-map .node { position:absolute; width:14px; height:14px; border-radius:999px; background:#4FACFE; box-shadow:0 0 0 6px rgba(79,172,254,.2); }
+    .continents-map .node.gold { background:#F5A623; box-shadow:0 0 0 6px rgba(245,166,35,.2); }
+    .continents-map .line { position:absolute; height:2px; background:linear-gradient(90deg,rgba(79,172,254,.8),rgba(245,166,35,.7)); transform-origin:left center; }
+    .entry-card { transition:transform .25s ease; }
+    .entry-card:hover { transform:translateY(-6px) scale(1.01); }
+    .stat-value { font-family:'Sora',sans-serif; font-size:clamp(2.2rem,4vw,3.8rem); font-weight:900; }
+    .phone-mock { width:min(100%,220px); height:420px; margin:0 auto; padding:12px; background:#0d1117; border-radius:36px; border:2px solid rgba(79,172,254,.3); box-shadow:0 0 40px rgba(79,172,254,.1), inset 0 0 20px rgba(0,0,0,.5); overflow:hidden; }
+    .phone-screen { height:100%; border-radius:28px; overflow:hidden; background:linear-gradient(180deg,#0f1724,#0b1220); display:flex; flex-direction:column; }
+    .phone-status,.phone-topbar,.phone-body,.tabbar { padding:.75rem .9rem; }
+    .phone-status { font-size:.72rem; color:#cbd5e1; display:flex; justify-content:space-between; }
+    .phone-topbar { border-top:1px solid rgba(255,255,255,.05); border-bottom:1px solid rgba(255,255,255,.14); font-weight:700; display:flex; justify-content:space-between; }
+    .phone-body { flex:1; display:grid; gap:.55rem; color:#e2e8f0; font-size:.72rem; }
+    .mini-card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:.55rem; }
+    .tabbar { border-top:1px solid rgba(255,255,255,.14); font-size:.65rem; color:#94a3b8; display:grid; grid-template-columns:repeat(4,1fr); gap:.35rem; text-align:center; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0);} }
+    @media (max-width: 920px){ .metric-float{position:static;display:inline-block;margin-top:1.2rem;} }
   </style>
 </head>
 <body data-page="home">
   <nav class="site-nav" aria-label="Primary Navigation">
     <div class="nav-shell">
       <div class="flex items-center justify-between gap-4">
-        <a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a>
+        <a href="./index.html" class="brand-font text-lg font-bold">▲ SummitLink</a>
         <div class="nav-links items-center gap-1 md:flex">
           <a class="nav-link" data-nav="home" href="./index.html">Home</a>
           <a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a>
@@ -526,226 +85,126 @@
     </div>
   </nav>
 
-  <header class="hero" aria-label="Hero">
-    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80');"></div>
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <h1 class="hero-title" data-reveal>Climb Higher. Connect Globally.</h1>
-      <p class="hero-subtitle" data-reveal>The global platform connecting climbers, certified mountain guides, and expedition partners.</p>
-      <div class="flex flex-wrap gap-3" data-reveal>
-        <a class="btn-primary" href="./seven-summits.html">Apply for Seven Summits Challenge</a>
-        <a class="btn-ghost" href="./guides.html">Become a Guide</a>
+  <header class="hero-v3" aria-label="Hero">
+    <div class="hero-inner">
+      <span class="hero-kicker">GLOBAL MOUNTAINEERING PLATFORM</span>
+      <h1 class="hero-title-v3">Building the world's<br>infrastructure for<br>global mountaineering.</h1>
+      <p class="hero-sub">Connecting climbers, certified guides, and expedition operators into a unified global platform.</p>
+      <div class="btn-row">
+        <a class="btn-primary" href="./seven-summits.html">View Seven Summits Challenge</a>
+        <a class="btn-outline" href="./guides.html#guide-form">Become a Guide</a>
+        <a class="btn-outline" href="./corporate.html#partnership-form">Partner / Invest</a>
+      </div>
+      <div class="metric-float">
+        <p>7 Continents</p>
+        <p>500+ Peaks</p>
+        <p>2027 Expeditions</p>
       </div>
     </div>
-    <div class="scroll-indicator" aria-hidden="true">↓</div>
+    <div class="scroll-tip" aria-hidden="true">↓</div>
   </header>
 
   <main>
     <section class="section-wrap">
-      <h2 class="text-3xl md:text-5xl font-black mb-3" data-reveal>Why SummitLink Exists</h2>
-      <p class="utility-muted mb-8" data-reveal>We exist to make global mountaineering safer, more connected, and more inclusive.</p>
+      <h2 class="section-title" data-reveal>The mountaineering industry is broken.</h2>
+      <p class="section-sub mb-8" data-reveal>A $50B+ global outdoor adventure market with no unified infrastructure.</p>
       <div class="grid-auto">
-        <article class="glass-panel p-6" data-reveal>
-          <p class="text-3xl mb-2">🌍</p>
-          <h3 class="text-xl font-bold mb-2">Global Connection</h3>
-          <p class="utility-muted">Breaking geographical, language, and economic barriers for climbers worldwide.</p>
-        </article>
-        <article class="glass-panel p-6" data-reveal>
-          <p class="text-3xl mb-2">🏔️</p>
-          <h3 class="text-xl font-bold mb-2">Safe Expeditions</h3>
-          <p class="utility-muted">Connecting climbers with certified, vetted mountain guides for every adventure.</p>
-        </article>
-        <article class="glass-panel p-6" data-reveal>
-          <p class="text-3xl mb-2">🤝</p>
-          <h3 class="text-xl font-bold mb-2">Shared Growth</h3>
-          <p class="utility-muted">Building a community where knowledge, routes, and success are shared openly.</p>
-        </article>
-      </div>
-      <p class="quote-bg mt-10" aria-hidden="true">Every summit begins with a single connection.</p>
-    </section>
-
-    <section class="section-wrap section-tight">
-      <div class="glass-panel p-7 md:p-10" style="background-image:linear-gradient(140deg, rgba(8,15,28,.94), rgba(28,35,51,.85)), url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1400&q=80'); background-size:cover;" data-reveal>
-        <h2 class="text-3xl md:text-4xl font-black mb-2">2026 Seven Summits Global Challenge</h2>
-        <p class="utility-muted mb-4">20 selected climbers. 7 continents. Fully supported expeditions.</p>
-        <div class="flex flex-wrap gap-2 mb-5">
-          <span class="timeline-pill">Applications Open Jul 1</span>
-          <span class="timeline-pill">Close Oct 15, 2026</span>
-          <span class="timeline-pill">Announcement Nov 11, 2026</span>
-          <span class="timeline-pill">Expeditions 2027</span>
-        </div>
-        <div class="flex flex-wrap items-center gap-4">
-          <a class="btn-primary" href="./seven-summits.html">Apply Now — Free Entry</a>
-          <strong data-days-until-close aria-live="polite"></strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-wrap">
-      <h2 class="text-3xl md:text-5xl font-black mb-8" data-reveal>Everything a Climber Needs</h2>
-      <div class="grid-auto">
-        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🗺️ Route Planning</h3><p class="utility-muted">Discover and plan routes on 500+ peaks worldwide.</p></article>
-        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🧗 Guide Matching</h3><p class="utility-muted">Connect with certified guides who know your mountain.</p></article>
-        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">⛅ Weather Intelligence</h3><p class="utility-muted">Real-time summit forecasts and condition reports.</p></article>
-        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">👥 Team Building</h3><p class="utility-muted">Find climbing partners who match your skill and schedule.</p></article>
-        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🛡️ Safety First</h3><p class="utility-muted">Emergency SOS, route tracking, and safety protocols.</p></article>
-        <article class="glass-panel p-5" data-reveal><h3 class="font-bold">🏆 Summit Log</h3><p class="utility-muted">Record every peak, share your journey, inspire others.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-3">🧩 Fragmented Ecosystem</h3><p class="section-sub">Thousands of guides, operators, and climbers operate in silos with no common platform.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-3">🔍 No Transparency</h3><p class="section-sub">Certification standards vary wildly across regions. Climbers have no way to verify guide credentials.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-3">⚠️ Safety Risk</h3><p class="section-sub">Without structured coordination, expedition safety depends entirely on luck and local contacts.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-3">🌐 No Global Access</h3><p class="section-sub">Elite mountaineering experiences remain inaccessible to most of the world's aspiring climbers.</p></article>
       </div>
     </section>
 
     <section class="section-wrap section-tight">
-      <h2 class="text-3xl md:text-5xl font-black mb-8" data-reveal>Who Is SummitLink For</h2>
+      <h2 class="section-title" data-reveal>SummitLink is the answer.</h2>
       <div class="grid-auto">
-        <article class="glass-panel p-6 transition hover:-translate-y-1" data-reveal><h3 class="text-xl font-bold mb-2">Climbers</h3><p class="utility-muted">From first-time trekkers to seasoned alpinists. Find your next adventure.</p></article>
-        <article class="glass-panel p-6 transition hover:-translate-y-1" data-reveal><h3 class="text-xl font-bold mb-2">Mountain Guides</h3><p class="utility-muted">Grow your client base. Get global visibility. Earn more.</p></article>
-        <article class="glass-panel p-6 transition hover:-translate-y-1" data-reveal><h3 class="text-xl font-bold mb-2">Expedition Operators & Sponsors</h3><p class="utility-muted">Reach the world's most passionate outdoor community.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">✅ Verified Guide Network</h3><p class="section-sub">Every guide on SummitLink is background-checked, certified, and rated by past clients. Global standards, local expertise.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">🏔️ Structured Programs</h3><p class="section-sub">Our flagship Seven Summits Challenge gives climbers a fully-supported pathway to summit all 7 continents.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">🔗 End-to-End Platform</h3><p class="section-sub">From permit acquisition to summit day, SummitLink coordinates every element of the expedition lifecycle.</p></article>
       </div>
     </section>
 
     <section class="section-wrap">
-      <h2 class="text-3xl md:text-5xl font-black mb-2" data-reveal>Mobile App — Coming Soon</h2>
-      <p class="app-showcase-note mb-2" data-reveal>峰会链接 · SummitLink</p>
-      <p class="utility-muted mb-8" data-reveal>Available on iOS and Android.</p>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="phone-mock" data-reveal>
-          <div class="phone-screen">
-            <div class="phone-notch"></div>
-            <div class="phone-status">
-              <strong>9:41 AM</strong>
-              <div class="status-icons">
-                <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
-                <div class="battery-icon"></div>
-              </div>
-            </div>
-            <div class="phone-topbar"><h3>Route Planner</h3><span>🗺️</span></div>
-            <div class="phone-body">
-              <div class="app-search">🔍 Search peaks...</div>
-              <div class="route-map map-card">
-                <div class="map-pin" style="top: 54%; left: 18%;"><span>C1</span></div>
-                <div class="map-pin" style="top: 43%; left: 43%;"><span>C2</span></div>
-                <div class="summit-pin" style="top: 22%; right: 17%;"><span>Summit</span></div>
-              </div>
-              <div class="info-card">
-                <strong>Mount Everest</strong>
-                <div class="info-meta">8,849m · Asia</div>
-                <div class="progress-track"></div>
-                <div class="progress-label"><span>Success window</span><span>78%</span></div>
-              </div>
-            </div>
-            <div class="tabbar">
-              <div class="tab-item active"><span class="tab-icon">🗺️</span><span>Route</span></div>
-              <div class="tab-item"><span class="tab-icon">📋</span><span>Plan</span></div>
-              <div class="tab-item"><span class="tab-icon">👥</span><span>Team</span></div>
-              <div class="tab-item"><span class="tab-icon">⚙️</span><span>More</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="phone-mock" data-reveal>
-          <div class="phone-screen">
-            <div class="phone-notch"></div>
-            <div class="phone-status">
-              <strong>9:41 AM</strong>
-              <div class="status-icons">
-                <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
-                <div class="battery-icon"></div>
-              </div>
-            </div>
-            <div class="phone-topbar"><h3>Find Your Guide</h3><span>🧗</span></div>
-            <div class="phone-body">
-              <div class="guide-list">
-                <div class="guide-card">
-                  <div class="guide-row">
-                    <div class="guide-avatar">👤</div>
-                    <div>
-                      <strong>Zhang Wei</strong>
-                      <div class="guide-rating">⭐ 4.9</div>
-                    </div>
-                  </div>
-                  <div class="guide-meta">Everest Expert</div>
-                  <div class="guide-meta">🇨🇳 China · $280/day</div>
-                  <span class="book-button">Book Now</span>
-                </div>
-                <div class="guide-card" style="padding-top: 0.8rem; padding-bottom: 0.8rem;">
-                  <div class="guide-row">
-                    <div class="guide-avatar" style="background: linear-gradient(135deg, rgba(251,191,36,0.9), rgba(147,197,253,0.55));">👤</div>
-                    <div>
-                      <strong>Carlos M.</strong>
-                      <div class="guide-rating">⭐ 4.8</div>
-                    </div>
-                  </div>
-                  <div class="guide-meta">Denali Specialist</div>
-                  <div class="guide-meta">🇺🇸 USA · $320/day</div>
-                </div>
-              </div>
-            </div>
-            <div class="tabbar">
-              <div class="tab-item"><span class="tab-icon">🔍</span><span>Search</span></div>
-              <div class="tab-item active"><span class="tab-icon">🧗</span><span>Guides</span></div>
-              <div class="tab-item"><span class="tab-icon">❤️</span><span>Saved</span></div>
-              <div class="tab-item"><span class="tab-icon">👤</span><span>Me</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="phone-mock" data-reveal>
-          <div class="phone-screen">
-            <div class="phone-notch"></div>
-            <div class="phone-status">
-              <strong>9:41 AM</strong>
-              <div class="status-icons">
-                <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
-                <div class="battery-icon"></div>
-              </div>
-            </div>
-            <div class="phone-topbar"><h3>Safety Center</h3><span>🛡️</span></div>
-            <div class="phone-body">
-              <div class="live-row"><span class="live-dot"></span><span>Live Tracking</span></div>
-              <div class="tracking-map map-card">
-                <div class="trail trail-1"></div>
-                <div class="trail trail-2"></div>
-                <div class="trail trail-3"></div>
-                <div class="waypoint-dot" style="top: 86px; left: 22px;"></div>
-                <div class="waypoint-dot" style="top: 56px; left: 74px;"></div>
-                <div class="tracker-dot" style="top: 72px; left: 148px;"></div>
-              </div>
-              <div class="sos-caption">
-                <div class="sos-button">SOS</div>
-                <strong>Emergency</strong>
-                <div class="safety-meta">Hold 3s to activate</div>
-              </div>
-              <div class="safety-card" style="border-radius: 20px; padding: 0.9rem; display: grid; gap: 0.35rem;">
-                <strong>📍 Camp 2</strong>
-                <div class="safety-meta">Alt: 6,400m</div>
-                <div class="weather-row"><span>❄️ -18°C</span><span>💨 45km/h</span></div>
-              </div>
-            </div>
-            <div class="tabbar">
-              <div class="tab-item"><span class="tab-icon">📍</span><span>Track</span></div>
-              <div class="tab-item active"><span class="tab-icon">🛡️</span><span>Safety</span></div>
-              <div class="tab-item"><span class="tab-icon">📞</span><span>Call</span></div>
-              <div class="tab-item"><span class="tab-icon">⚙️</span><span>Setup</span></div>
-            </div>
-          </div>
-        </div>
+      <div class="grid lg:grid-cols-2 gap-6 items-center">
+        <article class="glass-panel p-7" data-reveal>
+          <span class="badge mb-3">FLAGSHIP PROGRAM</span>
+          <h2 class="section-title text-4xl">2026 Seven Summits Global Challenge</h2>
+          <p class="text-xl mb-4 text-white/80">20 climbers. 7 continents. Fully supported.</p>
+          <p class="section-sub">Every expedition is fully covered — permits, certified guides, accommodation, meals, and sponsor-grade equipment. Climbers are selected through a rigorous application process. Applications open July 1, 2026.</p>
+          <ul class="timeline-list">
+            <li><strong>July 1, 2026</strong> — Applications Open</li>
+            <li><strong>October 15, 2026</strong> — Applications Close</li>
+            <li><strong>November 11, 2026</strong> — Selection Announced</li>
+            <li><strong>2027</strong> — Expeditions Begin</li>
+          </ul>
+          <a class="btn-primary" href="./seven-summits.html#apply-form">Apply for the Challenge →</a>
+        </article>
+        <aside class="continents-map" data-reveal>
+          <span class="line" style="left:22%; top:40%; width:22%; transform:rotate(12deg);"></span>
+          <span class="line" style="left:43%; top:45%; width:24%; transform:rotate(-14deg);"></span>
+          <span class="line" style="left:62%; top:38%; width:20%; transform:rotate(28deg);"></span>
+          <span class="line" style="left:31%; top:61%; width:32%; transform:rotate(-9deg);"></span>
+          <span class="line" style="left:49%; top:63%; width:24%; transform:rotate(18deg);"></span>
+          <span class="node" style="left:18%; top:34%;"></span>
+          <span class="node" style="left:40%; top:44%;"></span>
+          <span class="node gold" style="left:64%; top:36%;"></span>
+          <span class="node" style="left:30%; top:58%;"></span>
+          <span class="node gold" style="left:52%; top:61%;"></span>
+          <span class="node" style="left:72%; top:50%;"></span>
+          <span class="node" style="left:80%; top:23%;"></span>
+        </aside>
       </div>
-      <button class="btn-secondary" data-notify-open>Notify Me When Available</button>
     </section>
 
     <section class="section-wrap section-tight">
+      <h2 class="section-title" data-reveal>Built for everyone who loves the mountain.</h2>
       <div class="grid-auto">
-        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="500" data-counter-suffix="+">0</p><p class="utility-muted">Peaks in Database</p></article>
-        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="50" data-counter-suffix="+">0</p><p class="utility-muted">Countries Represented</p></article>
-        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="20">0</p><p class="utility-muted">Seven Summits Challenge Spots</p></article>
-        <article class="glass-panel p-6 text-center" data-reveal><p class="text-4xl font-black" data-counter-target="2027">0</p><p class="utility-muted">First Expeditions</p></article>
+        <article class="glass-panel p-6 entry-card" data-reveal><h3 class="text-2xl font-black mb-2">🧗 For Climbers</h3><p class="section-sub">Find your next expedition. Get matched with certified guides. Track your summit journey.</p><a class="text-[#F5A623] font-bold mt-3 inline-block" href="./seven-summits.html#apply-form">Apply for Seven Summits</a></article>
+        <article class="glass-panel p-6 entry-card" data-reveal><h3 class="text-2xl font-black mb-2">🧭 For Guides</h3><p class="section-sub">Build your global reputation. Manage bookings. Join the world's most credible guide network.</p><a class="text-[#F5A623] font-bold mt-3 inline-block" href="./guides.html#guide-form">Join as a Guide</a></article>
+        <article class="glass-panel p-6 entry-card" data-reveal><h3 class="text-2xl font-black mb-2">🏢 For Partners</h3><p class="section-sub">Reach the world's most passionate outdoor community. Sponsor expeditions. Build global brand equity.</p><a class="text-[#F5A623] font-bold mt-3 inline-block" href="./corporate.html#partnership-form">Become a Partner</a></article>
       </div>
     </section>
 
     <section class="section-wrap">
-      <h2 class="text-3xl md:text-5xl font-black mb-4" data-reveal>About SummitLink</h2>
-      <p class="utility-muted max-w-4xl" data-reveal>SummitLink was founded with a single belief: that the world's mountains should be accessible to every passionate climber, regardless of where they come from. We are building the infrastructure for global mountaineering — connecting climbers with certified guides, expedition operators, sponsors, and fellow adventurers.</p>
+      <h2 class="section-title" data-reveal>A platform built to scale.</h2>
+      <p class="section-sub mb-8" data-reveal>Multiple revenue streams across the expedition lifecycle.</p>
+      <div class="grid-auto">
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">💰 Expedition Commissions</h3><p class="section-sub">15% commission on every guided expedition booked through the platform.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">🧭 Guide Subscription</h3><p class="section-sub">Monthly SaaS fees for guides and operators to access booking and management tools.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">🤝 Corporate Partnerships</h3><p class="section-sub">Enterprise packages for companies sponsoring expeditions or sending leadership teams.</p></article>
+        <article class="glass-panel p-6" data-reveal><h3 class="text-xl font-bold mb-2">🎯 Sponsorship Programs</h3><p class="section-sub">Brand exposure through Seven Summits Challenge and expedition media content.</p></article>
+      </div>
+    </section>
+
+    <section class="section-wrap section-tight">
+      <h2 class="section-title" data-reveal>A massive, underserved market.</h2>
+      <div class="grid-auto mb-6">
+        <article class="glass-panel p-6 text-center" data-reveal><p class="stat-value"><span>$</span><span data-counter-target="50" data-counter-suffix="B+">0</span></p><p class="section-sub">Global outdoor adventure tourism market</p></article>
+        <article class="glass-panel p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="300" data-counter-suffix="M+">0</span></p><p class="section-sub">Active outdoor enthusiasts worldwide</p></article>
+        <article class="glass-panel p-6 text-center" data-reveal><p class="stat-value"><span data-counter-target="14000" data-counter-suffix="+">0</span></p><p class="section-sub">Certified mountain guides globally without a unified platform</p></article>
+      </div>
+      <p class="section-sub" data-reveal>The global mountaineering and expedition market is growing 12% annually, driven by rising disposable income, adventure tourism, and the growing prestige of high-altitude achievements. SummitLink is positioned to become the dominant infrastructure layer for this market.</p>
+    </section>
+
+    <section class="section-wrap section-tight">
+      <h2 class="section-title" data-reveal>About SummitLink</h2>
+      <p class="section-sub" data-reveal>SummitLink was founded with a single belief: that the world's mountains should be accessible to every passionate climber, regardless of where they come from. We are building the infrastructure for global mountaineering — connecting climbers with certified guides, expedition operators, sponsors, and fellow adventurers.</p>
       <div class="grid-auto mt-6">
         <div class="glass-panel p-5" data-reveal>🇨🇳 末登峰（北京）科技有限公司 — Beijing, China</div>
         <div class="glass-panel p-5" data-reveal>🇺🇸 UNSUMMIT TECHNOLOGY LIMITED — United States</div>
       </div>
+    </section>
+
+    <section class="section-wrap">
+      <h2 class="section-title" data-reveal>Mobile App — Coming Soon</h2>
+      <p class="section-sub mb-8" data-reveal>Available on iOS and Android.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="phone-mock" data-reveal><div class="phone-screen"><div class="phone-status"><span>9:41</span><span>5G ▮▮▮ 89%</span></div><div class="phone-topbar"><span>Route Planner</span><span>🗺️</span></div><div class="phone-body"><div class="mini-card">🔍 Search peaks...</div><div class="mini-card">C1 → C2 → Summit / Everest 8849m</div><div class="mini-card">Success window 78%</div></div><div class="tabbar"><span>Route</span><span>Plan</span><span>Team</span><span>More</span></div></div></div>
+        <div class="phone-mock" data-reveal><div class="phone-screen"><div class="phone-status"><span>9:41</span><span>5G ▮▮▮ 87%</span></div><div class="phone-topbar"><span>Find Guide</span><span>🧗</span></div><div class="phone-body"><div class="mini-card">Zhang Wei ⭐4.9 · Everest</div><div class="mini-card">Carlos M. ⭐4.8 · Denali</div><div class="mini-card">Book Now / Verified</div></div><div class="tabbar"><span>Search</span><span>Guides</span><span>Saved</span><span>Me</span></div></div></div>
+        <div class="phone-mock" data-reveal><div class="phone-screen"><div class="phone-status"><span>9:41</span><span>5G ▮▮▮ 86%</span></div><div class="phone-topbar"><span>Safety Center</span><span>🛡️</span></div><div class="phone-body"><div class="mini-card">LIVE Tracking / Camp 2</div><div class="mini-card">SOS / Hold 3s to activate</div><div class="mini-card">Altitude 6,400m · -18°C · 45km/h</div></div><div class="tabbar"><span>Track</span><span>Safety</span><span>Call</span><span>Setup</span></div></div></div>
+      </div>
+      <button class="btn-secondary" data-notify-open>Notify Me When Available</button>
     </section>
   </main>
 
@@ -753,13 +212,13 @@
     <div class="section-wrap section-tight">
       <div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10">
         <div>
-          <p class="brand-font text-xl font-bold">⛰ SummitLink / 峰会链接</p>
+          <p class="brand-font text-xl font-bold">▲ SummitLink / 峰会链接</p>
           <p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p>
         </div>
       </div>
       <div class="footer-grid py-8">
-        <div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div>
-        <div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./guides.html#guide-form">Become a Guide</a></div>
+        <div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./index.html">Home</a><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a></div>
+        <div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./corporate.html">Corporate</a></div>
         <div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div>
         <div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div>
       </div>
