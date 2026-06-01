@@ -1,93 +1,64 @@
-<!DOCTYPE html>
-<!-- 企业/俱乐部落地页：套餐对比、定制远征询价与合作展示 -->
-<html lang="en" class="scroll-smooth">
+<!doctype html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SummitLink · Corporate</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Corporate Partnerships | SummitLink</title>
+  <meta name="description" content="Partner with SummitLink to reach global climbers and expedition communities." />
+  <meta property="og:title" content="Corporate Partnerships | SummitLink" />
+  <meta property="og:description" content="For sponsors, outdoor brands, expedition operators, and tourism boards." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://desktop-tutorial-production-182a.up.railway.app/website/corporate.html" />
+  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    window.tailwind = window.tailwind || {};
-    window.tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Sora', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }, colors: { space: '#0A0A0F', glacier: '#4FACFE', ridge: '#F5A623' } } } };
-  </script>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body data-page="corporate" data-page-title="titles.corporate" class="bg-space font-sans text-white antialiased">
-  <div data-site-header></div>
-  <main class="pt-28">
-    <section class="px-4 py-16">
-      <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div class="space-y-6" data-reveal>
-          <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.28em] text-white/60" data-i18n="corporate.heroEyebrow"></span>
-          <h1 class="font-display text-5xl font-black leading-none md:text-7xl" data-i18n="corporate.heroTitle"></h1>
-          <p class="max-w-2xl text-lg leading-8 text-white/65" data-i18n="corporate.heroBody"></p>
-          <div class="flex flex-wrap gap-4">
-            <a href="./apply.html#corporate" class="rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="corporate.primary"></a>
-            <a href="./pricing.html" class="rounded-full border border-white/10 px-6 py-3 text-sm font-semibold text-white/80" data-i18n="corporate.secondary"></a>
-          </div>
-        </div>
-        <div class="glass-panel rounded-[2rem] p-6" data-reveal>
-          <h2 class="text-3xl font-black" data-i18n="corporate.tableTitle"></h2>
-          <div class="mt-6 overflow-hidden rounded-[1.4rem] border border-white/10">
-            <table class="comparison-table w-full text-sm text-white/70">
-              <thead class="bg-white/5 text-white/90">
-                <tr>
-                  <th data-i18n="corporate.featureCol"></th>
-                  <th data-i18n="corporate.basicCol"></th>
-                  <th data-i18n="corporate.proCol"></th>
-                  <th data-i18n="corporate.customCol"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td data-i18n="corporate.row1"></td><td data-i18n="corporate.basic1"></td><td data-i18n="corporate.pro1"></td><td data-i18n="corporate.custom1"></td></tr>
-                <tr><td data-i18n="corporate.row2"></td><td data-i18n="corporate.basic2"></td><td data-i18n="corporate.pro2"></td><td data-i18n="corporate.custom2"></td></tr>
-                <tr><td data-i18n="corporate.row3"></td><td data-i18n="corporate.basic3"></td><td data-i18n="corporate.pro3"></td><td data-i18n="corporate.custom3"></td></tr>
-                <tr><td data-i18n="corporate.row4"></td><td data-i18n="corporate.basic4"></td><td data-i18n="corporate.pro4"></td><td data-i18n="corporate.custom4"></td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+<body data-page="corporate">
+  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">⛰ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="#partnership-form">Partner Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
+
+  <header class="hero">
+    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=1920&q=80');"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">Partner with the World's Leading Mountaineering Platform</h1>
+      <p class="hero-subtitle">SummitLink helps brands, sponsors, operators, and destination partners reach a global adventure audience.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="section-wrap">
+      <div class="grid-auto">
+        <article class="glass-panel p-6" data-reveal><h2 class="font-bold text-xl">🏢 Outdoor Brands</h2><p class="utility-muted">Reach the most passionate climbers globally.</p></article>
+        <article class="glass-panel p-6" data-reveal><h2 class="font-bold text-xl">🗺️ Expedition Operators</h2><p class="utility-muted">Grow your client base through SummitLink.</p></article>
+        <article class="glass-panel p-6" data-reveal><h2 class="font-bold text-xl">🏛️ Tourism Boards</h2><p class="utility-muted">Promote your destinations to adventure travelers.</p></article>
+        <article class="glass-panel p-6" data-reveal><h2 class="font-bold text-xl">💰 Sponsors</h2><p class="utility-muted">Support the Seven Summits Challenge.</p></article>
       </div>
     </section>
 
-    <section class="mx-auto max-w-7xl px-4 py-16">
-      <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <form class="glass-panel rounded-[2rem] p-6" data-mock-form data-success-title-key="corporate.successTitle" data-success-body-key="corporate.successBody" data-reveal>
-          <h2 class="text-3xl font-black" data-i18n="corporate.inquiryTitle"></h2>
-          <div class="mt-6 grid gap-4 md:grid-cols-2">
-            <label class="text-sm text-white/60"><span data-i18n="corporate.targetPeak"></span><input required class="form-input mt-2" type="text" /></label>
-            <label class="text-sm text-white/60"><span data-i18n="corporate.teamSize"></span><input required class="form-input mt-2" type="number" min="1" /></label>
-            <label class="text-sm text-white/60"><span data-i18n="corporate.departureDate"></span><input required class="form-input mt-2" type="date" /></label>
-            <label class="text-sm text-white/60"><span data-i18n="corporate.budget"></span><select required class="form-select mt-2"><option value="" data-i18n="common.requestQuote"></option><option data-i18n="corporate.budget1"></option><option data-i18n="corporate.budget2"></option><option data-i18n="corporate.budget3"></option><option data-i18n="corporate.budget4"></option></select></label>
+    <section class="section-wrap" id="partnership-form">
+      <h2 class="text-3xl md:text-5xl font-black mb-6">Partnership Form</h2>
+      <div class="glass-panel p-5 md:p-8" data-reveal>
+        <form data-api="/api/partnerships" class="space-y-4">
+          <div class="grid md:grid-cols-2 gap-4">
+            <div><label class="form-label" for="companyName">Company Name</label><input class="form-input" id="companyName" name="companyName" required /></div>
+            <div><label class="form-label" for="contactName">Contact Name</label><input class="form-input" id="contactName" name="contactName" required /></div>
+            <div><label class="form-label" for="corporateEmail">Email</label><input class="form-input" id="corporateEmail" name="email" type="email" required /></div>
+            <div><label class="form-label" for="companyType">Company Type</label><select class="form-select" id="companyType" name="companyType"><option>Outdoor Brand</option><option>Expedition Operator</option><option>Tourism Board</option><option>Sponsor</option><option>Other</option></select></div>
           </div>
-          <label class="mt-4 block text-sm text-white/60"><span data-i18n="corporate.contact"></span><textarea required class="form-textarea mt-2"></textarea></label>
-          <button type="submit" class="mt-6 rounded-full bg-gradient-to-r from-sky-400 to-amber-400 px-6 py-3 text-sm font-semibold text-slate-950" data-i18n="common.requestQuote"></button>
+          <div><label class="form-label" for="partnerMessage">Message</label><textarea class="form-textarea" id="partnerMessage" name="message" required></textarea></div>
+          <div class="hidden" data-form-message></div>
+          <button class="btn-primary" type="submit">Submit Inquiry</button>
         </form>
-        <div class="space-y-6" data-reveal>
-          <div class="glass-panel rounded-[2rem] p-6">
-            <h2 class="text-3xl font-black" data-i18n="corporate.logosTitle"></h2>
-            <div class="brand-strip mt-6">
-              <div class="rounded-[1.5rem] bg-sky-400/10 p-5 text-center text-white/85">Altitude Lab</div>
-              <div class="rounded-[1.5rem] bg-amber-400/10 p-5 text-center text-white/85">Andes Circle</div>
-              <div class="rounded-[1.5rem] bg-emerald-400/10 p-5 text-center text-white/85">Summit Works</div>
-              <div class="rounded-[1.5rem] bg-fuchsia-400/10 p-5 text-center text-white/85">North Ice Club</div>
-              <div class="rounded-[1.5rem] bg-indigo-400/10 p-5 text-center text-white/85">Seven Peaks Co.</div>
-              <div class="rounded-[1.5rem] bg-rose-400/10 p-5 text-center text-white/85">Polar Ridge</div>
-            </div>
-          </div>
-          <div class="glass-panel rounded-[2rem] p-6">
-            <h2 class="text-3xl font-black" data-i18n="corporate.ctaTitle"></h2>
-            <p class="mt-4 text-sm leading-7 text-white/65" data-i18n="corporate.ctaBody"></p>
-            <a href="./apply.html#corporate" class="mt-6 inline-flex rounded-full border border-white/10 px-5 py-3 text-sm font-semibold text-white/80" data-i18n="corporate.ctaButton"></a>
-          </div>
-        </div>
+        <p class="form-success hidden mt-4" data-form-success-panel></p>
       </div>
     </section>
   </main>
-  <div data-site-footer></div>
-  <script type="module" src="./js/main.js"></script>
+
+  <footer class="site-footer"><div class="section-wrap section-tight"><div class="footer-grid py-4"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./guides.html#guide-form">Become a Guide</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
+
+  <script src="./js/site.js"></script>
 </body>
 </html>
