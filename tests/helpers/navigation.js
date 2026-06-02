@@ -154,7 +154,6 @@ async function gotoExploreCategory(page, category) {
 
 /**
  * Open the login modal and sign in with password login.
- * Handles the PR #43 "密码登录 / 短信验证码" tab inside the modal.
  * @param {import('@playwright/test').Page} page
  * @param {{ username?: string, password?: string }} [opts]
  */
@@ -171,16 +170,8 @@ async function loginAsTestUser(page, { username = '13800138000', password = '123
   // Wait until the password input inside the login modal is visible
   await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
 
-  // Make sure the "密码登录" tab is active (PR #43 added a SMS tab)
-  const passwordTab = loginBox.locator('button:has-text("密码登录")');
-  if (await passwordTab.isVisible().catch(() => false)) {
-    await passwordTab.click();
-    // Wait for the password input to remain visible after the tab switch
-    await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
-  }
-
   // Fill credentials
-  await loginBox.locator('input[type="tel"]').first().fill(username);
+  await loginBox.locator('input[type="text"]').first().fill(username);
   await loginBox.locator('input[type="password"]').first().fill(password);
 
   // Click the full-width primary submit button.

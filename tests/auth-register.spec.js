@@ -17,18 +17,31 @@ test.describe('登录注册流程', () => {
     await expect(page.locator('nav button:has-text("我的"), [data-tab="me"]').first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('密码登录 Tab 应有手机号和密码输入框', async ({ page }) => {
+  test('登录弹窗仅保留密码登录且无微信登录按钮', async ({ page }) => {
     await page.goto('/summitlink');
     await page.waitForLoadState('networkidle');
     const loginBtn = page.locator('button:visible:has-text("登录"), [data-action="login"]').first();
     if (await loginBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await loginBtn.click();
       const loginBox = page.locator('[x-show="showLogin"]');
-      const pwTab = loginBox.locator('button:has-text("密码登录")');
-      if (await pwTab.isVisible({ timeout: 2000 }).catch(() => false)) await pwTab.click();
-      await expect(loginBox.locator('input[type="tel"]').first()).toBeVisible({ timeout: 5000 });
+      await expect(loginBox.locator('button:has-text("短信验证码")')).toHaveCount(0);
+      await expect(loginBox.locator('button:has-text("微信")')).toHaveCount(0);
+      await expect(loginBox.locator('input[type="text"]').first()).toBeVisible({ timeout: 5000 });
       await expect(loginBox.locator('input[type="password"]').first()).toBeVisible({ timeout: 5000 });
     }
+  });
+
+  test('注册弹窗应使用邮箱字段', async ({ page }) => {
+    await page.goto('/summitlink');
+    await page.waitForLoadState('networkidle');
+    const loginBtn = page.locator('button:visible:has-text("登录"), button:visible:has-text("注册"), [data-action="login"]').first();
+    if (!(await loginBtn.isVisible({ timeout: 5000 }).catch(() => false))) return;
+    await loginBtn.click();
+    await page.locator('[x-show="showLogin"] button:has-text("注册")').first().click();
+    const registerBox = page.locator('[x-show="showRegister"]');
+    await expect(registerBox.locator('input[type="email"]').first()).toBeVisible({ timeout: 5000 });
+    await expect(registerBox.locator('input[type="email"]').first()).toHaveAttribute('placeholder', '请输入邮箱');
+    await expect(registerBox.locator('input[type="tel"]')).toHaveCount(0);
   });
 
   test('正确凭证登录后「我的」Tab 应可见用户信息', async ({ page }) => {

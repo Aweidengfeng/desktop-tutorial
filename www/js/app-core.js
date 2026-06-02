@@ -434,7 +434,7 @@ function alpineLink() {
     smsCountdown: 0,
     smsTimer: null,
     loginForm: { account: '', phone: '', password: '' },
-    registerForm: { name: '', phone: '', password: '', inviteCode: '' },
+    registerForm: { name: '', email: '', password: '', inviteCode: '' },
     showInviteCodeInput: false,
     myInviteCode: '',
     inviteUrl: '',
@@ -3971,7 +3971,7 @@ function alpineLink() {
       }
     },
     async doRegister() {
-      if (!/^(1[3-9]\d{9}|\+[1-9]\d{6,14})$/.test(this.registerForm.phone)) { this.showToast('请输入正确的手机号（中国大陆格式或+区号国际格式）', 'error'); return; }
+      if (!this.registerForm.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.registerForm.email)) { this.showToast('请输入正确的邮箱地址', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
         const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
@@ -3986,7 +3986,7 @@ function alpineLink() {
         localStorage.setItem('summitlink_token', data.token);
         this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
         this.showRegister = false;
-        this.registerForm = { name: '', phone: '', password: '', inviteCode: '' };
+        this.registerForm = { name: '', email: '', password: '', inviteCode: '' };
         this.showInviteCodeInput = false;
         this.agreedPrivacy = false;
         this.agreedTerms = false;
