@@ -75,6 +75,29 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
     expect(user.policy_version).toBe('2026-04-20');
     expect(user.policy_agreed_at).toBeTruthy();
   });
+
+  test('邮箱会自动 trim + lowercase，并阻止大小写变体重复注册', async () => {
+    const first = await request(app).post('/api/auth/register').send({
+      name: '邮箱归一化用户',
+      email: '  Mixed.Case+Norm@TestExample.COM  ',
+      password: 'pass123',
+      policyVersion: '2026-04-20',
+      agreedPrivacy: true,
+      agreedTerms: true,
+    });
+    expect([200, 201]).toContain(first.status);
+
+    const second = await request(app).post('/api/auth/register').send({
+      name: '邮箱归一化用户2',
+      email: 'mixed.case+norm@testexample.com',
+      password: 'pass123',
+      policyVersion: '2026-04-20',
+      agreedPrivacy: true,
+      agreedTerms: true,
+    });
+    expect(second.status).toBe(400);
+    expect(second.body.error).toBe('邮箱已注册');
+  });
 });
 
 describe('1.1 邀请码裂变链路', () => {

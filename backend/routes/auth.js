@@ -321,7 +321,7 @@ async function safeUser(user) {
  *   post:
  *     tags: [认证]
  *     summary: 用户注册
- *     description: 使用手机号、姓名和密码注册新账户
+ *     description: 使用邮箱、姓名和密码注册新账户（手机号可选）
  *     security: []
  *     requestBody:
  *       required: true
@@ -329,14 +329,18 @@ async function safeUser(user) {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, phone, password, policyVersion, agreedPrivacy, agreedTerms]
+ *             required: [name, email, password, policyVersion, agreedPrivacy, agreedTerms]
  *             properties:
  *               name:
  *                 type: string
  *                 description: 用户姓名
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 邮箱地址（必填）
  *               phone:
  *                 type: string
- *                 description: 手机号（中国大陆格式）
+ *                 description: 手机号（可选，支持中国大陆格式或国际 +区号格式）
  *               password:
  *                 type: string
  *                 minLength: 6
@@ -374,13 +378,14 @@ async function safeUser(user) {
 router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, phone, email, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     if (!name || !password) {
       return res.status(400).json({ error: '请填写姓名和密码' });
     }
-    if (!email) {
+    if (!normalizedEmail) {
       return res.status(400).json({ error: '请填写邮箱地址' });
     }
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(normalizedEmail)) {
       return res.status(400).json({ error: '邮箱格式不正确' });
     }
     if (phone && !isValidPhone(phone)) {
@@ -397,15 +402,13 @@ router.post('/register', registerLimiter, async (req, res) => {
       const existing = await prisma.user.findFirst({ where: { phone: encryptPII(phone) } });
       if (existing) return res.status(400).json({ error: '手机号已注册' });
     }
-    if (email) {
-      const existing = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
-      if (existing) return res.status(400).json({ error: '邮箱已注册' });
-    }
+    const existing = await prisma.user.findFirst({ where: { email: encryptPII(normalizedEmail) } });
+    if (existing) return res.status(400).json({ error: '邮箱已注册' });
     // 用4位随机十六进制后缀确保用户名唯一
     const suffix = crypto.randomBytes(2).toString('hex');
     const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
     const username = '@' + (sanitizedName || ('user' + crypto.randomBytes(4).toString('hex'))) + '_' + suffix;
-    const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || email || name);
+    const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || normalizedEmail || name);
     const hash = await bcrypt.hash(password, 10);
     const userData = {
       name,
@@ -416,7 +419,7 @@ router.post('/register', registerLimiter, async (req, res) => {
       policyAgreedAt: new Date(),
     };
     if (phone) userData.phone = encryptPII(phone);
-    if (email) userData.email = encryptPII(email);
+    userData.email = encryptPII(normalizedEmail);
     let user;
     try {
       user = await prisma.user.create({ data: userData });
