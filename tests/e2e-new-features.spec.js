@@ -32,14 +32,7 @@ async function doLogin(page) {
   const loginBox = page.locator('[x-show="showLogin"]');
   await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
 
-  // 切到密码登录 Tab（如果有）
-  const passwordTab = loginBox.locator('button:has-text("密码登录")');
-  if (await passwordTab.isVisible().catch(() => false)) {
-    await passwordTab.click();
-    await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
-  }
-
-  await loginBox.locator('input[type="tel"]').first().fill(TEST_PHONE);
+  await loginBox.locator('input[type="text"]').first().fill(TEST_PHONE);
   await loginBox.locator('input[type="password"]').first().fill(TEST_PASSWORD);
 
   const loginRespPromise = page.waitForResponse(

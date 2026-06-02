@@ -48,19 +48,11 @@ async function doLogin(page) {
   // 将所有输入框选择器 scope 到登录表单容器，避免与注册表单的同类型输入框冲突
   const loginBox = page.locator('[x-show="showLogin"]');
 
-  // 等待登录弹窗中的密码输入框可见（PR #43 新增了手机验证码 Tab，默认是密码登录 Tab）
+  // 等待登录弹窗中的密码输入框可见
   await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 8000 });
 
-  // 确保切到「密码登录」Tab（PR #43 新增了「短信验证码」Tab）
-  const passwordTab = loginBox.locator('button:has-text("密码登录")');
-  if (await passwordTab.isVisible().catch(() => false)) {
-    await passwordTab.click();
-    // Wait for the password input to remain visible after tab switch
-    await loginBox.locator('input[type="password"]').waitFor({ state: 'visible', timeout: 3000 });
-  }
-
-  // 填入手机号
-  await loginBox.locator('input[type="tel"]').first().fill(TEST_PHONE);
+  // 填入账号
+  await loginBox.locator('input[type="text"]').first().fill(TEST_PHONE);
   // 填入密码
   await loginBox.locator('input[type="password"]').first().fill(TEST_PASSWORD);
   // 点击全宽提交按钮（class="w-full"，区别于 flex-1 的 Tab 按钮，避免误点「密码登录」Tab）

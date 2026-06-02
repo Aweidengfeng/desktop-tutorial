@@ -2143,13 +2143,8 @@
         <span class="material-symbols-outlined text-slate-400">close</span>
       </button>
     </div>
-    <!-- Login Type Tabs -->
-    <div class="flex bg-slate-700 rounded-xl p-1 mb-4">
-      <button @click="loginType='password'" :class="loginType==='password' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" x-text="t('login_password')"></button>
-      <button @click="loginType='sms'" :class="loginType==='sms' ? 'bg-slate-600 text-white' : 'text-slate-400'" class="flex-1 py-2 rounded-lg text-xs font-semibold transition-all" x-text="t('login_sms')"></button>
-    </div>
     <!-- Password Login -->
-    <div x-show="loginType==='password'" class="space-y-4">
+    <div class="space-y-4">
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">手机号 / 邮箱</label>
         <input x-model="loginForm.account" type="text" placeholder="手机号 / 邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
@@ -2164,26 +2159,6 @@
       </button>
       <button x-show="showBiometricLogin" @click="loginWithBiometric()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition-colors" x-text="t('biometric_login')"></button>
     </div>
-    <!-- SMS Login -->
-    <div x-show="loginType==='sms'" class="space-y-4">
-      <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="loginForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
-      </div>
-      <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">验证码</label>
-        <div class="flex gap-2">
-          <input x-model="smsCode" type="text" placeholder="6位验证码" maxlength="6" class="flex-1 bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
-          <button @click="sendSmsCode()" :disabled="smsCountdown>0" class="flex-shrink-0 bg-primary hover:bg-primary-light disabled:bg-slate-600 text-white font-semibold px-3 py-3 rounded-xl text-xs transition-colors disabled:cursor-not-allowed">
-            <span x-text="smsCountdown > 0 ? smsCountdown + 's' : '发送'"></span>
-          </button>
-        </div>
-      </div>
-      <button @click="doSmsLogin()" :disabled="loginLoading" class="w-full bg-primary hover:bg-primary-light text-white font-bold py-3.5 rounded-xl transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-        <span x-show="loginLoading" class="material-symbols-outlined animate-spin text-base">progress_activity</span>
-        <span x-text="loginLoading ? '验证中…' : '验证码登录'"></span>
-      </button>
-    </div>
     <!-- Third Party Login -->
     <div class="mt-4">
       <div class="flex items-center gap-3 mb-3">
@@ -2192,10 +2167,6 @@
         <div class="flex-1 h-px bg-slate-700"></div>
       </div>
       <div class="flex gap-3 justify-center">
-        <button @click="doWechatLogin()" class="flex flex-col items-center gap-1 p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 transition-colors">
-          <span class="text-2xl">💬</span>
-          <span class="text-slate-300 text-xs">微信</span>
-        </button>
         <button @click="doAppleLogin()" x-show="!!window.__APPLE_CLIENT_ID__" class="flex flex-col items-center gap-1 p-3 rounded-2xl bg-slate-700 hover:bg-slate-600 transition-colors">
           <span class="text-2xl">🍎</span>
           <span class="text-slate-300 text-xs">Apple</span>
@@ -2232,8 +2203,8 @@
         <input x-model="registerForm.name" type="text" placeholder="请输入您的姓名" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
-        <label class="text-slate-400 text-xs mb-1.5 block">手机号</label>
-        <input x-model="registerForm.phone" type="tel" placeholder="请输入手机号" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <label class="text-slate-400 text-xs mb-1.5 block">邮箱</label>
+        <input x-model="registerForm.email" type="email" placeholder="请输入邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>
