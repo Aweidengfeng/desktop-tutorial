@@ -373,7 +373,8 @@ async function safeUser(user) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { name, phone, email, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
+    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
+    const email = req.body?.email ? req.body.email.trim().toLowerCase() : undefined;
     if (!name || !password) {
       return res.status(400).json({ error: '请填写姓名和密码' });
     }
