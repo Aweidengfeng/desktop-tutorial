@@ -1,7 +1,7 @@
 FROM node:24-alpine AS builder
 WORKDIR /app/backend
 COPY backend/package*.json ./
-RUN npm ci --only=production
+RUN npm install --only=production
 COPY backend/ .
 # Generate Prisma client for PostgreSQL
 RUN DATABASE_PROVIDER=postgresql DATABASE_URL="postgresql://placeholder/placeholder" node scripts/generate-prisma-client.js || true
