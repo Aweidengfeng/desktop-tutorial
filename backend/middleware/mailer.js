@@ -1,40 +1,28 @@
 /**
  * mailer.js — 邮件发送服务（渐进增强）
- * 若未配置 SMTP_HOST，则静默跳过（仅日志）。
+ * 若未配置 RESEND_API_KEY，则静默跳过（仅日志）。
  *
  * 环境变量：
- *   SMTP_HOST      SMTP 服务器，如 smtp.aliyun.com 或 smtp.gmail.com
- *   SMTP_PORT      端口，默认 465
- *   SMTP_SECURE    true/false，默认 true
- *   SMTP_USER      发件人邮箱
- *   SMTP_PASS      邮箱密码/授权码
- *   SMTP_FROM      发件人显示名，如 "SummitLink <noreply@summitlink.com>"
+ *   RESEND_API_KEY  Resend API Key
+ *   RESEND_FROM     发件人邮箱，如 noreply@mail.ussummit.cn
  */
 
-const MAIL_ENABLED = !!process.env.SMTP_HOST;
-let transporter = null;
+const MAIL_ENABLED = !!process.env.RESEND_API_KEY;
+let resend = null;
 
-function getTransporter() {
-  if (transporter) return transporter;
+function getResendClient() {
+  if (resend) return resend;
   try {
-    const nodemailer = require('nodemailer');
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '465'),
-      secure: process.env.SMTP_SECURE !== 'false',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-    return transporter;
+    const { Resend } = require('resend');
+    resend = new Resend(process.env.RESEND_API_KEY);
+    return resend;
   } catch (e) {
-    console.warn('[mailer] nodemailer 未安装或初始化失败:', e.message);
+    console.warn('[mailer] resend 未安装或初始化失败:', e.message);
     return null;
   }
 }
 
-const FROM = process.env.SMTP_FROM || 'SummitLink <noreply@summitlink.com>';
+const FROM = process.env.RESEND_FROM || 'noreply@mail.ussummit.cn';
 
 async function sendMail({ to, subject, html, text }) {
   if (!MAIL_ENABLED) {
@@ -43,12 +31,13 @@ async function sendMail({ to, subject, html, text }) {
     }
     return { skipped: true };
   }
-  const t = getTransporter();
-  if (!t) return { skipped: true };
+  const client = getResendClient();
+  if (!client) return { skipped: true };
   try {
-    const info = await t.sendMail({ from: FROM, to, subject, html, text });
-    console.log('[mailer] 已发送:', info.messageId);
-    return { sent: true, messageId: info.messageId };
+    const { data, error } = await client.emails.send({ from: FROM, to, subject, html, text });
+    if (error) throw new Error(error.message || '邮件发送失败');
+    console.log('[mailer] 已发送:', data?.id || 'unknown message ID');
+    return { sent: true, messageId: data?.id };
   } catch (e) {
     console.error('[mailer] 发送失败:', e.message);
     return { error: e.message };
