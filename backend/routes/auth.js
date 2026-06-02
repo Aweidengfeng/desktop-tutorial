@@ -808,7 +808,7 @@ router.post('/email/send', async (req, res) => {
     sendMail({ to: email, ...emailVerifyCode({ code, purpose: 'login' }) }).then(result => {
       if (result.skipped) emailProvider.send(email, code).catch(e => console.error('[Email]', e.message));
     }).catch(() => emailProvider.send(email, code).catch(e => console.error('[Email]', e.message)));
-    const isDev = process.env.EMAIL_PROVIDER !== 'smtp' && !process.env.SMTP_HOST;
+    const isDev = !process.env.RESEND_API_KEY;
     res.json({ success: true, message: isDev ? '验证码已发送（开发模式：查看服务器控制台）' : '验证码已发送到您的邮箱，请注意查收' });
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });

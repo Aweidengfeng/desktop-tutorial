@@ -1,16 +1,12 @@
 /**
  * @file email.js
- * @description 邮件发送工具。通过 EMAIL_PROVIDER 环境变量切换实现。
+ * @description 邮件发送工具。根据环境变量自动选择实现。
  *   - 默认：MockEmailProvider（打印到控制台，用于内测/开发）
- *   - SMTP：EMAIL_PROVIDER=smtp，对接任意 SMTP 服务（阿里云企业邮箱、QQ邮箱、163等）
+ *   - Resend：配置 RESEND_API_KEY 后自动启用
  *
- * SMTP 所需环境变量：
- *   EMAIL_HOST     - SMTP 服务器地址（如 smtp.qiye.aliyun.com）
- *   EMAIL_PORT     - SMTP 端口（默认 465）
- *   EMAIL_SECURE   - 是否使用 SSL（'true'/'false'，默认 'true'）
- *   EMAIL_USER     - SMTP 登录用户名（发件邮箱地址）
- *   EMAIL_PASS     - SMTP 登录密码（授权码）
- *   EMAIL_FROM     - 发件人显示名，格式："SummitLink <noreply@your-domain.com>"
+ * Resend 所需环境变量：
+ *   RESEND_API_KEY - Resend API Key
+ *   RESEND_FROM    - 发件人邮箱地址
  */
 
 /**
@@ -52,29 +48,21 @@ class MockEmailProvider extends EmailProvider {
 }
 
 /**
- * @class SmtpEmailProvider
- * @description 基于 SMTP 的邮件服务商（nodemailer）。
+ * @class ResendEmailProvider
+ * @description 基于 Resend SDK 的邮件服务商。
  */
-class SmtpEmailProvider extends EmailProvider {
+class ResendEmailProvider extends EmailProvider {
   constructor() {
     super();
-    const nodemailer = require('nodemailer');
-    this._transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.qiye.aliyun.com',
-      port: parseInt(process.env.EMAIL_PORT || '465', 10),
-      secure: process.env.EMAIL_SECURE !== 'false', // 默认 true（SSL）
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-    this._from = process.env.EMAIL_FROM || `SummitLink <${process.env.EMAIL_USER}>`;
+    const { Resend } = require('resend');
+    this._client = new Resend(process.env.RESEND_API_KEY);
+    this._from = process.env.RESEND_FROM || 'noreply@mail.ussummit.cn';
   }
 
   async send(email, code) {
     // Sanitize code to digits only before embedding in HTML
     const safeCode = String(code).replace(/[^0-9]/g, '');
-    await this._transporter.sendMail({
+    const { error } = await this._client.emails.send({
       from: this._from,
       to: email,
       subject: '【SummitLink】您的邮箱验证码',
@@ -91,14 +79,15 @@ class SmtpEmailProvider extends EmailProvider {
       `,
       text: `您的 SummitLink 邮箱验证码为：${safeCode}，5 分钟内有效，请勿泄露给他人。`,
     });
-    console.log(`📧 [SMTP Email] ${maskEmail(email)} → 验证码已发送`);
+    if (error) throw new Error(error.message || '邮件发送失败');
+    console.log(`📧 [Resend Email] ${maskEmail(email)} → 验证码已发送`);
     return { ok: true };
   }
 }
 
 /** 根据环境变量选择邮件服务商 */
-const provider = process.env.EMAIL_PROVIDER === 'smtp'
-  ? new SmtpEmailProvider()
+const provider = process.env.RESEND_API_KEY
+  ? new ResendEmailProvider()
   : new MockEmailProvider();
 
 module.exports = provider;
