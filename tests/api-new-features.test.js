@@ -34,7 +34,7 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
 
   test('缺少 agreedPrivacy → 422', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      name: '张三', phone: '13900000001', password: 'pass123',
+      name: '张三', email: 'test001@example.com', password: 'pass123',
       policyVersion: '2026-04-20', agreedTerms: true,
       // 故意不传 agreedPrivacy
     });
@@ -44,7 +44,7 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
 
   test('缺少 agreedTerms → 422', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      name: '张三', phone: '13900000002', password: 'pass123',
+      name: '张三', email: 'test002@example.com', password: 'pass123',
       policyVersion: '2026-04-20', agreedPrivacy: true,
     });
     expect(res.status).toBe(422);
@@ -52,7 +52,7 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
 
   test('policyVersion 错误 → 422', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      name: '张三', phone: '13900000003', password: 'pass123',
+      name: '张三', email: 'test003@example.com', password: 'pass123',
       policyVersion: '2020-01-01', agreedPrivacy: true, agreedTerms: true,
     });
     expect(res.status).toBe(422);
@@ -60,7 +60,7 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
 
   test('正确提交 → 201/200，数据库记录 policy_version', async () => {
     const res = await request(app).post('/api/auth/register').send({
-      name: '李四', phone: '13900000010', password: 'pass123',
+      name: '李四', email: 'test010@example.com', password: 'pass123',
       policyVersion: '2026-04-20', agreedPrivacy: true, agreedTerms: true,
     });
     expect([200, 201]).toContain(res.status);
@@ -102,7 +102,7 @@ describe('1.1 邀请码裂变链路', () => {
   test('注册支持 invite_code，并记录邀请关系+奖励', async () => {
     const registerRes = await request(app).post('/api/auth/register').send({
       name: '被邀请用户',
-      phone: '13900009992',
+      email: 'invitee9992@example.com',
       password: 'pass123',
       invite_code: 'INV001',
       policyVersion: '2026-04-20',
@@ -137,7 +137,7 @@ describe('1.1 邀请码裂变链路', () => {
 
   test('提供 my-code / stats / records 三个用户接口', async () => {
     const inviteeLogin = await request(app).post('/api/auth/login').send({
-      phone: '13900009992',
+      email: 'invitee9992@example.com',
       password: 'pass123',
     });
     expect(inviteeLogin.status).toBe(200);
