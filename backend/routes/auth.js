@@ -363,7 +363,7 @@ async function safeUser(user) {
  *                 user:
  *                   $ref: '#/components/schemas/User'
  *       400:
- *         description: 参数错误或手机号已注册
+ *         description: 参数错误或邮箱已注册
  *         content:
  *           application/json:
  *             schema:
@@ -377,15 +377,15 @@ async function safeUser(user) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { name, phone, email, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
-    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
+    const email = req.body?.email?.trim() ? req.body.email.trim().toLowerCase() : undefined;
     if (!name || !password) {
       return res.status(400).json({ error: '请填写姓名和密码' });
     }
-    if (!normalizedEmail) {
+    if (!email) {
       return res.status(400).json({ error: '请填写邮箱地址' });
     }
-    if (!isValidEmail(normalizedEmail)) {
+    if (!isValidEmail(email)) {
       return res.status(400).json({ error: '邮箱格式不正确' });
     }
     if (phone && !isValidPhone(phone)) {
@@ -402,13 +402,15 @@ router.post('/register', registerLimiter, async (req, res) => {
       const existing = await prisma.user.findFirst({ where: { phone: encryptPII(phone) } });
       if (existing) return res.status(400).json({ error: '手机号已注册' });
     }
-    const existing = await prisma.user.findFirst({ where: { email: encryptPII(normalizedEmail) } });
-    if (existing) return res.status(400).json({ error: '邮箱已注册' });
+    if (email) {
+      const existing = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
+      if (existing) return res.status(400).json({ error: '邮箱已注册' });
+    }
     // 用4位随机十六进制后缀确保用户名唯一
     const suffix = crypto.randomBytes(2).toString('hex');
     const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
     const username = '@' + (sanitizedName || ('user' + crypto.randomBytes(4).toString('hex'))) + '_' + suffix;
-    const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || normalizedEmail || name);
+    const avatar = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(phone || email || name);
     const hash = await bcrypt.hash(password, 10);
     const userData = {
       name,
@@ -419,7 +421,7 @@ router.post('/register', registerLimiter, async (req, res) => {
       policyAgreedAt: new Date(),
     };
     if (phone) userData.phone = encryptPII(phone);
-    userData.email = encryptPII(normalizedEmail);
+    if (email) userData.email = encryptPII(email);
     let user;
     try {
       user = await prisma.user.create({ data: userData });
