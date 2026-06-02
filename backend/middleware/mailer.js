@@ -36,7 +36,7 @@ async function sendMail({ to, subject, html, text }) {
   try {
     const { data, error } = await client.emails.send({ from: FROM, to, subject, html, text });
     if (error) throw new Error(error.message || '邮件发送失败');
-    console.log('[mailer] 已发送:', data?.id || 'resend');
+    console.log('[mailer] 已发送:', data?.id || 'unknown message ID');
     return { sent: true, messageId: data?.id };
   } catch (e) {
     console.error('[mailer] 发送失败:', e.message);
