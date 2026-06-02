@@ -321,7 +321,7 @@ async function safeUser(user) {
  *   post:
  *     tags: [认证]
  *     summary: 用户注册
- *     description: 使用手机号、姓名和密码注册新账户
+ *     description: 使用邮箱、姓名和密码注册新账户（手机号可选）
  *     security: []
  *     requestBody:
  *       required: true
@@ -329,14 +329,18 @@ async function safeUser(user) {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, phone, password, policyVersion, agreedPrivacy, agreedTerms]
+ *             required: [name, email, password, policyVersion, agreedPrivacy, agreedTerms]
  *             properties:
  *               name:
  *                 type: string
  *                 description: 用户姓名
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 邮箱地址（必填）
  *               phone:
  *                 type: string
- *                 description: 手机号（中国大陆格式）
+ *                 description: 手机号（可选，支持中国大陆格式或国际 +区号格式）
  *               password:
  *                 type: string
  *                 minLength: 6
@@ -359,7 +363,7 @@ async function safeUser(user) {
  *                 user:
  *                   $ref: '#/components/schemas/User'
  *       400:
- *         description: 参数错误或手机号已注册
+ *         description: 参数错误或邮箱已注册
  *         content:
  *           application/json:
  *             schema:
