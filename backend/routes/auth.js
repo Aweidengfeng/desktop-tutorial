@@ -377,14 +377,14 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (!name || !password) {
       return res.status(400).json({ error: '请填写姓名和密码' });
     }
-    if (!phone && !email) {
-      return res.status(400).json({ error: '请填写手机号或邮箱地址' });
+    if (!email) {
+      return res.status(400).json({ error: '请填写邮箱地址' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: '邮箱格式不正确' });
     }
     if (phone && !isValidPhone(phone)) {
       return res.status(400).json({ error: '手机号格式不正确（支持中国大陆格式或国际 +区号格式）' });
-    }
-    if (email && !isValidEmail(email)) {
-      return res.status(400).json({ error: '邮箱格式不正确' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: '密码至少6位' });
