@@ -2418,7 +2418,16 @@
       </div>
       <div>
         <label for="register-email" class="text-slate-400 text-xs mb-1.5 block">邮箱</label>
-        <input id="register-email" x-model="registerForm.email" type="email" placeholder="请输入邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <div style="display:flex;gap:8px;">
+          <input id="register-email" x-model="registerForm.email" type="email" placeholder="请输入邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500" style="flex:1;">
+          <button @click="sendRegisterEmailCode()" :disabled="registerEmailCountdown > 0 || registerEmailSending" type="button" class="flex-shrink-0 bg-slate-600 hover:bg-slate-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium px-3 py-2 rounded-xl transition-colors whitespace-nowrap">
+            <span x-text="registerEmailCountdown > 0 ? registerEmailCountdown + 's后重发' : '发送验证码'"></span>
+          </button>
+        </div>
+      </div>
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">邮箱验证码</label>
+        <input x-model="registerForm.emailCode" type="text" inputmode="numeric" maxlength="6" placeholder="请输入6位验证码" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label for="register-password" class="text-slate-400 text-xs mb-1.5 block">密码</label>
@@ -6362,7 +6371,7 @@ function alpineLink() {
     showLocationShareModal: false,
     locationShareRecipients: [],
     loginForm: { phone: '', password: '', email: '' },
-    registerForm: { name: '', email: '', password: '', inviteCode: '' },
+    registerForm: { name: '', email: '', password: '', inviteCode: '', emailCode: '' },
     showInviteCodeInput: false,
     myInviteCode: '',
     inviteUrl: '',
@@ -6370,6 +6379,9 @@ function alpineLink() {
     inviteRecords: [],
     inviteRecordsLoading: false,
     showInviteRecords: false,
+    registerEmailCountdown: 0,
+    registerEmailSending: false,
+    registerEmailTimer: null,
     emailCode: '',
     emailCountdown: 0,
     emailTimer: null,
@@ -9255,10 +9267,16 @@ function alpineLink() {
       const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
       if (!email) { this.showToast('请输入邮箱', 'error'); return; }
       if (!this._isValidEmail(email)) { this.showToast('邮箱格式不正确', 'error'); return; }
+      if (!this.registerForm.emailCode || this.registerForm.emailCode.length !== 6) { this.showToast('请输入邮箱收到的6位验证码', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
-        const payload = { ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION };
-        delete payload.inviteCode;
+        const payload = {
+          name: this.registerForm.name,
+          email,
+          password: this.registerForm.password,
+          emailCode: this.registerForm.emailCode,
+          agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION
+        };
         if (inviteCode) payload.invite_code = inviteCode;
         const res = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
@@ -9268,7 +9286,9 @@ function alpineLink() {
         localStorage.setItem('summitlink_token', data.token);
         this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
         this.showRegister = false;
-        this.registerForm = { name: '', email: '', password: '', inviteCode: '' };
+        this.registerForm = { name: '', email: '', password: '', inviteCode: '', emailCode: '' };
+        this.registerEmailCountdown = 0;
+        if (this.registerEmailTimer) { clearInterval(this.registerEmailTimer); this.registerEmailTimer = null; }
         this.showInviteCodeInput = false;
         this.agreedPrivacy = false;
         this.agreedTerms = false;
@@ -9401,6 +9421,24 @@ function alpineLink() {
           if (this.emailCountdown <= 0) { clearInterval(this.emailTimer); this.emailTimer = null; }
         }, 1000);
       } catch(e) { this.showToast('网络错误', 'error'); }
+    },
+    async sendRegisterEmailCode() {
+      const email = (this.registerForm.email || '').trim();
+      if (!this._isValidEmail(email)) { this.showToast('请先输入正确的邮箱地址', 'error'); return; }
+      if (this.registerEmailCountdown > 0 || this.registerEmailSending) return;
+      this.registerEmailSending = true;
+      try {
+        const res = await fetch(API_BASE + '/api/auth/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
+        this.showToast(data.message || '验证码已发送，请查收邮件 📧');
+        this.registerEmailCountdown = 60;
+        this.registerEmailTimer = setInterval(() => {
+          this.registerEmailCountdown--;
+          if (this.registerEmailCountdown <= 0) { clearInterval(this.registerEmailTimer); this.registerEmailTimer = null; }
+        }, 1000);
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.registerEmailSending = false; }
     },
     async doEmailLogin() {
       if (!this._isValidEmail(this.loginForm.email)) { this.showToast('邮箱格式不正确', 'error'); return; }

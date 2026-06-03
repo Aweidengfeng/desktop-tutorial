@@ -59,15 +59,17 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
   });
 
   test('正确提交 → 201/200，数据库记录 policy_version', async () => {
+    const db = require('../backend/db/database');
+    db.prepare("INSERT INTO email_codes (email, code, expires_at, used) VALUES (?, ?, ?, 0)").run('test010@example.com', '111111', Date.now() + 300000);
     const res = await request(app).post('/api/auth/register').send({
       name: '李四', email: 'test010@example.com', password: 'pass123',
+      emailCode: '111111',
       policyVersion: '2026-04-20', agreedPrivacy: true, agreedTerms: true,
     });
     expect([200, 201]).toContain(res.status);
     expect(res.body.token).toBeTruthy();
 
     // 验证数据库记录了 policy_version（通过返回的用户ID查找，因为手机号已加密存储）
-    const db = require('../backend/db/database');
     const userId = res.body.user && res.body.user.id;
     expect(userId).toBeTruthy(); // 确保响应包含用户ID
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
@@ -77,10 +79,13 @@ describe('1. 注册隐私/协议同意 POST /api/auth/register', () => {
   });
 
   test('邮箱会自动 trim + lowercase，并阻止大小写变体重复注册', async () => {
+    const db = require('../backend/db/database');
+    db.prepare("INSERT INTO email_codes (email, code, expires_at, used) VALUES (?, ?, ?, 0)").run('mixed.case+norm@testexample.com', '222222', Date.now() + 300000);
     const first = await request(app).post('/api/auth/register').send({
       name: '邮箱归一化用户',
       email: '  Mixed.Case+Norm@TestExample.COM  ',
       password: 'pass123',
+      emailCode: '222222',
       policyVersion: '2026-04-20',
       agreedPrivacy: true,
       agreedTerms: true,
@@ -123,10 +128,12 @@ describe('1.1 邀请码裂变链路', () => {
   });
 
   test('注册支持 invite_code，并记录邀请关系+奖励', async () => {
+    db.prepare("INSERT INTO email_codes (email, code, expires_at, used) VALUES (?, ?, ?, 0)").run('invitee9992@example.com', '333333', Date.now() + 300000);
     const registerRes = await request(app).post('/api/auth/register').send({
       name: '被邀请用户',
       email: 'invitee9992@example.com',
       password: 'pass123',
+      emailCode: '333333',
       invite_code: 'INV001',
       policyVersion: '2026-04-20',
       agreedPrivacy: true,

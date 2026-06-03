@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
+const db = require('../db/database');
 const auth = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimits');
 const { encryptPII, decryptPII } = require('../utils/crypto');
@@ -377,7 +378,7 @@ async function safeUser(user) {
  */
 router.post('/register', registerLimiter, async (req, res) => {
   try {
-    const { name, phone, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
+    const { name, phone, emailCode, password, policyVersion, agreedPrivacy, agreedTerms, invite_code } = req.body || {};
     const email = req.body?.email?.trim() ? req.body.email.trim().toLowerCase() : undefined;
     if (!name || !password) {
       return res.status(400).json({ error: '请填写姓名和密码' });
@@ -406,6 +407,17 @@ router.post('/register', registerLimiter, async (req, res) => {
       const existing = await prisma.user.findFirst({ where: { email: encryptPII(email) } });
       if (existing) return res.status(400).json({ error: '邮箱已注册' });
     }
+    // 验证邮箱验证码
+    if (!emailCode) {
+      return res.status(400).json({ error: '请输入邮箱验证码' });
+    }
+    const codeRecord = db.prepare(
+      'SELECT id, expires_at FROM email_codes WHERE email = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1'
+    ).get(email, emailCode);
+    if (!codeRecord || Date.now() > codeRecord.expires_at) {
+      return res.status(400).json({ error: '验证码无效或已过期，请重新获取' });
+    }
+    db.prepare('UPDATE email_codes SET used = 1 WHERE id = ?').run(codeRecord.id);
     // 用4位随机十六进制后缀确保用户名唯一
     const suffix = crypto.randomBytes(2).toString('hex');
     const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
