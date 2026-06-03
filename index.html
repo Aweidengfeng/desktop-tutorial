@@ -2204,7 +2204,16 @@
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">邮箱</label>
-        <input x-model="registerForm.email" type="email" placeholder="请输入邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
+        <div style="display:flex;gap:8px;">
+          <input x-model="registerForm.email" type="email" placeholder="请输入邮箱" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500" style="flex:1;">
+          <button @click="sendRegisterEmailCode()" :disabled="registerEmailCountdown > 0 || registerEmailSending" type="button" class="flex-shrink-0 bg-slate-600 hover:bg-slate-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium px-3 py-2 rounded-xl transition-colors whitespace-nowrap">
+            <span x-text="registerEmailCountdown > 0 ? registerEmailCountdown + 's后重发' : '发送验证码'"></span>
+          </button>
+        </div>
+      </div>
+      <div>
+        <label class="text-slate-400 text-xs mb-1.5 block">邮箱验证码</label>
+        <input x-model="registerForm.emailCode" type="text" inputmode="numeric" maxlength="6" placeholder="请输入6位验证码" class="w-full bg-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary text-sm placeholder-slate-500">
       </div>
       <div>
         <label class="text-slate-400 text-xs mb-1.5 block">密码</label>

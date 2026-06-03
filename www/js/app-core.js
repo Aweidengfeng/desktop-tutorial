@@ -434,7 +434,7 @@ function alpineLink() {
     smsCountdown: 0,
     smsTimer: null,
     loginForm: { account: '', phone: '', password: '' },
-    registerForm: { name: '', email: '', password: '', inviteCode: '' },
+    registerForm: { name: '', email: '', password: '', inviteCode: '', emailCode: '' },
     showInviteCodeInput: false,
     myInviteCode: '',
     inviteUrl: '',
@@ -442,6 +442,9 @@ function alpineLink() {
     inviteRecords: [],
     inviteRecordsLoading: false,
     showInviteRecords: false,
+    registerEmailCountdown: 0,
+    registerEmailSending: false,
+    registerEmailTimer: null,
     agreedPrivacy: false,
     agreedTerms: false,
     POLICY_VERSION: '2026-04-20',
@@ -3971,14 +3974,17 @@ function alpineLink() {
       }
     },
     async doRegister() {
-      if (!this.registerForm.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.registerForm.email)) { this.showToast('请输入正确的邮箱地址', 'error'); return; }
+      const email = (this.registerForm.email || '').trim();
+      const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.showToast('请输入正确的邮箱地址', 'error'); return; }
+      if (!this.registerForm.emailCode || this.registerForm.emailCode.length !== 6) { this.showToast('请输入邮箱收到的6位验证码', 'error'); return; }
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
-        const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
         const payload = {
           name: this.registerForm.name,
-          email: this.registerForm.email,
+          email,
           password: this.registerForm.password,
+          emailCode: this.registerForm.emailCode,
           agreedPrivacy: true,
           agreedTerms: true,
           policyVersion: this.POLICY_VERSION,
@@ -3992,13 +3998,33 @@ function alpineLink() {
         localStorage.setItem('summitlink_token', data.token);
         this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
         this.showRegister = false;
-        this.registerForm = { name: '', email: '', password: '', inviteCode: '' };
+        this.registerForm = { name: '', email: '', password: '', inviteCode: '', emailCode: '' };
+        this.registerEmailCountdown = 0;
+        if (this.registerEmailTimer) { clearInterval(this.registerEmailTimer); this.registerEmailTimer = null; }
         this.showInviteCodeInput = false;
         this.agreedPrivacy = false;
         this.agreedTerms = false;
         this.loadInviteInfo();
         this.showToast('注册成功，欢迎加入 ' + data.user.name + '！');
       } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+    },
+    async sendRegisterEmailCode() {
+      const email = (this.registerForm.email || '').trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.showToast('请先输入正确的邮箱地址', 'error'); return; }
+      if (this.registerEmailCountdown > 0 || this.registerEmailSending) return;
+      this.registerEmailSending = true;
+      try {
+        const res = await fetch('/api/auth/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        const data = await res.json();
+        if (!res.ok) { this.showToast(data.error || '发送失败', 'error'); return; }
+        this.showToast(data.message || '验证码已发送，请查收邮件 📧');
+        this.registerEmailCountdown = 60;
+        this.registerEmailTimer = setInterval(() => {
+          this.registerEmailCountdown--;
+          if (this.registerEmailCountdown <= 0) { clearInterval(this.registerEmailTimer); this.registerEmailTimer = null; }
+        }, 1000);
+      } catch(e) { this.showToast('网络错误，请重试', 'error'); }
+      finally { this.registerEmailSending = false; }
     },
     doLogout() {
       try {
