@@ -3975,8 +3975,14 @@ function alpineLink() {
       if (this.registerForm.password.length < 6) { this.showToast('密码至少6位', 'error'); return; }
       try {
         const inviteCode = (this.registerForm.inviteCode || '').trim().toUpperCase();
-        const payload = { ...this.registerForm, agreedPrivacy: true, agreedTerms: true, policyVersion: this.POLICY_VERSION };
-        delete payload.inviteCode;
+        const payload = {
+          name: this.registerForm.name,
+          email: this.registerForm.email,
+          password: this.registerForm.password,
+          agreedPrivacy: true,
+          agreedTerms: true,
+          policyVersion: this.POLICY_VERSION,
+        };
         if (inviteCode) payload.invite_code = inviteCode;
         const res = await fetch('/api/auth/register', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
@@ -3984,7 +3990,7 @@ function alpineLink() {
         this.authToken = data.token;
         this.currentUser = data.user;
         localStorage.setItem('summitlink_token', data.token);
-        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.phone), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
+        this.userProfile = { name: data.user.name, username: data.user.username || ('@' + data.user.name), avatar: data.user.avatar || ('https://i.pravatar.cc/150?u=' + data.user.id), level: '新手', summits: 0, expeditions: 0, followers: 0, following: 0 };
         this.showRegister = false;
         this.registerForm = { name: '', email: '', password: '', inviteCode: '' };
         this.showInviteCodeInput = false;
@@ -4299,7 +4305,7 @@ function alpineLink() {
             allow_stranger_msg: typeof user.privacy_settings.allow_stranger_msg === 'boolean' ? user.privacy_settings.allow_stranger_msg : this.privacySettings.allow_stranger_msg,
           };
         }
-        this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.phone), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
+        this.userProfile = { name: user.name, username: user.username || ('@' + user.name), avatar: user.avatar || ('https://i.pravatar.cc/150?u=' + user.id), level: user.level || '攀登者', summits: user.summits || 0, expeditions: user.expeditions || 0, followers: user.followers || 0, following: user.following || 0 };
         this.loadGuideStatus();
         this.loadClubStatus();
         this.loadUserStats();
