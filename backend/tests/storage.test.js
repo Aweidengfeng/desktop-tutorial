@@ -78,8 +78,7 @@ describe('storage adapter', () => {
     }), expect.any(Function));
   });
 
-  test('cn upload gracefully falls back to local storage when COS is not configured', async () => {
-    const { uploadFile, getSignedUrl, moveFile, deleteFile } = require('../lib/storage');
+  test('cn upload gracefully falls back to local storage when COS is not configured', async () => {    const { uploadFile, getSignedUrl, moveFile, deleteFile } = require('../lib/storage');
 
     const uploaded = await uploadFile(Buffer.from('fallback'), 'tmp/demo.txt', { region: 'cn' });
     expect(uploaded).toEqual({
@@ -103,5 +102,59 @@ describe('storage adapter', () => {
     await expect(deleteFile('tmp/moved.txt', { region: 'cn' }))
       .resolves.toEqual({ provider: 'local', key: 'tmp/moved.txt', deleted: true });
     expect(fs.existsSync(path.join(uploadsDir, 'tmp', 'moved.txt'))).toBe(false);
+  });
+
+  test('production refuses to fall back to local disk when COS is not configured (Fail Closed)', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.COS_BUCKET;
+    delete process.env.COS_SECRET_ID;
+    delete process.env.COS_SECRET_KEY;
+
+    const { uploadFile } = require('../lib/storage');
+    await expect(uploadFile(Buffer.from('x'), 'tmp/demo.txt', { region: 'cn' }))
+      .rejects.toThrow(/COS 未配置/);
+    // 必须没有写入本地磁盘
+    expect(fs.existsSync(path.join(uploadsDir, 'tmp', 'demo.txt'))).toBe(false);
+  });
+
+  test('assertProductionStorageReady throws in production without COS config', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.COS_BUCKET;
+    delete process.env.COS_SECRET_ID;
+    delete process.env.COS_SECRET_KEY;
+
+    const { assertProductionStorageReady } = require('../lib/storage');
+    expect(() => assertProductionStorageReady()).toThrow(/Fail Closed/);
+  });
+
+  test('assertProductionStorageReady throws in production when STORAGE_PROVIDER=local', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.STORAGE_PROVIDER = 'local';
+    process.env.COS_BUCKET = 'unsummit-cn-1234567890';
+    process.env.COS_REGION = 'ap-beijing';
+    process.env.COS_SECRET_ID = 'secret-id';
+    process.env.COS_SECRET_KEY = 'secret-key';
+
+    const { assertProductionStorageReady } = require('../lib/storage');
+    expect(() => assertProductionStorageReady()).toThrow(/STORAGE_PROVIDER=local/);
+  });
+
+  test('assertProductionStorageReady passes in production when COS is configured', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.STORAGE_PROVIDER;
+    process.env.COS_BUCKET = 'unsummit-cn-1234567890';
+    process.env.COS_REGION = 'ap-beijing';
+    process.env.COS_SECRET_ID = 'secret-id';
+    process.env.COS_SECRET_KEY = 'secret-key';
+
+    const { assertProductionStorageReady } = require('../lib/storage');
+    expect(() => assertProductionStorageReady()).not.toThrow();
+  });
+
+  test('non-production environment does not enforce COS (allows local fallback)', () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.COS_BUCKET;
+    const { assertProductionStorageReady } = require('../lib/storage');
+    expect(() => assertProductionStorageReady()).not.toThrow();
   });
 });

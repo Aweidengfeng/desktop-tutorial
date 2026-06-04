@@ -676,6 +676,13 @@ if (process.env.NODE_ENV === 'production') {
     console.error('❌ 安全错误: ADMIN_PASSWORD 未设置或仍为默认值，生产环境拒绝启动');
     process.exit(1);
   }
+  // 文件永久存储 Fail Closed：生产环境必须配置腾讯云 COS，禁止回退本地磁盘
+  try {
+    require('./lib/storage').assertProductionStorageReady();
+  } catch (e) {
+    console.error(`❌ 安全错误: ${e.message}`);
+    process.exit(1);
+  }
 } else {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET === DEFAULT_JWT_SECRET) {
     console.warn('⚠️  警告: JWT_SECRET 使用默认值，生产环境请务必修改');
