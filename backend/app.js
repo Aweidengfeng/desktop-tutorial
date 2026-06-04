@@ -431,6 +431,7 @@ app.use('/api/gdpr', require('./routes/gdpr'));
 app.use('/api/currency', require('./routes/currency'));
 app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/feedback', require('./routes/feedback'));
+app.use('/api/reports', require('./routes/reports'));
 
 function getStripeStartupStatus() {
   const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();

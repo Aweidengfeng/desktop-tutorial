@@ -1225,6 +1225,44 @@
         </div>
       </div>
 
+      <!-- UGC 举报（Apple App Store Guideline 1.2） -->
+      <div x-show="page === 'reports'">
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <h2 class="text-xl font-bold">🚨 UGC 举报处理</h2>
+          <select x-model="reportsStatusFilter" @change="loadReports()" class="bg-slate-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm">
+            <option value="">全部状态</option>
+            <option value="pending">待处理</option>
+            <option value="reviewing">审核中</option>
+            <option value="resolved">已处理</option>
+            <option value="dismissed">已驳回</option>
+          </select>
+        </div>
+        <div x-show="reportsLoading" class="text-center py-8 text-slate-400">加载中…</div>
+        <div x-show="!reportsLoading && reports.length===0" class="text-center py-8 text-slate-400">暂无举报记录</div>
+        <div class="overflow-x-auto" x-show="!reportsLoading && reports.length>0">
+          <table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-white/10">
+            <th class="text-left py-2 pr-4">ID</th><th class="text-left py-2 pr-4">对象</th><th class="text-left py-2 pr-4">原因</th><th class="text-left py-2 pr-4">说明</th><th class="text-left py-2 pr-4">举报人</th><th class="text-left py-2 pr-4">状态</th><th class="text-left py-2 pr-4">时间</th><th class="text-left py-2">操作</th>
+          </tr></thead><tbody>
+            <template x-for="r in reports" :key="r.id">
+              <tr class="border-b border-white/5 hover:bg-white/5">
+                <td class="py-2 pr-4 text-slate-300" x-text="r.id"></td>
+                <td class="py-2 pr-4 text-slate-300 text-xs"><span x-text="r.targetType || r.target_type"></span> #<span x-text="r.targetId || r.target_id"></span></td>
+                <td class="py-2 pr-4 text-red-300 text-xs" x-text="r.reason"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs max-w-[180px] truncate" x-text="r.detail || '—'"></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="r.reporterId || r.reporter_id || '—'"></td>
+                <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full text-xs bg-slate-600 text-slate-200" x-text="r.status"></span></td>
+                <td class="py-2 pr-4 text-slate-400 text-xs" x-text="((r.createdAt || r.created_at)||'').slice(0,16)"></td>
+                <td class="py-2 whitespace-nowrap">
+                  <button @click="updateReportStatus(r.id, 'reviewing')" class="text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 mr-1">审核中</button>
+                  <button @click="updateReportStatus(r.id, 'resolved')" class="text-xs px-2 py-1 rounded bg-green-600 hover:bg-green-500 mr-1">已处理</button>
+                  <button @click="updateReportStatus(r.id, 'dismissed')" class="text-xs px-2 py-1 rounded bg-slate-600 hover:bg-slate-500">驳回</button>
+                </td>
+              </tr>
+            </template>
+          </tbody></table>
+        </div>
+      </div>
+
       <!-- 俱乐部商业资质审核 -->
       <div x-show="page === 'club-commercial'">
         <h2 class="text-xl font-bold mb-4">🏢 俱乐部商业资质审核</h2>
@@ -2237,6 +2275,7 @@
           { id: 'applications',    icon: '📋', label: '申请审核' },
           { id: 'suspicious-tracks', icon: '🚩', label: '可疑轨迹' },
           { id: 'moderation-logs', icon: '🛡️', label: '审核日志' },
+          { id: 'reports',         icon: '🚨', label: 'UGC 举报' },
           { id: 'club-commercial', icon: '🏢', label: '俱乐部商业资质' },
           { id: 'guide-commercial', icon: '🔑', label: '向导商业资质' },
           { id: 'expeditions-manage', icon: '🗂️', label: '商业远征管理' },
@@ -2310,6 +2349,9 @@
 
         // Moderation Logs
         moderationLogs: [], moderationLogsTotal: 0, moderationLogsLoading: false,
+
+        // UGC Reports (Apple Guideline 1.2)
+        reports: [], reportsTotal: 0, reportsLoading: false, reportsStatusFilter: '',
 
         // Club Commercial Review
         clubCommercial: [], clubCommercialLoading: false, clubCommercialTotal: 0,
@@ -2512,6 +2554,7 @@
           else if (this.page === 'applications') { this.loadGuideApplications(); this.loadClubApplications(); }
           else if (this.page === 'suspicious-tracks') this.loadSuspiciousTracks();
           else if (this.page === 'moderation-logs') this.loadModerationLogs();
+          else if (this.page === 'reports') this.loadReports();
           else if (this.page === 'club-commercial') this.loadClubCommercial();
           else if (this.page === 'guide-commercial') this.loadGuideCommercial();
           else if (this.page === 'expeditions-manage') this.loadAdminExpeditionsManage(1);
@@ -3033,6 +3076,20 @@
             const d = await this.api('GET', '/moderation-logs?limit=50');
             this.moderationLogs = d.logs || d; this.moderationLogsTotal = d.total || this.moderationLogs.length;
           } catch(e) {} finally { this.moderationLogsLoading = false; }
+        },
+        async loadReports() {
+          this.reportsLoading = true;
+          try {
+            const qs = this.reportsStatusFilter ? `?status=${encodeURIComponent(this.reportsStatusFilter)}&limit=50` : '?limit=50';
+            const d = await this.api('GET', `/reports${qs}`);
+            this.reports = d.reports || []; this.reportsTotal = d.total || this.reports.length;
+          } catch(e) { this.showToast(e.message,'error'); } finally { this.reportsLoading = false; }
+        },
+        async updateReportStatus(id, status) {
+          try {
+            await this.api('PUT', `/reports/${id}/status`, { status });
+            this.showToast('举报状态已更新'); this.loadReports();
+          } catch(e) { this.showToast(e.message,'error'); }
         },
 
         async loadClubCommercial() {

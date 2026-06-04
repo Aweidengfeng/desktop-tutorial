@@ -64,6 +64,23 @@ async function runStartupMigrations(prisma) {
           "created_at" TIMESTAMPTZ DEFAULT NOW()
         )
       `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "content_reports" (
+          "id" SERIAL PRIMARY KEY,
+          "reporter_id" INTEGER,
+          "target_type" TEXT NOT NULL,
+          "target_id" INTEGER NOT NULL,
+          "reason" TEXT NOT NULL,
+          "detail" TEXT,
+          "status" TEXT DEFAULT 'pending',
+          "handled_by" INTEGER,
+          "handled_at" TIMESTAMPTZ,
+          "resolution" TEXT,
+          "created_at" TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_content_reports_status" ON "content_reports"("status")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_content_reports_target" ON "content_reports"("target_type", "target_id")`);
     } else {
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS coupons (
@@ -136,6 +153,23 @@ async function runStartupMigrations(prisma) {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS content_reports (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reporter_id INTEGER,
+          target_type TEXT NOT NULL,
+          target_id INTEGER NOT NULL,
+          reason TEXT NOT NULL,
+          detail TEXT,
+          status TEXT DEFAULT 'pending',
+          handled_by INTEGER,
+          handled_at DATETIME,
+          resolution TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_content_reports_status ON content_reports(status)');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_content_reports_target ON content_reports(target_type, target_id)');
     }
     console.log('[startup] schema patch applied');
   } catch (e) {

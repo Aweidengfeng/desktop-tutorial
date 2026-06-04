@@ -1382,6 +1382,72 @@ router.get('/moderation-logs', adminAuth, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────
+// UGC 举报审核（Apple App Store Guideline 1.2）
+// ─────────────────────────────────────────
+const REPORT_STATUS_VALUES = new Set(['pending', 'reviewing', 'resolved', 'dismissed']);
+
+// GET /api/admin/reports — 举报列表（支持按状态过滤 + 分页）
+router.get('/reports', adminAuth, async (req, res) => {
+  try {
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    const status = typeof req.query.status === 'string' && REPORT_STATUS_VALUES.has(req.query.status)
+      ? req.query.status
+      : undefined;
+    const where = status ? { status } : {};
+
+    const [reports, total] = await Promise.all([
+      prisma.report.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.report.count({ where }),
+    ]);
+    res.json({ reports, total, page, limit });
+  } catch (e) {
+    if (isMissingTableError(e)) return res.json({ reports: [], total: 0, page: 1, limit: 20 });
+    console.error('[admin/reports] list error:', e.message);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/reports/:id/status — 更新举报处理状态
+router.put('/reports/:id/status', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: '举报 ID 无效' });
+    const { status, resolution } = req.body || {};
+    if (!status || !REPORT_STATUS_VALUES.has(String(status))) {
+      return res.status(400).json({ error: '无效的状态值' });
+    }
+    if (resolution != null && String(resolution).length > 1000) {
+      return res.status(400).json({ error: '处理备注过长（最多 1000 字）' });
+    }
+
+    const existing = await prisma.report.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: '举报不存在' });
+
+    const terminal = status === 'resolved' || status === 'dismissed';
+    const updated = await prisma.report.update({
+      where: { id },
+      data: {
+        status: String(status),
+        resolution: resolution != null ? String(resolution).trim() : existing.resolution,
+        handledAt: terminal ? new Date() : existing.handledAt,
+      },
+    });
+    res.json({ success: true, report: updated });
+  } catch (e) {
+    if (isMissingTableError(e)) return res.status(404).json({ error: '举报不存在' });
+    console.error('[admin/reports] update error:', e.message);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // POST /api/admin/guide-applications/:id/review
 router.post('/guide-applications/:id/review', adminWriteLimiter, adminAuth, async (req, res) => {
   try {
