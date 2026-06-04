@@ -179,8 +179,17 @@ describe('C0 /api/pay/* 越权修复', () => {
   });
 
   // ── 5. 弃用响应头 ────────────────────────────────────────────────
-  test('响应包含 Deprecation 头', async () => {
+  // 弃用中间件在路由级、鉴权之前执行，因此即便未认证（401）也应返回弃用头。
+  test('响应包含 Deprecation 头（即使未认证）', async () => {
     const res = await request(app).get('/api/pay/transactions?owner_type=guide&owner_id=1');
+    expect(res.status).toBe(401);
+    expect(res.headers['deprecation']).toBe('true');
+  });
+
+  test('已认证请求同样返回 Deprecation 头', async () => {
+    const res = await request(app)
+      .get('/api/pay/transactions?owner_type=user&owner_id=' + userA.id)
+      .set(authHeader(userA.token));
     expect(res.headers['deprecation']).toBe('true');
   });
 });
