@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { getJwtSecret } = require('../utils/jwtSecret');
 
 module.exports = function adminAuth(req, res, next) {
   const token = req.cookies?.adminToken ||
@@ -7,7 +8,7 @@ module.exports = function adminAuth(req, res, next) {
     return res.status(401).json({ error: '未提供认证Token' });
   }
   try {
-    const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+    const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret);
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: '无管理员权限' });

@@ -1,11 +1,17 @@
 const jwt = require('jsonwebtoken');
 const { setSentryUser } = require('./sentry');
 const prisma = require('../db/prisma');
+const { getJwtSecret, DEV_ONLY_FALLBACK_SECRET } = require('../utils/jwtSecret');
 
 module.exports = async function authMiddleware(req, res, next) {
-  const DEFAULT_SECRET = 'summitlink_dev_secret_do_not_use_in_production';
-  const secret = process.env.JWT_SECRET || DEFAULT_SECRET;
-  if (process.env.NODE_ENV === 'production' && secret === DEFAULT_SECRET) {
+  let secret;
+  try {
+    secret = getJwtSecret();
+  } catch (e) {
+    console.error('[auth] FATAL: JWT_SECRET is not configured securely in production!');
+    return res.status(500).json({ error: '服务器配置错误' });
+  }
+  if (process.env.NODE_ENV === 'production' && secret === DEV_ONLY_FALLBACK_SECRET) {
     console.error('[auth] FATAL: JWT_SECRET is using the default value in production!');
     return res.status(500).json({ error: '服务器配置错误' });
   }
@@ -17,7 +23,7 @@ module.exports = async function authMiddleware(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, secret);
-    req.user = { id: decoded.id };
+    req.user = { id: decoded.id, isAdmin: !!decoded.isAdmin };
     setSentryUser(req.user);
 
     // 检查账号是否处于注销冷静期，如是则阻止写操作

@@ -43,7 +43,11 @@ async function main() {
     },
   });
 
-  const adminHash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123456', 10);
+  const seedAdminPassword = process.env.ADMIN_PASSWORD || require('crypto').randomBytes(24).toString('hex');
+  if (!process.env.ADMIN_PASSWORD) {
+    console.warn('⚠️  ADMIN_PASSWORD 未设置：已为种子管理员生成随机一次性密码。后台登录请通过 ADMIN_PASSWORD 环境变量配置。');
+  }
+  const adminHash = await bcrypt.hash(seedAdminPassword, 10);
   await prisma.user.upsert({
     where: { phone: encryptPII('18888888888') },
     update: {},

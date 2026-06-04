@@ -11,9 +11,9 @@ const { sendMail, certificationResultEmail } = require('../middleware/mailer');
 const PDFDocument = require('pdfkit');
 const stripeConnect = require('../lib/payment/stripe-connect');
 const { captureEvent } = require('../middleware/sentry');
+const { getJwtSecret } = require('../utils/jwtSecret');
 const { sendPushToUser } = require('../lib/pushSender');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
 const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -376,7 +376,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       console.warn('[admin/login] Failed login attempt for user:', username);
       return res.status(401).json({ error: '用户名或密码错误' });
     }
-    const token = jwt.sign({ isAdmin: true, username }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ isAdmin: true, username }, getJwtSecret(), { expiresIn: '7d' });
     res.cookie('adminToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

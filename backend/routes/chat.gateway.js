@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const prisma = require('../db/prisma');
+const { getJwtSecret } = require('../utils/jwtSecret');
 const { checkText } = require('../utils/moderation');
 
 const SOS_KEYWORDS = ['救命', 'SOS', 'sos', '遇难', '求救', '紧急', '危险', '失联'];
@@ -29,7 +30,7 @@ function socketAuth(socket, next) {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error('auth_required'));
   try {
-    const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+    const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret);
     socket.userId = decoded.id;
     next();

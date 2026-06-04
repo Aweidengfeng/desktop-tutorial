@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const { getJwtSecret } = require('../utils/jwtSecret');
 const { requireOwnership } = require('../middleware/ownershipGuard');
 const rateLimit = require('express-rate-limit');
 const { validateTrack } = require('../utils/trackValidator');
@@ -322,8 +323,7 @@ router.get('/:id/export', exportLimiter, async (req, res) => {
         return res.status(403).json({ error: '该轨迹非公开，请登录后访问' });
       }
       try {
-        const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
-        const payload = jwt.verify(authHeader.slice(7), JWT_SECRET);
+        const payload = jwt.verify(authHeader.slice(7), getJwtSecret());
         if (payload.id !== track.user_id) return res.status(403).json({ error: '无权下载该轨迹' });
       } catch (e) {
         return res.status(403).json({ error: '登录状态无效，请重新登录' });
