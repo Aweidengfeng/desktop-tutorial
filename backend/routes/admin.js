@@ -384,10 +384,13 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
     });
+    // 同步下发双提交 CSRF 令牌（前端在状态变更请求时回填到 X-CSRF-Token 头）
+    const csrfToken = adminAuth.issueCsrfCookie(res);
     res.json({
       success: true,
       message: '登录成功',
       token,
+      csrfToken,
       expiresIn: 7 * 24 * 60 * 60
     });
     console.log('[admin/login] Successful login for user:', username);
@@ -400,6 +403,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
 // POST /api/admin/logout
 router.post('/logout', async (req, res) => {
   res.clearCookie('adminToken');
+  res.clearCookie('adminCsrf');
   res.json({ success: true });
 });
 
