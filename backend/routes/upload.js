@@ -200,8 +200,9 @@ router.post('/gpx', uploadLimiter, auth, (req, res) => {
   uploadGpx.single('file')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message || '只允许上传 GPX 轨迹文件' });
     if (!req.file) return res.status(400).json({ error: '未收到 GPX 文件' });
+    if (!req.file.filename) return res.status(400).json({ error: 'GPX 文件无效' });
     // 仅在受控上传目录内按 multer 生成的文件名读取，避免路径注入
-    const safeGpxPath = path.join(uploadDir, path.basename(req.file.filename || ''));
+    const safeGpxPath = path.join(uploadDir, path.basename(req.file.filename));
     try {
       const buffer = fs.readFileSync(safeGpxPath);
       const content = buffer.toString('utf8');
