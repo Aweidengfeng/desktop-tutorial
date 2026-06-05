@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0
 and this project follows [Semantic Versioning](https://semver.org/lang/zh-CN/).
 
 ## [Unreleased]
+### Added - Release 2026-07-01
+- UGC 举报能力（Apple Guideline 1.2）：用户举报 API（`POST /api/reports`、`GET /api/reports/mine`）、管理后台举报流转入口、新增 `content_reports` 表（启动期幂等迁移，PostgreSQL + SQLite 双分支）
+- 7·1 上线最终发布包 `docs/RELEASE_2026-07-01_FINAL.md`：Release Readiness Report、Go/No-Go、生产部署计划、回滚方案、剩余风险分级、上线后 30 天路线图、数据库变更说明、生产环境变量清单与上架 Checklist 索引
+
 ### Added - PR-322
 - 新增 Lighthouse CI 配置（`lighthouserc.js`）与 `.github/workflows/lighthouse.yml`，在 PR 中自动采集 `/summitlink` 的性能/无障碍/SEO 指标
 - 新增 `.github/workflows/bundle-size.yml`，输出前端构建产物与 `www/js/app-core.js` 体积报告

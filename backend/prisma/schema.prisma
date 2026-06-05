@@ -1674,3 +1674,25 @@ model Feedback {
 
   @@map("feedback")
 }
+
+// ─────────────────────────────────────────
+// UGC 举报（Apple App Store Guideline 1.2）
+// ─────────────────────────────────────────
+
+model Report {
+  id          Int       @id @default(autoincrement())
+  reporterId  Int?      @map("reporter_id") // 举报人用户 ID（登录用户）
+  targetType  String    @map("target_type") // post | comment | user | guide | club | expedition | message
+  targetId    Int       @map("target_id")
+  reason      String    // spam | abuse | sexual | violence | illegal | harassment | other
+  detail      String?   // 补充说明
+  status      String    @default("pending") // pending | reviewing | resolved | dismissed
+  handledBy   Int?      @map("handled_by") // 处理的管理员 ID
+  handledAt   DateTime? @map("handled_at")
+  resolution  String?   // 处理结果备注
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([targetType, targetId])
+  @@map("content_reports")
+}

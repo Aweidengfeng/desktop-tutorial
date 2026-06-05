@@ -11,9 +11,9 @@ const { sendMail, certificationResultEmail } = require('../middleware/mailer');
 const PDFDocument = require('pdfkit');
 const stripeConnect = require('../lib/payment/stripe-connect');
 const { captureEvent } = require('../middleware/sentry');
+const { getJwtSecret } = require('../utils/jwtSecret');
 const { sendPushToUser } = require('../lib/pushSender');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
 
 const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -376,7 +376,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       console.warn('[admin/login] Failed login attempt for user:', username);
       return res.status(401).json({ error: '用户名或密码错误' });
     }
-    const token = jwt.sign({ isAdmin: true, username }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ isAdmin: true, username }, getJwtSecret(), { expiresIn: '7d' });
     res.cookie('adminToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -384,10 +384,13 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/',
     });
+    // 同步下发双提交 CSRF 令牌（前端在状态变更请求时回填到 X-CSRF-Token 头）
+    const csrfToken = adminAuth.issueCsrfCookie(res);
     res.json({
       success: true,
       message: '登录成功',
       token,
+      csrfToken,
       expiresIn: 7 * 24 * 60 * 60
     });
     console.log('[admin/login] Successful login for user:', username);
@@ -400,6 +403,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
 // POST /api/admin/logout
 router.post('/logout', async (req, res) => {
   res.clearCookie('adminToken');
+  res.clearCookie('adminCsrf');
   res.json({ success: true });
 });
 
@@ -1374,6 +1378,72 @@ router.get('/moderation-logs', adminAuth, async (req, res) => {
     if (isMissingTableError(e)) {
       return res.json({ logs: [], total: 0 });
     }
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ─────────────────────────────────────────
+// UGC 举报审核（Apple App Store Guideline 1.2）
+// ─────────────────────────────────────────
+const REPORT_STATUS_VALUES = new Set(['pending', 'reviewing', 'resolved', 'dismissed']);
+
+// GET /api/admin/reports — 举报列表（支持按状态过滤 + 分页）
+router.get('/reports', adminAuth, async (req, res) => {
+  try {
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 100);
+    const offset = (page - 1) * limit;
+    const status = typeof req.query.status === 'string' && REPORT_STATUS_VALUES.has(req.query.status)
+      ? req.query.status
+      : undefined;
+    const where = status ? { status } : {};
+
+    const [reports, total] = await Promise.all([
+      prisma.report.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      prisma.report.count({ where }),
+    ]);
+    res.json({ reports, total, page, limit });
+  } catch (e) {
+    if (isMissingTableError(e)) return res.json({ reports: [], total: 0, page: 1, limit: 20 });
+    console.error('[admin/reports] list error:', e.message);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/admin/reports/:id/status — 更新举报处理状态
+router.put('/reports/:id/status', adminWriteLimiter, adminAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: '举报 ID 无效' });
+    const { status, resolution } = req.body || {};
+    if (!status || !REPORT_STATUS_VALUES.has(String(status))) {
+      return res.status(400).json({ error: '无效的状态值' });
+    }
+    if (resolution != null && String(resolution).length > 1000) {
+      return res.status(400).json({ error: '处理备注过长（最多 1000 字）' });
+    }
+
+    const existing = await prisma.report.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: '举报不存在' });
+
+    const terminal = status === 'resolved' || status === 'dismissed';
+    const updated = await prisma.report.update({
+      where: { id },
+      data: {
+        status: String(status),
+        resolution: resolution != null ? String(resolution).trim() : existing.resolution,
+        handledAt: terminal ? new Date() : existing.handledAt,
+      },
+    });
+    res.json({ success: true, report: updated });
+  } catch (e) {
+    if (isMissingTableError(e)) return res.status(404).json({ error: '举报不存在' });
+    console.error('[admin/reports] update error:', e.message);
     res.status(500).json({ error: '服务器错误' });
   }
 });

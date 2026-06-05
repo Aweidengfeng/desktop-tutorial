@@ -13,7 +13,16 @@ const path = require('path');
 const crypto = require('crypto');
 const { uploadFile } = require('../lib/storage');
 
-const SAFE_UPLOAD_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']);
+const SAFE_UPLOAD_EXTENSIONS = new Set([
+  // 图片
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  // 文档
+  '.pdf',
+  // 视频
+  '.mp4', '.mov', '.m4v', '.mpeg', '.mpg',
+  // 轨迹
+  '.gpx',
+]);
 
 const CLOUD_STORAGE_ENABLED = !!(
   process.env.COS_BUCKET &&
@@ -81,14 +90,14 @@ function safeReadFile(filePath, allowedDir) {
  * @param {string} [allowedDir] 允许读取的磁盘目录（diskStorage 时使用）
  * @returns {Promise<void>}
  */
-async function uploadFilesToStorage(files, allowedDir) {
+async function uploadFilesToStorage(files, allowedDir, folder = 'uploads') {
   for (const f of files) {
     let buf = f.buffer || null;
     if (!buf && f.path && allowedDir) {
       buf = safeReadFile(f.path, allowedDir);
     }
     if (buf) {
-      f.storageUrl = await uploadBufferToStorage(buf, f.originalname, 'uploads', f.mimetype || 'application/octet-stream');
+      f.storageUrl = await uploadBufferToStorage(buf, f.originalname, folder, f.mimetype || 'application/octet-stream');
     }
   }
 }
@@ -108,7 +117,11 @@ function storageUploadMiddleware(allowedDir) {
       await uploadFilesToStorage(files, allowedDir);
       next();
     } catch (e) {
-      console.error('[storage] 上传失败，降级本地存储:', e.message);
+      console.error('[storage] 上传失败:', e.message);
+      // 生产环境 Fail Closed：禁止静默降级本地磁盘，返回错误
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(502).json({ error: '文件存储服务暂不可用，请稍后重试' });
+      }
       next();
     }
   };

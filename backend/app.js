@@ -431,6 +431,7 @@ app.use('/api/gdpr', require('./routes/gdpr'));
 app.use('/api/currency', require('./routes/currency'));
 app.use('/api/metrics', require('./routes/metrics'));
 app.use('/api/feedback', require('./routes/feedback'));
+app.use('/api/reports', require('./routes/reports'));
 
 function getStripeStartupStatus() {
   const stripeKey = (process.env.STRIPE_SECRET_KEY || '').trim();
@@ -674,6 +675,13 @@ if (process.env.NODE_ENV === 'production') {
   }
   if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD) {
     console.error('❌ 安全错误: ADMIN_PASSWORD 未设置或仍为默认值，生产环境拒绝启动');
+    process.exit(1);
+  }
+  // 文件永久存储 Fail Closed：生产环境必须配置腾讯云 COS，禁止回退本地磁盘
+  try {
+    require('./lib/storage').assertProductionStorageReady();
+  } catch (e) {
+    console.error(`❌ 安全错误: ${e.message}`);
     process.exit(1);
   }
 } else {

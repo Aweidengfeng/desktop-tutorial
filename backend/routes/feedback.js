@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
+const { getJwtSecret } = require('../utils/jwtSecret');
 
 const feedbackLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -20,7 +21,7 @@ router.post('/', feedbackLimiter, async (req, res) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const jwt = require('jsonwebtoken');
       const token = authHeader.slice(7);
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production');
+      const decoded = jwt.verify(token, getJwtSecret());
       userId = decoded.id || null;
     }
   } catch (_) {}

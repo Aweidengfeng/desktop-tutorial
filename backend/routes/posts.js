@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
+const { getJwtSecret } = require('../utils/jwtSecret');
 const moderation = require('../utils/moderation');
 const rateLimit = require('express-rate-limit');
 
@@ -132,7 +133,7 @@ router.get('/feed', feedLimiter, async (req, res) => {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
           const jwt = require('jsonwebtoken');
-          const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+          const secret = getJwtSecret();
           const decoded = jwt.verify(authHeader.split(' ')[1], secret);
           userId = decoded.id;
         } catch (e) {}
