@@ -185,7 +185,7 @@
     } catch (error) {
       setMessage(
         messageTarget,
-        'We could not submit right now. Please try again in a moment or email vxbf8352@gmail.com.',
+        'We could not submit right now. Please try again in a moment or email hello@summitlink.com.',
         'error'
       );
     } finally {
