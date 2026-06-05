@@ -127,6 +127,39 @@
     container.classList.remove('hidden');
   }
 
+  // Fallback inbox per form endpoint, used when the backend API is unreachable
+  // (e.g. the static site is served without an API origin). Ensures leads are
+  // never silently lost on submit failure.
+  const FORM_FALLBACK_EMAIL = {
+    '/api/contact': 'hello@summitlink.com',
+    '/api/partnerships': 'partners@summitlink.com',
+    '/api/applications/seven-summits': 'hello@summitlink.com',
+    '/api/applications/guide': 'guides@summitlink.com'
+  };
+
+  function buildMailtoFallback(form, payload) {
+    const endpoint = form.dataset.api || '';
+    const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
+    const subject = `SummitLink form submission (${endpoint || 'website'})`;
+    const body = Object.entries(payload)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+    return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function showMailtoFallback(container, form, payload) {
+    if (!container) return;
+    container.className = 'form-error';
+    container.textContent = 'We could not reach our server right now. ';
+    const link = document.createElement('a');
+    link.href = buildMailtoFallback(form, payload);
+    link.textContent = 'Send your details by email instead';
+    link.className = 'text-sky-300 underline';
+    container.appendChild(link);
+    container.append('. Your information was not lost.');
+    container.classList.remove('hidden');
+  }
+
   function serializeForm(form) {
     const data = {};
     const formData = new FormData(form);
@@ -153,13 +186,14 @@
 
     if (!endpoint) return;
 
+    const payload = serializeForm(form);
+
     try {
       if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Submitting...';
       }
 
-      const payload = serializeForm(form);
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,11 +217,7 @@
       setMessage(messageTarget, 'Submission successful.', 'success');
       form.reset();
     } catch (error) {
-      setMessage(
-        messageTarget,
-        'We could not submit right now. Please try again in a moment or email hello@summitlink.com.',
-        'error'
-      );
+      showMailtoFallback(messageTarget, form, payload);
     } finally {
       if (submitButton) {
         submitButton.disabled = false;
