@@ -292,7 +292,7 @@
 ### SummitLink — 2026-07-01 Release（Web + Backend）
 
 **Security**
-- 管理后台 CSRF：cookie 会话强制双提交 CSRF Token（常量时间比较），******
+- 管理后台 CSRF：cookie 会话强制双提交 CSRF Token（常量时间比较），Bearer（Authorization 头）鉴权请求予以豁免。
 - 支付安全：Stripe Live Mode 守卫 + Webhook 签名校验；日志 PII/密钥脱敏（`sk_`/`pk_`/手机号）。
 
 **Infrastructure**

@@ -191,6 +191,12 @@ router.post('/video', uploadLimiter, auth, (req, res) => {
     } catch (e) {
       console.error('[upload/video]', e);
       res.status(502).json({ error: '视频存储失败，请稍后重试' });
+    } finally {
+      // 启用对象存储时，视频走 diskStorage 落盘后再上传 COS，
+      // 无论成功或失败都需清理本地临时文件，避免磁盘持续增长。
+      if (CLOUD_STORAGE_ENABLED && req.file && req.file.filename) {
+        fs.unlink(path.join(uploadDir, path.basename(req.file.filename)), () => {});
+      }
     }
   });
 });

@@ -80,7 +80,7 @@ describe('管理后台 CSRF 防护', () => {
     expect(res.status).not.toBe(403);
   });
 
-  test('****** Cookie）状态变更请求豁免 CSRF（非 403）', async () => {
+  test('Bearer 鉴权（非 Cookie）状态变更请求豁免 CSRF（非 403）', async () => {
     const adminToken = jwt.sign(
       { isAdmin: true, username: 'admin' },
       process.env.JWT_SECRET,
