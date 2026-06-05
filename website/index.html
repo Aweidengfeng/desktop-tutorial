@@ -8,11 +8,19 @@
   <meta property="og:title" content="SummitLink | Global Mountaineering Infrastructure" />
   <meta property="og:description" content="Investor-grade global platform connecting climbers, guides, operators, and partners." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="./index.html" />
   <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <meta property="og:url" content="https://summitlink.cn/" />
+  <meta property="og:site_name" content="SummitLink" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="SummitLink | Global Mountaineering Infrastructure" />
+  <meta name="twitter:description" content="SummitLink is building the global infrastructure for mountaineering and high-altitude expeditions." />
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=80" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://summitlink.cn/" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
   <style>
@@ -55,6 +63,31 @@
     @keyframes fadeUp { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0);} }
     @media (max-width: 920px){ .metric-float{position:static;display:inline-block;margin-top:1.2rem;} }
   </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://summitlink.cn/#organization",
+        "name": "SummitLink",
+        "legalName": "Summit Technology LLC",
+        "url": "https://summitlink.cn/",
+        "email": "hello@summitlink.com",
+        "description": "SummitLink is building the global infrastructure for mountaineering and high-altitude expeditions, connecting climbers with verified guides and fully-supported expeditions across all 7 continents.",
+        "sameAs": []
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://summitlink.cn/#website",
+        "url": "https://summitlink.cn/",
+        "name": "SummitLink",
+        "publisher": { "@id": "https://summitlink.cn/#organization" },
+        "inLanguage": "en"
+      }
+    ]
+  }
+  </script>
 </head>
 <body data-page="home">
   <nav class="site-nav" aria-label="Primary Navigation">
