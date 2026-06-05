@@ -81,7 +81,7 @@ function injectShell() {
             </div>
             <p class="max-w-xl text-sm leading-7 text-white/60" data-i18n="footer.tagline"></p>
             <div class="space-y-1 text-sm text-white/50">
-              <p>🇨�� <span data-i18n="footer.nodeCn"></span></p>
+              <p>🇨🇳 <span data-i18n="footer.nodeCn"></span></p>
               <p>🌍 <span data-i18n="footer.nodeGlobal"></span></p>
               <p data-icp-only>📄 <span data-i18n="footer.icp"></span></p>
             </div>
