@@ -50,8 +50,8 @@ module.exports = function adminAuth(req, res, next) {
     return res.status(403).json({ error: '无管理员权限' });
   }
 
-  // CSRF 防护：仅对“基于 Cookie 的会话”生效。Authorization 头不会被浏览器自动附带，
-  // 因此使用 ****** CSRF，予以豁免（统一为 ****** CSRF Token 方案）。
+  // CSRF 防护：仅对“基于 Cookie 的会话”生效。Bearer（Authorization 头）不会被浏览器自动附带，
+  // 因此无 CSRF 风险，予以豁免；仅 Cookie 会话才需要双提交校验（adminCsrf Cookie + X-CSRF-Token 头）。
   const usingCookieSession = !bearerToken && !!cookieToken;
   if (usingCookieSession && !SAFE_METHODS.has(req.method)) {
     const csrfCookie = req.cookies?.adminCsrf;
