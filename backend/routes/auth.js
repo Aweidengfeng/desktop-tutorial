@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
-const db = require('../db/database');
 const auth = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimits');
 const { encryptPII, decryptPII } = require('../utils/crypto');
@@ -411,13 +410,14 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (!emailCode) {
       return res.status(400).json({ error: '请输入邮箱验证码' });
     }
-    const codeRecord = db.prepare(
-      'SELECT id, expires_at FROM email_codes WHERE email = ? AND code = ? AND used = 0 ORDER BY id DESC LIMIT 1'
-    ).get(email, emailCode);
-    if (!codeRecord || Date.now() > codeRecord.expires_at) {
+    const codeRecord = await prisma.emailCode.findFirst({
+      where: { email, code: emailCode, used: false },
+      orderBy: { id: 'desc' },
+    });
+    if (!codeRecord || Date.now() > Number(codeRecord.expiresAt)) {
       return res.status(400).json({ error: '验证码无效或已过期，请重新获取' });
     }
-    db.prepare('UPDATE email_codes SET used = 1 WHERE id = ?').run(codeRecord.id);
+    await prisma.emailCode.update({ where: { id: codeRecord.id }, data: { used: true } });
     // 用4位随机十六进制后缀确保用户名唯一
     const suffix = crypto.randomBytes(2).toString('hex');
     const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
@@ -666,7 +666,7 @@ router.put('/change-phone', authWriteLimiter, auth, async (req, res) => {
       where: { phone, code, used: false },
       orderBy: { id: 'desc' },
     });
-    if (!record || Date.now() > record.expiresAt) return res.status(401).json({ error: '验证码无效或已过期' });
+    if (!record || Date.now() > Number(record.expiresAt)) return res.status(401).json({ error: '验证码无效或已过期' });
     await prisma.smsCode.update({ where: { id: record.id }, data: { used: true } });
     await prisma.user.update({ where: { id: req.user.id }, data: { phone: encryptPII(phone) } });
     res.json({ success: true });
@@ -726,7 +726,7 @@ router.post('/sms/send', authLimiter, async (req, res) => {
     const expiresAt = Date.now() + 5 * 60 * 1000;
     // 使旧验证码失效
     await prisma.smsCode.updateMany({ where: { phone, used: false }, data: { used: true } });
-    await prisma.smsCode.create({ data: { phone, code, expiresAt } });
+    await prisma.smsCode.create({ data: { phone, code, expiresAt: BigInt(expiresAt) } });
     // 记录发送时间
     smsSendCooldown.set(phone, Date.now());
     // 发送
@@ -768,7 +768,7 @@ router.post('/sms/verify', async (req, res) => {
       smsFailCount.set(phone, current);
       return res.status(401).json({ error: '验证码错误' });
     }
-    if (Date.now() > record.expiresAt) {
+    if (Date.now() > Number(record.expiresAt)) {
       return res.status(401).json({ error: '验证码已过期，请重新获取' });
     }
     await prisma.smsCode.update({ where: { id: record.id }, data: { used: true } });
@@ -818,7 +818,7 @@ router.post('/email/send', async (req, res) => {
     const expiresAt = Date.now() + 5 * 60 * 1000;
     // 使旧验证码失效
     await prisma.emailCode.updateMany({ where: { email, used: false }, data: { used: true } });
-    await prisma.emailCode.create({ data: { email, code, expiresAt } });
+    await prisma.emailCode.create({ data: { email, code, expiresAt: BigInt(expiresAt) } });
     // 记录发送时间
     emailSendCooldown.set(email, Date.now());
     // 发送邮件（优先使用 mailer.js，降级到 emailProvider）
@@ -857,7 +857,7 @@ router.post('/email/verify', async (req, res) => {
       emailFailCount.set(email, current);
       return res.status(401).json({ error: '验证码错误' });
     }
-    if (Date.now() > record.expiresAt) {
+    if (Date.now() > Number(record.expiresAt)) {
       return res.status(401).json({ error: '验证码已过期，请重新获取' });
     }
     await prisma.emailCode.update({ where: { id: record.id }, data: { used: true } });
@@ -891,7 +891,7 @@ router.put('/change-email', authWriteLimiter, auth, async (req, res) => {
       where: { email, code, used: false },
       orderBy: { id: 'desc' },
     });
-    if (!record || Date.now() > record.expiresAt) return res.status(401).json({ error: '验证码无效或已过期' });
+    if (!record || Date.now() > Number(record.expiresAt)) return res.status(401).json({ error: '验证码无效或已过期' });
     await prisma.emailCode.update({ where: { id: record.id }, data: { used: true } });
     await prisma.user.update({ where: { id: req.user.id }, data: { email: encryptPII(email) } });
     res.json({ success: true });

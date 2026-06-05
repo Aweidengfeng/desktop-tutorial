@@ -110,7 +110,7 @@ model SmsCode {
   phone     String
   code      String
   purpose   String   @default("login")
-  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds (matches database.js INTEGER column)
+  expiresAt BigInt   @map("expires_at") // Unix timestamp in milliseconds (BigInt: ms value exceeds INT4 range on PostgreSQL)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
@@ -125,7 +125,7 @@ model EmailCode {
   email     String
   code      String
   purpose   String   @default("login")
-  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds
+  expiresAt BigInt   @map("expires_at") // Unix timestamp in milliseconds (BigInt: ms value exceeds INT4 range on PostgreSQL)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")

@@ -1148,7 +1148,7 @@ CREATE TABLE IF NOT EXISTS sms_codes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   phone TEXT NOT NULL,
   code TEXT NOT NULL,
-  expires_at INTEGER NOT NULL,
+  expires_at BIGINT NOT NULL,
   used INTEGER DEFAULT 0
 );
 
@@ -1455,7 +1455,7 @@ CREATE TABLE IF NOT EXISTS email_codes (
   email TEXT NOT NULL,
   code TEXT NOT NULL,
   purpose TEXT DEFAULT 'login',
-  expires_at INTEGER NOT NULL,
+  expires_at BIGINT NOT NULL,
   used INTEGER DEFAULT 0,
   user_id INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
