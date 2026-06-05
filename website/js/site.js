@@ -141,8 +141,9 @@
     const endpoint = form.dataset.api || '';
     const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
     const subject = `SummitLink form submission (${endpoint || 'website'})`;
+    const flatten = (v) => String(v).replace(/[\r\n]+/g, ' ').trim();
     const body = Object.entries(payload)
-      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.map(flatten).join(', ') : flatten(value)}`)
       .join('\n');
     return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
