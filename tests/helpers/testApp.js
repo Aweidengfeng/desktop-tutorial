@@ -88,6 +88,8 @@ function createApp() {
   app.use('/api/notifications', loadRoute('../../backend/routes/notifications'));
   app.use('/api/invite',        loadRoute('../../backend/routes/invite'));
   app.use('/api/admin',         loadRoute('../../backend/routes/admin-messages'));
+  // 官网线索收集：必须在 /api/admin 之前挂载（GET /admin/leads 命中本路由）
+  app.use('/api',               loadRoute('../../backend/routes/leads'));
   app.use('/api/admin',         loadRoute('../../backend/routes/admin'));
   app.use('/api/expeditions',   loadRoute('../../backend/routes/expeditions'));
   app.use('/api/launch',        loadRoute('../../backend/routes/launch'));
