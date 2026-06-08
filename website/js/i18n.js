@@ -33,7 +33,7 @@ export const translations = {
       rights: '© 2026 SummitLink. All rights reserved.',
       nodeCn: '中国节点：腾讯云 ap-beijing',
       nodeGlobal: '全球节点：Railway US',
-      icp: '京ICP备XXXXXXXX号（备案中）'
+      icp: '京ICP备2026031853号-2A'
     },
     common: {
       startClimbing: '开始你的攀登',
@@ -315,7 +315,7 @@ export const translations = {
       rights: '© 2026 SummitLink. All rights reserved.',
       nodeCn: 'China node: Tencent Cloud ap-beijing',
       nodeGlobal: 'Global node: Railway US',
-      icp: 'Beijing ICP XXXXXXXXX (pending)'
+      icp: '京ICP备2026031853号-2A'
     },
     common: {
       startClimbing: 'Start Climbing',
@@ -597,7 +597,7 @@ export const translations = {
       rights: '© 2026 SummitLink. Todos los derechos reservados.',
       nodeCn: 'Nodo China: Tencent Cloud ap-beijing',
       nodeGlobal: 'Nodo global: Railway US',
-      icp: 'ICP de Pekín XXXXXXXXX (pendiente)'
+      icp: '京ICP备2026031853号-2A'
     },
     common: {
       startClimbing: 'Comienza a escalar',
@@ -879,7 +879,7 @@ export const translations = {
       rights: '© 2026 SummitLink. All rights reserved.',
       nodeCn: '中国ノード：Tencent Cloud ap-beijing',
       nodeGlobal: 'グローバルノード：Railway US',
-      icp: '北京ICP XXXXXXXXX（申請中）'
+      icp: '京ICP备2026031853号-2A'
     },
     common: {
       startClimbing: '登攀を始める',

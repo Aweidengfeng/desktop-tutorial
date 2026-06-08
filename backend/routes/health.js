@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     sentry: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
   };
   if (region === 'cn') {
-    checks.icp_number = regionConfig.icpNumber || process.env.ICP_NUMBER || '京ICP备XXXXXXXX号（备案中）';
+    checks.icp_number = regionConfig.icpNumber || process.env.ICP_NUMBER || '京ICP备2026031853号-2A';
   }
 
   // DB 连通性检查
