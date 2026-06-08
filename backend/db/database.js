@@ -1590,6 +1590,7 @@ CREATE TABLE IF NOT EXISTS invite_records (
   rewarded_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
 `);
 
 // ── A7: expeditions 和 expedition_orders 表 ──────────────────

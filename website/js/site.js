@@ -1,6 +1,25 @@
 (function () {
   const APP_DEADLINE = '2026-10-15T23:59:59Z';
 
+  // Absolute API origin for the lead-collection backend. The static site is served
+  // from GitHub Pages (summitlink.cn) which has no backend, so form `data-api`
+  // paths must be resolved against this origin. Override at runtime by setting
+  // `window.SUMMITLINK_API_BASE` before this script loads.
+  const API_BASE = (typeof window !== 'undefined' && window.SUMMITLINK_API_BASE) || '';
+
+  // Resolve a form's relative `data-api` path into an absolute endpoint when an
+  // API base is configured; otherwise fall back to the same-origin path.
+  function resolveEndpoint(path) {
+    if (!path) return path;
+    if (/^https?:\/\//i.test(path)) return path;
+    if (!API_BASE) return path;
+    try {
+      return new URL(path, API_BASE).toString();
+    } catch (e) {
+      return path;
+    }
+  }
+
   function initNav() {
     const nav = document.querySelector('.site-nav');
     const toggle = document.querySelector('[data-menu-toggle]');
@@ -127,6 +146,40 @@
     container.classList.remove('hidden');
   }
 
+  // Fallback inbox per form endpoint, used when the backend API is unreachable
+  // (e.g. the static site is served without an API origin). Ensures leads are
+  // never silently lost on submit failure.
+  const FORM_FALLBACK_EMAIL = {
+    '/api/contact': 'hello@summitlink.com',
+    '/api/partnerships': 'partners@summitlink.com',
+    '/api/applications/seven-summits': 'hello@summitlink.com',
+    '/api/applications/guide': 'guides@summitlink.com'
+  };
+
+  function buildMailtoFallback(form, payload) {
+    const endpoint = form.dataset.api || '';
+    const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
+    const subject = `SummitLink form submission (${endpoint || 'website'})`;
+    const flatten = (v) => String(v).replace(/[\r\n]+/g, ' ').trim();
+    const body = Object.entries(payload)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.map(flatten).join(', ') : flatten(value)}`)
+      .join('\n');
+    return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function showMailtoFallback(container, form, payload) {
+    if (!container) return;
+    container.className = 'form-error';
+    container.textContent = 'We could not reach our server right now. ';
+    const link = document.createElement('a');
+    link.href = buildMailtoFallback(form, payload);
+    link.textContent = 'Send your details by email instead';
+    link.className = 'text-sky-300 underline';
+    container.appendChild(link);
+    container.append('. Your information was not lost.');
+    container.classList.remove('hidden');
+  }
+
   function serializeForm(form) {
     const data = {};
     const formData = new FormData(form);
@@ -153,14 +206,16 @@
 
     if (!endpoint) return;
 
+    const payload = serializeForm(form);
+    const requestUrl = resolveEndpoint(endpoint);
+
     try {
       if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Submitting...';
       }
 
-      const payload = serializeForm(form);
-      const response = await fetch(endpoint, {
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -183,11 +238,7 @@
       setMessage(messageTarget, 'Submission successful.', 'success');
       form.reset();
     } catch (error) {
-      setMessage(
-        messageTarget,
-        'We could not submit right now. Please try again in a moment or email vxbf8352@gmail.com.',
-        'error'
-      );
+      showMailtoFallback(messageTarget, form, payload);
     } finally {
       if (submitButton) {
         submitButton.disabled = false;
