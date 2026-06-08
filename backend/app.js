@@ -234,76 +234,9 @@ if (!process.env.API_BASE) {
 const { mountUniversalLinks } = require('./middleware/universalLinks');
 mountUniversalLinks(app);
 
-// 专门处理HTML文件路由（避免中文文件名问题）
-const htmlFile = path.join(rootPath, 'index.html');
-const renderMainPage = (req, res) => {
-  console.log('📄 请求HTML文件:', htmlFile);
-  console.log('📄 文件存在:', fs.existsSync(htmlFile));
-  const amapKey = process.env.AMAP_KEY || '';
-  const amapSecurityCode = process.env.AMAP_SECURITY_CODE || '';
-  const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
-  const escapeHtmlAttr = (value) => String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-  fs.readFile(htmlFile, 'utf8', (err, html) => {
-    if (err) {
-      console.error('❌ 读取HTML文件失败:', err);
-      return res.status(500).send('Internal Server Error');
-    }
-    let result = html
-      .replaceAll('YOUR_AMAP_KEY', amapKey);
-    // 注入 SENTRY_DSN、API_BASE、ENV 和 MAP_PROVIDER 到前端
-    const sentryDsn = process.env.SENTRY_DSN || '';
-    const apiBase = process.env.API_BASE || '';
-    const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
-    const appleClientId = process.env.APPLE_CLIENT_ID || '';
-    const injected = `<head>
-  <script>
-    window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)};
-    window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};
-    window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};
-    window.__STRIPE_PUBLISHABLE_KEY__ = ${JSON.stringify(stripePublishableKey)};
-    window.__AMAP_KEY__ = ${JSON.stringify(amapKey)};
-    window.__AMAP_SECURITY_CODE__ = ${JSON.stringify(amapSecurityCode)};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}${appleClientId ? `\n    window.__APPLE_CLIENT_ID__ = ${JSON.stringify(appleClientId)};` : ''}
-  </script>`;
-    result = result.replace('<head>', injected);
-    result = result.replace(
-      /<meta name="stripe-publishable-key" content="[^"]*">/,
-      `<meta name="stripe-publishable-key" content="${escapeHtmlAttr(stripePublishableKey)}">`
-    );
-    // 在 AMap script 标签之前注入安全密钥配置（高德官方要求：必须先于 AMap JS 加载）
-    if (amapSecurityCode) {
-      const amapSecurityScript = `<script>window._AMapSecurityConfig = { securityJsCode: ${JSON.stringify(amapSecurityCode)} };</script>`;
-      result = result.replace(
-        /<script[^>]+webapi\.amap\.com\/maps[^>]*>/,
-        amapSecurityScript + '\n$&'
-      );
-    }
-    // 若 Key 或安全密钥未配置，注入提示脚本
-    if (!amapKey || !amapSecurityCode) {
-      const missingVars = [!amapKey && 'AMAP_KEY', !amapSecurityCode && 'AMAP_SECURITY_CODE'].filter(Boolean).join(' / ');
-      const warningScript = `<script>
-(function(){
-  var msg = '地图未配置：请在环境变量中设置 ${missingVars}';
-  console.error('[SummitLink]', msg);
-  document.addEventListener('DOMContentLoaded', function(){
-    document.querySelectorAll('[id*="map"],[id*="Map"],[class*="map-container"]').forEach(function(el){
-      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#f87171;font-size:13px;text-align:center;padding:12px;">' + msg + '</div>';
-    });
-  });
-})();
-</script>`;
-      result = result.replace('</head>', warningScript + '\n</head>');
-    }
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store');
-    res.send(result);
-  });
-};
-// 根路径和 SummitLink 入口都走动态注入逻辑，避免 express.static 直接返回未替换占位符
-app.get(['/', '/index.html', '/summitlink', '/summitlink.html'], htmlPageLimiter, renderMainPage);
+// ─── 静态文件服务 ──────────────────────────────────────────────────────────
+// 优先级：React 构建产物（dist-app/）→ 传统 Alpine.js 旧版（/legacy）→ 其他静态资源
+// 运行时配置已迁移到 GET /api/config，不再注入 HTML。
 
 // 敏感文件保护：阻止测试脚本、配置文件被直接下载
 app.use((req, res, next) => {
@@ -318,10 +251,63 @@ app.use((req, res, next) => {
   }
   next();
 });
-// 静态文件服务 - 根目录（必须放在根路径 HTML 注入路由之后）
-app.use(express.static(rootPath));
-// 前端核心脚本：index.html 引用 `/js/app-core.js`，但物理路径是 `www/js/`，
-// 因此显式映射 `/js` → `<rootPath>/www/js`，避免 404 导致整个 SPA 加载失败。
+
+// React 前端（新版）：优先从 dist-app/ 提供构建产物
+const distAppPath = path.join(rootPath, 'dist-app');
+if (fs.existsSync(distAppPath)) {
+  app.use(express.static(distAppPath, { index: false }));
+  // SPA fallback：所有非 /api 路由均返回 React 入口 index.html
+  app.get(['/', '/index.html'], htmlPageLimiter, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(distAppPath, 'index.html'));
+  });
+  // React Router 路径（history mode）的 SPA fallback
+  app.get(/^\/(?!api|uploads|legacy|js|i18n|admin|\.well-known)/, htmlPageLimiter, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(distAppPath, 'index.html'));
+  });
+} else {
+  // 旧版 Alpine.js 兜底（dist-app/ 尚未构建时继续提供服务）
+  const htmlFile = path.join(rootPath, 'index.html');
+  const renderLegacyPage = (req, res) => {
+    const amapKey = process.env.AMAP_KEY || '';
+    const amapSecurityCode = process.env.AMAP_SECURITY_CODE || '';
+    const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+    const escapeHtmlAttr = (value) => String(value || '')
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    fs.readFile(htmlFile, 'utf8', (err, html) => {
+      if (err) return res.status(500).send('Internal Server Error');
+      let result = html.replaceAll('YOUR_AMAP_KEY', amapKey);
+      const sentryDsn = process.env.SENTRY_DSN || '';
+      const apiBase = process.env.API_BASE || '';
+      const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+      const appleClientId = process.env.APPLE_CLIENT_ID || '';
+      const injected = `<head>\n  <script>\n    window.__SENTRY_DSN = ${JSON.stringify(sentryDsn)};\n    window.__ENV = ${JSON.stringify(process.env.NODE_ENV || 'production')};\n    window.__MAP_PROVIDER = ${JSON.stringify(process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap')};\n    window.__STRIPE_PUBLISHABLE_KEY__ = ${JSON.stringify(stripePublishableKey)};\n    window.__AMAP_KEY__ = ${JSON.stringify(amapKey)};\n    window.__AMAP_SECURITY_CODE__ = ${JSON.stringify(amapSecurityCode)};${apiBase ? `\n    window.__API_BASE__ = ${JSON.stringify(apiBase)};` : ''}${googleClientId ? `\n    window.__GOOGLE_CLIENT_ID__ = ${JSON.stringify(googleClientId)};` : ''}${appleClientId ? `\n    window.__APPLE_CLIENT_ID__ = ${JSON.stringify(appleClientId)};` : ''}\n  </script>`;
+      result = result.replace('<head>', injected);
+      result = result.replace(/<meta name="stripe-publishable-key" content="[^"]*">/, `<meta name="stripe-publishable-key" content="${escapeHtmlAttr(stripePublishableKey)}">`);
+      if (amapSecurityCode) result = result.replace(/<script[^>]+webapi\.amap\.com\/maps[^>]*>/, `<script>window._AMapSecurityConfig = { securityJsCode: ${JSON.stringify(amapSecurityCode)} };</script>\n$&`);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      res.send(result);
+    });
+  };
+  app.get(['/', '/index.html', '/summitlink', '/summitlink.html'], htmlPageLimiter, renderLegacyPage);
+  app.use(express.static(rootPath));
+}
+
+// 旧版 Alpine.js 保留在 /legacy 路径，便于对比和回退
+app.use('/legacy', htmlPageLimiter, (req, res, next) => {
+  if (req.path === '/' || req.path === '') {
+    const htmlFile = path.join(rootPath, 'index.html');
+    if (!fs.existsSync(htmlFile)) return next();
+    res.setHeader('Cache-Control', 'no-store');
+    return res.sendFile(htmlFile);
+  }
+  next();
+});
+app.use('/legacy', express.static(rootPath));
+
+// 静态辅助路径
 app.use('/js', express.static(path.join(rootPath, 'www', 'js')));
 app.use('/i18n', express.static(path.join(rootPath, 'www', 'i18n')));
 
@@ -366,6 +352,24 @@ app.use('/api/gdpr', process.env.NODE_ENV === 'test' ? testStrictLimiter : gdprL
 
 // HTTP 缓存头（在路由挂载之前）
 app.use(cacheMiddleware);
+
+// 前端运行时配置：替代在 HTML 中注入环境变量的方式，避免前后端静态文件耦合
+app.get('/api/config', (req, res) => {
+  res.setHeader('Cache-Control', 'private, max-age=60');
+  res.json({
+    env: process.env.NODE_ENV || 'production',
+    apiBase: process.env.API_BASE || '',
+    mapProvider: process.env.MAPBOX_TOKEN ? 'mapbox' : 'amap',
+    mapboxToken: process.env.MAPBOX_TOKEN || '',
+    amapKey: process.env.AMAP_KEY || '',
+    amapSecurityCode: process.env.AMAP_SECURITY_CODE || '',
+    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+    appleClientId: process.env.APPLE_CLIENT_ID || '',
+    sentryDsn: process.env.SENTRY_DSN || '',
+    region: req.region || 'us',
+  });
+});
 
 app.get('/api/region', (req, res) => {
   const payload = {

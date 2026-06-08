@@ -35,7 +35,10 @@
     "test:frontend": "node frontend_test.js",
     "test:db": "node db_test.js",
     "build:admin": "vite build --config vite.admin.config.js",
-    "dev:admin": "vite --config vite.admin.config.js --port 3001"
+    "dev:admin": "vite --config vite.admin.config.js --port 3001",
+    "build:app": "vite build --config vite.app.config.js",
+    "dev:app": "vite --config vite.app.config.js --port 3002",
+    "build:all": "npm run build && npm run build:app && npm run build:admin"
   },
   "dependencies": {
     "@capacitor/android": "8.3.4",
