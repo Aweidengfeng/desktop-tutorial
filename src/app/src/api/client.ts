@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base: 开发时 Vite 代理到 localhost:8080，生产时从 /api/config 获取
-const BASE_URL = (window as Window).__API_BASE__ || '';
+const BASE_URL = window.__API_BASE__ || '';
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

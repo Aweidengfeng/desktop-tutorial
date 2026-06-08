@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -14,10 +14,18 @@ export function RegisterPage() {
   const [countdown, setCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup interval on unmount
+  useEffect(() => () => { if (countdownRef.current) clearInterval(countdownRef.current); }, []);
 
   const startCountdown = () => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
     setCountdown(60);
-    const t = setInterval(() => setCountdown((c) => { if (c <= 1) { clearInterval(t); return 0; } return c - 1; }), 1000);
+    countdownRef.current = setInterval(() => setCountdown((c) => {
+      if (c <= 1) { clearInterval(countdownRef.current!); countdownRef.current = null; return 0; }
+      return c - 1;
+    }), 1000);
   };
 
   const handleSendCode = async () => {

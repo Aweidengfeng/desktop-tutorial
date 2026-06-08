@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { Avatar, EmptyState, ErrorBanner, Spinner } from '../components/ui/Common';
@@ -82,7 +82,7 @@ export function HomePage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const loadPosts = async (pg = 1) => {
+  const loadPosts = useCallback(async (pg = 1) => {
     setLoading(true);
     setError('');
     try {
@@ -96,9 +96,9 @@ export function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated]);
 
-  useEffect(() => { loadPosts(1); }, [isAuthenticated]);
+  useEffect(() => { loadPosts(1); }, [loadPosts]);
 
   return (
     <AppShell

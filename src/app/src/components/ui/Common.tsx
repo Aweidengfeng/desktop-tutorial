@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 interface SpinnerProps {
   className?: string;
 }
@@ -66,16 +68,17 @@ interface AvatarProps {
 const SIZE_MAP = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-14 h-14 text-base' };
 
 export function Avatar({ src, name, size = 'md', className = '' }: AvatarProps) {
+  const [imgError, setImgError] = useState(false);
   const initials = name ? name.slice(0, 1).toUpperCase() : '?';
   const sizeClass = SIZE_MAP[size];
 
-  if (src) {
+  if (src && !imgError) {
     return (
       <img
         src={src}
         alt={name || 'avatar'}
         className={`${sizeClass} rounded-full object-cover bg-slate-700 ${className}`}
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        onError={() => setImgError(true)}
       />
     );
   }

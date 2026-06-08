@@ -261,7 +261,8 @@ if (fs.existsSync(distAppPath)) {
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(distAppPath, 'index.html'));
   });
-  // React Router 路径（history mode）的 SPA fallback
+  // SPA fallback: React Router (history mode) — serve index.html for every
+  // non-asset path. Excluded prefixes: api, uploads, legacy, js, i18n, admin, .well-known
   app.get(/^\/(?!api|uploads|legacy|js|i18n|admin|\.well-known)/, htmlPageLimiter, (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(path.join(distAppPath, 'index.html'));

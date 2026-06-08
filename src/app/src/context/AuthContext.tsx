@@ -29,9 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('sl_token'));
   const [loading, setLoading] = useState(true);
 
-  // 启动时校验会话有效性
+  // 启动时校验会话有效性（仅运行一次；使用 token 快照，不依赖 token state）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
+    const storedToken = localStorage.getItem('sl_token');
+    if (!storedToken) { setLoading(false); return; }
     authApi.me()
       .then((res) => {
         const u = res.data as User;
@@ -39,14 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('sl_user', JSON.stringify(u));
       })
       .catch(() => {
-        // token 失效
         localStorage.removeItem('sl_token');
         localStorage.removeItem('sl_user');
         setToken(null);
         setUser(null);
       })
       .finally(() => setLoading(false));
-  }, []); // 只在挂载时运行一次
+  }, []); // intentional: validate token snapshot once on mount
 
   const _persistSession = useCallback((userData: User, authToken: string) => {
     localStorage.setItem('sl_token', authToken);

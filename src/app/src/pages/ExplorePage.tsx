@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { EmptyState, ErrorBanner, Spinner } from '../components/ui/Common';
@@ -93,7 +93,7 @@ export function ExplorePage() {
   const [hasMore, setHasMore] = useState(true);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadPeaks = async (pg = 1, q = '') => {
+  const loadPeaks = useCallback(async (pg = 1, q = '') => {
     setLoading(true); setError('');
     try {
       const res = await peaksApi.list({ page: pg, pageSize: 20, search: q || undefined });
@@ -103,9 +103,9 @@ export function ExplorePage() {
       setPage(pg);
     } catch { setError('加载失败，请重试'); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  const loadGuides = async (pg = 1) => {
+  const loadGuides = useCallback(async (pg = 1) => {
     setLoading(true); setError('');
     try {
       const res = await guidesApi.list({ page: pg, pageSize: 20 });
@@ -115,13 +115,16 @@ export function ExplorePage() {
       setPage(pg);
     } catch { setError('加载失败，请重试'); }
     finally { setLoading(false); }
-  };
+  }, []);
 
   useEffect(() => {
     setPage(1); setSearch('');
     if (tab === 'peaks') loadPeaks(1, '');
     else if (tab === 'guides') loadGuides(1);
-  }, [tab]);
+  }, [tab, loadPeaks, loadGuides]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); }, []);
 
   const handleSearch = (val: string) => {
     setSearch(val);
