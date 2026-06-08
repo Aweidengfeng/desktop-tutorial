@@ -1,7 +1,7 @@
 /**
  * backend/lib/commission.js
  *
- * Dual-region commission engine for Unsummit / 末登峰 platform.
+ * Dual-region commission engine for Unsummit / 未登峰 platform.
  *
  * Regions: 'us' | 'cn'
  * Merchant types: 'guide' | 'club'

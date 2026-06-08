@@ -44,7 +44,20 @@ npx cap open ios
 
 ## CI/CD 自动构建
 
-### Android（GitHub Actions）
+### 今晚装机：下载可直接安装的 Debug APK（无需 keystore）
+
+每次推送分支或手动触发 `Build Android (APK + AAB)` workflow，CI 都会产出一个**可直接安装到安卓手机**的 debug APK，无需 Google Play 账号或签名 keystore。
+
+1. 打开 GitHub → **Actions** → 选择 `Build Android (APK + AAB)` 的最新一次运行
+2. 在页面底部 **Artifacts** 区域下载 `summitlink-debug-apk-<run_number>`
+3. 解压得到 `app-debug.apk`，传到安卓手机（或用二维码/网盘）
+4. 在手机上允许「安装未知来源应用」后点击安装
+5. 打开应用即可连接真实后端、真实登录联调
+
+> ⚠️ Debug APK 仅用于内部测试装机，**不能**上架 Google Play（商店要求 release 签名的 AAB）。
+> 手动触发：Actions → `Build Android (APK + AAB)` → `Run workflow`。
+
+### Android（GitHub Actions）正式签名包
 
 触发方式：推送 `v*` tag 或手动触发
 ```bash

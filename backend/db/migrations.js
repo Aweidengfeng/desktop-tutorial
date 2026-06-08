@@ -64,6 +64,27 @@ async function runStartupMigrations(prisma) {
           "created_at" TIMESTAMPTZ DEFAULT NOW()
         )
       `);
+      // 官网线索收集表（与 Prisma model Lead 对齐）。生产由 prisma db push 创建，
+      // 此处 IF NOT EXISTS 作为幂等兜底，确保任何启动路径下 leads 表都存在。
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "leads" (
+          "id" SERIAL PRIMARY KEY,
+          "type" TEXT NOT NULL,
+          "name" TEXT,
+          "email" TEXT,
+          "phone" TEXT,
+          "company" TEXT,
+          "subject" TEXT,
+          "message" TEXT,
+          "payload" TEXT NOT NULL DEFAULT '{}',
+          "status" TEXT NOT NULL DEFAULT 'new',
+          "source" TEXT,
+          "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_leads_type" ON "leads"("type")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_leads_status" ON "leads"("status")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_leads_created_at" ON "leads"("created_at")`);
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "content_reports" (
           "id" SERIAL PRIMARY KEY,
@@ -153,6 +174,26 @@ async function runStartupMigrations(prisma) {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+      // 官网线索收集表（与 Prisma model Lead 对齐），SQLite（开发/测试）。
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS leads (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL,
+          name TEXT,
+          email TEXT,
+          phone TEXT,
+          company TEXT,
+          subject TEXT,
+          message TEXT,
+          payload TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL DEFAULT 'new',
+          source TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_leads_type ON leads(type)');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at)');
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS content_reports (
           id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -110,7 +110,7 @@ model SmsCode {
   phone     String
   code      String
   purpose   String   @default("login")
-  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds (matches database.js INTEGER column)
+  expiresAt BigInt   @map("expires_at") // Unix timestamp in milliseconds (BigInt: ms value exceeds INT4 range on PostgreSQL)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
@@ -125,7 +125,7 @@ model EmailCode {
   email     String
   code      String
   purpose   String   @default("login")
-  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds
+  expiresAt BigInt   @map("expires_at") // Unix timestamp in milliseconds (BigInt: ms value exceeds INT4 range on PostgreSQL)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
@@ -1673,6 +1673,35 @@ model Feedback {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@map("feedback")
+}
+
+// ─────────────────────────────────────────
+// 官网线索收集（Lead Collection）
+// 对应官网 4 个表单：联系、合作、向导申请、七大洲报名。
+// 写入 PostgreSQL（生产）/ SQLite（开发），管理端 GET /api/admin/leads 可见。
+// ─────────────────────────────────────────
+
+model Lead {
+  id        Int      @id @default(autoincrement())
+  // contact | partnership | guide_application | seven_summits
+  type      String
+  name      String?
+  email     String?
+  phone     String?
+  company   String?
+  subject   String?
+  message   String?
+  // 完整表单 JSON（保留所有提交字段），存为文本
+  payload   String   @default("{}")
+  // new | contacted | closed
+  status    String   @default("new")
+  source    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
 }
 
 // ─────────────────────────────────────────
