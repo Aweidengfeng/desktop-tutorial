@@ -1,4 +1,4 @@
-name: Build Android AAB
+name: Build Android (APK + AAB)
 
 on:
   pull_request:
@@ -64,7 +64,7 @@ jobs:
         run: npm install
 
       - name: Ensure Capacitor Android dependencies
-        run: npm install --no-save @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
+        run: npm install --no-save @capacitor/core@8.3.4 @capacitor/cli@8.3.4 @capacitor/android@8.3.4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -102,6 +102,11 @@ jobs:
           cd android
           ./gradlew bundleDebug
 
+      - name: Build Debug APK (directly installable)
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
       - name: Build Release AAB (signed)
         if: startsWith(github.ref, 'refs/tags/v') && env.HAS_ANDROID_KEYSTORE == 'true'
         run: |
@@ -112,7 +117,7 @@ jobs:
         if: always() && hashFiles('android/app/build/outputs/bundle/release/*.aab') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: summitlink-release-${{ replace(github.ref_name, '/', '-') }}.aab
+          name: summitlink-release-aab-${{ github.run_number }}
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 30
 
@@ -120,8 +125,16 @@ jobs:
         if: always() && hashFiles('android/app/build/outputs/bundle/debug/*.aab') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: summitlink-debug-${{ replace(github.ref_name, '/', '-') }}.aab
+          name: summitlink-debug-aab-${{ github.run_number }}
           path: android/app/build/outputs/bundle/debug/*.aab
+          retention-days: 30
+
+      - name: Upload debug APK artifact (install on phone)
+        if: always() && hashFiles('android/app/build/outputs/apk/debug/*.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: summitlink-debug-apk-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
       - name: Cleanup keystore file
