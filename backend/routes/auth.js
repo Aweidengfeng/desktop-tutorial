@@ -9,6 +9,7 @@ const auth = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimits');
 const { encryptPII, decryptPII } = require('../utils/crypto');
 const { INVITE_REWARD_POINTS, normalizeInviteCode, ensureUserInviteCode } = require('../utils/invite');
+const { getJwtSecret } = require('../utils/jwtSecret');
 
 const POLICY_VERSION = '2026-04-20';
 
@@ -21,7 +22,7 @@ if (!SECRET) {
     console.warn('WARNING: JWT_SECRET is not set. Using default dev secret. Do NOT use in production!');
   }
 }
-const JWT_SECRET = SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+const JWT_SECRET = getJwtSecret();
 
 // ── Google OAuth ─────────────────────────────────────────────────────────────
 // 仅当 GOOGLE_CLIENT_ID 配置时加载 google-auth-library

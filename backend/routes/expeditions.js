@@ -17,6 +17,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const { getJwtSecret } = require('../utils/jwtSecret');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const auth = require('../middleware/auth');
@@ -54,7 +55,7 @@ function parseOptionalViewer(req) {
   if (!authHeader.startsWith('Bearer ')) return null;
   try {
     const token = authHeader.slice(7);
-    const secret = process.env.JWT_SECRET || 'summitlink_dev_secret_do_not_use_in_production';
+    const secret = getJwtSecret();
     const decoded = jwt.verify(token, secret);
     return {
       id: decoded.id ? Number(decoded.id) : null,

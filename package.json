@@ -14,6 +14,9 @@
     "smoke": "node scripts/smoke.js",
     "db:seed": "node backend/db/seed.js",
     "db:seed:dev": "NODE_ENV=development node backend/db/seed.js",
+    "db:pg:migrate": "bash backend/scripts/pg-migrate-deploy.sh",
+    "db:pg:data": "node backend/scripts/migrate-sqlite-to-postgres.js",
+    "db:pg:verify": "node backend/scripts/verify-migration.js",
     "build:vite": "vite build",
     "preview": "vite preview",
     "test:load": "node backend/scripts/load-test.js",
@@ -35,13 +38,13 @@
     "dev:admin": "vite --config vite.admin.config.js --port 3001"
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.4",
-    "@capacitor/camera": "^8.2.0",
-    "@capacitor/core": "^8.3.4",
-    "@capacitor/ios": "^8.3.4",
-    "@capacitor/push-notifications": "^8.1.1",
-    "@capacitor/share": "^8.0.1",
-    "@capacitor/status-bar": "^8.0.2",
+    "@capacitor/android": "8.3.4",
+    "@capacitor/camera": "8.2.0",
+    "@capacitor/core": "8.3.4",
+    "@capacitor/ios": "8.3.4",
+    "@capacitor/push-notifications": "8.1.1",
+    "@capacitor/share": "8.0.1",
+    "@capacitor/status-bar": "8.0.2",
     "@prisma/client": "^6.6.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
@@ -65,7 +68,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.3.4",
+    "@capacitor/cli": "8.3.4",
     "@playwright/test": "^1.59.1",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
@@ -97,6 +100,7 @@
       "**/backend/tests/payment-degraded.test.js",
       "**/backend/tests/payment-cn-framework.test.js",
       "**/backend/tests/security.test.js",
+      "**/backend/tests/admin-csrf.test.js",
       "**/backend/tests/ownershipGuard.test.js",
       "**/backend/tests/sentry-pii.test.js",
       "**/backend/tests/concurrency.test.js",
@@ -114,6 +118,8 @@
       "**/backend/tests/teams-resilience.test.js",
       "**/tests/api-feedback.test.js",
       "**/tests/api-leads.test.js",
+      "**/tests/api-reports.test.js",
+      "**/tests/api-pay-authz.test.js",
       "**/backend/tests/admin-v2-page.test.js"
     ],
     "testTimeout": 15000

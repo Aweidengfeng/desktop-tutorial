@@ -25,6 +25,7 @@ const { createRequire } = require('module');
 const requireFromBackend = createRequire(path.resolve(__dirname, '../../backend/package.json'));
 const express = requireFromBackend('express');
 const cors = requireFromBackend('cors');
+const cookieParser = requireFromBackend('cookie-parser');
 
 const { clearDbCache } = require('./db');
 
@@ -56,6 +57,8 @@ function createApp() {
   const app = express();
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
+  // 与 backend/app.js 保持一致：解析 Cookie，使基于 Cookie 的会话（如管理后台）可被测试
+  app.use(cookieParser());
 
   // 挂载路由（顺序与 backend/app.js 一致）
   // Wrap each require so module-load failures print the exact path and full stack
@@ -74,6 +77,7 @@ function createApp() {
   }
 
   app.use('/api/feedback',        loadRoute('../../backend/routes/feedback'));
+  app.use('/api/reports',         loadRoute('../../backend/routes/reports'));
   app.use('/api/auth',          loadRoute('../../backend/routes/auth'));
   app.use('/api/peaks',         loadRoute('../../backend/routes/peaks'));
   app.use('/api/guides',        loadRoute('../../backend/routes/guides'));

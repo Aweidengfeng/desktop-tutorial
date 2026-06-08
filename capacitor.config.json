@@ -35,7 +35,7 @@
   },
   "server": {
     "androidScheme": "https",
-    "allowNavigation": ["*.summitlink.app", "*.railway.app"],
+    "allowNavigation": ["summitlink.app", "*.summitlink.app"],
     "allowMixedContent": false,
     "hostname": "summitlink.app"
   },

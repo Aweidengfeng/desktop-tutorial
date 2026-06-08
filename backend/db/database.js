@@ -1566,6 +1566,20 @@ CREATE TABLE IF NOT EXISTS feedback (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS content_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reporter_id INTEGER,
+  target_type TEXT NOT NULL,
+  target_id INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  detail TEXT,
+  status TEXT DEFAULT 'pending',
+  handled_by INTEGER,
+  handled_at DATETIME,
+  resolution TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS invite_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   inviter_id INTEGER NOT NULL,

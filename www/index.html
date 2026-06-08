@@ -8961,7 +8961,7 @@ function alpineLink() {
     },
     async confirmPayment() {
       try {
-        const res = await fetch(API_BASE + '/api/pay/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
+        const res = await fetch(API_BASE + '/api/pay/create', { method: 'POST', headers: this.getAuthHeaders(), body: JSON.stringify({ amount: this.paymentAmount, method: this.paymentMethod }) });
         if (!res.ok) {
           // Fallback to mock success for demo (remove in production)
         }

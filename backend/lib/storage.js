@@ -57,6 +57,42 @@ function isCosConfigured() {
   );
 }
 
+function isProduction() {
+  return process.env.NODE_ENV === 'production';
+}
+
+/**
+ * 生产环境对象存储 Fail Closed 校验。
+ * 生产环境必须配置腾讯云 COS，且禁止 STORAGE_PROVIDER=local（禁止回退本地磁盘）。
+ * 非生产环境不做强制，便于本地开发与测试。
+ * @throws {Error} 当生产环境缺少 COS 配置或被显式降级为本地磁盘时
+ */
+function assertProductionStorageReady() {
+  if (!isProduction()) return;
+  if (String(process.env.STORAGE_PROVIDER || '').toLowerCase() === 'local') {
+    throw new Error('生产环境禁止 STORAGE_PROVIDER=local：文件必须永久存储到腾讯云 COS');
+  }
+  if (!isCosConfigured()) {
+    throw new Error('腾讯云 COS 未配置：缺少 COS_BUCKET / COS_REGION / COS_SECRET_ID / COS_SECRET_KEY，生产环境拒绝启动 (Fail Closed)');
+  }
+}
+
+/**
+ * 判断 COS 操作是否可执行。
+ * - COS 已配置：返回 true。
+ * - 生产环境且 COS 未配置：抛错（禁止回退本地磁盘）。
+ * - 非生产环境且 COS 未配置：返回 false（允许回退本地磁盘）。
+ * @param {string} action 操作名（用于错误信息）
+ * @returns {boolean}
+ */
+function requireCosOrLocalFallback(action) {
+  if (isCosConfigured()) return true;
+  if (isProduction()) {
+    throw new Error(`[storage] 腾讯云 COS 未配置，生产环境禁止回退本地磁盘（${action}）`);
+  }
+  return false;
+}
+
 function buildCosOriginUrl(key) {
   const bucket = resolveCosBucket();
   const region = resolveCosRegion();
@@ -159,7 +195,7 @@ const localProvider = {
 
 const cosProvider = {
   async uploadFile(buffer, key, options = {}) {
-    if (!isCosConfigured()) return localProvider.uploadFile(buffer, key, options);
+    if (!requireCosOrLocalFallback('uploadFile')) return localProvider.uploadFile(buffer, key, options);
     const safeKey = normalizeKey(key);
     await callCos('putObject', {
       Bucket: resolveCosBucket(),
@@ -172,7 +208,7 @@ const cosProvider = {
   },
 
   async getSignedUrl(key, expiresIn = 3600) {
-    if (!isCosConfigured()) return localProvider.getSignedUrl(key, expiresIn);
+    if (!requireCosOrLocalFallback('getSignedUrl')) return localProvider.getSignedUrl(key, expiresIn);
     const client = getCosClient();
     return client.getObjectUrl({
       Bucket: resolveCosBucket(),
@@ -184,7 +220,7 @@ const cosProvider = {
   },
 
   async deleteFile(key) {
-    if (!isCosConfigured()) return localProvider.deleteFile(key);
+    if (!requireCosOrLocalFallback('deleteFile')) return localProvider.deleteFile(key);
     const safeKey = normalizeKey(key);
     await callCos('deleteObject', {
       Bucket: resolveCosBucket(),
@@ -195,7 +231,7 @@ const cosProvider = {
   },
 
   async moveFile(fromKey, toKey) {
-    if (!isCosConfigured()) return localProvider.moveFile(fromKey, toKey);
+    if (!requireCosOrLocalFallback('moveFile')) return localProvider.moveFile(fromKey, toKey);
     const sourceKey = normalizeKey(fromKey);
     const targetKey = normalizeKey(toKey);
     const bucket = resolveCosBucket();
@@ -308,4 +344,12 @@ async function moveFile(fromKey, toKey, options = {}) {
   return getStorageProvider(resolved.region).moveFile(fromKey, toKey, resolved);
 }
 
-module.exports = { uploadFile, getSignedUrl, deleteFile, moveFile, getStorageProvider };
+module.exports = {
+  uploadFile,
+  getSignedUrl,
+  deleteFile,
+  moveFile,
+  getStorageProvider,
+  isCosConfigured,
+  assertProductionStorageReady,
+};

@@ -599,7 +599,7 @@ async function testPay() {
   await runTest('POST /api/pay/create - 创建订单', async () => {
     const res = await fetch(`${BASE_URL}/api/pay/create`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({ amount: 9800, method: 'alipay' }),
     });
     if (res.status === 503) {
@@ -618,7 +618,9 @@ async function testPay() {
 
   await runTest('GET /api/pay/status/:orderNo - 查询订单状态', async () => {
     if (!testOrderNo) return;
-    const res = await fetch(`${BASE_URL}/api/pay/status/${testOrderNo}`);
+    const res = await fetch(`${BASE_URL}/api/pay/status/${testOrderNo}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     assert(res.ok, `HTTP ${res.status}`);
     const data = await res.json();
     assert(data.orderNo === testOrderNo, 'orderNo 不匹配');
@@ -629,7 +631,7 @@ async function testPay() {
   await runTest('POST /api/pay/create - wechat 支付方式', async () => {
     const res = await fetch(`${BASE_URL}/api/pay/create`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({ amount: 4500, method: 'wechat' }),
     });
     if (res.status === 503) {
@@ -644,7 +646,9 @@ async function testPay() {
   });
 
   await runTest('GET /api/pay/status/:orderNo - 不存在的订单返回 404', async () => {
-    const res = await fetch(`${BASE_URL}/api/pay/status/SL_NOT_EXISTS_000000`);
+    const res = await fetch(`${BASE_URL}/api/pay/status/SL_NOT_EXISTS_000000`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
     assert(res.status === 404, `预期 404，实际 ${res.status}`);
     const data = await res.json();
     assert(data.error, '响应中缺少 error 字段');
