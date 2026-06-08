@@ -1,200 +1,199 @@
 /**
- * @file leads.js
- * @description 官网线索收集（MVP）。承载官网四类公开表单的提交，并提供管理员查看列表。
+ * leads.js — 官网线索收集（Lead Collection）
  *
- * 公开提交端点（无需登录，CORS 由 app.js 白名单控制）：
- *   POST /api/contact                       → Contact        → hello@
- *   POST /api/partnerships                  → Partnerships   → partners@
- *   POST /api/applications/guide            → Guide          → guides@
- *   POST /api/applications/seven-summits    → Seven Summits  → hello@
+ * 处理官网 4 个公开表单，写入 PostgreSQL（生产）/ SQLite（开发）的 leads 表：
+ *   POST /api/contact                       联系咨询
+ *   POST /api/partnerships                  商务合作
+ *   POST /api/applications/guide            向导申请
+ *   POST /api/applications/seven-summits    七大洲报名
  *
- * 管理端点（复用 adminAuth：Cookie 会话 + 双提交 CSRF，或 Bearer）：
- *   GET  /api/admin/leads?type=&status=&page=&pageSize=
+ * 管理端可见：
+ *   GET  /api/admin/leads                   （需管理员权限）
  *
- * 每次提交：honeypot 静默丢弃 → 输入校验 → 写库 → 发管理员邮件（best-effort）→ 返回成功确认。
+ * 邮件通知：每条线索写库成功后，向管理员发送通知邮件（失败降级，不影响提交）。
+ *
+ * 挂载方式（backend/app.js）：app.use('/api', require('./routes/leads'))，
+ * 必须在 app.use('/api/admin', ...) 之前，以便 GET /admin/leads 命中本路由。
  */
 
-'use strict';
-
 const express = require('express');
-const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
-const { sendLeadNotification } = require('../lib/leadMailer');
+const { sendMail, leadNotificationEmail } = require('../middleware/mailer');
 
 const router = express.Router();
 
-// 蜜罐字段名：正常用户看不到（前端 CSS 隐藏），机器人常会填写
-const HONEYPOT_FIELD = 'website';
-
-// 提交限流：按 IP，60s 内最多 5 次；测试环境放宽以免相互干扰
-const submitLimiter = rateLimit({
+// 公开表单限流：每分钟每 IP 最多 10 次，防刷
+const leadLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 1000 : 5,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: '提交过于频繁，请稍后再试' },
+  message: { error: '提交过于频繁，请稍后再试' },
 });
 
-// 各表单字段白名单与必填项；超出白名单的字段一律忽略，避免脏数据/注入
-const FORM_CONFIG = {
-  contact: {
-    fields: ['name', 'email', 'subject', 'message'],
-    required: ['name', 'email', 'message'],
-    nameKey: 'name',
-    successMessage: 'Thank you! We received your message and will reply soon.',
-  },
-  partnership: {
-    fields: ['name', 'company', 'email', 'investmentType', 'message'],
-    required: ['name', 'email'],
-    nameKey: 'name',
-    successMessage: 'Thank you! Our partnerships team will be in touch.',
-  },
-  guide: {
-    fields: ['fullName', 'email', 'country', 'phone', 'yearsOfExperience', 'certifications', 'specialtyMountains', 'personalBio'],
-    required: ['fullName', 'email'],
-    nameKey: 'fullName',
-    successMessage: 'Thank you for applying to join as a guide. We will review your application.',
-  },
-  seven_summits: {
-    fields: ['fullName', 'email', 'country', 'phone', 'experienceLevel', 'targetSummit', 'personalStatement', 'source'],
-    required: ['fullName', 'email'],
-    nameKey: 'fullName',
-    successMessage: 'Thank you for your application. Selected climbers will be announced as scheduled.',
-  },
-};
-
-const MAX_FIELD_LENGTH = 2000;
-// 邮箱校验：用 indexOf 风格的轻量规则，避免在畸形输入上触发回溯（ReDoS）
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function trimString(value, max = MAX_FIELD_LENGTH) {
+function trimString(value, max = 2000) {
   if (value == null) return '';
-  if (Array.isArray(value)) return value.map((v) => trimString(v, max)).filter(Boolean).join(', ');
   return String(value).trim().slice(0, max);
 }
 
-// 对来源 IP 做 SHA-256 哈希（可选加盐），避免在数据库中存储明文 PII
-function hashIp(req) {
-  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
-  if (!ip) return null;
-  const salt = process.env.LEAD_IP_SALT || '';
-  return crypto.createHash('sha256').update(`${salt}${ip}`).digest('hex');
+// 极简邮箱格式校验（线性扫描，避免 ReDoS）
+function isValidEmail(email) {
+  const str = String(email);
+  if (str.length > 254) return false;
+  const at = str.indexOf('@');
+  if (at <= 0 || at !== str.lastIndexOf('@')) return false;
+  const dot = str.indexOf('.', at);
+  return dot > at + 1 && dot < str.length - 1;
 }
 
 /**
- * 构造某一类表单的提交处理器。
- * @param {string} type 表单类型，对应 FORM_CONFIG 的键
+ * 构造线索写库 + 通知逻辑。
+ * @param {string} type - 线索类型
+ * @param {(body:object)=>object} extract - 从请求体提取常用字段
  */
-function makeHandler(type) {
-  const config = FORM_CONFIG[type];
+function makeHandler(type, extract) {
   return async (req, res) => {
-    const body = req.body || {};
-
-    // 1) 蜜罐：非空即视为机器人，静默返回成功（不写库、不发信）
-    if (trimString(body[HONEYPOT_FIELD], 200)) {
-      return res.status(200).json({ success: true, message: config.successMessage });
-    }
-
-    // 2) 输入校验 + 字段白名单收敛
-    const fields = {};
-    for (const key of config.fields) {
-      const val = trimString(body[key]);
-      if (val) fields[key] = val;
-    }
-    for (const key of config.required) {
-      if (!fields[key]) {
-        return res.status(400).json({ success: false, error: `字段 ${key} 不能为空` });
-      }
-    }
-    if (fields.email && !EMAIL_RE.test(fields.email)) {
-      return res.status(400).json({ success: false, error: '邮箱格式不正确' });
-    }
-
-    const name = config.nameKey ? fields[config.nameKey] || null : null;
-    const email = fields.email || null;
-
-    // 3) 写库（数据优先）
-    let lead;
     try {
-      lead = await prisma.lead.create({
+      const body = (req.body && typeof req.body === 'object') ? req.body : {};
+      const fields = extract(body);
+
+      // 校验：邮箱必填且格式正确（4 个表单均含 email）
+      if (!fields.email || !isValidEmail(fields.email)) {
+        return res.status(400).json({ error: '请提供有效的邮箱地址' });
+      }
+      // 校验：姓名/称呼必填
+      if (!fields.name) {
+        return res.status(400).json({ error: '请填写姓名' });
+      }
+
+      // 完整表单 JSON（裁剪每个字段，限制总量），便于管理端查看原始提交
+      const rawPayload = {};
+      for (const [k, v] of Object.entries(body)) {
+        if (typeof v === 'string') rawPayload[trimString(k, 60)] = trimString(v, 2000);
+        else if (v != null && typeof v !== 'object') rawPayload[trimString(k, 60)] = v;
+      }
+
+      const lead = await prisma.lead.create({
         data: {
           type,
-          name,
-          email,
-          payload: JSON.stringify(fields),
+          name: fields.name || null,
+          email: fields.email || null,
+          phone: fields.phone || null,
+          company: fields.company || null,
+          subject: fields.subject || null,
+          message: fields.message || null,
+          source: fields.source || 'website',
           status: 'new',
-          ipHash: hashIp(req),
+          payload: JSON.stringify(rawPayload).slice(0, 8000),
         },
       });
-    } catch (e) {
-      console.error('[leads] insert error:', e.message);
-      return res.status(500).json({ success: false, error: '提交失败，请稍后重试' });
-    }
 
-    // 4) 发管理员邮件（best-effort：失败不影响已写入的线索）
-    try {
-      await sendLeadNotification({ type, fields });
-    } catch (e) {
-      console.warn('[leads] notification error:', e.message);
-    }
+      // 管理员通知邮件：失败降级，绝不阻塞提交结果。
+      notifyAdmin(lead);
 
-    // 5) 返回用户成功确认
-    return res.status(201).json({ success: true, id: lead.id, message: config.successMessage });
+      return res.status(201).json({ success: true, id: lead.id });
+    } catch (e) {
+      console.error(`[leads] ${type} 提交失败:`, e.message);
+      return res.status(500).json({ error: '提交失败，请稍后再试' });
+    }
   };
 }
 
-// 公开提交端点（保持与官网现有 data-api 路径一致）
-router.post('/contact', submitLimiter, makeHandler('contact'));
-router.post('/partnerships', submitLimiter, makeHandler('partnership'));
-router.post('/applications/guide', submitLimiter, makeHandler('guide'));
-router.post('/applications/seven-summits', submitLimiter, makeHandler('seven_summits'));
+/** 向管理员发送线索通知邮件（fire-and-forget，吞掉所有错误）。 */
+function notifyAdmin(lead) {
+  const to = process.env.LEADS_NOTIFY_EMAIL || process.env.ADMIN_EMAIL;
+  if (!to) {
+    // 未配置收件人时跳过（开发/未配置场景）
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[leads] 未配置 LEADS_NOTIFY_EMAIL/ADMIN_EMAIL，跳过通知邮件');
+    }
+    return;
+  }
+  Promise.resolve()
+    .then(() => sendMail({ to, ...leadNotificationEmail(lead) }))
+    .then((result) => {
+      if (result && result.error) {
+        console.error('[leads] 通知邮件发送失败（已降级，不影响提交）:', result.error);
+      }
+    })
+    .catch((err) => {
+      console.error('[leads] 通知邮件异常（已降级，不影响提交）:', err.message);
+    });
+}
 
-// 管理员列表：分页 + 类型/状态过滤，按创建时间倒序
+// ── 公开表单端点 ─────────────────────────────────────────
+
+// 联系咨询：name, email, subject, message
+router.post('/contact', leadLimiter, makeHandler('contact', (b) => ({
+  name: trimString(b.name, 120),
+  email: trimString(b.email, 254),
+  subject: trimString(b.subject, 200),
+  message: trimString(b.message, 4000),
+  source: trimString(b.source, 80),
+})));
+
+// 商务合作：name, company, email, investmentType, message
+router.post('/partnerships', leadLimiter, makeHandler('partnership', (b) => ({
+  name: trimString(b.name, 120),
+  email: trimString(b.email, 254),
+  company: trimString(b.company, 200),
+  subject: trimString(b.investmentType, 200),
+  message: trimString(b.message, 4000),
+  source: trimString(b.source, 80),
+})));
+
+// 向导申请：fullName, email, country, phone, yearsOfExperience, certifications, ...
+router.post('/applications/guide', leadLimiter, makeHandler('guide_application', (b) => ({
+  name: trimString(b.fullName || b.name, 120),
+  email: trimString(b.email, 254),
+  phone: trimString(b.phone, 60),
+  company: trimString(b.country, 120),
+  subject: '向导申请',
+  message: trimString(b.personalBio || b.certifications, 4000),
+  source: trimString(b.source, 80),
+})));
+
+// 七大洲报名：fullName, email, phone, country, targetSummit, experienceLevel, ...
+router.post('/applications/seven-summits', leadLimiter, makeHandler('seven_summits', (b) => ({
+  name: trimString(b.fullName || b.name, 120),
+  email: trimString(b.email, 254),
+  phone: trimString(b.phone, 60),
+  company: trimString(b.country, 120),
+  subject: trimString(b.targetSummit, 200) || '七大洲报名',
+  message: trimString(b.personalStatement, 4000),
+  source: trimString(b.source, 80),
+})));
+
+// ── 管理端 ───────────────────────────────────────────────
+
+// GET /api/admin/leads —— 线索列表（管理员）
 router.get('/admin/leads', adminAuth, async (req, res) => {
   try {
     const where = {};
     const type = trimString(req.query.type, 40);
     const status = trimString(req.query.status, 40);
-    if (type && FORM_CONFIG[type]) where.type = type;
+    if (type) where.type = type;
     if (status) where.status = status;
 
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 20, 1), 100);
+    const take = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 500);
 
-    const [total, rows] = await Promise.all([
+    const [leads, total] = await Promise.all([
+      prisma.lead.findMany({ where, orderBy: { createdAt: 'desc' }, take }),
       prisma.lead.count({ where }),
-      prisma.lead.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
     ]);
 
-    const leads = rows.map((row) => {
-      let payload = null;
-      try {
-        payload = row.payload ? JSON.parse(row.payload) : null;
-      } catch (e) {
-        payload = null;
-      }
-      return {
-        id: row.id,
-        type: row.type,
-        name: row.name,
-        email: row.email,
-        status: row.status,
-        payload,
-        createdAt: row.createdAt,
-      };
+    const items = leads.map((l) => {
+      let payload = {};
+      try { payload = JSON.parse(l.payload || '{}'); } catch (_) { payload = {}; }
+      return { ...l, payload };
     });
 
-    return res.json({ leads, total, page, pageSize });
+    return res.json({ total, count: items.length, leads: items });
   } catch (e) {
-    console.error('[leads] admin list error:', e.message);
-    return res.status(500).json({ error: '获取线索列表失败' });
+    console.error('[leads] 管理端查询失败:', e.message);
+    return res.status(500).json({ error: '查询失败' });
   }
 });
 

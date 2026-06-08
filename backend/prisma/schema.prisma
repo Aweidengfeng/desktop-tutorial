@@ -110,7 +110,7 @@ model SmsCode {
   phone     String
   code      String
   purpose   String   @default("login")
-  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds (matches database.js INTEGER column)
+  expiresAt BigInt   @map("expires_at") // Unix timestamp in milliseconds (BigInt: ms value exceeds INT4 range on PostgreSQL)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
@@ -125,7 +125,7 @@ model EmailCode {
   email     String
   code      String
   purpose   String   @default("login")
-  expiresAt Int      @map("expires_at") // Unix timestamp in milliseconds
+  expiresAt BigInt   @map("expires_at") // Unix timestamp in milliseconds (BigInt: ms value exceeds INT4 range on PostgreSQL)
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   userId    Int?     @map("user_id")
@@ -1676,6 +1676,35 @@ model Feedback {
 }
 
 // ─────────────────────────────────────────
+// 官网线索收集（Lead Collection）
+// 对应官网 4 个表单：联系、合作、向导申请、七大洲报名。
+// 写入 PostgreSQL（生产）/ SQLite（开发），管理端 GET /api/admin/leads 可见。
+// ─────────────────────────────────────────
+
+model Lead {
+  id        Int      @id @default(autoincrement())
+  // contact | partnership | guide_application | seven_summits
+  type      String
+  name      String?
+  email     String?
+  phone     String?
+  company   String?
+  subject   String?
+  message   String?
+  // 完整表单 JSON（保留所有提交字段），存为文本
+  payload   String   @default("{}")
+  // new | contacted | closed
+  status    String   @default("new")
+  source    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+// ─────────────────────────────────────────
 // UGC 举报（Apple App Store Guideline 1.2）
 // ─────────────────────────────────────────
 
@@ -1695,25 +1724,4 @@ model Report {
   @@index([status])
   @@index([targetType, targetId])
   @@map("content_reports")
-}
-
-// ─────────────────────────────────────────
-// 官网线索收集（Contact / Partnerships / Guide / Seven Summits）
-// 单表承载全部表单类型，payload 存该表单的原始字段（JSON）
-// ─────────────────────────────────────────
-
-model Lead {
-  id        Int      @id @default(autoincrement())
-  type      String   // contact | partnership | guide | seven_summits
-  name      String?  // 提交者姓名（可选，按表单而定）
-  email     String?  // 提交者邮箱（可选，按表单而定）
-  payload   String?  // 该表单的完整字段，序列化为 JSON 字符串
-  status    String   @default("new") // new | read | archived
-  ipHash    String?  @map("ip_hash") // 提交来源 IP 的哈希（排查/限流用，不存明文 PII）
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([type])
-  @@index([status])
-  @@index([createdAt])
-  @@map("leads")
 }

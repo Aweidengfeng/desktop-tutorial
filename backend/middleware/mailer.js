@@ -104,4 +104,46 @@ function emailVerifyCode({ code, purpose }) {
   };
 }
 
-module.exports = { sendMail, bookingConfirmEmail, certificationResultEmail, emailVerifyCode, MAIL_ENABLED };
+/**
+ * 官网线索通知邮件（发送给管理员）。
+ * @param {object} lead - 已落库的 Lead 记录
+ */
+function leadNotificationEmail(lead) {
+  const TYPE_LABELS = {
+    contact: '联系咨询',
+    partnership: '商务合作',
+    guide_application: '向导申请',
+    seven_summits: '七大洲报名',
+  };
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const label = TYPE_LABELS[lead.type] || lead.type;
+  const row = (k, v) => v
+    ? `<tr><td style="padding:8px;border:1px solid #e5e7eb;color:#6b7280">${esc(k)}</td><td style="padding:8px;border:1px solid #e5e7eb">${esc(v)}</td></tr>`
+    : '';
+  return {
+    subject: `【SummitLink】新线索：${label}${lead.name ? ' - ' + lead.name : ''}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h2 style="color:#1e40af">🏔️ SummitLink 官网新线索</h2>
+        <p>收到一条 <strong>${esc(label)}</strong> 线索（ID #${esc(lead.id)}）：</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          ${row('姓名', lead.name)}
+          ${row('邮箱', lead.email)}
+          ${row('电话', lead.phone)}
+          ${row('公司/机构', lead.company)}
+          ${row('主题', lead.subject)}
+          ${row('留言', lead.message)}
+          ${row('来源', lead.source)}
+        </table>
+        <p style="color:#6b7280;font-size:14px">请登录管理后台查看完整信息并跟进。</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb">
+        <p style="color:#9ca3af;font-size:12px">SummitLink © 2026</p>
+      </div>
+    `,
+    text: `新线索（${label}）#${lead.id}：姓名=${lead.name || ''} 邮箱=${lead.email || ''} 电话=${lead.phone || ''} 留言=${lead.message || ''}`,
+  };
+}
+
+module.exports = { sendMail, bookingConfirmEmail, certificationResultEmail, emailVerifyCode, leadNotificationEmail, MAIL_ENABLED };

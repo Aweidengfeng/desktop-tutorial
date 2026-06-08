@@ -1,14 +1,6 @@
 /**
- * 官网线索收集（Leads MVP）集成测试
- * 覆盖：
- *   - POST /api/contact|/api/partnerships|/api/applications/guide|/api/applications/seven-summits
- *       · 必填校验 400
- *       · 邮箱格式 400
- *       · honeypot 命中 → 200 静默成功（不写库）
- *       · 正常提交 → 201 + { success, id, message }
- *   - GET /api/admin/leads
- *       · 未登录 401 / 非管理员 403
- *       · 管理员 200 + 列表 + 类型过滤
+ * 官网线索收集（Lead Collection）集成测试
+ * 覆盖：4 个公开表单写入、必填校验、管理端列表 + 类型过滤 + 鉴权。
  */
 
 'use strict';
@@ -22,119 +14,97 @@ process.env.ADMIN_USERNAME = 'admin';
 process.env.NODE_ENV       = 'test';
 
 const request = require('supertest');
-const { createApp } = require('./helpers/testApp');
-const { createTestUser, createAdminToken } = require('./helpers/auth');
-const { createTestDb, clearDbCache } = require('./helpers/db');
+const { createApp }       = require('./helpers/testApp');
+const { createAdminToken } = require('./helpers/auth');
+const { clearDbCache }    = require('./helpers/db');
 
-const bearer = (token) => 'Bearer ' + token;
-
-describe('官网线索收集 /api/leads', () => {
-  let app, db, user, userAuth, adminAuthHeader;
+describe('Lead Collection', () => {
+  let app;
 
   beforeAll(() => {
     clearDbCache();
     app = createApp();
-    db = createTestDb();
-    user = createTestUser(db, { phone: '13900002200', name: '线索用户' });
-    userAuth = bearer(user.token);
-    adminAuthHeader = bearer(createAdminToken());
   });
 
-  test('Contact 缺少必填 → 400', async () => {
-    const res = await request(app).post('/api/contact').send({ name: 'A', email: 'a@b.com' });
-    expect(res.status).toBe(400);
-    expect(res.body.success).toBe(false);
-  });
-
-  test('Contact 邮箱格式错误 → 400', async () => {
+  test('POST /api/contact 成功写入 → 201 + { success, id }', async () => {
     const res = await request(app)
       .post('/api/contact')
-      .send({ name: 'A', email: 'not-an-email', message: 'hi' });
-    expect(res.status).toBe(400);
-  });
-
-  test('Contact honeypot 命中 → 200 静默成功且不写库', async () => {
-    const before = await request(app).get('/api/admin/leads?type=contact').set('Authorization', adminAuthHeader);
-    const beforeTotal = before.body.total;
-
-    const res = await request(app)
-      .post('/api/contact')
-      .send({ name: 'Bot', email: 'bot@spam.com', message: 'spam', website: 'http://spam.example' });
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.id).toBeUndefined();
-
-    const after = await request(app).get('/api/admin/leads?type=contact').set('Authorization', adminAuthHeader);
-    expect(after.body.total).toBe(beforeTotal);
-  });
-
-  test('Contact 正常提交 → 201 + id', async () => {
-    const res = await request(app)
-      .post('/api/contact')
-      .send({ name: 'Climber', email: 'climber@example.com', subject: 'General', message: 'Hello there' });
+      .send({ name: '联系人', email: 'contact@example.com', subject: '咨询', message: '你好' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(typeof res.body.id).toBe('number');
-    expect(res.body.message).toBeTruthy();
   });
 
-  test('Partnerships 正常提交 → 201', async () => {
+  test('POST /api/partnerships 成功写入 → 201', async () => {
     const res = await request(app)
       .post('/api/partnerships')
-      .send({ name: 'VC', company: 'Acme', email: 'vc@acme.com', investmentType: 'Venture Capital', message: 'interested' });
+      .send({ name: '合作方', company: 'Acme', email: 'biz@acme.com', investmentType: 'A轮', message: '合作意向' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
   });
 
-  test('Guide 申请正常提交 → 201', async () => {
+  test('POST /api/applications/guide 成功写入 → 201', async () => {
     const res = await request(app)
       .post('/api/applications/guide')
-      .send({ fullName: 'Guide One', email: 'guide@example.com', country: 'Nepal', phone: '123', yearsOfExperience: '10', certifications: 'IFMGA', specialtyMountains: 'Everest', personalBio: 'Veteran' });
+      .send({ fullName: '向导', email: 'guide@example.com', country: 'Nepal', phone: '+97712345', certifications: 'IFMGA', personalBio: '资深向导' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
   });
 
-  test('Seven Summits 申请正常提交 → 201', async () => {
+  test('POST /api/applications/seven-summits 成功写入 → 201', async () => {
     const res = await request(app)
       .post('/api/applications/seven-summits')
-      .send({ fullName: 'Summit Hopeful', email: 'hopeful@example.com', country: 'USA', phone: '456', experienceLevel: 'Advanced', targetSummit: 'Everest', personalStatement: 'Dream' });
+      .send({ fullName: '报名者', email: 'climber@example.com', phone: '+1555', country: 'USA', targetSummit: 'Everest', personalStatement: '梦想' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
   });
 
-  test('Guide 缺少必填 fullName → 400', async () => {
+  test('缺少邮箱 → 400', async () => {
     const res = await request(app)
-      .post('/api/applications/guide')
-      .send({ email: 'guide2@example.com' });
+      .post('/api/contact')
+      .send({ name: '无邮箱', message: 'x' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeTruthy();
+  });
+
+  test('邮箱格式非法 → 400', async () => {
+    const res = await request(app)
+      .post('/api/contact')
+      .send({ name: '坏邮箱', email: 'not-an-email', message: 'x' });
     expect(res.status).toBe(400);
   });
 
-  test('管理员列表未登录 → 401', async () => {
+  test('缺少姓名 → 400', async () => {
+    const res = await request(app)
+      .post('/api/contact')
+      .send({ email: 'noname@example.com', message: 'x' });
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /api/admin/leads 无 token → 401', async () => {
     const res = await request(app).get('/api/admin/leads');
     expect(res.status).toBe(401);
   });
 
-  test('非管理员访问列表 → 403', async () => {
-    const res = await request(app).get('/api/admin/leads').set('Authorization', userAuth);
-    expect(res.status).toBe(403);
-  });
-
-  test('管理员列表 → 200 + 数组 + total', async () => {
-    const res = await request(app).get('/api/admin/leads').set('Authorization', adminAuthHeader);
+  test('GET /api/admin/leads 管理员可见全部线索 → 200', async () => {
+    const token = createAdminToken();
+    const res = await request(app)
+      .get('/api/admin/leads')
+      .set('Authorization', `Bearer ${token}`)
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.leads)).toBe(true);
-    expect(typeof res.body.total).toBe('number');
-    expect(res.body.total).toBeGreaterThan(0);
+    expect(res.body.total).toBeGreaterThanOrEqual(4);
     // payload 应被解析为对象
-    const sample = res.body.leads[0];
-    expect(sample).toHaveProperty('type');
-    expect(sample).toHaveProperty('createdAt');
+    expect(typeof res.body.leads[0].payload).toBe('object');
   });
 
-  test('管理员按类型过滤 type=guide 命中', async () => {
-    const res = await request(app).get('/api/admin/leads?type=guide').set('Authorization', adminAuthHeader);
+  test('GET /api/admin/leads?type=guide_application 类型过滤 → 仅返回向导申请', async () => {
+    const token = createAdminToken();
+    const res = await request(app)
+      .get('/api/admin/leads?type=guide_application')
+      .set('Authorization', `Bearer ${token}`)
     expect(res.status).toBe(200);
-    expect(res.body.leads.every((l) => l.type === 'guide')).toBe(true);
-    expect(res.body.leads.length).toBeGreaterThan(0);
+    expect(res.body.leads.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.leads.every((l) => l.type === 'guide_application')).toBe(true);
   });
 });

@@ -1,5 +1,17 @@
 require('dotenv').config();
 
+// 生产 Fail-Closed：生产环境必须使用 PostgreSQL，禁止回退到 SQLite。
+// 否则进程会尝试在 Railway Volume 上打开 better-sqlite3，触发
+// "attempt to write a readonly database" 错误。配置缺失即拒绝启动。
+if (process.env.NODE_ENV === 'production' && process.env.DATABASE_PROVIDER !== 'postgresql') {
+  console.error(
+    '❌ 生产环境必须设置 DATABASE_PROVIDER=postgresql（当前为 ' +
+      (process.env.DATABASE_PROVIDER || '未设置') +
+      '）。禁止在生产使用 SQLite，进程退出。'
+  );
+  process.exit(1);
+}
+
 const pino = require('pino');
 const pinoHttp = require('pino-http');
 const { randomUUID } = require('crypto');
@@ -374,9 +386,6 @@ app.get('/api/region', (req, res) => {
 });
 
 // 挂载路由
-// 官网线索收集（公开提交 + /api/admin/leads 列表）。挂载在 /api 根，
-// 须早于 /api/admin，确保 /api/admin/leads 命中本路由。
-app.use('/api', require('./routes/leads'));
 app.use('/api/auth', noCache, require('./routes/auth'));
 app.use('/api/peaks', require('./routes/peaks'));
 app.use('/api/guides', require('./routes/guides'));
@@ -401,6 +410,8 @@ app.use('/api/location-share', require('./routes/locationShare'));
 app.use('/api/location', require('./routes/location'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/admin/coupons', require('./routes/coupons'));
+// 官网线索收集：必须在 /api/admin 之前挂载，以便 GET /api/admin/leads 命中本路由
+app.use('/api', require('./routes/leads'));
 app.use('/api/admin/stats', require('./routes/admin-stats'));
 app.use('/api/admin', require('./routes/admin-messages'));
 app.use('/api/admin', require('./routes/admin'));
