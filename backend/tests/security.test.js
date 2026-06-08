@@ -236,8 +236,9 @@ describe('安全测试 8 — CSP 与 Alpine 构建', () => {
   });
 
   test('门户页面应继续使用 Alpine CSP 构建', () => {
+    // 注意：index.html 是主站 SPA，内含大量内联 Alpine 表达式，按 PR #335 决定走标准
+    // Alpine 构建（CSP 已显式放行 'unsafe-eval'）。本用例只覆盖真正的「门户」页面。
     const htmlFiles = [
-      '../../index.html',
       '../../admin.html',
       '../../club-portal.html',
       '../../guide-portal.html',
