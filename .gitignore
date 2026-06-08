@@ -7,6 +7,8 @@ nohup.out
 backend/uploads/*
 !backend/uploads/.gitkeep
 dist/
+dist-app/
+dist-admin/
 screenshots/output/
 
 # Fastlane artifacts
