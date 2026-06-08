@@ -1696,3 +1696,24 @@ model Report {
   @@index([targetType, targetId])
   @@map("content_reports")
 }
+
+// ─────────────────────────────────────────
+// 官网线索收集（Contact / Partnerships / Guide / Seven Summits）
+// 单表承载全部表单类型，payload 存该表单的原始字段（JSON）
+// ─────────────────────────────────────────
+
+model Lead {
+  id        Int      @id @default(autoincrement())
+  type      String   // contact | partnership | guide | seven_summits
+  name      String?  // 提交者姓名（可选，按表单而定）
+  email     String?  // 提交者邮箱（可选，按表单而定）
+  payload   String?  // 该表单的完整字段，序列化为 JSON 字符串
+  status    String   @default("new") // new | read | archived
+  ipHash    String?  @map("ip_hash") // 提交来源 IP 的哈希（排查/限流用，不存明文 PII）
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}

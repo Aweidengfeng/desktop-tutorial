@@ -406,3 +406,15 @@ img {
     padding-top: 6.5rem;
   }
 }
+
+/* Honeypot anti-spam field: visually hidden, kept out of tab order and a11y tree.
+   Real users never see or fill it; bots that auto-fill inputs get silently dropped. */
+.hp-field {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

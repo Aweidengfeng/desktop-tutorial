@@ -78,6 +78,8 @@ function createApp() {
 
   app.use('/api/feedback',        loadRoute('../../backend/routes/feedback'));
   app.use('/api/reports',         loadRoute('../../backend/routes/reports'));
+  // 官网线索：挂载在 /api 根，须早于 /api/admin，确保 /api/admin/leads 命中本路由
+  app.use('/api',                 loadRoute('../../backend/routes/leads'));
   app.use('/api/auth',          loadRoute('../../backend/routes/auth'));
   app.use('/api/peaks',         loadRoute('../../backend/routes/peaks'));
   app.use('/api/guides',        loadRoute('../../backend/routes/guides'));

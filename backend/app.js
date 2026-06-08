@@ -374,6 +374,9 @@ app.get('/api/region', (req, res) => {
 });
 
 // 挂载路由
+// 官网线索收集（公开提交 + /api/admin/leads 列表）。挂载在 /api 根，
+// 须早于 /api/admin，确保 /api/admin/leads 命中本路由。
+app.use('/api', require('./routes/leads'));
 app.use('/api/auth', noCache, require('./routes/auth'));
 app.use('/api/peaks', require('./routes/peaks'));
 app.use('/api/guides', require('./routes/guides'));

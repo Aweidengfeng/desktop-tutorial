@@ -81,6 +81,21 @@ async function runStartupMigrations(prisma) {
       `);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_content_reports_status" ON "content_reports"("status")`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_content_reports_target" ON "content_reports"("target_type", "target_id")`);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "leads" (
+          "id" SERIAL PRIMARY KEY,
+          "type" TEXT NOT NULL,
+          "name" TEXT,
+          "email" TEXT,
+          "payload" TEXT,
+          "status" TEXT DEFAULT 'new',
+          "ip_hash" TEXT,
+          "created_at" TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_leads_type" ON "leads"("type")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_leads_status" ON "leads"("status")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_leads_created_at" ON "leads"("created_at")`);
     } else {
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS coupons (
@@ -170,6 +185,21 @@ async function runStartupMigrations(prisma) {
       `);
       await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_content_reports_status ON content_reports(status)');
       await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_content_reports_target ON content_reports(target_type, target_id)');
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS leads (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL,
+          name TEXT,
+          email TEXT,
+          payload TEXT,
+          status TEXT DEFAULT 'new',
+          ip_hash TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_leads_type ON leads(type)');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at)');
     }
     console.log('[startup] schema patch applied');
   } catch (e) {

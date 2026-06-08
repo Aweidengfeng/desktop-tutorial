@@ -1590,6 +1590,17 @@ CREATE TABLE IF NOT EXISTS invite_records (
   rewarded_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS leads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  name TEXT,
+  email TEXT,
+  payload TEXT,
+  status TEXT DEFAULT 'new',
+  ip_hash TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // ── A7: expeditions 和 expedition_orders 表 ──────────────────
