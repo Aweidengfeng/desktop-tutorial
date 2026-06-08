@@ -30,6 +30,16 @@ function parseGuide(guide) {
   return guide;
 }
 
+// 将向导记录的评分替换为基于 reviews 表的动态均值；无评价时回退到静态 rating 列。
+function withDynamicRating(guide) {
+  const { review_avg, review_count, ...rest } = guide;
+  const count = Number(review_count || 0);
+  const rating = count > 0
+    ? Math.round(Number(review_avg || 0) * 10) / 10
+    : Number(guide.rating || 0);
+  return { ...rest, rating, reviews: count, review_count: count };
+}
+
 function isValidUploadUrl(url) {
   if (!url) return true;
   return typeof url === 'string' && (
@@ -63,16 +73,13 @@ router.get('/', async (req, res) => {
     const guides = await prisma.$queryRaw`
       SELECT g.id, g.user_id as userId, g.name, g.avatar, g.flag, g.nationality,
              g.rating,
-             g.specialty, g.day_rate as dayRate
+             g.specialty, g.day_rate as dayRate,
+             (SELECT AVG(CAST(r.rating AS REAL)) FROM reviews r WHERE r.target_type = 'guide' AND r.target_id = g.id) AS review_avg,
+             (SELECT COUNT(*) FROM reviews r WHERE r.target_type = 'guide' AND r.target_id = g.id) AS review_count
       FROM guides g WHERE g.status = 'approved'
       ORDER BY g.rating DESC
     `;
-    res.json(guides.map((guide) => ({
-      ...guide,
-      rating: Number(guide.rating || 0),
-      reviews: 0,
-      review_count: 0,
-    })));
+    res.json(guides.map((guide) => withDynamicRating(guide)));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -435,14 +442,17 @@ router.get('/:id', async (req, res) => {
     const id = parseInt(req.params.id);
     const [guide] = await prisma.$queryRaw`
       SELECT g.*,
-             g.rating AS review_rating,
-             CAST(0 AS INTEGER) AS review_count
+             (SELECT AVG(CAST(r.rating AS REAL)) FROM reviews r WHERE r.target_type = 'guide' AND r.target_id = g.id) AS review_avg,
+             (SELECT COUNT(*) FROM reviews r WHERE r.target_type = 'guide' AND r.target_id = g.id) AS review_count
       FROM guides g
       WHERE g.id = ${id} AND g.status = 'approved'
     `;
     if (!guide) return res.status(404).json({ error: '向导不存在' });
     const reviewCount = Number(guide.review_count || 0);
-    guide.rating = Number(guide.review_rating || guide.rating || 0);
+    guide.rating = reviewCount > 0
+      ? Math.round(Number(guide.review_avg || 0) * 10) / 10
+      : Number(guide.rating || 0);
+    delete guide.review_avg;
     guide.review_count = reviewCount;
     guide.reviews = reviewCount;
     res.json(parseGuide(guide));

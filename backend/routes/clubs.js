@@ -12,6 +12,16 @@ const clubPayRateLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, standard
 const clubReadLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: '请求过于频繁，请稍后再试' } });
 const clubWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false, message: { error: '操作过于频繁，请稍后再试' } });
 
+// 将俱乐部记录的评分替换为基于 reviews 表的动态均值；无评价时回退到静态 rating 列。
+function withDynamicRating(club) {
+  const { review_avg, review_count, ...rest } = club;
+  const count = Number(review_count || 0);
+  const rating = count > 0
+    ? Math.round(Number(review_avg || 0) * 10) / 10
+    : Number(club.rating || 0);
+  return { ...rest, rating, reviews: count, review_count: count };
+}
+
 // POST /api/clubs/apply — 提交俱乐部入驻申请（需要JWT）
 router.post('/apply', clubWriteLimiter, auth, async (req, res) => {
   try {
@@ -283,15 +293,12 @@ router.get('/', async (req, res) => {
     const clubs = await prisma.$queryRaw`
       SELECT c.id, c.name, c.description, c.cover, c.specialty, c.region, c.type,
              c.members_count as members, c.expeditions, c.verified, c.founded, c.status, c.created_at,
-             c.rating
+             c.rating,
+             (SELECT AVG(CAST(r.rating AS REAL)) FROM reviews r WHERE r.target_type = 'club' AND r.target_id = c.id) AS review_avg,
+             (SELECT COUNT(*) FROM reviews r WHERE r.target_type = 'club' AND r.target_id = c.id) AS review_count
       FROM clubs c WHERE c.status = 'active' ORDER BY members_count DESC LIMIT ${limit}
     `;
-    res.json(clubs.map((club) => ({
-      ...club,
-      rating: Number(club.rating || 0),
-      reviews: 0,
-      review_count: 0,
-    })));
+    res.json(clubs.map((club) => withDynamicRating(club)));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -364,16 +371,13 @@ router.get('/:id', async (req, res) => {
       SELECT c.id, c.name, c.description, c.cover, c.specialty, c.region, c.type,
              c.members_count as members, c.expeditions, c.verified, c.founded, c.status, c.creator_id,
              c.contact, c.wechat, c.website, c.cover_image, c.logo, c.created_at,
-             c.rating
+             c.rating,
+             (SELECT AVG(CAST(r.rating AS REAL)) FROM reviews r WHERE r.target_type = 'club' AND r.target_id = c.id) AS review_avg,
+             (SELECT COUNT(*) FROM reviews r WHERE r.target_type = 'club' AND r.target_id = c.id) AS review_count
       FROM clubs c WHERE c.id = ${id}
     `;
     if (!club) return res.status(404).json({ error: '俱乐部不存在' });
-    res.json({
-      ...club,
-      rating: Number(club.rating || 0),
-      reviews: 0,
-      review_count: 0,
-    });
+    res.json(withDynamicRating(club));
   } catch (e) {
     res.status(500).json({ error: '服务器错误' });
   }
