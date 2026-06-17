@@ -411,6 +411,7 @@
       .ss-section { padding: 4rem 1rem; }
       .peak-grid { grid-template-columns: repeat(2, 1fr); }
       .peak-card-v2 { aspect-ratio: 2/3; }
+      .stat-sep { display: none; }
     }
   </style>
 </head>
@@ -471,11 +472,11 @@
       </div>
       <div class="stat-strip" data-reveal>
         <div class="stat-pill"><strong>20</strong> Climbers per cohort</div>
-        <div class="stat-pill">·</div>
+        <div class="stat-pill stat-sep" aria-hidden="true">·</div>
         <div class="stat-pill"><strong>7</strong> Continents</div>
-        <div class="stat-pill">·</div>
+        <div class="stat-pill stat-sep" aria-hidden="true">·</div>
         <div class="stat-pill"><strong>Free</strong> to apply</div>
-        <div class="stat-pill">·</div>
+        <div class="stat-pill stat-sep" aria-hidden="true">·</div>
         <div class="stat-pill"><strong>IFMGA</strong> Certified guides</div>
       </div>
     </div>
@@ -816,11 +817,11 @@
           <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Guided Expeditions</div>
         </div>
         <div class="glass-panel p-5 text-center" data-reveal>
-          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-counter-target="4" data-counter-suffix=":1" data-counter-duration="600">4:1</div>
+          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">4:1</div>
           <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Max Guide Ratio</div>
         </div>
         <div class="glass-panel p-5 text-center" data-reveal>
-          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-counter-target="0" data-counter-suffix="$" data-counter-duration="400">$0</div>
+          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">$0</div>
           <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Application Fee</div>
         </div>
       </div>
@@ -916,7 +917,7 @@
           </div>
         </div>
         <div class="glass-panel p-6" data-reveal>
-          <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="感谢申请，名单将于2026年11月11日公布。" class="space-y-4">
+          <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="Thank you for applying — selection results will be announced on November 11, 2026." class="space-y-4">
             <div class="grid md:grid-cols-2 gap-4">
               <div><label class="form-label" for="fullName">Full Name</label><input class="form-input" id="fullName" name="fullName" required></div>
               <div><label class="form-label" for="email">Email</label><input class="form-input" id="email" name="email" type="email" required></div>
@@ -926,7 +927,7 @@
               <div><label class="form-label" for="targetSummit">Target Summit</label><select class="form-select" id="targetSummit" name="targetSummit"><option>Everest</option><option>Aconcagua</option><option>Denali</option><option>Kilimanjaro</option><option>Vinson</option><option>Elbrus</option><option>Puncak Jaya</option></select></div>
             </div>
             <div><label class="form-label" for="personalStatement">Personal Statement <span style="color:rgba(180,200,230,.5);font-size:.85em;">(Why Seven Summits? Why now?)</span></label><textarea class="form-textarea" id="personalStatement" name="personalStatement" required style="min-height:140px;"></textarea></div>
-            <div><label class="form-label" for="source">How did you hear about us</label><input class="form-input" id="source" name="source"></div>
+            <div><label class="form-label" for="source">How did you hear about us?</label><input class="form-input" id="source" name="source"></div>
             <div class="hp-field" aria-hidden="true"><label>Leave this field empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
             <div class="hidden" data-form-message></div>
             <button class="btn-primary" type="submit" style="width:100%;font-size:1rem;padding:.9rem;">Start Selection Process →</button>
