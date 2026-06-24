@@ -78,9 +78,12 @@
     });
   }
 
+  const reducedMotionQuery = window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
   function prefersReducedMotion() {
-    return window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return !!(reducedMotionQuery && reducedMotionQuery.matches);
   }
 
   function animateCounter(el) {
@@ -154,8 +157,7 @@
 
   function setMessage(container, message, type) {
     if (!container) return;
-    container.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
-    container.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    prepareLiveRegion(container, type === 'error' ? 'assertive' : 'polite');
     container.className = type === 'error' ? 'form-error' : 'form-success';
     container.textContent = message;
     container.classList.remove('hidden');
