@@ -25,10 +25,10 @@ router.get('/', async (req, res) => {
     timestamp: new Date().toISOString(),
     sentry: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
   };
-  const leadsRecipientConfigured = !!(process.env.LEADS_NOTIFY_EMAIL || process.env.ADMIN_EMAIL);
+  const hasLeadsRecipient = !!(process.env.LEADS_NOTIFY_EMAIL || process.env.ADMIN_EMAIL);
   checks.lead_notifications = {
-    ready: leadsRecipientConfigured && !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM,
-    recipient_configured: leadsRecipientConfigured,
+    ready: hasLeadsRecipient && !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM,
+    recipient_configured: hasLeadsRecipient,
     resend_configured: !!process.env.RESEND_API_KEY,
     from_configured: !!process.env.RESEND_FROM,
   };
