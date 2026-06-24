@@ -59,6 +59,38 @@ describe('Lead Collection', () => {
     expect(res.body.success).toBe(true);
   });
 
+  test('GET /api/health exposes lead notification readiness without leaking secrets', async () => {
+    const original = {
+      LEADS_NOTIFY_EMAIL: process.env.LEADS_NOTIFY_EMAIL,
+      ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      RESEND_FROM: process.env.RESEND_FROM,
+    };
+    process.env.LEADS_NOTIFY_EMAIL = 'admin@example.com';
+    process.env.RESEND_API_KEY = 're_test_key';
+    process.env.RESEND_FROM = 'noreply@example.com';
+    delete process.env.ADMIN_EMAIL;
+
+    let res;
+    try {
+      res = await request(app).get('/api/health');
+    } finally {
+      Object.entries(original).forEach(([key, value]) => {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      });
+    }
+
+    expect(res.status).toBe(200);
+    expect(res.body.lead_notifications).toEqual({
+      ready: true,
+      recipient_configured: true,
+      resend_configured: true,
+      from_configured: true,
+    });
+    expect(JSON.stringify(res.body)).not.toContain('re_test_key');
+  });
+
   test('缺少邮箱 → 400', async () => {
     const res = await request(app)
       .post('/api/contact')

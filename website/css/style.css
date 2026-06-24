@@ -388,6 +388,26 @@ img {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (max-width: 920px) {
   .nav-links {
     display: none;
@@ -404,6 +424,26 @@ img {
 
   .hero-content {
     padding-top: 6.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  form[data-api] {
+    font-size: 0.98rem;
+  }
+
+  form[data-api] .grid {
+    gap: 0.9rem;
+  }
+
+  form[data-api] .form-input,
+  form[data-api] .form-select,
+  form[data-api] .form-textarea {
+    padding: 0.8rem 0.85rem;
+  }
+
+  #apply-form .form-textarea {
+    min-height: 150px;
   }
 }
 
