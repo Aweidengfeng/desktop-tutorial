@@ -442,7 +442,7 @@ img {
     padding: 0.8rem 0.85rem;
   }
 
-  #apply-form .form-textarea {
+  form[data-api] .form-textarea {
     min-height: 150px;
   }
 }

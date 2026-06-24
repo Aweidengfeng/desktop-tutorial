@@ -79,8 +79,7 @@
   }
 
   function prefersReducedMotion() {
-    return typeof window !== 'undefined' &&
-      window.matchMedia &&
+    return window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
