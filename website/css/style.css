@@ -317,6 +317,12 @@ img {
   color: #bbf7d0;
 }
 
+.form-success a,
+.form-error a {
+  color: #bae6fd;
+  text-decoration: underline;
+}
+
 .modal-root {
   position: fixed;
   inset: 0;
@@ -674,6 +680,29 @@ img {
 .hero-visual img {
   object-fit: cover;
   border-radius: 14px;
+}
+
+.visual-proof-grid {
+  position: absolute;
+  left: 1.2rem;
+  right: 1.2rem;
+  bottom: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  z-index: 2;
+}
+
+.visual-proof-grid span {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(8, 13, 24, 0.68);
+  color: #dce8ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.55rem 0.35rem;
+  backdrop-filter: blur(10px);
 }
 
 .dashboard-card {
@@ -1134,6 +1163,10 @@ img {
   .hero-visual picture,
   .hero-visual img {
     min-height: 400px;
+  }
+
+  .visual-proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .trust-strip,

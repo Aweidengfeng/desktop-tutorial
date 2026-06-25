@@ -183,7 +183,7 @@
   function buildMailtoFallback(form, payload) {
     const endpoint = form.dataset.api || '';
     const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
-    const subject = `SummitLink form submission (${endpoint || 'website'})`;
+    const subject = `SummitLink backup submission (${endpoint || 'website'})`;
     const flatten = (v) => String(v).replace(/[\r\n]+/g, ' ').trim();
     const body = Object.entries(payload)
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.map(flatten).join(', ') : flatten(value)}`)
@@ -195,14 +195,27 @@
     if (!container) return;
     prepareLiveRegion(container, 'assertive');
     container.className = 'form-error';
-    container.textContent = 'We could not reach our server right now. ';
+    container.textContent = 'We could not reach the SummitLink API. Your submission was not stored yet. ';
     const link = document.createElement('a');
     link.href = buildMailtoFallback(form, payload);
-    link.textContent = 'Send your details by email instead';
+    link.textContent = 'Send your details by email as a backup';
     link.className = 'text-sky-300 underline';
     container.appendChild(link);
-    container.append('. Your information was not lost.');
+    container.append('. Our team will manually route it to the right inbox.');
     container.classList.remove('hidden');
+  }
+
+  function getSuccessMessage(form, payload, result) {
+    const name = payload.fullName || payload.name || 'there';
+    const email = payload.email || 'your email';
+    if (form.dataset.successTemplate) {
+      return form.dataset.successTemplate
+        .replaceAll('{name}', name)
+        .replaceAll('{email}', email)
+        .replaceAll('{nextSteps}', result.nextSteps || '');
+    }
+    const nextSteps = result.nextSteps || 'Our team will review your submission and follow up with next steps.';
+    return `Thank you, ${name}. We received your submission and created a secure follow-up record. ${nextSteps} A confirmation email has been queued for ${email}.`;
   }
 
   function serializeForm(form) {
@@ -246,22 +259,22 @@
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Request failed');
+      let result = {};
+      try {
+        result = await response.json();
+      } catch (e) {
+        result = {};
+      }
+
+      if (!response.ok) throw new Error(result.error || 'Request failed');
 
       if (successPanel) {
         prepareLiveRegion(successPanel, 'polite');
-        const name = payload.fullName || payload.name || 'Climber';
-        const email = payload.email || 'your email';
-        const customMessage = form.dataset.successTemplate
-          ? form.dataset.successTemplate
-              .replaceAll('{name}', name)
-              .replaceAll('{email}', email)
-          : 'Thank you! We received your submission.';
-        successPanel.textContent = customMessage;
+        successPanel.textContent = getSuccessMessage(form, payload, result);
         successPanel.classList.remove('hidden');
       }
 
-      setMessage(messageTarget, 'Submission successful.', 'success');
+      setMessage(messageTarget, 'Submission received. Check the next-step panel below.', 'success');
       form.reset();
     } catch (error) {
       showMailtoFallback(messageTarget, form, payload);

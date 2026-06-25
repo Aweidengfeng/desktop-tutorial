@@ -40,13 +40,18 @@
         <article class="glass-panel p-5" data-reveal><h2 class="font-bold text-xl">📰 Media & Press</h2><p class="utility-muted">Interview requests and press materials.</p><a href="mailto:hello@summitlink.com" class="text-sky-300">hello@summitlink.com</a></article>
         <article class="glass-panel p-5" data-reveal><h2 class="font-bold text-xl">🆘 General Support</h2><p class="utility-muted">Questions about SummitLink and campaigns.</p><a href="mailto:hello@summitlink.com" class="text-sky-300">hello@summitlink.com</a></article>
       </div>
+      <div class="grid-auto mt-6">
+        <article class="glass-panel p-5" data-reveal><h2 class="font-bold text-xl">✅ Backend captured</h2><p class="utility-muted">The form posts to the SummitLink API, stores a lead, and notifies the team.</p></article>
+        <article class="glass-panel p-5" data-reveal><h2 class="font-bold text-xl">📩 Confirmation email</h2><p class="utility-muted">Submitters receive a confirmation email with a reference ID when mail service is configured.</p></article>
+        <article class="glass-panel p-5" data-reveal><h2 class="font-bold text-xl">⏱ Follow-up window</h2><p class="utility-muted">General inquiries are reviewed within 1–2 business days; urgent expedition matters can still email hello@summitlink.com.</p></article>
+      </div>
       <p class="utility-muted text-sm mt-6" data-reveal>SummitLink is operated by Summit Technology LLC (United States) as the primary entity, with engineering, product development, and regional operations provided by 未登峰（北京）科技有限公司.</p>
     </section>
 
     <section class="section-wrap" id="contact-form">
       <h2 class="text-3xl md:text-5xl font-black mb-6" data-reveal>Contact Form</h2>
       <div class="glass-panel p-5 md:p-8" data-reveal>
-        <form data-api="/api/contact" class="space-y-4">
+        <form data-api="/api/contact" data-success-template="Thank you, {name}. We received your message and queued a confirmation email to {email}. {nextSteps}" class="space-y-4">
           <div class="grid md:grid-cols-2 gap-4">
             <div><label class="form-label" for="contactName">Name</label><input class="form-input" id="contactName" name="name" required /></div>
             <div><label class="form-label" for="contactEmail">Email</label><input class="form-input" id="contactEmail" type="email" name="email" required /></div>
