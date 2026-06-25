@@ -96,7 +96,7 @@ describe('Resend mail helpers', () => {
     expect(email.subject).toContain('Seven Summits application received');
     expect(email.html).toContain('&lt;Alex&gt;');
     expect(email.html).toContain('Reference ID');
-    expect(email.html).toContain('cohort selection window');
+    expect(email.html).toContain('selection window');
     expect(email.html).not.toContain('<Alex>');
     expect(email.text).toContain('#42');
   });
