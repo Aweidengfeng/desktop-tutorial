@@ -2,7 +2,7 @@ name: Deploy Website to GitHub Pages
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  WEBSITE_CUSTOM_DOMAIN: summitlink.cn
+  WEBSITE_CUSTOM_DOMAIN: unsummit.cn
 on:
   push:
     branches:

@@ -2,7 +2,7 @@
   const APP_DEADLINE = '2026-10-15T23:59:59Z';
 
   // Absolute API origin for the lead-collection backend. The static site is served
-  // from GitHub Pages (summitlink.cn) which has no backend, so form `data-api`
+  // from GitHub Pages (unsummit.cn) which has no backend, so form `data-api`
   // paths must be resolved against this origin. Override at runtime by setting
   // `window.SUMMITLINK_API_BASE` before this script loads.
   const API_BASE = (typeof window !== 'undefined' && window.SUMMITLINK_API_BASE) || '';
