@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <meta property="og:url" content="https://summitlink.cn/corporate.html" />
+  <meta property="og:url" content="https://unsummit.cn/corporate.html" />
   <meta property="og:site_name" content="SummitLink" />
   <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -20,7 +20,7 @@
   <meta name="twitter:description" content="SummitLink is building scalable global infrastructure for mountaineering. Partner with us as an investor, sponsor, or strategic partner." />
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80" />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://summitlink.cn/corporate.html" />
+  <link rel="canonical" href="https://unsummit.cn/corporate.html" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
   <style>
@@ -507,7 +507,7 @@
       <div class="glass-card p-6 md:p-8" data-reveal>
         <h3 class="text-2xl font-black mb-2">Interested in Investing?</h3>
         <p class="section-sub">We welcome conversations with venture investors, family offices, strategic partners, and high-net-worth individuals who share our belief in the future of global adventure infrastructure.</p>
-        <form data-api="/api/partnerships" class="space-y-4" aria-label="Investment inquiry form">
+        <form data-api="/api/partnerships" data-success-template="Thank you, {name}. We received your partnership or investment inquiry and queued a confirmation email to {email}. {nextSteps}" class="space-y-4" aria-label="Investment inquiry form">
           <div class="grid md:grid-cols-2 gap-4">
             <div>
               <label class="form-label" for="investorName">Name</label>

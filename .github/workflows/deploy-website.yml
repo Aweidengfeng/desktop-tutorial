@@ -2,12 +2,14 @@ name: Deploy Website to GitHub Pages
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  WEBSITE_CUSTOM_DOMAIN: unsummit.cn
 on:
   push:
     branches:
       - main
     paths:
       - 'website/**'
+      - '.github/workflows/deploy-website.yml'
   workflow_dispatch:
 
 permissions:
@@ -25,6 +27,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Verify custom domain
+        run: |
+          test -f website/CNAME
+          grep -qx "$WEBSITE_CUSTOM_DOMAIN" website/CNAME
+
+      - name: Disable Jekyll processing
+        run: touch website/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

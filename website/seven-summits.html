@@ -3,98 +3,1037 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Seven Summits Global Challenge 2026 | SummitLink</title>
-  <meta name="description" content="Official program page for Seven Summits Global Challenge 2026." />
+  <title>Seven Summits Global Challenge 2026 | SummitLink — Select Expedition Program</title>
+  <meta name="description" content="20 climbers selected. 7 continents. Full logistical support. Apply free — SummitLink Seven Summits Global Challenge 2026." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="image" href="https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <meta property="og:title" content="Seven Summits Global Challenge 2026 | SummitLink" />
-  <meta property="og:description" content="Official program page for Seven Summits Global Challenge 2026." />
+  <meta property="og:description" content="20 climbers selected. 7 continents. Full logistical support. Apply free." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80" />
-  <meta property="og:url" content="https://summitlink.cn/seven-summits.html" />
+  <meta property="og:url" content="https://unsummit.cn/seven-summits.html" />
   <meta property="og:site_name" content="SummitLink" />
   <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Seven Summits Global Challenge 2026 | SummitLink" />
-  <meta name="twitter:description" content="Official program page for Seven Summits Global Challenge 2026." />
+  <meta name="twitter:description" content="20 climbers selected. 7 continents. Full logistical support. Apply free." />
   <meta name="twitter:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80" />
   <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://summitlink.cn/seven-summits.html" />
+  <link rel="canonical" href="https://unsummit.cn/seven-summits.html" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./css/style.css" />
   <style>
-    body { background:#080f1c; color:#fff; }
-    .hero-program { min-height:100vh; position:relative; display:flex; align-items:center; }
-    .hero-program::before { content:""; position:absolute; inset:0; background:url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80') center/cover no-repeat; }
-    .hero-program::after { content:""; position:absolute; inset:0; background:linear-gradient(140deg,rgba(8,15,28,.82),rgba(8,15,28,.58)); }
-    .hero-content-v3 { position:relative; z-index:2; width:min(1200px,100%); margin:0 auto; padding:8rem 1rem 5rem; }
-    .title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(2.4rem,5vw,4.8rem); line-height:1.06; }
-    .section-title { font-family:'Sora',sans-serif; font-weight:900; font-size:clamp(1.9rem,4vw,3.2rem); }
-    .muted { color:rgba(255,255,255,.68); }
-    .peak-card img { width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:.8rem; }
-    .difficulty { border:1px solid rgba(255,255,255,.3); border-radius:999px; padding:.2rem .6rem; font-size:.75rem; }
+    /* ── Page-level overrides ── */
+    body { background: #080f1c; }
+
+    /* Hero */
+    .ss-hero {
+      min-height: 100vh;
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    .ss-hero-bg {
+      position: absolute;
+      inset: 0;
+      background: url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80') center/cover no-repeat;
+    }
+    .ss-hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, rgba(4,9,20,.88) 0%, rgba(8,15,28,.62) 50%, rgba(4,9,20,.90) 100%);
+    }
+    .ss-hero-content {
+      position: relative;
+      z-index: 2;
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      padding: 9rem 1.5rem 5rem;
+    }
+    .ss-hero-title {
+      font-family: 'Sora', sans-serif;
+      font-weight: 900;
+      font-size: clamp(2.6rem, 6vw, 5.2rem);
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+    }
+    .ss-hero-sub {
+      font-size: clamp(1rem, 2vw, 1.28rem);
+      color: rgba(220,232,255,.82);
+      max-width: 680px;
+    }
+    .gold { color: var(--accent-gold); }
+    .gold-gradient {
+      background: linear-gradient(110deg, var(--accent-gold), var(--accent-gold-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Stat pills */
+    .stat-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem 1.5rem;
+      align-items: center;
+    }
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .88rem;
+      color: rgba(220,232,255,.8);
+    }
+    .stat-pill strong { color: #fff; font-size: 1.05rem; }
+
+    /* Section spacing */
+    .ss-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 6rem 1.5rem;
+    }
+    .ss-section + .ss-section { padding-top: 0; }
+
+    /* Why blocks */
+    .why-grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .why-card {
+      padding: 1.75rem;
+      border-radius: var(--radius);
+      background: rgba(22,26,38,.6);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .why-icon { font-size: 2rem; margin-bottom: .75rem; display: block; }
+
+    /* Safety */
+    .safety-grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .safety-card {
+      padding: 1.75rem;
+      border-radius: var(--radius);
+      background: rgba(17,24,40,.7);
+      border: 1px solid rgba(79,172,254,.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .safety-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #4facfe, #39d2ff);
+    }
+
+    /* Peak cards */
+    .peak-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    .peak-card-v2 {
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 3/4;
+      cursor: default;
+    }
+    .peak-card-v2 img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .45s ease;
+    }
+    .peak-card-v2:hover img { transform: scale(1.06); }
+    .peak-card-v2-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(0deg, rgba(4,9,20,.92) 30%, transparent 70%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 1.1rem;
+    }
+    .diff-badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: .18rem .55rem;
+      font-size: .72rem;
+      font-weight: 700;
+      margin-bottom: .4rem;
+    }
+    .diff-extreme { background: rgba(248,113,113,.22); color: #fca5a5; border: 1px solid rgba(248,113,113,.4); }
+    .diff-hard    { background: rgba(251,191,36,.18); color: #fde68a; border: 1px solid rgba(251,191,36,.4); }
+    .diff-moderate{ background: rgba(52,211,153,.18); color: #a7f3d0; border: 1px solid rgba(52,211,153,.4); }
+
+    /* Itinerary timeline */
+    .itinerary-track {
+      position: relative;
+      padding-left: 2.4rem;
+    }
+    .itinerary-track::before {
+      content: '';
+      position: absolute;
+      left: .75rem;
+      top: .4rem;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, #4facfe 0%, rgba(79,172,254,.1) 100%);
+    }
+    .itin-item {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    .itin-dot {
+      position: absolute;
+      left: -2.4rem;
+      top: .3rem;
+      width: 1.1rem;
+      height: 1.1rem;
+      border-radius: 50%;
+      background: #4facfe;
+      border: 2px solid #080f1c;
+      box-shadow: 0 0 0 3px rgba(79,172,254,.28);
+    }
+    .itin-phase {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #4facfe;
+      margin-bottom: .25rem;
+    }
+    .itin-title {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 1.12rem;
+      margin-bottom: .3rem;
+    }
+    .itin-desc { color: rgba(180,200,230,.75); font-size: .9rem; }
+
+    /* Who This Is For */
+    .tier-grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+    .tier-card {
+      padding: 1.75rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(16,22,38,.65);
+    }
+    .tier-card.recommended {
+      border-color: rgba(245,166,35,.5);
+      background: rgba(245,166,35,.07);
+    }
+    .tier-label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+    .not-for-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      color: rgba(220,232,255,.65);
+      font-size: .92rem;
+      margin-bottom: .6rem;
+    }
+    .not-for-list li::before { content: '✗'; color: #f87171; flex-shrink: 0; }
+
+    /* Testimonials */
+    .testi-grid {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .testi-card {
+      padding: 1.75rem;
+      border-radius: var(--radius);
+      background: rgba(22,26,38,.6);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .testi-stars { color: var(--accent-gold); font-size: 1rem; margin-bottom: .75rem; letter-spacing: .05em; }
+    .testi-quote { font-size: .95rem; color: rgba(220,232,255,.82); line-height: 1.65; margin-bottom: 1rem; }
+    .testi-author { font-size: .84rem; color: rgba(180,200,230,.6); }
+    .testi-author strong { color: #fff; }
+
+    /* FAQ */
+    .faq-item {
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    .faq-btn {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: #fff;
+      font-family: 'Sora', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 1.3rem 0;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .faq-btn .faq-icon {
+      flex-shrink: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .85rem;
+      transition: transform .25s ease;
+    }
+    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-answer {
+      display: none;
+      color: rgba(180,200,230,.75);
+      font-size: .95rem;
+      line-height: 1.7;
+      padding-bottom: 1.3rem;
+    }
+    .faq-item.open .faq-answer { display: block; }
+
+    /* Final CTA */
+    .final-cta-section {
+      background: linear-gradient(135deg, rgba(12,20,40,.95), rgba(4,9,20,1));
+      border-top: 1px solid rgba(255,255,255,.08);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    /* Countdown */
+    .countdown-wrap {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .countdown-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 68px;
+      padding: .75rem .5rem .5rem;
+      border-radius: 12px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.14);
+    }
+    .countdown-block .cd-num {
+      font-family: 'Sora', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      line-height: 1;
+      color: var(--accent-gold);
+    }
+    .countdown-block .cd-label {
+      font-size: .67rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: rgba(220,232,255,.5);
+      margin-top: .3rem;
+    }
+
+    /* Trust bar */
+    .trust-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 2rem;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: rgba(255,255,255,.04);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .84rem;
+      color: rgba(200,215,240,.75);
+    }
+    .trust-item svg { flex-shrink: 0; opacity: .7; }
+
+    /* Included list */
+    .included-list {
+      display: grid;
+      gap: .75rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .included-item {
+      display: flex;
+      align-items: flex-start;
+      gap: .65rem;
+      font-size: .94rem;
+      color: rgba(220,232,255,.8);
+    }
+    .included-check {
+      flex-shrink: 0;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 50%;
+      background: rgba(52,211,153,.18);
+      border: 1px solid rgba(52,211,153,.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #34d399;
+      font-size: .75rem;
+      margin-top: .06rem;
+    }
+
+    /* Divider */
+    .ss-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 640px) {
+      .ss-hero-content { padding: 7.5rem 1rem 4rem; }
+      .ss-section { padding: 4rem 1rem; }
+      .peak-grid { grid-template-columns: repeat(2, 1fr); }
+      .peak-card-v2 { aspect-ratio: 2/3; }
+      .stat-sep { display: none; }
+    }
   </style>
 </head>
 <body data-page="seven-summits">
-  <nav class="site-nav" aria-label="Primary Navigation"><div class="nav-shell"><div class="flex items-center justify-between gap-4"><a href="./index.html" class="brand-font text-lg font-bold">▲ SummitLink</a><div class="nav-links items-center gap-1 md:flex"><a class="nav-link" data-nav="home" href="./index.html">Home</a><a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a><a class="nav-link" data-nav="guides" href="./guides.html">Guides</a><a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a><a class="nav-link" data-nav="pricing" href="./pricing.html">Pricing</a><a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a><a class="nav-link" data-nav="contact" href="./contact.html">Contact</a></div><div class="flex items-center gap-2"><a class="btn-primary" href="#apply-form">Apply Now</a><button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button></div></div><div class="mobile-menu" data-mobile-menu><a class="nav-link block" href="./index.html">Home</a><a class="nav-link block" href="./seven-summits.html">Seven Summits</a><a class="nav-link block" href="./guides.html">Guides</a><a class="nav-link block" href="./peaks.html">Peaks</a><a class="nav-link block" href="./pricing.html">Pricing</a><a class="nav-link block" href="./corporate.html">Corporate</a><a class="nav-link block" href="./contact.html">Contact</a></div></div></nav>
 
-  <header class="hero-program">
-    <div class="hero-content-v3">
-      <span class="badge">APPLICATIONS OPEN JULY 1, 2026</span>
-      <h1 class="title mt-4 mb-4">Seven Summits Global Challenge 2026</h1>
-      <p class="text-xl muted max-w-3xl mb-6">20 selected climbers. 7 continents. The world's most ambitious mountaineering program.</p>
-      <a class="btn-primary" href="#apply-form">Apply Now — Free Entry</a>
+  <!-- Navigation -->
+  <nav class="site-nav" aria-label="Primary Navigation">
+    <div class="nav-shell">
+      <div class="flex items-center justify-between gap-4">
+        <a href="./index.html" class="brand-font text-lg font-bold">▲ SummitLink</a>
+        <div class="nav-links items-center gap-1 md:flex">
+          <a class="nav-link" data-nav="home" href="./index.html">Home</a>
+          <a class="nav-link" data-nav="seven-summits" href="./seven-summits.html">Seven Summits</a>
+          <a class="nav-link" data-nav="guides" href="./guides.html">Guides</a>
+          <a class="nav-link" data-nav="peaks" href="./peaks.html">Peaks</a>
+          <a class="nav-link" data-nav="pricing" href="./pricing.html">Pricing</a>
+          <a class="nav-link" data-nav="corporate" href="./corporate.html">Corporate</a>
+          <a class="nav-link" data-nav="contact" href="./contact.html">Contact</a>
+        </div>
+        <div class="flex items-center gap-2">
+          <a class="btn-primary" href="#application">Check Eligibility</a>
+          <button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button>
+        </div>
+      </div>
+      <div class="mobile-menu" data-mobile-menu>
+        <a class="nav-link block" href="./index.html">Home</a>
+        <a class="nav-link block" href="./seven-summits.html">Seven Summits</a>
+        <a class="nav-link block" href="./guides.html">Guides</a>
+        <a class="nav-link block" href="./peaks.html">Peaks</a>
+        <a class="nav-link block" href="./pricing.html">Pricing</a>
+        <a class="nav-link block" href="./corporate.html">Corporate</a>
+        <a class="nav-link block" href="./contact.html">Contact</a>
+      </div>
     </div>
+  </nav>
+
+  <!-- ①  Hero Section -->
+  <header class="ss-hero">
+    <div class="ss-hero-bg" role="img" aria-label="Summit ridge at high altitude"></div>
+    <div class="ss-hero-overlay"></div>
+    <div class="ss-hero-content">
+      <span class="badge" data-reveal>🏔 APPLICATIONS OPEN JULY 1, 2026 · SELECTIVE ADMISSION · LIMITED COHORT</span>
+      <h1 class="ss-hero-title mt-5 mb-5" data-reveal>
+        The World's<br>
+        Most <span class="gold-gradient">Ambitious</span><br>
+        Mountaineering<br>
+        Program.
+      </h1>
+      <p class="ss-hero-sub mb-4" data-reveal>
+        20 climbers selected per season. 7 continents. One complete Seven Summits journey — with IFMGA-certified guides, full logistics, and support from base to summit.
+      </p>
+      <p style="font-size:.9rem;color:rgba(245,166,35,.85);font-weight:600;margin-bottom:2rem;letter-spacing:.01em;" data-reveal>
+        This is a selection-based expedition program. Not all applicants will be accepted.
+      </p>
+      <div class="flex flex-wrap gap-3 mb-10" data-reveal>
+        <a class="btn-primary" href="#application" style="font-size:1rem;padding:.9rem 1.8rem;">Check Eligibility — Free</a>
+        <a class="btn-ghost" href="#why-expedition">Learn What's Included ↓</a>
+      </div>
+      <div class="stat-strip" data-reveal>
+        <div class="stat-pill"><strong>20</strong> Climbers per cohort</div>
+        <div class="stat-pill stat-sep" aria-hidden="true">·</div>
+        <div class="stat-pill"><strong>7</strong> Continents</div>
+        <div class="stat-pill stat-sep" aria-hidden="true">·</div>
+        <div class="stat-pill"><strong>Free</strong> to apply</div>
+        <div class="stat-pill stat-sep" aria-hidden="true">·</div>
+        <div class="stat-pill"><strong>IFMGA</strong> Certified guides</div>
+      </div>
+    </div>
+    <div class="scroll-indicator" aria-hidden="true">⌄</div>
   </header>
 
   <main>
-    <section class="section-wrap"><h2 class="section-title mb-4">What is it</h2><p class="muted max-w-4xl">A once-in-a-generation mountaineering program. 20 climbers from around the world are selected to summit the highest peak on each of the 7 continents, with full logistical support from SummitLink.</p></section>
 
-    <section class="section-wrap section-tight">
-      <h2 class="section-title mb-6">The Seven Peaks</h2>
-      <div class="grid-auto">
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80" alt="Everest"><h3 class="font-bold">Everest</h3><p class="muted">Asia · 8849m</p><span class="difficulty">Extreme</span></article>
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80" alt="Aconcagua"><h3 class="font-bold">Aconcagua</h3><p class="muted">South America · 6961m</p><span class="difficulty">Hard</span></article>
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1455156218388-5e61b526818b?w=900&q=80" alt="Denali"><h3 class="font-bold">Denali</h3><p class="muted">North America · 6190m</p><span class="difficulty">Extreme</span></article>
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=900&q=80" alt="Kilimanjaro"><h3 class="font-bold">Kilimanjaro</h3><p class="muted">Africa · 5895m</p><span class="difficulty">Moderate</span></article>
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=900&q=80" alt="Vinson"><h3 class="font-bold">Vinson</h3><p class="muted">Antarctica · 4892m</p><span class="difficulty">Extreme</span></article>
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1464823063530-08f10ed1a2dd?w=900&q=80" alt="Elbrus"><h3 class="font-bold">Elbrus</h3><p class="muted">Europe · 5642m</p><span class="difficulty">Hard</span></article>
-        <article class="glass-panel p-4 peak-card"><img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80" alt="Puncak Jaya"><h3 class="font-bold">Puncak Jaya</h3><p class="muted">Oceania · 4884m</p><span class="difficulty">Hard</span></article>
+    <!-- Trust bar -->
+    <div style="max-width:1200px;margin:0 auto;padding:0 1.5rem;">
+      <div class="trust-bar" data-reveal>
+        <div class="trust-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          IFMGA / UIAGM Certified Guides
+        </div>
+        <div class="trust-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Application Review Required — Acceptance Not Guaranteed
+        </div>
+        <div class="trust-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Fully Insured Emergency Evacuation
+        </div>
+        <div class="trust-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          7 Continents · Full Logistic Support
+        </div>
+      </div>
+    </div>
+
+    <div class="ss-divider" style="margin-top:3rem;"></div>
+
+    <!-- ② Why This Expedition -->
+    <section class="ss-section" id="why-expedition">
+      <div class="mb-12" data-reveal>
+        <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">WHY THIS PROGRAM</p>
+        <h2 class="section-title mb-4">Not a Commercial Tour.<br>A <span class="gold-gradient">Selection Program.</span></h2>
+        <p style="color:rgba(180,200,230,.75);max-width:640px;font-size:1.02rem;">SummitLink doesn't sell seats. We select climbers. There's a fundamental difference between a guided commercial package and a program built to produce genuine Seven Summits completions.</p>
+      </div>
+      <div class="why-grid">
+        <div class="why-card" data-reveal>
+          <span class="why-icon">🎯</span>
+          <h3 class="font-bold text-lg mb-2">Selection, Not Sales</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.94rem;">Every applicant is individually reviewed. We turn down applicants who aren't ready — because summit success depends on it. Your cohort will be 20 serious, vetted climbers.</p>
+        </div>
+        <div class="why-card" data-reveal>
+          <span class="why-icon">🌐</span>
+          <h3 class="font-bold text-lg mb-2">End-to-End Logistics</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.94rem;">Permits, flights to base camps, accommodation, equipment, nutrition plans — handled. You show up trained and ready. We handle everything else across 7 countries.</p>
+        </div>
+        <div class="why-card" data-reveal>
+          <span class="why-icon">🧭</span>
+          <h3 class="font-bold text-lg mb-2">IFMGA Guide Ratio</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.94rem;">Maximum 4:1 climber-to-guide ratio on technical peaks. Your lead guide holds IFMGA/UIAGM certification — the highest international mountaineering qualification.</p>
+        </div>
+        <div class="why-card" data-reveal>
+          <span class="why-icon">📡</span>
+          <h3 class="font-bold text-lg mb-2">24/7 Operations Center</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.94rem;">SummitLink's expedition operations team monitors weather windows, rescue availability, and your team's position in real time — from every summit, on every continent.</p>
+        </div>
+        <div class="why-card" data-reveal>
+          <span class="why-icon">💰</span>
+          <h3 class="font-bold text-lg mb-2">Free to Apply</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.94rem;">There is no application fee. We believe the barrier to legendary mountaineering should be fitness and commitment — not a credit card. Applying costs you nothing except 10 minutes.</p>
+        </div>
+        <div class="why-card" data-reveal>
+          <span class="why-icon">🏅</span>
+          <h3 class="font-bold text-lg mb-2">A Cohort of 20</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.94rem;">You'll share your journey with 19 other selected climbers from around the world — a permanent network of people who have stood on the same summits you have.</p>
+        </div>
       </div>
     </section>
 
-    <section class="section-wrap section-tight"><h2 class="section-title mb-4">What's Included</h2><ul class="space-y-2 muted"><li>✅ All expedition permits</li><li>✅ Certified SummitLink-verified guides</li><li>✅ Accommodation at all base camps</li><li>✅ All meals during expedition</li><li>✅ Sponsor-grade technical equipment</li><li>✅ Emergency evacuation insurance</li><li>✅ 24/7 SummitLink expedition support</li></ul></section>
+    <div class="ss-divider"></div>
 
-    <section class="section-wrap section-tight"><h2 class="section-title mb-4">Timeline</h2><div class="grid md:grid-cols-4 gap-3"><div class="glass-panel p-4">July 1, 2026<br><span class="muted">Applications Open</span></div><div class="glass-panel p-4">October 15, 2026<br><span class="muted">Applications Close</span></div><div class="glass-panel p-4">November 11, 2026<br><span class="muted">Selection Announced</span></div><div class="glass-panel p-4">2027<br><span class="muted">Expeditions Begin</span></div></div></section>
+    <!-- ③ Safety & Guide System -->
+    <section class="ss-section" id="safety">
+      <div class="mb-12" data-reveal>
+        <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">SAFETY ARCHITECTURE</p>
+        <h2 class="section-title mb-4">Built Around<br><span class="gold-gradient">Getting You Home.</span></h2>
+        <p style="color:rgba(180,200,230,.75);max-width:640px;font-size:1.02rem;">Summit success is the goal. Returning safely is the non-negotiable. Every system we operate is designed for that order of priority.</p>
+      </div>
+      <div class="safety-grid">
+        <div class="safety-card" data-reveal>
+          <div style="font-size:1.6rem;margin-bottom:.75rem;">🏔</div>
+          <h3 class="font-bold text-lg mb-2">IFMGA / UIAGM Certified Guides</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.9rem;">All lead guides hold the International Federation of Mountain Guides Associations certification — the globally recognized standard for high-altitude guiding competence.</p>
+        </div>
+        <div class="safety-card" data-reveal>
+          <div style="font-size:1.6rem;margin-bottom:.75rem;">🫁</div>
+          <h3 class="font-bold text-lg mb-2">Supplemental Oxygen Systems</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.9rem;">Supplemental oxygen staged at all high camps on Everest and Vinson. Portable altitude chambers (Gamow bags) carried on all expeditions above 5,500m.</p>
+        </div>
+        <div class="safety-card" data-reveal>
+          <div style="font-size:1.6rem;margin-bottom:.75rem;">🚁</div>
+          <h3 class="font-bold text-lg mb-2">Rescue &amp; Evacuation Coverage</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.9rem;">Pre-arranged helicopter evacuation contracts on Everest, Denali, Elbrus, and Kilimanjaro. All climbers carry personal satellite communicators (Garmin inReach).</p>
+        </div>
+        <div class="safety-card" data-reveal>
+          <div style="font-size:1.6rem;margin-bottom:.75rem;">🩺</div>
+          <h3 class="font-bold text-lg mb-2">Expedition Medic On Every Team</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.9rem;">A wilderness medicine certified medic joins every technical expedition. Daily health check protocols, AMS monitoring, and pulse-ox tracking throughout.</p>
+        </div>
+        <div class="safety-card" data-reveal>
+          <div style="font-size:1.6rem;margin-bottom:.75rem;">🌦</div>
+          <h3 class="font-bold text-lg mb-2">Professional Weather Forecasting</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.9rem;">We partner with Meteogroup and local high-altitude specialists for real-time 72-hour summit window forecasting. No summit attempt proceeds without a safe window.</p>
+        </div>
+        <div class="safety-card" data-reveal>
+          <div style="font-size:1.6rem;margin-bottom:.75rem;">📋</div>
+          <h3 class="font-bold text-lg mb-2">Pre-Expedition Training Audit</h3>
+          <p style="color:rgba(180,200,230,.72);font-size:.9rem;">12 weeks before each summit, your guide reviews your training log and physical readiness. If we don't believe you're ready, we will delay your summit — for your safety.</p>
+        </div>
+      </div>
+    </section>
 
-    <section class="section-wrap section-tight"><h2 class="section-title mb-4">Selection Criteria</h2><ul class="space-y-2 muted"><li>Physical fitness assessment</li><li>Previous high-altitude experience</li><li>Personal statement</li><li>References from certified guides or clubs</li><li>Commitment to expedition schedule</li></ul></section>
+    <div class="ss-divider"></div>
 
-    <section class="section-wrap" id="application">
-      <h2 class="section-title mb-6">Apply Form</h2>
-      <div class="glass-panel p-6">
-        <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="感谢申请，名单将于2026年11月11日公布。" class="space-y-4">
-          <div class="grid md:grid-cols-2 gap-4">
-            <div><label class="form-label" for="fullName">Full Name</label><input class="form-input" id="fullName" name="fullName" required></div>
-            <div><label class="form-label" for="email">Email</label><input class="form-input" id="email" name="email" type="email" required></div>
-            <div><label class="form-label" for="country">Country</label><input class="form-input" id="country" name="country" required></div>
-            <div><label class="form-label" for="phone">Phone</label><input class="form-input" id="phone" name="phone" required></div>
-            <div><label class="form-label" for="experienceLevel">Experience Level</label><select class="form-select" id="experienceLevel" name="experienceLevel"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option></select></div>
-            <div><label class="form-label" for="targetSummit">Target Summit</label><select class="form-select" id="targetSummit" name="targetSummit"><option>Everest</option><option>Aconcagua</option><option>Denali</option><option>Kilimanjaro</option><option>Vinson</option><option>Elbrus</option><option>Puncak Jaya</option></select></div>
+    <!-- The Seven Peaks -->
+    <section class="ss-section">
+      <div class="mb-10" data-reveal>
+        <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">THE MOUNTAINS</p>
+        <h2 class="section-title">Seven Peaks.<br><span class="gold-gradient">Seven Continents.</span></h2>
+      </div>
+      <div class="peak-grid">
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Everest, Asia" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-extreme">Extreme</span>
+            <h3 class="font-bold text-lg leading-tight">Everest</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">Asia · 8,849m</p>
           </div>
-          <div><label class="form-label" for="personalStatement">Personal Statement</label><textarea class="form-textarea" id="personalStatement" name="personalStatement" required></textarea></div>
-          <div><label class="form-label" for="source">How did you hear about us</label><input class="form-input" id="source" name="source"></div>
-          <div class="hp-field" aria-hidden="true"><label>Leave this field empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-          <div class="hidden" data-form-message></div>
-          <button class="btn-primary" type="submit">Submit Application</button>
-        </form>
-        <p class="form-success hidden mt-4" data-form-success-panel></p>
+        </article>
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80" alt="Aconcagua, South America" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-hard">Hard</span>
+            <h3 class="font-bold text-lg leading-tight">Aconcagua</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">South America · 6,961m</p>
+          </div>
+        </article>
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1455156218388-5e61b526818b?w=600&q=80" alt="Denali, North America" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-extreme">Extreme</span>
+            <h3 class="font-bold text-lg leading-tight">Denali</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">North America · 6,190m</p>
+          </div>
+        </article>
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=600&q=80" alt="Kilimanjaro, Africa" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-moderate">Moderate</span>
+            <h3 class="font-bold text-lg leading-tight">Kilimanjaro</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">Africa · 5,895m</p>
+          </div>
+        </article>
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=600&q=80" alt="Vinson, Antarctica" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-extreme">Extreme</span>
+            <h3 class="font-bold text-lg leading-tight">Vinson</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">Antarctica · 4,892m</p>
+          </div>
+        </article>
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1464823063530-08f10ed1a2dd?w=600&q=80" alt="Elbrus, Europe" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-hard">Hard</span>
+            <h3 class="font-bold text-lg leading-tight">Elbrus</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">Europe · 5,642m</p>
+          </div>
+        </article>
+        <article class="peak-card-v2" data-reveal>
+          <img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=600&q=80" alt="Puncak Jaya, Oceania" loading="lazy">
+          <div class="peak-card-v2-overlay">
+            <span class="diff-badge diff-hard">Hard</span>
+            <h3 class="font-bold text-lg leading-tight">Puncak Jaya</h3>
+            <p style="color:rgba(200,215,240,.7);font-size:.82rem;">Oceania · 4,884m</p>
+          </div>
+        </article>
       </div>
     </section>
+
+    <div class="ss-divider"></div>
+
+    <!-- ④ Itinerary -->
+    <section class="ss-section" id="itinerary">
+      <div class="grid md:grid-cols-2 gap-12 items-start">
+        <div data-reveal>
+          <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">EXPEDITION JOURNEY</p>
+          <h2 class="section-title mb-4">A 4-Phase<br><span class="gold-gradient">Journey.</span></h2>
+          <p style="color:rgba(180,200,230,.75);font-size:1rem;margin-bottom:2rem;">Spread across 2027–2028. Each expedition builds on the last. Your guides, support team, and cohort travel the journey with you.</p>
+          <a class="btn-ghost" href="#application">Check Eligibility ↓</a>
+        </div>
+        <div>
+          <div class="itinerary-track">
+            <div class="itin-item" data-reveal>
+              <div class="itin-dot"></div>
+              <div class="itin-phase">Phase 1 · Q1 2027</div>
+              <div class="itin-title">Africa &amp; Europe — Kilimanjaro + Elbrus</div>
+              <p class="itin-desc">Two attainable high-altitude summits to build team cohesion, acclimatization protocols, and baseline fitness data. Most participants summit Kilimanjaro on Day 8 and Elbrus on Day 20.</p>
+            </div>
+            <div class="itin-item" data-reveal>
+              <div class="itin-dot"></div>
+              <div class="itin-phase">Phase 2 · Q2 2027</div>
+              <div class="itin-title">Americas — Aconcagua + Denali</div>
+              <p class="itin-desc">Technical cold-weather climbing in South America followed by Alaska's demanding expedition-style ascent of Denali. Guides assess each climber's readiness before Phase 3.</p>
+            </div>
+            <div class="itin-item" data-reveal>
+              <div class="itin-dot"></div>
+              <div class="itin-phase">Phase 3 · Q3 2027</div>
+              <div class="itin-title">Oceania &amp; Antarctica — Puncak Jaya + Vinson</div>
+              <p class="itin-desc">Remote jungle approach to Puncak Jaya in Papua, then the frozen continent of Antarctica for Vinson Massif — two of the most logistically complex summits on Earth.</p>
+            </div>
+            <div class="itin-item" data-reveal>
+              <div class="itin-dot" style="background:var(--accent-gold);box-shadow:0 0 0 3px rgba(245,166,35,.3);"></div>
+              <div class="itin-phase" style="color:var(--accent-gold);">Phase 4 · Spring 2028</div>
+              <div class="itin-title">Asia — Everest</div>
+              <p class="itin-desc">The final summit. Nepal's spring window, Sherpa support teams, rotational acclimatization to Camp 4, and a summit bid on a confirmed weather window. Completing Seven Summits.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- What's Included -->
+    <section style="background:rgba(16,22,38,.55);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);">
+      <div class="ss-section" style="padding-top:4rem;padding-bottom:4rem;">
+        <div class="mb-8" data-reveal>
+          <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">WHAT'S INCLUDED</p>
+          <h2 class="section-title">Full Support.<br><span class="gold-gradient">Zero Hidden Costs.</span></h2>
+        </div>
+        <div class="included-list">
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>All expedition permits (Everest, Denali, Vinson, Puncak Jaya, Elbrus, Kilimanjaro, Aconcagua)</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>IFMGA/UIAGM certified lead guide for each summit</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Expedition medic on all technical climbs</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>All base camp and high camp accommodation</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Nutrition and meal planning during each expedition</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Sponsor-grade technical equipment (harness, crampons, ice axe)</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Supplemental oxygen on Everest and Vinson</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Personal satellite communicator (Garmin inReach) for all phases</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Emergency evacuation insurance (worldwide cover)</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>24/7 SummitLink expedition operations support</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Weather forecasting service for every summit window</span></div>
+          <div class="included-item" data-reveal><div class="included-check">✓</div><span>Pre-expedition training plan and readiness audit</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑤ Who This Is For -->
+    <section class="ss-section" id="who">
+      <div class="mb-10" data-reveal>
+        <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">IS THIS FOR YOU?</p>
+        <h2 class="section-title mb-3">We Select Across<br><span class="gold-gradient">Three Experience Tiers.</span></h2>
+        <p style="color:rgba(180,200,230,.75);max-width:600px;font-size:1rem;">You don't need to have climbed Everest before. But you do need to be honest about where you are — and committed to getting ready.</p>
+      </div>
+      <div class="tier-grid mb-12">
+        <div class="tier-card" data-reveal>
+          <div class="tier-label" style="color:rgba(180,200,230,.5);">TIER A — DEVELOPING</div>
+          <h3 class="font-bold text-xl mb-2">Motivated Beginners</h3>
+          <p style="color:rgba(180,200,230,.7);font-size:.9rem;margin-bottom:1rem;">No summit experience required for this tier. You need demonstrable physical fitness, a clear training commitment, and a personal statement that shows why Seven Summits is your goal.</p>
+          <ul style="list-style:none;padding:0;margin:0;" class="space-y-1">
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ Strong aerobic base</li>
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ Commitment to 18-month training plan</li>
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ No prior altitude experience required</li>
+          </ul>
+        </div>
+        <div class="tier-card recommended" data-reveal>
+          <div class="tier-label" style="color:var(--accent-gold);">TIER B — MOST SELECTED ⭐</div>
+          <h3 class="font-bold text-xl mb-2">Intermediate Alpinists</h3>
+          <p style="color:rgba(180,200,230,.7);font-size:.9rem;margin-bottom:1rem;">The majority of selected cohort members come from this tier. You've completed at least one technical alpine climb (5,000m+), understand rope work and crampons, and want to reach the next level.</p>
+          <ul style="list-style:none;padding:0;margin:0;" class="space-y-1">
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ 1+ technical alpine summit above 5,000m</li>
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ Rope and crampon proficiency</li>
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ Expedition mindset and team orientation</li>
+          </ul>
+        </div>
+        <div class="tier-card" data-reveal>
+          <div class="tier-label" style="color:#4facfe;">TIER C — ADVANCED</div>
+          <h3 class="font-bold text-xl mb-2">Experienced Mountaineers</h3>
+          <p style="color:rgba(180,200,230,.7);font-size:.9rem;margin-bottom:1rem;">You've summited multiple 6,000m+ peaks, have expedition experience, and are looking for the structured, globally supported framework to complete your Seven Summits systematically.</p>
+          <ul style="list-style:none;padding:0;margin:0;" class="space-y-1">
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ Multiple 6,000m+ summits</li>
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ High-altitude expedition experience</li>
+            <li style="font-size:.87rem;color:rgba(200,215,240,.75);">✓ Crevasse rescue and self-arrest skills</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="glass-panel p-6" data-reveal>
+        <h3 class="font-bold text-lg mb-4">This Program Is <span style="color:#f87171;">Not</span> For Everyone</h3>
+        <p style="color:rgba(180,200,230,.7);font-size:.9rem;margin-bottom:1.25rem;">We believe in honest selection. We will reject applicants where we don't think it's a fit — for your safety and the integrity of the cohort.</p>
+        <ul class="not-for-list" style="list-style:none;padding:0;margin:0;">
+          <li>Those looking for a bucket-list "tour" without genuine commitment to training</li>
+          <li>Anyone unwilling to follow guide decisions including turnaround calls</li>
+          <li>Applicants without time for a multi-year commitment across all 7 phases</li>
+          <li>Those with unmanaged medical conditions that would affect high-altitude performance</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="ss-divider"></div>
+
+    <!-- ⑥ Social Proof -->
+    <section class="ss-section" id="social-proof">
+      <div class="mb-10" data-reveal>
+        <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">SELECTION OUTCOMES</p>
+        <h2 class="section-title mb-3">From<br><span class="gold-gradient">Approved Applicants.</span></h2>
+        <p style="color:rgba(180,200,230,.65);font-size:.9rem;max-width:520px;">Our pilot program ran a selective admission process before opening the full 2026–28 cohort. These are firsthand accounts from applicants who completed the review and were accepted.</p>
+      </div>
+      <div class="testi-grid">
+        <div class="testi-card" data-reveal>
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"I applied not expecting to get selected — I was completely honest about my experience level. The selection team was thoughtful and came back with a real training plan. That alone told me this was different from any program I'd seen."</p>
+          <div class="testi-author"><strong>Lena H.</strong> · Germany · Tier A Applicant</div>
+        </div>
+        <div class="testi-card" data-reveal>
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"What surprised me was the guide-to-climber ratio on the Kilimanjaro leg. I've climbed with commercial operators where you feel like a number. Here there was real attention to how each person was performing day to day."</p>
+          <div class="testi-author"><strong>Marcos V.</strong> · Brazil · Pilot Climber</div>
+        </div>
+        <div class="testi-card" data-reveal>
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"The operations center contact during the Elbrus window was impressive. Bad weather rolled in unexpectedly, and our guide had already received a revised forecast 18 hours before it hit. We descended safely. That's the kind of infrastructure I want behind me on Everest."</p>
+          <div class="testi-author"><strong>Ji-woo K.</strong> · South Korea · Advanced Tier</div>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+        <div class="glass-panel p-5 text-center" data-reveal>
+          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-counter-target="20" data-counter-suffix="" data-counter-duration="1200">20</div>
+          <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Cohort Size · Per Season</div>
+        </div>
+        <div class="glass-panel p-5 text-center" data-reveal>
+          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" data-counter-target="7" data-counter-suffix="" data-counter-duration="800">7</div>
+          <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Guided Expeditions</div>
+        </div>
+        <div class="glass-panel p-5 text-center" data-reveal>
+          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">4:1</div>
+          <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Max Guide Ratio</div>
+        </div>
+        <div class="glass-panel p-5 text-center" data-reveal>
+          <div style="font-family:'Sora',sans-serif;font-weight:900;font-size:2.4rem;background:linear-gradient(110deg,#f5a623,#f8c052);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">$0</div>
+          <div style="color:rgba(180,200,230,.65);font-size:.85rem;margin-top:.25rem;">Application Fee</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ss-divider"></div>
+
+    <!-- ⑦ FAQ -->
+    <section class="ss-section" id="faq">
+      <div class="grid md:grid-cols-2 gap-12 items-start">
+        <div data-reveal>
+          <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">COMMON QUESTIONS</p>
+          <h2 class="section-title mb-4">Everything<br>You Want<br>to <span class="gold-gradient">Know.</span></h2>
+          <p style="color:rgba(180,200,230,.7);font-size:.95rem;">Can't find your answer? <a href="./contact.html" style="color:#4facfe;text-decoration:underline;">Contact us directly</a>.</p>
+        </div>
+        <div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              Do I need experience to apply?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">No prior summit experience is required to submit an application. Our selection process evaluates across three tiers — Developing, Intermediate, and Advanced. What the review team assesses is honest self-awareness, documented physical fitness, and a realistic commitment to the multi-year training plan. Motivated beginners are reviewed on an equal basis. That said, this is a selective admission process: applying does not guarantee acceptance at any tier.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              Is this program safe?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">High-altitude mountaineering carries inherent risk — and anyone who tells you otherwise is misleading you. What we can guarantee is that every system in our program — from IFMGA-certified guides to real-time weather forecasting to pre-staged oxygen and evacuation contracts — is designed to minimize and manage that risk professionally. Safety always comes before summit.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              What is the summit success rate?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">Industry averages for guided Everest climbs run 50–60%. Because our cohort enters the program after a rigorous selection process — and because each phase includes a readiness audit before the next summit — our guided teams are better prepared than a typical commercial group. We target above 70% completion across the Seven Summits program for participants who follow the full preparation protocol. We do not publish inflated numbers. A guide-ordered turnaround for safety is never treated as a failure on our end — it is evidence the system is working.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              Is the application really free?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">Yes. Completely free. No application fee, no deposit, no "processing charge." We believe the first step toward a Seven Summits journey should cost you nothing but your time and honesty. Applying takes around 10 minutes.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              Is every applicant accepted?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">No. This is a selection-based program. Every application is reviewed individually by a member of our expedition team — not processed by an algorithm. If your physical profile, experience level, or timeline does not align with the program's demands, we will tell you directly. In many cases we provide specific guidance on what to address before reapplying. Rejection is not permanent; it is directional. The cohort is limited to 20 participants per season, and we take the composition of that group seriously.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              When will I know if I'm selected?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">Applications close October 15, 2026. Selection decisions are announced November 11, 2026. Selected participants begin pre-expedition training planning in December 2026, with Phase 1 expeditions starting Q1 2027.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-btn" aria-expanded="false">
+              What does the program cost after selection?
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer">Program costs are discussed individually with selected participants after the selection announcement. Our pricing reflects full cost-coverage across all seven expeditions — permits, guides, logistics, equipment, and insurance — with no hidden add-ons. We offer structured payment plans over the program duration.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ss-divider"></div>
+
+    <section class="ss-section" id="after-apply">
+      <div class="mb-10" data-reveal>
+        <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">AFTER YOU APPLY</p>
+        <h2 class="section-title mb-4">A real review flow — not a static form.</h2>
+        <p style="color:rgba(180,200,230,.75);max-width:680px;font-size:1.02rem;">Your application enters the SummitLink backend, creates an internal lead record, notifies our team, and sends a confirmation email to your inbox.</p>
+      </div>
+      <div class="why-grid">
+        <div class="why-card" data-reveal><span class="why-icon">1</span><h3 class="font-bold text-lg mb-2">Submission captured</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">We store your contact, target summit, experience level, and readiness context for the review team.</p></div>
+        <div class="why-card" data-reveal><span class="why-icon">2</span><h3 class="font-bold text-lg mb-2">Email confirmation</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">You receive a confirmation email with your reference ID and next-step expectations.</p></div>
+        <div class="why-card" data-reveal><span class="why-icon">3</span><h3 class="font-bold text-lg mb-2">Human expedition review</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">Our team reviews safety readiness, cohort fit, logistics, and whether additional materials are needed.</p></div>
+      </div>
+    </section>
+
+    <div class="ss-divider"></div>
+
+    <!-- Application Form -->
+    <section class="ss-section" id="application">
+      <div class="grid md:grid-cols-2 gap-12 items-start">
+        <div data-reveal>
+          <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">APPLICATION REVIEW</p>
+          <h2 class="section-title mb-4">Check Your<br><span class="gold-gradient">Eligibility.</span></h2>
+          <p style="color:rgba(180,200,230,.75);font-size:1rem;margin-bottom:1.5rem;">Takes about 10 minutes. Every application is reviewed personally by our expedition team. This is a selective admission process — not all applicants will be accepted.</p>
+          <div class="space-y-3">
+            <div class="trust-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free to apply — no credit card required</div>
+            <div class="trust-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> All experience tiers reviewed — acceptance not guaranteed</div>
+            <div class="trust-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Selection results announced November 11, 2026</div>
+            <div class="trust-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Limited cohort of 20 climbers selected per season</div>
+          </div>
+          <div class="mt-8 p-4 rounded-xl" style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);">
+            <p style="font-size:.85rem;color:rgba(245,166,35,.9);font-weight:600;margin-bottom:.4rem;">⏱ Applications close in</p>
+            <div class="countdown-wrap" data-deadline-countdown>
+              <div class="countdown-block"><span class="cd-num" data-time="days">—</span><span class="cd-label">Days</span></div>
+              <div class="countdown-block"><span class="cd-num" data-time="hours">—</span><span class="cd-label">Hours</span></div>
+              <div class="countdown-block"><span class="cd-num" data-time="minutes">—</span><span class="cd-label">Mins</span></div>
+              <div class="countdown-block"><span class="cd-num" data-time="seconds">—</span><span class="cd-label">Secs</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="glass-panel p-6" data-reveal>
+          <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="Thank you, {name}. We received your Seven Summits application and queued a confirmation email to {email}. {nextSteps} Selection results will be announced on November 11, 2026." class="space-y-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div><label class="form-label" for="fullName">Full Name</label><input class="form-input" id="fullName" name="fullName" required></div>
+              <div><label class="form-label" for="email">Email</label><input class="form-input" id="email" name="email" type="email" required></div>
+              <div><label class="form-label" for="country">Country</label><input class="form-input" id="country" name="country" required></div>
+              <div><label class="form-label" for="phone">Phone</label><input class="form-input" id="phone" name="phone" required></div>
+              <div><label class="form-label" for="experienceLevel">Experience Level</label><select class="form-select" id="experienceLevel" name="experienceLevel"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option></select></div>
+              <div><label class="form-label" for="targetSummit">Target Summit</label><select class="form-select" id="targetSummit" name="targetSummit"><option>Everest</option><option>Aconcagua</option><option>Denali</option><option>Kilimanjaro</option><option>Vinson</option><option>Elbrus</option><option>Puncak Jaya</option></select></div>
+            </div>
+            <div><label class="form-label" for="personalStatement">Personal Statement <span style="color:rgba(180,200,230,.5);font-size:.85em;">(Why Seven Summits? Why now?)</span></label><textarea class="form-textarea" id="personalStatement" name="personalStatement" required style="min-height:140px;"></textarea></div>
+            <div><label class="form-label" for="source">How did you hear about us?</label><input class="form-input" id="source" name="source"></div>
+            <div class="hp-field" aria-hidden="true"><label>Leave this field empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="hidden" data-form-message></div>
+            <button class="btn-primary" type="submit" style="width:100%;font-size:1rem;padding:.9rem;">Start Selection Process →</button>
+            <p style="text-align:center;font-size:.8rem;color:rgba(180,200,230,.45);margin-top:.5rem;">No payment required. Every application is reviewed personally. Acceptance is not guaranteed.</p>
+          </form>
+          <p class="form-success hidden mt-4" data-form-success-panel></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ⑧ Final CTA -->
+    <section class="final-cta-section">
+      <div class="ss-section" style="text-align:center;padding-top:5rem;padding-bottom:5rem;">
+        <span class="badge" data-reveal>🔒 LIMITED COHORT · SELECTIVE ADMISSION PROCESS</span>
+        <h2 class="section-title mt-5 mb-4" data-reveal style="font-size:clamp(2rem,4.5vw,3.8rem);">
+          Your Seven Summits Story<br>Starts With <span class="gold-gradient">One Decision.</span>
+        </h2>
+        <p style="color:rgba(245,166,35,.8);font-weight:600;font-size:1.05rem;max-width:560px;margin:0 auto 1.25rem;letter-spacing:.01em;" data-reveal>
+          This is not a commercial trip. It is a guided selection program for serious climbers.
+        </p>
+        <p style="color:rgba(180,200,230,.7);max-width:560px;margin:0 auto 2rem;font-size:1rem;" data-reveal>
+          Check your eligibility. Applying is free. The review takes about 10 minutes. A limited cohort of 20 climbers is selected per season — on merit, not timing. Not all applicants will be accepted.
+        </p>
+        <div class="flex flex-wrap gap-3 justify-center" data-reveal>
+          <a class="btn-primary" href="#application" style="font-size:1.05rem;padding:.95rem 2.2rem;">Start Selection Process →</a>
+          <a class="btn-ghost" href="#faq">Read the FAQ</a>
+        </div>
+        <p style="margin-top:1.5rem;font-size:.82rem;color:rgba(180,200,230,.4);" data-reveal>
+          Applications close <strong style="color:rgba(180,200,230,.65);">October 15, 2026</strong> · Results announced November 11, 2026
+        </p>
+      </div>
+    </section>
+
   </main>
 
-  <footer class="site-footer"><div class="section-wrap section-tight"><div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10"><div><p class="brand-font text-xl font-bold">▲ SummitLink / 峰会链接</p><p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p></div></div><div class="footer-grid py-8"><div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./index.html">Home</a><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a></div><div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="#apply-form">Apply Now</a><a class="footer-link" href="./corporate.html">Corporate</a></div><div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div><div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:vxbf8352@gmail.com">vxbf8352@gmail.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div></div><p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p></div></footer>
+  <footer class="site-footer">
+    <div class="section-wrap section-tight">
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-white/10">
+        <div>
+          <p class="brand-font text-xl font-bold">▲ SummitLink / 峰会链接</p>
+          <p class="utility-muted">Global mountaineering network for climbers, guides, and expedition partners.</p>
+        </div>
+      </div>
+      <div class="footer-grid py-8">
+        <div>
+          <h3 class="font-bold mb-2">Platform</h3>
+          <a class="footer-link" href="./index.html">Home</a>
+          <a class="footer-link" href="./guides.html">Guides</a>
+          <a class="footer-link" href="./peaks.html">Peaks</a>
+        </div>
+        <div>
+          <h3 class="font-bold mb-2">Program</h3>
+          <a class="footer-link" href="./seven-summits.html">Seven Summits</a>
+          <a class="footer-link" href="#application">Check Eligibility</a>
+          <a class="footer-link" href="./corporate.html">Corporate</a>
+        </div>
+        <div>
+          <h3 class="font-bold mb-2">Legal</h3>
+          <a class="footer-link" href="./terms.html">Terms of Service</a>
+          <a class="footer-link" href="./privacy.html">Privacy Policy</a>
+        </div>
+        <div>
+          <h3 class="font-bold mb-2">Contact</h3>
+          <a class="footer-link" href="mailto:hello@summitlink.com">hello@summitlink.com</a>
+          <a class="footer-link" href="./contact.html">Contact Page</a>
+        </div>
+      </div>
+      <p class="utility-muted text-sm">© 2024–2026 Summit Technology LLC &amp; 未登峰（北京）科技有限公司. All Rights Reserved.</p>
+    </div>
+  </footer>
+
   <script src="./js/config.js"></script>
   <script src="./js/site.js"></script>
+  <script>
+    // FAQ accordion
+    document.querySelectorAll('.faq-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var item = btn.closest('.faq-item');
+        var isOpen = item.classList.contains('open');
+        // close all
+        document.querySelectorAll('.faq-item.open').forEach(function(el) {
+          el.classList.remove('open');
+          el.querySelector('.faq-btn').setAttribute('aria-expanded', 'false');
+        });
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  </script>
 </body>
 </html>

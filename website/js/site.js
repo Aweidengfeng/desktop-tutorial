@@ -2,7 +2,7 @@
   const APP_DEADLINE = '2026-10-15T23:59:59Z';
 
   // Absolute API origin for the lead-collection backend. The static site is served
-  // from GitHub Pages (summitlink.cn) which has no backend, so form `data-api`
+  // from GitHub Pages (unsummit.cn) which has no backend, so form `data-api`
   // paths must be resolved against this origin. Override at runtime by setting
   // `window.SUMMITLINK_API_BASE` before this script loads.
   const API_BASE = (typeof window !== 'undefined' && window.SUMMITLINK_API_BASE) || '';
@@ -49,6 +49,10 @@
   function initReveal() {
     const nodes = document.querySelectorAll('[data-reveal]');
     if (!nodes.length) return;
+    if (prefersReducedMotion()) {
+      nodes.forEach((n) => n.classList.add('revealed'));
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -69,15 +73,27 @@
         const target = document.querySelector(link.getAttribute('href'));
         if (!target) return;
         event.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        target.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
       });
     });
   }
 
+  const reducedMotionQuery = window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
+  function prefersReducedMotion() {
+    return !!(reducedMotionQuery && reducedMotionQuery.matches);
+  }
+
   function animateCounter(el) {
     const target = Number(el.dataset.counterTarget || 0);
-    const duration = Number(el.dataset.counterDuration || 1400);
     const suffix = el.dataset.counterSuffix || '';
+    if (prefersReducedMotion()) {
+      el.textContent = `${target.toLocaleString()}${suffix}`;
+      return;
+    }
+    const duration = Number(el.dataset.counterDuration || 1400);
     const start = performance.now();
 
     function frame(now) {
@@ -141,9 +157,17 @@
 
   function setMessage(container, message, type) {
     if (!container) return;
+    prepareLiveRegion(container, type === 'error' ? 'assertive' : 'polite');
     container.className = type === 'error' ? 'form-error' : 'form-success';
     container.textContent = message;
     container.classList.remove('hidden');
+  }
+
+  function prepareLiveRegion(container, mode = 'polite') {
+    if (!container) return;
+    container.setAttribute('aria-live', mode);
+    container.setAttribute('aria-atomic', 'true');
+    container.setAttribute('role', mode === 'assertive' ? 'alert' : 'status');
   }
 
   // Fallback inbox per form endpoint, used when the backend API is unreachable
@@ -159,7 +183,7 @@
   function buildMailtoFallback(form, payload) {
     const endpoint = form.dataset.api || '';
     const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
-    const subject = `SummitLink form submission (${endpoint || 'website'})`;
+    const subject = `SummitLink backup submission (${endpoint || 'website'})`;
     const flatten = (v) => String(v).replace(/[\r\n]+/g, ' ').trim();
     const body = Object.entries(payload)
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.map(flatten).join(', ') : flatten(value)}`)
@@ -169,15 +193,29 @@
 
   function showMailtoFallback(container, form, payload) {
     if (!container) return;
+    prepareLiveRegion(container, 'assertive');
     container.className = 'form-error';
-    container.textContent = 'We could not reach our server right now. ';
+    container.textContent = 'We could not reach the SummitLink API. Your submission was not stored yet. ';
     const link = document.createElement('a');
     link.href = buildMailtoFallback(form, payload);
-    link.textContent = 'Send your details by email instead';
+    link.textContent = 'Send your details by email as a backup';
     link.className = 'text-sky-300 underline';
     container.appendChild(link);
-    container.append('. Your information was not lost.');
+    container.append('. Our team will manually route it to the right inbox.');
     container.classList.remove('hidden');
+  }
+
+  function getSuccessMessage(form, payload, result) {
+    const name = payload.fullName || payload.name || 'there';
+    const email = payload.email || 'your email';
+    if (form.dataset.successTemplate) {
+      return form.dataset.successTemplate
+        .replaceAll('{name}', name)
+        .replaceAll('{email}', email)
+        .replaceAll('{nextSteps}', result.nextSteps || '');
+    }
+    const nextSteps = result.nextSteps || 'Our team will review your submission and follow up with next steps.';
+    return `Thank you, ${name}. We received your submission and created a secure follow-up record. ${nextSteps} A confirmation email has been queued for ${email}.`;
   }
 
   function serializeForm(form) {
@@ -221,21 +259,22 @@
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Request failed');
+      let result = {};
+      try {
+        result = await response.json();
+      } catch (e) {
+        result = {};
+      }
+
+      if (!response.ok) throw new Error(result.error || 'Request failed');
 
       if (successPanel) {
-        const name = payload.fullName || payload.name || 'Climber';
-        const email = payload.email || 'your email';
-        const customMessage = form.dataset.successTemplate
-          ? form.dataset.successTemplate
-              .replaceAll('{name}', name)
-              .replaceAll('{email}', email)
-          : 'Thank you! We received your submission.';
-        successPanel.textContent = customMessage;
+        prepareLiveRegion(successPanel, 'polite');
+        successPanel.textContent = getSuccessMessage(form, payload, result);
         successPanel.classList.remove('hidden');
       }
 
-      setMessage(messageTarget, 'Submission successful.', 'success');
+      setMessage(messageTarget, 'Submission received. Check the next-step panel below.', 'success');
       form.reset();
     } catch (error) {
       showMailtoFallback(messageTarget, form, payload);
@@ -249,6 +288,8 @@
 
   function initForms() {
     document.querySelectorAll('form[data-api]').forEach((form) => {
+      prepareLiveRegion(form.querySelector('[data-form-message]'), 'polite');
+      prepareLiveRegion(form.parentElement.querySelector('[data-form-success-panel]'), 'polite');
       form.addEventListener('submit', (event) => {
         event.preventDefault();
         submitForm(form);

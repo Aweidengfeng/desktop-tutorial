@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Abstract mountain expedition route</title>
+  <desc id="desc">Layered dark mountain ranges with glowing route lines and summit markers.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10243f"/>
+      <stop offset="0.45" stop-color="#08111f"/>
+      <stop offset="1" stop-color="#030712"/>
+    </linearGradient>
+    <linearGradient id="ridge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d3557"/>
+      <stop offset="1" stop-color="#09101f"/>
+    </linearGradient>
+    <linearGradient id="snow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fbff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#8fc8ff" stop-opacity="0.35"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <circle cx="1240" cy="210" r="180" fill="#4facfe" opacity="0.14"/>
+  <circle cx="330" cy="190" r="220" fill="#f5a623" opacity="0.08"/>
+  <path d="M0 705 255 438l139 150 210-286 255 331 201-241 255 309 155-161 130 171v289H0z" fill="url(#ridge)" opacity="0.95"/>
+  <path d="m604 302 79 103-62-24-52 61-34-53zM1060 392l76 92-59-20-42 48-35-41zM255 438l65 70-57-20-47 54-35-47z" fill="url(#snow)"/>
+  <path d="M90 790c180-78 267-178 372-160 122 21 151 151 285 133 129-18 162-167 312-164 132 2 222 119 451 71" fill="none" stroke="#4facfe" stroke-width="7" stroke-linecap="round" stroke-dasharray="20 22" opacity="0.8" filter="url(#glow)"/>
+  <g fill="#f5a623" filter="url(#glow)">
+    <circle cx="462" cy="630" r="16"/>
+    <circle cx="747" cy="763" r="16"/>
+    <circle cx="1059" cy="599" r="16"/>
+  </g>
+  <g fill="none" stroke="#ffffff" opacity="0.08">
+    <path d="M160 160h1280M160 300h1280M160 440h1280M160 580h1280M160 720h1280"/>
+    <path d="M320 100v760M640 100v760M960 100v760M1280 100v760"/>
+  </g>
+</svg>

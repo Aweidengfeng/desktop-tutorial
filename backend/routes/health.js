@@ -25,6 +25,13 @@ router.get('/', async (req, res) => {
     timestamp: new Date().toISOString(),
     sentry: process.env.SENTRY_DSN ? 'enabled' : 'disabled',
   };
+  const hasLeadsRecipient = !!(process.env.LEADS_NOTIFY_EMAIL || process.env.ADMIN_EMAIL);
+  checks.lead_notifications = {
+    ready: hasLeadsRecipient && !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM,
+    recipient_configured: hasLeadsRecipient,
+    resend_configured: !!process.env.RESEND_API_KEY,
+    from_configured: !!process.env.RESEND_FROM,
+  };
   if (region === 'cn') {
     checks.icp_number = regionConfig.icpNumber || process.env.ICP_NUMBER || '京ICP备2026031853号-2A';
   }

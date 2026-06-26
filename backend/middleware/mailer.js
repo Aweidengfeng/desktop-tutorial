@@ -146,4 +146,62 @@ function leadNotificationEmail(lead) {
   };
 }
 
-module.exports = { sendMail, bookingConfirmEmail, certificationResultEmail, emailVerifyCode, leadNotificationEmail, MAIL_ENABLED };
+/**
+ * 官网线索确认邮件（发送给提交人）。
+ * @param {object} lead - 已落库的 Lead 记录
+ */
+function leadConfirmationEmail(lead) {
+  const TYPE_LABELS = {
+    contact: 'your inquiry',
+    partnership: 'your partnership inquiry',
+    guide_application: 'your guide application',
+    seven_summits: 'your Seven Summits application',
+  };
+  const NEXT_STEPS = {
+    contact: 'Our team will review your message and reply within 1–2 business days.',
+    partnership: 'Our partnership team will review your organization, sponsorship, or investment fit and follow up with next-step materials.',
+    guide_application: 'Our guide operations team will review your certifications, mountain experience, and regional availability before contacting you.',
+    seven_summits: 'Our expedition team will review your summit goals, experience, safety readiness, and cohort fit before the selection window.',
+  };
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const label = TYPE_LABELS[lead.type] || 'your submission';
+  const nextStep = NEXT_STEPS[lead.type] || 'Our team will review your submission and follow up with next steps.';
+  const subjectLabel = lead.type === 'seven_summits'
+    ? 'Seven Summits application received'
+    : lead.type === 'guide_application'
+      ? 'Guide application received'
+      : 'Submission received';
+
+  return {
+    subject: `【SummitLink】${subjectLabel}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:620px;margin:0 auto;padding:24px;color:#111827">
+        <h2 style="color:#1e40af;margin-bottom:12px">🏔️ SummitLink received ${esc(label)}</h2>
+        <p>Hello ${esc(lead.name || 'there')},</p>
+        <p>Thank you for reaching SummitLink. We have received ${esc(label)} and created a secure internal lead record for follow-up.</p>
+        <table style="width:100%;border-collapse:collapse;margin:18px 0">
+          <tr><td style="padding:9px;border:1px solid #e5e7eb;color:#6b7280">Reference ID</td><td style="padding:9px;border:1px solid #e5e7eb"><strong>#${esc(lead.id)}</strong></td></tr>
+          <tr><td style="padding:9px;border:1px solid #e5e7eb;color:#6b7280">Submission type</td><td style="padding:9px;border:1px solid #e5e7eb">${esc(label)}</td></tr>
+          ${lead.subject ? `<tr><td style="padding:9px;border:1px solid #e5e7eb;color:#6b7280">Topic</td><td style="padding:9px;border:1px solid #e5e7eb">${esc(lead.subject)}</td></tr>` : ''}
+        </table>
+        <p style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;color:#1e3a8a"><strong>Next step:</strong> ${esc(nextStep)}</p>
+        <p style="color:#4b5563;font-size:14px">You do not need to resubmit the form. If you need to add documents or urgent context, reply to this email or contact hello@summitlink.com.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+        <p style="color:#9ca3af;font-size:12px">SummitLink © 2026 · Summit Technology LLC & 未登峰（北京）科技有限公司</p>
+      </div>
+    `,
+    text: `SummitLink received ${label}. Reference ID: #${lead.id}. Next step: ${nextStep}`,
+  };
+}
+
+module.exports = {
+  sendMail,
+  bookingConfirmEmail,
+  certificationResultEmail,
+  emailVerifyCode,
+  leadNotificationEmail,
+  leadConfirmationEmail,
+  MAIL_ENABLED,
+};

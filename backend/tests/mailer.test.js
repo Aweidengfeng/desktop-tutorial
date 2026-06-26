@@ -83,4 +83,21 @@ describe('Resend mail helpers', () => {
     expect(sendMock.mock.calls[0][0].html).toContain('123456');
     expect(result).toEqual({ ok: true });
   });
+
+  test('lead confirmation email escapes applicant content and explains next steps', () => {
+    const { leadConfirmationEmail } = require(mailerPath);
+    const email = leadConfirmationEmail({
+      id: 42,
+      type: 'seven_summits',
+      name: '<Alex>',
+      subject: 'Everest & Vinson',
+    });
+
+    expect(email.subject).toContain('Seven Summits application received');
+    expect(email.html).toContain('&lt;Alex&gt;');
+    expect(email.html).toContain('Reference ID');
+    expect(email.html).toContain('selection window');
+    expect(email.html).not.toContain('<Alex>');
+    expect(email.text).toContain('#42');
+  });
 });

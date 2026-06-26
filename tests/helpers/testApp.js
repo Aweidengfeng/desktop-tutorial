@@ -148,9 +148,8 @@ function createApp() {
   app.use('/api/metrics',      loadRoute('../../backend/routes/metrics'));
 
   // 健康检查
-  app.get(['/api/health', '/health'], (req, res) => {
-    res.json({ status: 'ok', uptime: process.uptime(), version: '1.0.0' });
-  });
+  app.use('/api/health', loadRoute('../../backend/routes/health'));
+  app.use('/health', loadRoute('../../backend/routes/health'));
 
   return app;
 }

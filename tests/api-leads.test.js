@@ -33,6 +33,9 @@ describe('Lead Collection', () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(typeof res.body.id).toBe('number');
+    expect(res.body.status).toBe('new');
+    expect(res.body.confirmationEmail).toBe(true);
+    expect(res.body.nextSteps).toContain('1–2 business days');
   });
 
   test('POST /api/partnerships 成功写入 → 201', async () => {
@@ -41,6 +44,7 @@ describe('Lead Collection', () => {
       .send({ name: '合作方', company: 'Acme', email: 'biz@acme.com', investmentType: 'A轮', message: '合作意向' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    expect(res.body.nextSteps).toContain('partnership');
   });
 
   test('POST /api/applications/guide 成功写入 → 201', async () => {
@@ -49,6 +53,7 @@ describe('Lead Collection', () => {
       .send({ fullName: '向导', email: 'guide@example.com', country: 'Nepal', phone: '+97712345', certifications: 'IFMGA', personalBio: '资深向导' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    expect(res.body.nextSteps).toContain('certifications');
   });
 
   test('POST /api/applications/seven-summits 成功写入 → 201', async () => {
@@ -57,6 +62,39 @@ describe('Lead Collection', () => {
       .send({ fullName: '报名者', email: 'climber@example.com', phone: '+1555', country: 'USA', targetSummit: 'Everest', personalStatement: '梦想' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    expect(res.body.nextSteps).toContain('cohort selection');
+  });
+
+  test('GET /api/health exposes lead notification readiness without leaking secrets', async () => {
+    const original = {
+      LEADS_NOTIFY_EMAIL: process.env.LEADS_NOTIFY_EMAIL,
+      ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      RESEND_FROM: process.env.RESEND_FROM,
+    };
+    process.env.LEADS_NOTIFY_EMAIL = 'admin@example.com';
+    process.env.RESEND_API_KEY = 're_test_key';
+    process.env.RESEND_FROM = 'noreply@example.com';
+    delete process.env.ADMIN_EMAIL;
+
+    let res;
+    try {
+      res = await request(app).get('/api/health');
+    } finally {
+      Object.entries(original).forEach(([key, value]) => {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      });
+    }
+
+    expect(res.status).toBe(200);
+    expect(res.body.lead_notifications).toEqual({
+      ready: true,
+      recipient_configured: true,
+      resend_configured: true,
+      from_configured: true,
+    });
+    expect(JSON.stringify(res.body)).not.toContain('re_test_key');
   });
 
   test('缺少邮箱 → 400', async () => {

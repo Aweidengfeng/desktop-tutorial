@@ -10,7 +10,7 @@
  * 管理端可见：
  *   GET  /api/admin/leads                   （需管理员权限）
  *
- * 邮件通知：每条线索写库成功后，向管理员发送通知邮件（失败降级，不影响提交）。
+ * 邮件通知：每条线索写库成功后，向管理员发送通知邮件，并向提交人发送确认邮件（失败降级，不影响提交）。
  *
  * 挂载方式（backend/app.js）：app.use('/api', require('./routes/leads'))，
  * 必须在 app.use('/api/admin', ...) 之前，以便 GET /admin/leads 命中本路由。
@@ -20,7 +20,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../db/prisma');
 const adminAuth = require('../middleware/adminAuth');
-const { sendMail, leadNotificationEmail } = require('../middleware/mailer');
+const { sendMail, leadNotificationEmail, leadConfirmationEmail } = require('../middleware/mailer');
 
 const router = express.Router();
 
@@ -92,13 +92,31 @@ function makeHandler(type, extract) {
 
       // 管理员通知邮件：失败降级，绝不阻塞提交结果。
       notifyAdmin(lead);
+      // 提交人确认邮件：失败降级，绝不阻塞提交结果。
+      notifyCustomer(lead);
 
-      return res.status(201).json({ success: true, id: lead.id });
+      return res.status(201).json({
+        success: true,
+        id: lead.id,
+        status: lead.status,
+        confirmationEmail: true,
+        nextSteps: leadNextSteps(lead.type),
+      });
     } catch (e) {
       console.error(`[leads] ${type} 提交失败:`, e.message);
       return res.status(500).json({ error: '提交失败，请稍后再试' });
     }
   };
+}
+
+function leadNextSteps(type) {
+  const steps = {
+    contact: 'SummitLink will review your message and reply within 1–2 business days.',
+    partnership: 'Our partnership team will evaluate the opportunity and follow up with relevant sponsor, investor, or strategic partner materials.',
+    guide_application: 'Our operations team will review your certifications, mountain experience, and regional availability before contacting you.',
+    seven_summits: 'Our expedition team will review your goals, experience level, and safety readiness before the cohort selection window.',
+  };
+  return steps[type] || 'Our team will review your submission and follow up with next steps.';
 }
 
 /** 向管理员发送线索通知邮件（fire-and-forget，吞掉所有错误）。 */
@@ -120,6 +138,21 @@ function notifyAdmin(lead) {
     })
     .catch((err) => {
       console.error('[leads] 通知邮件异常（已降级，不影响提交）:', err.message);
+    });
+}
+
+/** 向提交人发送确认邮件（fire-and-forget，吞掉所有错误）。 */
+function notifyCustomer(lead) {
+  if (!lead.email) return;
+  Promise.resolve()
+    .then(() => sendMail({ to: lead.email, ...leadConfirmationEmail(lead) }))
+    .then((result) => {
+      if (result && result.error) {
+        console.error('[leads] 提交人确认邮件发送失败（已降级，不影响提交）:', result.error);
+      }
+    })
+    .catch((err) => {
+      console.error('[leads] 提交人确认邮件异常（已降级，不影响提交）:', err.message);
     });
 }
 
