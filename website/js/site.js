@@ -9,9 +9,11 @@
   const API_BASE_FALLBACKS = (typeof window !== 'undefined' && Array.isArray(window.SUMMITLINK_API_BASE_FALLBACKS))
     ? window.SUMMITLINK_API_BASE_FALLBACKS
     : [];
-  const API_BASES = [API_BASE, ...API_BASE_FALLBACKS]
-    .map((base) => String(base || '').trim())
-    .filter((base, index, list) => base && list.indexOf(base) === index);
+  const API_BASES = [...new Set(
+    [API_BASE, ...API_BASE_FALLBACKS]
+      .map((base) => String(base || '').trim())
+      .filter(Boolean)
+  )];
 
   // Resolve a form's relative `data-api` path into an absolute endpoint when an
   // API base is configured; otherwise fall back to the same-origin path.
@@ -278,7 +280,7 @@
         }
       }
 
-      if (!response) throw lastNetworkError || new Error('Request failed');
+      if (!response) throw lastNetworkError || new Error('No response received from any API endpoint');
 
       let result = {};
       try {
