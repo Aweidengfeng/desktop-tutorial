@@ -29,7 +29,8 @@
   }
 
   function resolveEndpointCandidates(path) {
-    if (!path || /^https?:\/\//i.test(path) || !API_BASES.length) return [path];
+    if (!path) return [];
+    if (/^https?:\/\//i.test(path) || !API_BASES.length) return [path];
     return API_BASES.map((base) => resolveEndpoint(path, base));
   }
 
@@ -282,7 +283,10 @@
       }
 
       if (!response) {
-        throw new Error(`No response received from ${endpointCandidates.length} API endpoint(s): ${lastNetworkError?.message || 'unknown network error'}`);
+        const failureDetail = lastNetworkError instanceof Error
+          ? lastNetworkError.message
+          : String(lastNetworkError || 'unknown network error');
+        throw new Error(`No response received from ${endpointCandidates.length} API endpoint(s): ${failureDetail}`);
       }
 
       let result = {};
