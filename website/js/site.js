@@ -265,9 +265,10 @@
         submitButton.textContent = 'Sending...';
       }
 
+      const endpointCandidates = resolveEndpointCandidates(endpoint);
       let response;
       let lastNetworkError;
-      for (const url of resolveEndpointCandidates(endpoint)) {
+      for (const url of endpointCandidates) {
         try {
           response = await fetch(url, {
             method: 'POST',
@@ -280,7 +281,9 @@
         }
       }
 
-      if (!response) throw lastNetworkError || new Error('No response received from any API endpoint');
+      if (!response) {
+        throw new Error(`No response received from ${endpointCandidates.length} API endpoint(s): ${lastNetworkError?.message || 'unknown network error'}`);
+      }
 
       let result = {};
       try {
