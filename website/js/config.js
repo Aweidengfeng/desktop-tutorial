@@ -10,10 +10,11 @@
  * BEFORE `site.js` on every page that contains a form.
  *
  * To point the site at a different backend (e.g. the overseas node, a staging API,
- * or a Railway preview domain), edit the value below and redeploy the website.
+ * or a Railway preview domain), edit the values below and redeploy the website.
  *
  *   - Must be an absolute https origin (no trailing path).
  *   - Must NOT be empty and MUST NOT be localhost in production.
  *   - The backend MUST list this site's origin in CORS_ORIGINS.
  */
 window.SUMMITLINK_API_BASE = 'https://api.unsummit.cn';
+window.SUMMITLINK_API_BASE_FALLBACKS = ['https://desktop-tutorial-production-182a.up.railway.app'];

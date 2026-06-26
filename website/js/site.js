@@ -6,18 +6,29 @@
   // paths must be resolved against this origin. Override at runtime by setting
   // `window.SUMMITLINK_API_BASE` before this script loads.
   const API_BASE = (typeof window !== 'undefined' && window.SUMMITLINK_API_BASE) || '';
+  const API_BASE_FALLBACKS = (typeof window !== 'undefined' && Array.isArray(window.SUMMITLINK_API_BASE_FALLBACKS))
+    ? window.SUMMITLINK_API_BASE_FALLBACKS
+    : [];
+  const API_BASES = [API_BASE, ...API_BASE_FALLBACKS]
+    .map((base) => String(base || '').trim())
+    .filter((base, index, list) => base && list.indexOf(base) === index);
 
   // Resolve a form's relative `data-api` path into an absolute endpoint when an
   // API base is configured; otherwise fall back to the same-origin path.
-  function resolveEndpoint(path) {
+  function resolveEndpoint(path, apiBase = API_BASE) {
     if (!path) return path;
     if (/^https?:\/\//i.test(path)) return path;
-    if (!API_BASE) return path;
+    if (!apiBase) return path;
     try {
-      return new URL(path, API_BASE).toString();
+      return new URL(path, apiBase).toString();
     } catch (e) {
       return path;
     }
+  }
+
+  function resolveEndpointCandidates(path) {
+    if (!path || /^https?:\/\//i.test(path) || !API_BASES.length) return [path];
+    return API_BASES.map((base) => resolveEndpoint(path, base));
   }
 
   function initNav() {
@@ -245,19 +256,29 @@
     if (!endpoint) return;
 
     const payload = serializeForm(form);
-    const requestUrl = resolveEndpoint(endpoint);
 
     try {
       if (submitButton) {
         submitButton.disabled = true;
-        submitButton.textContent = 'Submitting...';
+        submitButton.textContent = 'Sending...';
       }
 
-      const response = await fetch(requestUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      let response;
+      let lastNetworkError;
+      for (const url of resolveEndpointCandidates(endpoint)) {
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          break;
+        } catch (networkError) {
+          lastNetworkError = networkError;
+        }
+      }
+
+      if (!response) throw lastNetworkError || new Error('Request failed');
 
       let result = {};
       try {
