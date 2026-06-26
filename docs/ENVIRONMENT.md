@@ -75,7 +75,7 @@
 
 | 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
 |--------|----------|--------|--------|------|
-| `CORS_ORIGINS` | **生产必需** | — | `https://summitlink.cn,https://www.summitlink.cn` | 生产环境 CORS 白名单，多个域名用英文逗号分隔（不含空格）。开发环境（`NODE_ENV !== production`）下自动允许所有来源。官网表单由 GitHub Pages 静态站发起跨域请求，上线前必须包含官网域名 |
+| `CORS_ORIGINS` | **生产必需** | — | `https://unsummit.cn,https://www.unsummit.cn` | 生产环境 CORS 白名单，多个域名用英文逗号分隔（不含空格）。开发环境（`NODE_ENV !== production`）下自动允许所有来源。官网表单由 GitHub Pages 静态站发起跨域请求，上线前必须包含官网域名 |
 
 ### 官网线索与邮件闭环
 
@@ -86,7 +86,7 @@
 | `LEADS_NOTIFY_EMAIL` | 官网线索管理员通知必需 | — | `ops@summitlink.com` | 官网 4 个公开表单写库后通知的运营收件人。未配置时使用 `ADMIN_EMAIL` 兜底 |
 | `ADMIN_EMAIL` | 兜底 | — | `admin@summitlink.com` | `LEADS_NOTIFY_EMAIL` 未配置时的线索通知收件人 |
 
-上线前必须同时确认静态官网 `website/js/config.js` 中的 `window.SUMMITLINK_API_BASE` 指向真实 API 域名（当前为 `https://api.summitlink.cn`），并通过 `GET /api/health` 检查 `lead_notifications.ready=true`。
+上线前必须同时确认静态官网 `website/js/config.js` 中的 `window.SUMMITLINK_API_BASE` 指向真实 API 域名（当前为 `https://api.unsummit.cn`），并通过 `GET /api/health` 检查 `lead_notifications.ready=true`。
 
 ### 数据初始化
 
@@ -170,7 +170,7 @@ DATABASE_PROVIDER=postgresql
 DATABASE_URL=******host:5432/dbname
 JWT_SECRET=<openssl rand -hex 32 输出>
 ADMIN_PASSWORD=<强密码>
-CORS_ORIGINS=https://summitlink.cn,https://www.summitlink.cn
+CORS_ORIGINS=https://unsummit.cn,https://www.unsummit.cn
 RESEND_API_KEY=<Resend API Key>
 RESEND_FROM=SummitLink <noreply@mail.ussummit.cn>
 LEADS_NOTIFY_EMAIL=ops@summitlink.com
