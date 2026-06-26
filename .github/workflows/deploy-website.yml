@@ -2,6 +2,7 @@ name: Deploy Website to GitHub Pages
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  WEBSITE_CUSTOM_DOMAIN: summitlink.cn
 on:
   push:
     branches:
@@ -33,7 +34,7 @@ jobs:
       - name: Verify custom domain
         run: |
           test -f website/CNAME
-          grep -qx 'summitlink.cn' website/CNAME
+          grep -qx "$WEBSITE_CUSTOM_DOMAIN" website/CNAME
 
       - name: Disable Jekyll processing
         run: touch website/.nojekyll
