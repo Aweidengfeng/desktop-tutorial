@@ -110,7 +110,6 @@ function makeHandler(type, extract) {
       console.error(`[leads] ${type} 提交失败:`, e.message);
       return res.status(500).json({ error: '提交失败，请稍后再试' });
     }
-
   };
 }
 
