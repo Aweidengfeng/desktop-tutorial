@@ -63,9 +63,11 @@ function assertProductionEnvReady(env = process.env) {
   const errors = validateProductionEnv(env);
   if (errors.length === 0) return;
 
-  console.error('❌ 生产环境变量未就绪：');
-  errors.forEach(error => console.error(`   • ${error}`));
-  console.error('请补齐 Railway / 部署平台 Variables 后重新部署。');
+  console.error([
+    '❌ 生产环境变量未就绪：',
+    ...errors.map(error => `   • ${error}`),
+    '请补齐 Railway / 部署平台 Variables 后重新部署。',
+  ].join('\n'));
   process.exit(1);
 }
 
