@@ -82,11 +82,13 @@
 | 变量名 | 是否必需 | 默认值 | 示例值 | 说明 |
 |--------|----------|--------|--------|------|
 | `RESEND_API_KEY` | 官网线索邮件必需 | — | `re_...` | Resend API Key。未配置时邮件功能降级为日志，线索仍写库，但管理员通知和用户确认邮件不会真实发送 |
-| `RESEND_FROM` | 官网线索邮件必需 | `noreply@mail.ussummit.cn` | `SummitLink <noreply@mail.ussummit.cn>` | 发件人地址。需在 Resend 完成域名验证 |
+| `RESEND_FROM` | 官网线索邮件必需 | `noreply@mail.ussummit.cn` | `SummitLink <no-reply@unsummit.cn>` | 发件人地址。需在 Resend 完成域名验证 |
 | `LEADS_NOTIFY_EMAIL` | 官网线索管理员通知必需 | — | `ops@summitlink.com` | 官网 4 个公开表单写库后通知的运营收件人。未配置时使用 `ADMIN_EMAIL` 兜底 |
 | `ADMIN_EMAIL` | 兜底 | — | `admin@summitlink.com` | `LEADS_NOTIFY_EMAIL` 未配置时的线索通知收件人 |
 
-上线前必须同时确认静态官网 `website/js/config.js` 中的 `window.SUMMITLINK_API_BASE` 指向真实 API 域名（当前为 `https://api.unsummit.cn`），并通过 `GET /api/health` 检查 `lead_notifications.ready=true`。
+上线前必须同时确认静态官网 `website/js/config.js` 中的 `window.SUMMITLINK_API_BASE` 指向真实 HTTPS API 域名（当前为 `https://api.unsummit.cn`），并通过 `GET /api/health` 检查 `lead_notifications.ready=true`。
+
+生产环境启动会 fail-closed 校验这些线索邮件配置：`RESEND_API_KEY`、`RESEND_FROM`、`LEADS_NOTIFY_EMAIL`/`ADMIN_EMAIL` 至少一个、`CORS_ORIGINS`。`CORS_ORIGINS` 只能填写 HTTPS origin，例如 `https://unsummit.cn,https://www.unsummit.cn`，不能带路径、查询参数或空白项。
 
 ### 数据初始化
 
@@ -172,7 +174,7 @@ JWT_SECRET=<openssl rand -hex 32 输出>
 ADMIN_PASSWORD=<强密码>
 CORS_ORIGINS=https://unsummit.cn,https://www.unsummit.cn
 RESEND_API_KEY=<Resend API Key>
-RESEND_FROM=SummitLink <noreply@mail.ussummit.cn>
+RESEND_FROM=SummitLink <no-reply@unsummit.cn>
 LEADS_NOTIFY_EMAIL=ops@summitlink.com
 AMAP_KEY=<高德 Key>
 AMAP_SECURITY_CODE=<高德安全密钥>
