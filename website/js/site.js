@@ -211,7 +211,7 @@
     const reference = result.id ? `#${result.id}` : 'your submission';
     const emailStatus = result.confirmationEmail
       ? `A confirmation email has been queued for ${email}.`
-      : `Email delivery is not configured yet, so please save reference ${reference} or email hello@summitlink.com if you need urgent follow-up.`;
+      : `Email delivery is not configured yet. Please save reference ${reference}.`;
     if (form.dataset.successTemplate) {
       return form.dataset.successTemplate
         .replaceAll('{name}', name)
