@@ -51,7 +51,7 @@
     <section class="section-wrap" id="contact-form">
       <h2 class="text-3xl md:text-5xl font-black mb-6" data-reveal>Contact Form</h2>
       <div class="glass-panel p-5 md:p-8" data-reveal>
-        <form data-api="/api/contact" data-success-template="Thank you, {name}. We received your message and queued a confirmation email to {email}. {nextSteps}" class="space-y-4">
+        <form data-api="/api/contact" data-success-template="Thank you, {name}. We received your message. {emailStatus} {nextSteps}" class="space-y-4">
           <div class="grid md:grid-cols-2 gap-4">
             <div><label class="form-label" for="contactName">Name</label><input class="form-input" id="contactName" name="name" required /></div>
             <div><label class="form-label" for="contactEmail">Email</label><input class="form-input" id="contactEmail" type="email" name="email" required /></div>

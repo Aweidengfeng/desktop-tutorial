@@ -898,11 +898,11 @@
       <div class="mb-10" data-reveal>
         <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">AFTER YOU APPLY</p>
         <h2 class="section-title mb-4">A real review flow — not a static form.</h2>
-        <p style="color:rgba(180,200,230,.75);max-width:680px;font-size:1.02rem;">Your application enters the SummitLink backend, creates an internal lead record, notifies our team, and sends a confirmation email to your inbox.</p>
+        <p style="color:rgba(180,200,230,.75);max-width:680px;font-size:1.02rem;">Your application enters the SummitLink backend, creates an internal lead record, notifies our team when mail service is configured, and shows a reference ID for follow-up.</p>
       </div>
       <div class="why-grid">
         <div class="why-card" data-reveal><span class="why-icon">1</span><h3 class="font-bold text-lg mb-2">Submission captured</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">We store your contact, target summit, experience level, and readiness context for the review team.</p></div>
-        <div class="why-card" data-reveal><span class="why-icon">2</span><h3 class="font-bold text-lg mb-2">Email confirmation</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">You receive a confirmation email with your reference ID and next-step expectations.</p></div>
+        <div class="why-card" data-reveal><span class="why-icon">2</span><h3 class="font-bold text-lg mb-2">Follow-up reference</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">You receive an on-screen reference ID, plus email confirmation when mail service is configured.</p></div>
         <div class="why-card" data-reveal><span class="why-icon">3</span><h3 class="font-bold text-lg mb-2">Human expedition review</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">Our team reviews safety readiness, cohort fit, logistics, and whether additional materials are needed.</p></div>
       </div>
     </section>
@@ -933,7 +933,7 @@
           </div>
         </div>
         <div class="glass-panel p-6" data-reveal>
-          <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="Thank you, {name}. We received your Seven Summits application and queued a confirmation email to {email}. {nextSteps} Selection results will be announced on November 11, 2026." class="space-y-4">
+          <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="Thank you, {name}. We received your Seven Summits application. {emailStatus} {nextSteps} Selection results will be announced on November 11, 2026." class="space-y-4">
             <div class="grid md:grid-cols-2 gap-4">
               <div><label class="form-label" for="fullName">Full Name</label><input class="form-input" id="fullName" name="fullName" required></div>
               <div><label class="form-label" for="email">Email</label><input class="form-input" id="email" name="email" type="email" required></div>

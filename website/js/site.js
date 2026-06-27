@@ -208,14 +208,19 @@
   function getSuccessMessage(form, payload, result) {
     const name = payload.fullName || payload.name || 'there';
     const email = payload.email || 'your email';
+    const reference = result.id ? `#${result.id}` : 'your submission';
+    const emailStatus = result.confirmationEmail
+      ? `A confirmation email has been queued for ${email}.`
+      : `Email delivery is not configured yet, so please save reference ${reference} or email hello@summitlink.com if you need urgent follow-up.`;
     if (form.dataset.successTemplate) {
       return form.dataset.successTemplate
         .replaceAll('{name}', name)
         .replaceAll('{email}', email)
+        .replaceAll('{emailStatus}', emailStatus)
         .replaceAll('{nextSteps}', result.nextSteps || '');
     }
     const nextSteps = result.nextSteps || 'Our team will review your submission and follow up with next steps.';
-    return `Thank you, ${name}. We received your submission and created a secure follow-up record. ${nextSteps} A confirmation email has been queued for ${email}.`;
+    return `Thank you, ${name}. We received your submission and created a secure follow-up record. ${nextSteps} ${emailStatus}`;
   }
 
   function serializeForm(form) {

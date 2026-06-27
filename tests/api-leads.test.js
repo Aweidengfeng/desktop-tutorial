@@ -18,12 +18,38 @@ const { createApp }       = require('./helpers/testApp');
 const { createAdminToken } = require('./helpers/auth');
 const { clearDbCache }    = require('./helpers/db');
 
+const originalMailEnv = {
+  LEADS_NOTIFY_EMAIL: process.env.LEADS_NOTIFY_EMAIL,
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  RESEND_FROM: process.env.RESEND_FROM,
+};
+
+function clearMailEnv() {
+  delete process.env.LEADS_NOTIFY_EMAIL;
+  delete process.env.ADMIN_EMAIL;
+  delete process.env.RESEND_API_KEY;
+  delete process.env.RESEND_FROM;
+}
+
 describe('Lead Collection', () => {
   let app;
 
   beforeAll(() => {
+    clearMailEnv();
     clearDbCache();
     app = createApp();
+  });
+
+  afterEach(() => {
+    clearMailEnv();
+  });
+
+  afterAll(() => {
+    Object.entries(originalMailEnv).forEach(([key, value]) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    });
   });
 
   test('POST /api/contact 成功写入 → 201 + { success, id }', async () => {
@@ -34,7 +60,8 @@ describe('Lead Collection', () => {
     expect(res.body.success).toBe(true);
     expect(typeof res.body.id).toBe('number');
     expect(res.body.status).toBe('new');
-    expect(res.body.confirmationEmail).toBe(true);
+    expect(res.body.confirmationEmail).toBe(false);
+    expect(res.body.adminNotificationEmail).toBe(false);
     expect(res.body.nextSteps).toContain('1–2 business days');
   });
 
