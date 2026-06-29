@@ -9,7 +9,7 @@ const legalLimiter = rateLimit({ windowMs: 60*1000, max: 30 });
 
 const FOOTER = `
 <footer style="position:fixed;bottom:0;left:0;right:0;background:#1f2937;color:#9ca3af;padding:12px 24px;font-size:12px;text-align:center;z-index:100;">
-  © SummitLink · <a href="/legal/privacy" style="color:#60a5fa">隐私政策</a> · <a href="/legal/terms" style="color:#60a5fa">用户协议</a> · 投诉邮箱: support@summitlink.app
+  © SummitLink · <a href="/legal/privacy" style="color:#60a5fa">隐私政策</a> · <a href="/legal/terms" style="color:#60a5fa">用户协议</a> · 投诉邮箱: hello@unsummit.cn
 </footer>`;
 
 function escapeHtml(str) {
@@ -103,7 +103,7 @@ ${PAGE_STYLE}
 <div class="container">
 
 <h2>1. 数据控制者 | Data Controller</h2>
-<p>SummitLink operates the SummitLink mobile and web platform ("Service"). Questions about this policy can be directed to <a href="mailto:privacy@summitlink.app">privacy@summitlink.app</a>.</p>
+<p>SummitLink operates the SummitLink mobile and web platform ("Service"). Questions about this policy can be directed to <a href="mailto:hello@unsummit.cn">hello@unsummit.cn</a>.</p>
 <p><strong>Current request region:</strong> ${region}（${regionHint}）</p>
 <table>
   <thead><tr><th>Entity Type</th><th>Legal Entity</th><th>Registration ID</th><th>Registered Address</th></tr></thead>
@@ -170,14 +170,14 @@ ${PAGE_STYLE}
 </div>
 
 <h2>7. 儿童隐私 | Children's Privacy</h2>
-<p>The Service is not directed at children under the age of 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact <a href="mailto:privacy@summitlink.app">privacy@summitlink.app</a> and we will delete it promptly.</p>
+<p>The Service is not directed at children under the age of 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact <a href="mailto:hello@unsummit.cn">hello@unsummit.cn</a> and we will delete it promptly.</p>
 
 <h2>8. 政策更新 | Policy Updates</h2>
 <p>We may update this policy periodically. Significant changes will be communicated via in-app notification or email at least 30 days before taking effect. Continued use of the Service after the effective date constitutes acceptance of the revised policy.</p>
 
 <h2>9. 联系方式 | Contact</h2>
 <p>For privacy questions, data requests, or complaints:<br>
-📧 <a href="mailto:privacy@summitlink.app">privacy@summitlink.app</a></p>
+📧 <a href="mailto:hello@unsummit.cn">hello@unsummit.cn</a></p>
 
 </div>
 ${FOOTER}
@@ -222,7 +222,7 @@ ${PAGE_STYLE}
 <ul>
   <li>Provide <strong>accurate and truthful information</strong> during registration.</li>
   <li>Keep your login credentials confidential.</li>
-  <li>Notify us immediately at <a href="mailto:legal@summitlink.app">legal@summitlink.app</a> if you suspect unauthorised account access.</li>
+  <li>Notify us immediately at <a href="mailto:hello@unsummit.cn">hello@unsummit.cn</a> if you suspect unauthorised account access.</li>
   <li>Be at least 13 years old (or the minimum age required by the laws of your country).</li>
 </ul>
 
@@ -278,7 +278,7 @@ ${PAGE_STYLE}
 
 <h2>10. 联系方式 | Contact</h2>
 <p>For legal enquiries:<br>
-📧 <a href="mailto:legal@summitlink.app">legal@summitlink.app</a></p>
+📧 <a href="mailto:hello@unsummit.cn">hello@unsummit.cn</a></p>
 
 </div>
 ${FOOTER}

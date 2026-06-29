@@ -1,16 +1,8 @@
 require('dotenv').config();
+const { assertProductionEnvReady } = require('./utils/productionEnv');
 
-// 生产 Fail-Closed：生产环境必须使用 PostgreSQL，禁止回退到 SQLite。
-// 否则进程会尝试在 Railway Volume 上打开 better-sqlite3，触发
-// "attempt to write a readonly database" 错误。配置缺失即拒绝启动。
-if (process.env.NODE_ENV === 'production' && process.env.DATABASE_PROVIDER !== 'postgresql') {
-  console.error(
-    '❌ 生产环境必须设置 DATABASE_PROVIDER=postgresql（当前为 ' +
-      (process.env.DATABASE_PROVIDER || '未设置') +
-      '）。禁止在生产使用 SQLite，进程退出。'
-  );
-  process.exit(1);
-}
+// 生产 Fail-Closed：生产环境必须补齐数据库、CORS、官网线索邮件等关键配置。
+assertProductionEnvReady();
 
 const pino = require('pino');
 const pinoHttp = require('pino-http');

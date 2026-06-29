@@ -49,7 +49,7 @@
   function initReveal() {
     const nodes = document.querySelectorAll('[data-reveal]');
     if (!nodes.length) return;
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
       nodes.forEach((n) => n.classList.add('revealed'));
       return;
     }
@@ -108,6 +108,10 @@
   function initCounters() {
     const counters = document.querySelectorAll('[data-counter-target]');
     if (!counters.length) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      counters.forEach(animateCounter);
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -174,15 +178,15 @@
   // (e.g. the static site is served without an API origin). Ensures leads are
   // never silently lost on submit failure.
   const FORM_FALLBACK_EMAIL = {
-    '/api/contact': 'hello@summitlink.com',
-    '/api/partnerships': 'partners@summitlink.com',
-    '/api/applications/seven-summits': 'hello@summitlink.com',
-    '/api/applications/guide': 'guides@summitlink.com'
+    '/api/contact': 'hello@unsummit.cn',
+    '/api/partnerships': 'hello@unsummit.cn',
+    '/api/applications/seven-summits': 'hello@unsummit.cn',
+    '/api/applications/guide': 'hello@unsummit.cn'
   };
 
   function buildMailtoFallback(form, payload) {
     const endpoint = form.dataset.api || '';
-    const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
+    const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@unsummit.cn';
     const subject = `SummitLink backup submission (${endpoint || 'website'})`;
     const flatten = (v) => String(v).replace(/[\r\n]+/g, ' ').trim();
     const body = Object.entries(payload)
@@ -208,14 +212,19 @@
   function getSuccessMessage(form, payload, result) {
     const name = payload.fullName || payload.name || 'there';
     const email = payload.email || 'your email';
+    const reference = result.id ? `#${result.id}` : 'your submission';
+    const emailStatus = result.confirmationEmail
+      ? `A confirmation email has been queued for ${email}.`
+      : `Email delivery is not configured. Please save reference ${reference} for your records.`;
     if (form.dataset.successTemplate) {
       return form.dataset.successTemplate
         .replaceAll('{name}', name)
         .replaceAll('{email}', email)
+        .replaceAll('{emailStatus}', emailStatus)
         .replaceAll('{nextSteps}', result.nextSteps || '');
     }
     const nextSteps = result.nextSteps || 'Our team will review your submission and follow up with next steps.';
-    return `Thank you, ${name}. We received your submission and created a secure follow-up record. ${nextSteps} A confirmation email has been queued for ${email}.`;
+    return `Thank you, ${name}. We received your submission and created a secure follow-up record. ${nextSteps} ${emailStatus}`;
   }
 
   function serializeForm(form) {

@@ -8,7 +8,7 @@
   <meta property="og:title" content="Corporate & Investment | SummitLink" />
   <meta property="og:description" content="Investor-grade partnership page for SummitLink's global expedition platform." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80" />
+  <meta property="og:image" content="https://unsummit.cn/assets/hero-mountain.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -18,7 +18,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Corporate &amp; Investment | SummitLink" />
   <meta name="twitter:description" content="SummitLink is building scalable global infrastructure for mountaineering. Partner with us as an investor, sponsor, or strategic partner." />
-  <meta name="twitter:image" content="https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80" />
+  <meta name="twitter:image" content="https://unsummit.cn/assets/hero-mountain.svg" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://unsummit.cn/corporate.html" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -48,7 +48,7 @@
       display: flex;
       align-items: center;
       isolation: isolate;
-      background: url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80') center/cover no-repeat;
+      background: url('./assets/hero-mountain.svg') center/cover no-repeat;
     }
 
     .corp-hero::before {
@@ -385,7 +385,7 @@
           <a class="nav-link" data-nav="contact" href="./contact.html">Contact</a>
         </div>
         <div class="flex items-center gap-2">
-          <a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a>
+          <a class="btn-primary" href="./seven-summits.html#apply-form">Download Package</a>
           <button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button>
         </div>
       </div>
@@ -505,43 +505,13 @@
       </div>
 
       <div class="glass-card p-6 md:p-8" data-reveal>
-        <h3 class="text-2xl font-black mb-2">Interested in Investing?</h3>
+        <h3 class="text-2xl font-black mb-2">Interested in Investing or Partnering?</h3>
         <p class="section-sub">We welcome conversations with venture investors, family offices, strategic partners, and high-net-worth individuals who share our belief in the future of global adventure infrastructure.</p>
-        <form data-api="/api/partnerships" data-success-template="Thank you, {name}. We received your partnership or investment inquiry and queued a confirmation email to {email}. {nextSteps}" class="space-y-4" aria-label="Investment inquiry form">
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label class="form-label" for="investorName">Name</label>
-              <input class="form-input" id="investorName" name="name" type="text" autocomplete="name" required />
-            </div>
-            <div>
-              <label class="form-label" for="investorCompany">Company</label>
-              <input class="form-input" id="investorCompany" name="company" type="text" autocomplete="organization" required />
-            </div>
-            <div>
-              <label class="form-label" for="investorEmail">Email</label>
-              <input class="form-input" id="investorEmail" name="email" type="email" autocomplete="email" required />
-            </div>
-            <div>
-              <label class="form-label" for="investmentType">Investment Type</label>
-              <select class="form-select" id="investmentType" name="investmentType" required>
-                <option value="">Select investment type</option>
-                <option>Venture Capital</option>
-                <option>Strategic Investment</option>
-                <option>Family Office</option>
-                <option>Individual</option>
-                <option>Other</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="form-label" for="investmentMessage">Message</label>
-            <textarea class="form-textarea" id="investmentMessage" name="message" required></textarea>
-          </div>
-          <div class="hp-field" aria-hidden="true"><label>Leave this field empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-          <div class="hidden" data-form-message></div>
-          <button class="btn-primary" type="submit" style="background:#F5A623;border-color:#F5A623;color:#111827;">Send Investment Inquiry</button>
-        </form>
-        <p class="form-success hidden mt-4" data-form-success-panel></p>
+        <p class="section-sub">Please email a short introduction, organization profile, target partnership type, and preferred follow-up window. The team reviews partnership inquiries manually.</p>
+        <div class="flex flex-wrap gap-3">
+          <a class="btn-primary" href="mailto:hello@unsummit.cn?subject=SummitLink%20Partnership%20Inquiry" style="background:#F5A623;border-color:#F5A623;color:#111827;">Email Partnership Inquiry</a>
+          <a class="btn-outline" href="./contact.html">Contact Page</a>
+        </div>
       </div>
     </section>
 
@@ -631,8 +601,8 @@
       <div class="grid md:grid-cols-3 gap-4 mt-6">
         <article class="glass-card p-6" data-reveal>
           <h3 class="text-xl font-bold mb-2">📧 Investment Inquiries</h3>
-          <p class="section-sub mb-4">invest@summitlink.com</p>
-          <a class="btn-outline" href="mailto:invest@summitlink.com">Send Email</a>
+          <p class="section-sub mb-4">hello@unsummit.cn</p>
+          <a class="btn-outline" href="mailto:hello@unsummit.cn">Send Email</a>
         </article>
         <article class="glass-card p-6" data-reveal>
           <h3 class="text-xl font-bold mb-2">🤝 Partnership &amp; Sponsorship</h3>
@@ -642,7 +612,7 @@
         <article class="glass-card p-6" data-reveal>
           <h3 class="text-xl font-bold mb-2">🏔️ Seven Summits Challenge</h3>
           <p class="section-sub mb-4">For climbers and organizations seeking to join the flagship program.</p>
-          <a class="btn-primary" href="./seven-summits.html#apply-form">Apply Now</a>
+          <a class="btn-primary" href="./seven-summits.html#apply-form">Download Package</a>
         </article>
       </div>
     </section>
@@ -658,11 +628,11 @@
       </div>
       <div class="footer-grid py-8">
         <div><h3 class="font-bold mb-2">Platform</h3><a class="footer-link" href="./index.html">Home</a><a class="footer-link" href="./climbers.html">Climbers</a><a class="footer-link" href="./guides.html">Guides</a><a class="footer-link" href="./peaks.html">Peaks</a></div>
-        <div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Apply Now</a><a class="footer-link" href="./corporate.html">Corporate</a></div>
+        <div><h3 class="font-bold mb-2">Program</h3><a class="footer-link" href="./seven-summits.html">Seven Summits</a><a class="footer-link" href="./seven-summits.html#apply-form">Download Package</a><a class="footer-link" href="./corporate.html">Corporate</a></div>
         <div><h3 class="font-bold mb-2">Legal</h3><a class="footer-link" href="./terms.html">Terms of Service</a><a class="footer-link" href="./privacy.html">Privacy Policy</a></div>
-        <div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:hello@summitlink.com">hello@summitlink.com</a><a class="footer-link" href="./contact.html">Contact Page</a></div>
+        <div><h3 class="font-bold mb-2">Contact</h3><a class="footer-link" href="mailto:hello@unsummit.cn">hello@unsummit.cn</a><a class="footer-link" href="./contact.html">Contact Page</a></div>
       </div>
-      <p class="utility-muted text-sm">© 2024–2026 未登峰（北京）科技有限公司 &amp; UNSUMMIT TECHNOLOGY LIMITED. All Rights Reserved.</p>
+      <p class="utility-muted text-sm">© 2024–2026 Summit Technology LLC &amp; 未登峰（北京）科技有限公司. All Rights Reserved.</p>
     </div>
   </footer>
 

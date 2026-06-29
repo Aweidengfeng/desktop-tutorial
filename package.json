@@ -67,6 +67,7 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-router-dom": "^6.23.0",
+    "resend": "^6.16.0",
     "stripe": "^14.25.0",
     "uuid": "^14.0.0"
   },
@@ -112,6 +113,7 @@
       "**/backend/tests/weak-network.test.js",
       "**/backend/tests/commission.test.js",
       "**/backend/tests/region.test.js",
+      "**/backend/tests/production-env.test.js",
       "**/backend/tests/storage.test.js",
       "**/backend/tests/mailer.test.js",
       "**/backend/tests/sms-sender.test.js",

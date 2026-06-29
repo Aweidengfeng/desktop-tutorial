@@ -7,19 +7,19 @@
   <meta name="description" content="20 climbers selected. 7 continents. Full logistical support. Apply free — SummitLink Seven Summits Global Challenge 2026." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preload" as="image" href="https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80" />
+  <link rel="preload" as="image" href="./assets/hero-mountain.svg" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <meta property="og:title" content="Seven Summits Global Challenge 2026 | SummitLink" />
   <meta property="og:description" content="20 climbers selected. 7 continents. Full logistical support. Apply free." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80" />
+  <meta property="og:image" content="https://unsummit.cn/assets/hero-mountain.svg" />
   <meta property="og:url" content="https://unsummit.cn/seven-summits.html" />
   <meta property="og:site_name" content="SummitLink" />
   <meta property="og:locale" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Seven Summits Global Challenge 2026 | SummitLink" />
   <meta name="twitter:description" content="20 climbers selected. 7 continents. Full logistical support. Apply free." />
-  <meta name="twitter:image" content="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80" />
+  <meta name="twitter:image" content="https://unsummit.cn/assets/hero-mountain.svg" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://unsummit.cn/seven-summits.html" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -39,7 +39,7 @@
     .ss-hero-bg {
       position: absolute;
       inset: 0;
-      background: url('https://images.unsplash.com/photo-1464820453369-31d2c0b651af?w=1920&q=80') center/cover no-repeat;
+      background: url('./assets/hero-mountain.svg') center/cover no-repeat;
     }
     .ss-hero-overlay {
       position: absolute;
@@ -146,13 +146,12 @@
       aspect-ratio: 3/4;
       cursor: default;
     }
-    .peak-card-v2 img {
+    .peak-card-v2 .peak-visual {
       width: 100%;
       height: 100%;
-      object-fit: cover;
       transition: transform .45s ease;
     }
-    .peak-card-v2:hover img { transform: scale(1.06); }
+    .peak-card-v2:hover .peak-visual { transform: scale(1.06); }
     .peak-card-v2-overlay {
       position: absolute;
       inset: 0;
@@ -433,7 +432,7 @@
           <a class="nav-link" data-nav="contact" href="./contact.html">Contact</a>
         </div>
         <div class="flex items-center gap-2">
-          <a class="btn-primary" href="#application">Check Eligibility</a>
+          <a class="btn-primary" href="#apply-form">Check Eligibility</a>
           <button class="mobile-toggle md:hidden" data-menu-toggle aria-label="Toggle menu" aria-expanded="false">☰</button>
         </div>
       </div>
@@ -468,7 +467,7 @@
         This is a selection-based expedition program. Not all applicants will be accepted.
       </p>
       <div class="flex flex-wrap gap-3 mb-10" data-reveal>
-        <a class="btn-primary" href="#application" style="font-size:1rem;padding:.9rem 1.8rem;">Check Eligibility — Free</a>
+        <a class="btn-primary" href="#apply-form" style="font-size:1rem;padding:.9rem 1.8rem;">Check Eligibility — Free</a>
         <a class="btn-ghost" href="#why-expedition">Learn What's Included ↓</a>
       </div>
       <div class="stat-strip" data-reveal>
@@ -604,7 +603,7 @@
       </div>
       <div class="peak-grid">
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="Everest, Asia" loading="lazy">
+          <div class="peak-visual peak-everest" role="img" aria-label="Stylized mountain illustration for Everest, Asia"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-extreme">Extreme</span>
             <h3 class="font-bold text-lg leading-tight">Everest</h3>
@@ -612,7 +611,7 @@
           </div>
         </article>
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80" alt="Aconcagua, South America" loading="lazy">
+          <div class="peak-visual peak-aconcagua" role="img" aria-label="Stylized mountain illustration for Aconcagua, South America"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-hard">Hard</span>
             <h3 class="font-bold text-lg leading-tight">Aconcagua</h3>
@@ -620,7 +619,7 @@
           </div>
         </article>
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1455156218388-5e61b526818b?w=600&q=80" alt="Denali, North America" loading="lazy">
+          <div class="peak-visual peak-denali" role="img" aria-label="Stylized mountain illustration for Denali, North America"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-extreme">Extreme</span>
             <h3 class="font-bold text-lg leading-tight">Denali</h3>
@@ -628,7 +627,7 @@
           </div>
         </article>
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=600&q=80" alt="Kilimanjaro, Africa" loading="lazy">
+          <div class="peak-visual peak-kilimanjaro" role="img" aria-label="Stylized mountain illustration for Kilimanjaro, Africa"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-moderate">Moderate</span>
             <h3 class="font-bold text-lg leading-tight">Kilimanjaro</h3>
@@ -636,7 +635,7 @@
           </div>
         </article>
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=600&q=80" alt="Vinson, Antarctica" loading="lazy">
+          <div class="peak-visual peak-vinson" role="img" aria-label="Stylized mountain illustration for Vinson Massif, Antarctica"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-extreme">Extreme</span>
             <h3 class="font-bold text-lg leading-tight">Vinson</h3>
@@ -644,7 +643,7 @@
           </div>
         </article>
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1464823063530-08f10ed1a2dd?w=600&q=80" alt="Elbrus, Europe" loading="lazy">
+          <div class="peak-visual peak-elbrus" role="img" aria-label="Stylized mountain illustration for Elbrus, Europe"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-hard">Hard</span>
             <h3 class="font-bold text-lg leading-tight">Elbrus</h3>
@@ -652,7 +651,7 @@
           </div>
         </article>
         <article class="peak-card-v2" data-reveal>
-          <img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=600&q=80" alt="Puncak Jaya, Oceania" loading="lazy">
+          <div class="peak-visual peak-puncak-jaya" role="img" aria-label="Stylized mountain illustration for Puncak Jaya, Oceania"></div>
           <div class="peak-card-v2-overlay">
             <span class="diff-badge diff-hard">Hard</span>
             <h3 class="font-bold text-lg leading-tight">Puncak Jaya</h3>
@@ -671,7 +670,7 @@
           <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">EXPEDITION JOURNEY</p>
           <h2 class="section-title mb-4">A 4-Phase<br><span class="gold-gradient">Journey.</span></h2>
           <p style="color:rgba(180,200,230,.75);font-size:1rem;margin-bottom:2rem;">Spread across 2027–2028. Each expedition builds on the last. Your guides, support team, and cohort travel the journey with you.</p>
-          <a class="btn-ghost" href="#application">Check Eligibility ↓</a>
+          <a class="btn-ghost" href="#apply-form">Check Eligibility ↓</a>
         </div>
         <div>
           <div class="itinerary-track">
@@ -897,25 +896,25 @@
     <section class="ss-section" id="after-apply">
       <div class="mb-10" data-reveal>
         <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">AFTER YOU APPLY</p>
-        <h2 class="section-title mb-4">A real review flow — not a static form.</h2>
-        <p style="color:rgba(180,200,230,.75);max-width:680px;font-size:1.02rem;">Your application enters the SummitLink backend, creates an internal lead record, notifies our team, and sends a confirmation email to your inbox.</p>
+        <h2 class="section-title mb-4">A formal application package — reviewed manually by our team.</h2>
+        <p style="color:rgba(180,200,230,.75);max-width:680px;font-size:1.02rem;">Your completed package is reviewed manually by the SummitLink team. Email submission keeps the candidate record complete and gives reviewers the context needed for high-altitude risk screening.</p>
       </div>
       <div class="why-grid">
-        <div class="why-card" data-reveal><span class="why-icon">1</span><h3 class="font-bold text-lg mb-2">Submission captured</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">We store your contact, target summit, experience level, and readiness context for the review team.</p></div>
-        <div class="why-card" data-reveal><span class="why-icon">2</span><h3 class="font-bold text-lg mb-2">Email confirmation</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">You receive a confirmation email with your reference ID and next-step expectations.</p></div>
+        <div class="why-card" data-reveal><span class="why-icon">1</span><h3 class="font-bold text-lg mb-2">Package received</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">You email one complete file with contact details, target summit, experience, health, insurance, and emergency contact context.</p></div>
+        <div class="why-card" data-reveal><span class="why-icon">2</span><h3 class="font-bold text-lg mb-2">Manual screening</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">The team reviews your materials from the mailbox and shortlists candidates for interview or extra documents.</p></div>
         <div class="why-card" data-reveal><span class="why-icon">3</span><h3 class="font-bold text-lg mb-2">Human expedition review</h3><p style="color:rgba(180,200,230,.72);font-size:.94rem;">Our team reviews safety readiness, cohort fit, logistics, and whether additional materials are needed.</p></div>
       </div>
     </section>
 
     <div class="ss-divider"></div>
 
-    <!-- Application Form -->
-    <section class="ss-section" id="application">
+    <!-- Application Package -->
+    <section class="ss-section" id="apply-form">
       <div class="grid md:grid-cols-2 gap-12 items-start">
         <div data-reveal>
           <p class="text-sm font-bold tracking-widest uppercase" style="color:#4facfe;margin-bottom:.75rem;">APPLICATION REVIEW</p>
           <h2 class="section-title mb-4">Check Your<br><span class="gold-gradient">Eligibility.</span></h2>
-          <p style="color:rgba(180,200,230,.75);font-size:1rem;margin-bottom:1.5rem;">Takes about 10 minutes. Every application is reviewed personally by our expedition team. This is a selective admission process — not all applicants will be accepted.</p>
+          <p style="color:rgba(180,200,230,.75);font-size:1rem;margin-bottom:1.5rem;">Prepare one complete application file before submitting. Every package is reviewed personally by our expedition team. This is a selective admission process — not all applicants will be accepted.</p>
           <div class="space-y-3">
             <div class="trust-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Free to apply — no credit card required</div>
             <div class="trust-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> All experience tiers reviewed — acceptance not guaranteed</div>
@@ -933,23 +932,18 @@
           </div>
         </div>
         <div class="glass-panel p-6" data-reveal>
-          <form id="apply-form" data-api="/api/applications/seven-summits" data-success-template="Thank you, {name}. We received your Seven Summits application and queued a confirmation email to {email}. {nextSteps} Selection results will be announced on November 11, 2026." class="space-y-4">
-            <div class="grid md:grid-cols-2 gap-4">
-              <div><label class="form-label" for="fullName">Full Name</label><input class="form-input" id="fullName" name="fullName" required></div>
-              <div><label class="form-label" for="email">Email</label><input class="form-input" id="email" name="email" type="email" required></div>
-              <div><label class="form-label" for="country">Country</label><input class="form-input" id="country" name="country" required></div>
-              <div><label class="form-label" for="phone">Phone</label><input class="form-input" id="phone" name="phone" required></div>
-              <div><label class="form-label" for="experienceLevel">Experience Level</label><select class="form-select" id="experienceLevel" name="experienceLevel"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option></select></div>
-              <div><label class="form-label" for="targetSummit">Target Summit</label><select class="form-select" id="targetSummit" name="targetSummit"><option>Everest</option><option>Aconcagua</option><option>Denali</option><option>Kilimanjaro</option><option>Vinson</option><option>Elbrus</option><option>Puncak Jaya</option></select></div>
-            </div>
-            <div><label class="form-label" for="personalStatement">Personal Statement <span style="color:rgba(180,200,230,.5);font-size:.85em;">(Why Seven Summits? Why now?)</span></label><textarea class="form-textarea" id="personalStatement" name="personalStatement" required style="min-height:140px;"></textarea></div>
-            <div><label class="form-label" for="source">How did you hear about us?</label><input class="form-input" id="source" name="source"></div>
-            <div class="hp-field" aria-hidden="true"><label>Leave this field empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
-            <div class="hidden" data-form-message></div>
-            <button class="btn-primary" type="submit" style="width:100%;font-size:1rem;padding:.9rem;">Start Selection Process →</button>
-            <p style="text-align:center;font-size:.8rem;color:rgba(180,200,230,.45);margin-top:.5rem;">No payment required. Every application is reviewed personally. Acceptance is not guaranteed.</p>
-          </form>
-          <p class="form-success hidden mt-4" data-form-success-panel></p>
+          <p class="badge">APPLICATION PACKAGE</p>
+          <h3 class="text-2xl font-black mt-3 mb-3">Download, complete, and email your application.</h3>
+          <p class="utility-muted mb-5">For serious expedition and guide candidates, SummitLink now uses a formal application package instead of a short web form. This gives the review team enough context to assess experience, health readiness, insurance, emergency contact details, and target program fit.</p>
+          <div class="grid md:grid-cols-2 gap-4 mb-5">
+            <article class="glass-panel p-4"><h4 class="font-bold mb-2">1 · Download the template</h4><p class="utility-muted text-sm">Use the Word template to prepare your complete application file.</p></article>
+            <article class="glass-panel p-4"><h4 class="font-bold mb-2">2 · Email for screening</h4><p class="utility-muted text-sm">Send the completed package to hello@unsummit.cn for manual review and follow-up.</p></article>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a class="btn-primary" href="./assets/SummitLink-Application-Package.docx" download>Download Application Package</a>
+            <a class="btn-ghost" href="mailto:hello@unsummit.cn?subject=SummitLink%20Application%20Package">Email hello@unsummit.cn</a>
+          </div>
+          <p class="utility-muted text-sm mt-4">Shortlisted applicants may be asked for interviews, certificates, insurance proof, medical confirmation, agreements, and deposit/payment steps before acceptance.</p>
         </div>
       </div>
     </section>
@@ -962,13 +956,13 @@
           Your Seven Summits Story<br>Starts With <span class="gold-gradient">One Decision.</span>
         </h2>
         <p style="color:rgba(245,166,35,.8);font-weight:600;font-size:1.05rem;max-width:560px;margin:0 auto 1.25rem;letter-spacing:.01em;" data-reveal>
-          This is not a commercial trip. It is a guided selection program for serious climbers.
+          This is not a short web form. It is a guided selection program for serious climbers.
         </p>
         <p style="color:rgba(180,200,230,.7);max-width:560px;margin:0 auto 2rem;font-size:1rem;" data-reveal>
-          Check your eligibility. Applying is free. The review takes about 10 minutes. A limited cohort of 20 climbers is selected per season — on merit, not timing. Not all applicants will be accepted.
+          Download the application package, complete your expedition background, and email it for manual screening. A limited cohort of 20 climbers is selected per season — on merit, not timing.
         </p>
         <div class="flex flex-wrap gap-3 justify-center" data-reveal>
-          <a class="btn-primary" href="#application" style="font-size:1.05rem;padding:.95rem 2.2rem;">Start Selection Process →</a>
+          <a class="btn-primary" href="#apply-form" style="font-size:1.05rem;padding:.95rem 2.2rem;">Start Selection Process →</a>
           <a class="btn-ghost" href="#faq">Read the FAQ</a>
         </div>
         <p style="margin-top:1.5rem;font-size:.82rem;color:rgba(180,200,230,.4);" data-reveal>
@@ -997,7 +991,7 @@
         <div>
           <h3 class="font-bold mb-2">Program</h3>
           <a class="footer-link" href="./seven-summits.html">Seven Summits</a>
-          <a class="footer-link" href="#application">Check Eligibility</a>
+          <a class="footer-link" href="#apply-form">Check Eligibility</a>
           <a class="footer-link" href="./corporate.html">Corporate</a>
         </div>
         <div>
@@ -1007,7 +1001,7 @@
         </div>
         <div>
           <h3 class="font-bold mb-2">Contact</h3>
-          <a class="footer-link" href="mailto:hello@summitlink.com">hello@summitlink.com</a>
+          <a class="footer-link" href="mailto:hello@unsummit.cn">hello@unsummit.cn</a>
           <a class="footer-link" href="./contact.html">Contact Page</a>
         </div>
       </div>

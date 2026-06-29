@@ -90,6 +90,9 @@ function makeHandler(type, extract) {
         },
       });
 
+      const confirmationEmail = isMailProviderConfigured();
+      const adminNotificationEmail = isAdminLeadNotificationConfigured();
+
       // 管理员通知邮件：失败降级，绝不阻塞提交结果。
       notifyAdmin(lead);
       // 提交人确认邮件：失败降级，绝不阻塞提交结果。
@@ -99,7 +102,8 @@ function makeHandler(type, extract) {
         success: true,
         id: lead.id,
         status: lead.status,
-        confirmationEmail: true,
+        confirmationEmail,
+        adminNotificationEmail,
         nextSteps: leadNextSteps(lead.type),
       });
     } catch (e) {
@@ -107,6 +111,14 @@ function makeHandler(type, extract) {
       return res.status(500).json({ error: '提交失败，请稍后再试' });
     }
   };
+}
+
+function isMailProviderConfigured() {
+  return !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM;
+}
+
+function isAdminLeadNotificationConfigured() {
+  return isMailProviderConfigured() && !!(process.env.LEADS_NOTIFY_EMAIL || process.env.ADMIN_EMAIL);
 }
 
 function leadNextSteps(type) {

@@ -56,7 +56,7 @@ class ResendEmailProvider extends EmailProvider {
     super();
     const { Resend } = require('resend');
     this._client = new Resend(process.env.RESEND_API_KEY);
-    this._from = process.env.RESEND_FROM || 'noreply@mail.ussummit.cn';
+    this._from = process.env.RESEND_FROM || 'no-reply@unsummit.cn';
   }
 
   async send(email, code) {

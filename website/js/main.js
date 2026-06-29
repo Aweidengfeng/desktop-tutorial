@@ -98,9 +98,9 @@ function injectShell() {
           <div>
             <h3 class="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-white/50" data-i18n="footer.contact"></h3>
             <div class="space-y-2 text-sm text-white/70">
-              <p>hello@summitlink.com</p>
-              <p>guides@summitlink.com</p>
-              <p>corporate@summitlink.com</p>
+              <p>hello@unsummit.cn</p>
+              <p>hello@unsummit.cn</p>
+              <p>hello@unsummit.cn</p>
               <p class="pt-2 text-white/40" data-i18n="footer.rights"></p>
             </div>
           </div>
