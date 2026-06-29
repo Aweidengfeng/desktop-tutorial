@@ -152,7 +152,7 @@ Railway Dashboard → Deployments → 选择上一个成功的 deployment → Ro
 
 | 角色 | 联系方式 |
 |------|---------|
-| 项目负责人 | support@summitlink.app |
+| 项目负责人 | hello@unsummit.cn |
 | Railway 支持 | https://railway.app/help |
 | 高德技术支持 | https://lbs.amap.com/support |
 
