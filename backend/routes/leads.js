@@ -114,7 +114,7 @@ function makeHandler(type, extract) {
 }
 
 function isMailProviderConfigured() {
-  return !!process.env.RESEND_API_KEY;
+  return !!process.env.RESEND_API_KEY && !!process.env.RESEND_FROM;
 }
 
 function isAdminLeadNotificationConfigured() {

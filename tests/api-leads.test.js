@@ -65,6 +65,20 @@ describe('Lead Collection', () => {
     expect(res.body.nextSteps).toContain('1–2 business days');
   });
 
+  test('POST /api/contact requires RESEND_FROM before reporting email queued', async () => {
+    process.env.LEADS_NOTIFY_EMAIL = 'admin@example.com';
+    process.env.RESEND_API_KEY = 're_test_key';
+    delete process.env.RESEND_FROM;
+
+    const res = await request(app)
+      .post('/api/contact')
+      .send({ name: '联系人', email: 'contact-from@example.com', subject: '咨询', message: '你好' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.confirmationEmail).toBe(false);
+    expect(res.body.adminNotificationEmail).toBe(false);
+  });
+
   test('POST /api/partnerships 成功写入 → 201', async () => {
     const res = await request(app)
       .post('/api/partnerships')
