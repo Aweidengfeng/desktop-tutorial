@@ -49,7 +49,7 @@
   function initReveal() {
     const nodes = document.querySelectorAll('[data-reveal]');
     if (!nodes.length) return;
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
       nodes.forEach((n) => n.classList.add('revealed'));
       return;
     }
@@ -108,6 +108,10 @@
   function initCounters() {
     const counters = document.querySelectorAll('[data-counter-target]');
     if (!counters.length) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      counters.forEach(animateCounter);
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
