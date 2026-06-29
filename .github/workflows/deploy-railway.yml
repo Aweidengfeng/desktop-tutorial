@@ -67,10 +67,10 @@ jobs:
           SMTP_SECURE: "true"
           SMTP_USER: ci@example.com
           SMTP_PASS: ci_pass
-          SMTP_FROM: SummitLink <noreply@summitlink.app>
+          SMTP_FROM: SummitLink <no-reply@unsummit.cn>
           VAPID_PUBLIC_KEY: ci_vapid_public
           VAPID_PRIVATE_KEY: ci_vapid_private
-          VAPID_MAILTO: mailto:admin@summitlink.app
+          VAPID_MAILTO: mailto:hello@unsummit.cn
           ANTHROPIC_API_KEY: ci_anthropic
           OPENAI_API_KEY: ci_openai
           AI_MODEL_CLAUDE: claude-3-haiku-20240307

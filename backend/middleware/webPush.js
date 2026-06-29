@@ -8,7 +8,7 @@
  * 环境变量：
  *   VAPID_PUBLIC_KEY
  *   VAPID_PRIVATE_KEY
- *   VAPID_MAILTO      如 mailto:admin@summitlink.com
+ *   VAPID_MAILTO      如 mailto:hello@unsummit.cn
  */
 
 const PUSH_ENABLED = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
@@ -19,7 +19,7 @@ function getWebPush() {
   try {
     webpush = require('web-push');
     webpush.setVapidDetails(
-      process.env.VAPID_MAILTO || 'mailto:admin@summitlink.com',
+      process.env.VAPID_MAILTO || 'mailto:hello@unsummit.cn',
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );

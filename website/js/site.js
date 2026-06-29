@@ -174,15 +174,15 @@
   // (e.g. the static site is served without an API origin). Ensures leads are
   // never silently lost on submit failure.
   const FORM_FALLBACK_EMAIL = {
-    '/api/contact': 'hello@summitlink.com',
-    '/api/partnerships': 'partners@summitlink.com',
-    '/api/applications/seven-summits': 'hello@summitlink.com',
-    '/api/applications/guide': 'guides@summitlink.com'
+    '/api/contact': 'hello@unsummit.cn',
+    '/api/partnerships': 'hello@unsummit.cn',
+    '/api/applications/seven-summits': 'hello@unsummit.cn',
+    '/api/applications/guide': 'hello@unsummit.cn'
   };
 
   function buildMailtoFallback(form, payload) {
     const endpoint = form.dataset.api || '';
-    const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@summitlink.com';
+    const to = FORM_FALLBACK_EMAIL[endpoint] || 'hello@unsummit.cn';
     const subject = `SummitLink backup submission (${endpoint || 'website'})`;
     const flatten = (v) => String(v).replace(/[\r\n]+/g, ' ').trim();
     const body = Object.entries(payload)

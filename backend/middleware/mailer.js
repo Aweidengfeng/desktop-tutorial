@@ -4,7 +4,7 @@
  *
  * 环境变量：
  *   RESEND_API_KEY  Resend API Key
- *   RESEND_FROM     发件人邮箱，如 noreply@mail.ussummit.cn
+ *   RESEND_FROM     发件人邮箱，如 no-reply@unsummit.cn
  */
 
 const MAIL_ENABLED = !!process.env.RESEND_API_KEY;
@@ -22,7 +22,7 @@ function getResendClient() {
   }
 }
 
-const FROM = process.env.RESEND_FROM || 'noreply@mail.ussummit.cn';
+const FROM = process.env.RESEND_FROM || 'no-reply@unsummit.cn';
 
 async function sendMail({ to, subject, html, text }) {
   if (!MAIL_ENABLED) {
@@ -187,7 +187,7 @@ function leadConfirmationEmail(lead) {
           ${lead.subject ? `<tr><td style="padding:9px;border:1px solid #e5e7eb;color:#6b7280">Topic</td><td style="padding:9px;border:1px solid #e5e7eb">${esc(lead.subject)}</td></tr>` : ''}
         </table>
         <p style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;color:#1e3a8a"><strong>Next step:</strong> ${esc(nextStep)}</p>
-        <p style="color:#4b5563;font-size:14px">You do not need to resubmit the form. If you need to add documents or urgent context, reply to this email or contact hello@summitlink.com.</p>
+        <p style="color:#4b5563;font-size:14px">You do not need to resubmit the form. If you need to add documents or urgent context, reply to this email or contact hello@unsummit.cn.</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
         <p style="color:#9ca3af;font-size:12px">SummitLink © 2026 · Summit Technology LLC & 未登峰（北京）科技有限公司</p>
       </div>
