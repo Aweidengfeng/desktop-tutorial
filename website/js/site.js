@@ -1,5 +1,6 @@
 (function () {
   const APP_DEADLINE = '2026-10-15T23:59:59Z';
+  document.documentElement.classList.add('js-reveal');
 
   // Absolute API origin for the lead-collection backend. The static site is served
   // from GitHub Pages (unsummit.cn) which has no backend, so form `data-api`
