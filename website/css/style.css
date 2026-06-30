@@ -1293,7 +1293,7 @@ img {
 
 .peak-visual::before {
   background:
-    linear-gradient(115deg, rgba(255,255,255,.38) 0 15%, transparent 16% 100%),
+    linear-gradient(115deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.38) 15%, transparent 16%),
     linear-gradient(135deg, var(--peak-ridge, #386b9a), #18324d);
   box-shadow: inset 0 22px 44px rgba(255,255,255,.08);
 }
