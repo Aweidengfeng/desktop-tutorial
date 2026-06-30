@@ -36,7 +36,7 @@ function injectShell() {
                 </div>
               </a>
               <nav class="flex flex-wrap items-center gap-2 text-sm text-white/70">
-                ${['home', 'climbers', 'guides', 'corporate', 'peaks', 'apply', 'contact'].map((page) => `
+                ${['home', 'climbers', 'guides', 'corporate', 'peaks', 'pricing', 'apply', 'contact'].map((page) => `
                   <a href="./${page === 'home' ? 'index' : page}.html" data-nav-link="${page}" class="rounded-full px-3 py-2 transition hover:bg-white/5 hover:text-white" data-i18n="nav.${page}"></a>
                 `).join('')}
               </nav>
@@ -91,6 +91,7 @@ function injectShell() {
             <div class="grid gap-2 text-sm text-white/70">
               <a class="transition hover:text-white" href="./index.html" data-i18n="nav.home"></a>
               <a class="transition hover:text-white" href="./peaks.html" data-i18n="nav.peaks"></a>
+              <a class="transition hover:text-white" href="./pricing.html" data-i18n="nav.pricing"></a>
               <a class="transition hover:text-white" href="./apply.html" data-i18n="nav.apply"></a>
             </div>
           </div>
