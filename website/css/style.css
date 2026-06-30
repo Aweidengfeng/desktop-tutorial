@@ -256,13 +256,13 @@ img {
   font-weight: 700;
 }
 
-[data-reveal] {
+.js-reveal [data-reveal] {
   opacity: 0;
   transform: translateY(18px);
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
-[data-reveal].revealed {
+.js-reveal [data-reveal].revealed {
   opacity: 1;
   transform: translateY(0);
 }
@@ -1271,8 +1271,10 @@ img {
   min-height: 220px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 72% 18%, rgba(245, 166, 35, 0.28), transparent 16%),
-    linear-gradient(145deg, var(--peak-sky, #10243f), #06101f 62%, #030712);
+    linear-gradient(180deg, rgba(4, 9, 20, 0.08) 0%, rgba(4, 9, 20, 0.2) 46%, rgba(4, 9, 20, 0.62) 100%),
+    var(--peak-photo);
+  background-size: cover;
+  background-position: var(--peak-position, center);
   transition: transform .45s ease;
 }
 
@@ -1285,34 +1287,32 @@ img {
 .peak-visual::after {
   content: "";
   position: absolute;
-  inset: auto -8% 0;
-  height: 72%;
-  clip-path: polygon(0 100%, 18% 42%, 28% 62%, 43% 20%, 57% 68%, 70% 34%, 86% 58%, 100% 18%, 100% 100%);
+  pointer-events: none;
 }
 
 .peak-visual::before {
-  background: linear-gradient(135deg, var(--peak-ridge, #1d3557), #07101f);
+  inset: 0;
+  background: radial-gradient(circle at 74% 16%, rgba(255, 216, 126, 0.32), transparent 18%);
+  mix-blend-mode: screen;
 }
 
 .peak-visual::after {
-  inset: auto 9% 23%;
-  height: 32%;
-  clip-path: polygon(10% 95%, 34% 10%, 47% 48%, 58% 4%, 82% 95%);
-  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(143,200,255,.32));
-  opacity: .84;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 52%, rgba(4,9,20,.58) 100%);
+  box-shadow: inset 0 -90px 90px rgba(4,9,20,.5), inset 0 0 0 1px rgba(255,255,255,.04);
 }
 
-.peak-everest { --peak-sky:#12345a; --peak-ridge:#213f66; }
-.peak-kilimanjaro { --peak-sky:#4b2b16; --peak-ridge:#6f4a22; }
-.peak-denali { --peak-sky:#1d3f58; --peak-ridge:#204766; }
-.peak-aconcagua { --peak-sky:#3b241c; --peak-ridge:#6a3d2a; }
-.peak-vinson { --peak-sky:#10293d; --peak-ridge:#315d78; }
-.peak-elbrus { --peak-sky:#182a4d; --peak-ridge:#2d3f69; }
-.peak-puncak-jaya { --peak-sky:#123b34; --peak-ridge:#1f5b4c; }
-.peak-k2 { --peak-sky:#101f39; --peak-ridge:#24365a; }
-.peak-kangchenjunga { --peak-sky:#2d2446; --peak-ridge:#4b3f72; }
-.peak-lhotse { --peak-sky:#132d45; --peak-ridge:#1d4665; }
-.peak-makalu { --peak-sky:#2c263f; --peak-ridge:#4b456a; }
-.peak-cho-oyu { --peak-sky:#153a4e; --peak-ridge:#2f6077; }
-.peak-dhaulagiri { --peak-sky:#24304c; --peak-ridge:#44516f; }
-.peak-manaslu { --peak-sky:#173445; --peak-ridge:#315769; }
+.peak-everest { --peak-photo: url('https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-kilimanjaro { --peak-photo: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-denali { --peak-photo: url('https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-aconcagua { --peak-photo: url('https://images.unsplash.com/photo-1477346611705-65d5c2f15df8?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-vinson { --peak-photo: url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-elbrus { --peak-photo: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-puncak-jaya { --peak-photo: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-k2 { --peak-photo: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-kangchenjunga { --peak-photo: url('https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-lhotse { --peak-photo: url('https://images.unsplash.com/photo-1549880338-65ddcdfd017b?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-makalu { --peak-photo: url('https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-cho-oyu { --peak-photo: url('https://images.unsplash.com/photo-1434394354979-a235cd36269d?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-dhaulagiri { --peak-photo: url('https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-manaslu { --peak-photo: url('https://images.unsplash.com/photo-1518272840991-0f9a865d6d1f?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
