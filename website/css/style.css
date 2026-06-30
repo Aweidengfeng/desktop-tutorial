@@ -1298,20 +1298,21 @@ img {
 
 .peak-visual::after {
   inset: 0;
+  background: linear-gradient(180deg, transparent 52%, rgba(4,9,20,.58) 100%);
   box-shadow: inset 0 -90px 90px rgba(4,9,20,.5), inset 0 0 0 1px rgba(255,255,255,.04);
 }
 
-.peak-everest { --peak-photo: url('https://source.unsplash.com/1200x900/?mount-everest'); --peak-position: center; }
-.peak-kilimanjaro { --peak-photo: url('https://source.unsplash.com/1200x900/?mount-kilimanjaro'); --peak-position: center; }
-.peak-denali { --peak-photo: url('https://source.unsplash.com/1200x900/?denali-mountain'); --peak-position: center; }
-.peak-aconcagua { --peak-photo: url('https://source.unsplash.com/1200x900/?aconcagua-mountain'); --peak-position: center; }
-.peak-vinson { --peak-photo: url('https://source.unsplash.com/1200x900/?antarctica-mountain'); --peak-position: center; }
-.peak-elbrus { --peak-photo: url('https://source.unsplash.com/1200x900/?mount-elbrus'); --peak-position: center; }
-.peak-puncak-jaya { --peak-photo: url('https://source.unsplash.com/1200x900/?puncak-jaya-mountain'); --peak-position: center; }
-.peak-k2 { --peak-photo: url('https://source.unsplash.com/1200x900/?k2-mountain'); --peak-position: center; }
-.peak-kangchenjunga { --peak-photo: url('https://source.unsplash.com/1200x900/?kangchenjunga'); --peak-position: center; }
-.peak-lhotse { --peak-photo: url('https://source.unsplash.com/1200x900/?lhotse-mountain'); --peak-position: center; }
-.peak-makalu { --peak-photo: url('https://source.unsplash.com/1200x900/?makalu-mountain'); --peak-position: center; }
-.peak-cho-oyu { --peak-photo: url('https://source.unsplash.com/1200x900/?cho-oyu-mountain'); --peak-position: center; }
-.peak-dhaulagiri { --peak-photo: url('https://source.unsplash.com/1200x900/?dhaulagiri-mountain'); --peak-position: center; }
-.peak-manaslu { --peak-photo: url('https://source.unsplash.com/1200x900/?manaslu-mountain'); --peak-position: center; }
+.peak-everest { --peak-photo: url('https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-kilimanjaro { --peak-photo: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-denali { --peak-photo: url('https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-aconcagua { --peak-photo: url('https://images.unsplash.com/photo-1477346611705-65d5c2f15df88?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-vinson { --peak-photo: url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-elbrus { --peak-photo: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-puncak-jaya { --peak-photo: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-k2 { --peak-photo: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-kangchenjunga { --peak-photo: url('https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-lhotse { --peak-photo: url('https://images.unsplash.com/photo-1549880338-65ddcdfd017b?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-makalu { --peak-photo: url('https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-cho-oyu { --peak-photo: url('https://images.unsplash.com/photo-1434394354979-a235cd36269d?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-dhaulagiri { --peak-photo: url('https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
+.peak-manaslu { --peak-photo: url('https://images.unsplash.com/photo-1518272840991-0f9a865d6d1f?auto=format&fit=crop&w=1200&q=80'); --peak-position: center; }
